@@ -89,6 +89,83 @@
             50% { transform: scale(1.1); }
         }
 
+        /* شريط البحث */
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 20px;
+            padding-right: 45px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--glass-border);
+            border-radius: 50px;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gold);
+            font-size: 18px;
+            pointer-events: none;
+        }
+
+        .search-clear {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gold-light);
+            cursor: pointer;
+            display: none;
+            font-size: 14px;
+        }
+
+        .search-clear:hover {
+            color: var(--gold);
+        }
+
+        .search-results-info {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--glass);
+            border-radius: 50px;
+            border: 1px solid var(--gold);
+            display: none;
+        }
+
+        .search-results-info i {
+            color: var(--gold);
+            margin-left: 10px;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.1));
+            padding: 0 5px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
         /* الهيدر ثلاثي الأبعاد */
         .header {
             background: var(--glass);
@@ -633,20 +710,32 @@
         </div>
     </div>
 
-    <!-- الهيدر -->
+    <!-- الهيدر مع البحث -->
     <header class="header">
         <div class="container header-content">
             <div class="logo">
                 <h1>ناردو ⚡ برو</h1>
                 <span>التميز بلا حدود</span>
             </div>
+            
+            <!-- شريط البحث -->
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
+                <i class="fas fa-times search-clear" id="searchClear" onclick="clearSearch()"></i>
+            </div>
+            
             <div class="user-actions" style="display: flex; gap: 20px;">
-                <a href="#" style="color: var(--gold);"><i class="fas fa-search fa-lg"></i></a>
                 <a href="#" style="color: var(--gold);"><i class="fas fa-user-astronaut fa-lg"></i></a>
                 <a href="#" style="color: var(--gold);"><i class="fas fa-crown fa-lg"></i></a>
             </div>
         </div>
     </header>
+
+    <!-- معلومات نتائج البحث -->
+    <div class="container">
+        <div id="searchResultsInfo" class="search-results-info"></div>
+    </div>
 
     <!-- قائمة الأقسام -->
     <nav class="categories-nav">
@@ -767,7 +856,7 @@
                 </div>
                 <div class="footer-col">
                     <h3 style="color: var(--gold);">اتصال ناري</h3>
-                    <p><i class="fab fa-whatsapp" style="color: #25D366;"></i> +213 0000000</p>
+                    <p><i class="fab fa-whatsapp" style="color: #25D366;"></i> +213 562243648</p>
                     <p><i class="fas fa-phone" style="color: var(--gold);"></i> 023 000000</p>
                 </div>
                 <div class="footer-col">
@@ -785,6 +874,9 @@
     <script>
         // ========== قاعدة البيانات المتطورة ==========
         let products = [];
+        let currentProduct = null;
+        let currentFilter = 'all';
+        let searchTerm = '';
 
         // تحميل البيانات
         function loadProducts() {
@@ -803,21 +895,78 @@
             }
         }
 
-        let currentProduct = null;
-        let currentFilter = 'all';
-
         function saveToLocalStorage() {
             localStorage.setItem('nardoo_products_pro', JSON.stringify(products));
         }
 
-        // ========== عرض المنتجات بشكل جهنمي ==========
+        // ========== وظائف البحث ==========
+        function searchProducts() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('searchClear');
+            searchTerm = input.value.trim().toLowerCase();
+            
+            // إظهار/إخفاء زر المسح
+            if (searchTerm.length > 0) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+            
+            // تصفية وعرض المنتجات
+            filterAndDisplayProducts();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('searchClear');
+            input.value = '';
+            searchTerm = '';
+            clearBtn.style.display = 'none';
+            filterAndDisplayProducts();
+        }
+
+        function filterAndDisplayProducts() {
+            let filteredProducts = products;
+            
+            // تطبيق فلتر القسم
+            if (currentFilter !== 'all') {
+                filteredProducts = filteredProducts.filter(p => p.category === currentFilter);
+            }
+            
+            // تطبيق البحث
+            if (searchTerm) {
+                filteredProducts = filteredProducts.filter(p => 
+                    p.name.toLowerCase().includes(searchTerm) || 
+                    p.categoryName.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // تحديث عنوان البحث
+            const searchInfo = document.getElementById('searchResultsInfo');
+            if (searchTerm) {
+                if (filteredProducts.length === 0) {
+                    searchInfo.innerHTML = `<i class="fas fa-search"></i> لا توجد نتائج لـ "${searchTerm}"`;
+                    searchInfo.style.display = 'block';
+                } else {
+                    searchInfo.innerHTML = `<i class="fas fa-search"></i> تم العثور على ${filteredProducts.length} منتج${filteredProducts.length > 1 ? 'ين' : ''} لـ "${searchTerm}"`;
+                    searchInfo.style.display = 'block';
+                }
+            } else {
+                searchInfo.style.display = 'none';
+            }
+            
+            // عرض المنتجات المفلترة
+            displayFilteredProducts(filteredProducts);
+        }
+
+        // ========== عرض المنتجات ==========
         function displayProducts() {
+            filterAndDisplayProducts();
+        }
+
+        function displayFilteredProducts(filteredProducts) {
             const container = document.getElementById('products-container');
             if (!container) return;
-            
-            const filteredProducts = currentFilter === 'all' 
-                ? products 
-                : products.filter(p => p.category === currentFilter);
             
             container.innerHTML = filteredProducts.map(product => {
                 let stockClass = 'in-stock';
@@ -839,6 +988,13 @@
                     ? `<img src="${product.image}" alt="${product.name}">` 
                     : `<div class="no-image"><i class="fas fa-crown"></i><span>ناردو</span></div>`;
 
+                // تمييز كلمة البحث
+                let productName = product.name;
+                if (searchTerm) {
+                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    productName = product.name.replace(regex, '<span class="highlight">$1</span>');
+                }
+
                 return `
                     <div class="product-card" data-category="${product.category}">
                         <div class="product-image">${imageHtml}</div>
@@ -846,7 +1002,7 @@
                             <div class="product-category">
                                 <i class="fas fa-tag"></i> ${product.categoryName}
                             </div>
-                            <h3 class="product-title">${product.name}</h3>
+                            <h3 class="product-title">${productName}</h3>
                             <div class="product-price">${product.price.toLocaleString()}</div>
                             <div class="product-stock ${stockClass}">
                                 <i class="fas ${product.stock > 0 ? 'fa-check-circle' : 'fa-times-circle'}"></i> 
@@ -880,7 +1036,6 @@
 
         function filterProducts(category) {
             currentFilter = category;
-            displayProducts();
             
             document.querySelectorAll('.categories-list a').forEach(link => {
                 link.classList.remove('active');
@@ -888,13 +1043,14 @@
                     link.classList.add('active');
                 }
             });
+            
+            filterAndDisplayProducts();
         }
 
-        // ========== نظام رفع الصور المتطور ==========
+        // ========== نظام رفع الصور ==========
         function previewImage(event) {
             const file = event.target.files[0];
             if (file) {
-                // التحقق من حجم الملف (5 ميجا كحد أقصى)
                 if (file.size > 5 * 1024 * 1024) {
                     alert('حجم الصورة كبير جداً. الحد الأقصى 5 ميجا');
                     return;
@@ -977,7 +1133,6 @@
             };
 
             if (editingId) {
-                // تعديل منتج موجود
                 const index = products.findIndex(p => p.id == editingId);
                 if (index !== -1) {
                     products[index] = {
@@ -991,7 +1146,6 @@
                     };
                 }
             } else {
-                // إضافة منتج جديد
                 const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
                 products.push({
                     id: newId,
@@ -1005,10 +1159,9 @@
             }
 
             saveToLocalStorage();
-            displayProducts();
+            filterAndDisplayProducts();
             closeProductModal();
             
-            // أنيميشن نجاح
             if (anime) {
                 anime({
                     targets: '.admin-panel',
@@ -1028,7 +1181,7 @@
             if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
                 products = products.filter(p => p.id !== id);
                 saveToLocalStorage();
-                displayProducts();
+                filterAndDisplayProducts();
             }
         }
 
@@ -1074,11 +1227,11 @@
             if (product) {
                 product.stock = newStock;
                 saveToLocalStorage();
-                displayProducts();
+                filterAndDisplayProducts();
             }
         }
 
-        // ========== نظام الطلب ==========
+        // ========== نظام الطلب مع الرد التلقائي ==========
         function openOrderModal(productId) {
             currentProduct = products.find(p => p.id === productId);
             
@@ -1101,7 +1254,6 @@
                 `;
             }
             
-            // إعادة تعيين حقل الكمية
             const quantityInput = document.getElementById('quantity');
             if (quantityInput) {
                 quantityInput.value = 1;
@@ -1137,22 +1289,43 @@
             // تحديث المخزون
             currentProduct.stock -= quantity;
             saveToLocalStorage();
-            displayProducts();
+            filterAndDisplayProducts();
 
             const total = currentProduct.price * quantity;
-            let message = "🛍️ *طلب ناردو برو*\n\n";
-            message += `📦 المنتج: ${currentProduct.name}\n`;
-            message += `🔢 الكمية: ${quantity}\n`;
-            message += `💰 السعر: ${currentProduct.price.toLocaleString()} دج\n`;
-            message += `💵 المجموع: ${total.toLocaleString()} دج\n\n`;
-            message += `👤 العميل: ${name}\n`;
-            message += `📞 الهاتف: ${phone}\n`;
-            message += `📍 الولاية: ${wilaya}\n`;
-            message += `🏠 العنوان: ${address}\n`;
-            if (notes) message += `📝 ملاحظات: ${notes}`;
+            
+            // رسالة العميل
+            let customerMessage = "🛍️ *طلب جديد من ناردو برو*\n\n";
+            customerMessage += `📦 المنتج: ${currentProduct.name}\n`;
+            customerMessage += `🔢 الكمية: ${quantity}\n`;
+            customerMessage += `💰 السعر: ${currentProduct.price.toLocaleString()} دج\n`;
+            customerMessage += `💵 المجموع: ${total.toLocaleString()} دج\n\n`;
+            customerMessage += `👤 العميل: ${name}\n`;
+            customerMessage += `📞 الهاتف: ${phone}\n`;
+            customerMessage += `📍 الولاية: ${wilaya}\n`;
+            customerMessage += `🏠 العنوان: ${address}\n`;
+            if (notes) customerMessage += `📝 ملاحظات: ${notes}`;
 
-            window.open(`https://wa.me/213562243648?text=${encodeURIComponent(message)}`, '_blank');
+            // الرد التلقائي
+            let autoReply = "\n\n━━━━━━━━━━━━━━━\n";
+            autoReply += "*✅ تم استلام طلبك بنجاح!*\n";
+            autoReply += "شكراً لتسوقك مع ناردو برو 🙏\n\n";
+            autoReply += "📢 *معلومات الطلب:*\n";
+            autoReply += `⏱️ وقت الطلب: ${new Date().toLocaleString('ar-EG')}\n`;
+            autoReply += `🆔 رقم الطلب: #${Math.floor(Math.random() * 10000)}\n\n`;
+            autoReply += "🔔 *سيتم التواصل معك قريباً لتأكيد الطلب*\n";
+            autoReply += "📞 للاستفسار: +213 562243648\n\n";
+            autoReply += "🌟 *تابعنا على:*\n";
+            autoReply += "📱 فيسبوك | انستغرام: @nardoo.pro\n";
+            autoReply += "━━━━━━━━━━━━━━━\n";
+            autoReply += "نتمنى لك تسوقاً سعيداً! 🛒";
+
+            // فتح الواتساب مع الرسالة والرد التلقائي
+            window.open(`https://wa.me/213562243648?text=${encodeURIComponent(customerMessage + autoReply)}`, '_blank');
+            
             closeOrderModal();
+            
+            // رسالة تأكيد للمستخدم
+            alert('✅ تم إرسال طلبك بنجاح! سيتم الرد عليك قريباً');
         }
 
         function closeOrderModal() {
@@ -1163,9 +1336,8 @@
         // ========== تهيئة الصفحة ==========
         document.addEventListener('DOMContentLoaded', function() {
             loadProducts();
-            displayProducts();
+            filterAndDisplayProducts();
             
-            // جعل الفلتر الافتراضي نشطاً
             const allLink = document.querySelector('.categories-list a[onclick="filterProducts(\'all\')"]');
             if (allLink) {
                 allLink.classList.add('active');
@@ -1191,6 +1363,8 @@
         window.closeProductModal = closeProductModal;
         window.updateStockFromAdmin = updateStockFromAdmin;
         window.previewImage = previewImage;
+        window.searchProducts = searchProducts;
+        window.clearSearch = clearSearch;
     </script>
 </body>
 </html>
