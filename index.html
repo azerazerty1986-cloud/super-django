@@ -168,6 +168,7 @@
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
 
         .categories-list li a::before {
@@ -651,11 +652,11 @@
     <nav class="categories-nav">
         <div class="container">
             <ul class="categories-list">
-                <li><a href="#" onclick="filterProducts('all')" class="active"><i class="fas fa-home"></i> الكل</a></li>
-                <li><a href="#" onclick="filterProducts('clothes')"><i class="fas fa-tshirt"></i> ملابس</a></li>
-                <li><a href="#" onclick="filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a></li>
-                <li><a href="#" onclick="filterProducts('phones')"><i class="fas fa-mobile-alt"></i> هواتف</a></li>
-                <li><a href="#" onclick="filterProducts('hardware')"><i class="fas fa-tools"></i> خردة</a></li>
+                <li><a onclick="filterProducts('all')" class="active"><i class="fas fa-home"></i> الكل</a></li>
+                <li><a onclick="filterProducts('clothes')"><i class="fas fa-tshirt"></i> ملابس</a></li>
+                <li><a onclick="filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a></li>
+                <li><a onclick="filterProducts('phones')"><i class="fas fa-mobile-alt"></i> هواتف</a></li>
+                <li><a onclick="filterProducts('hardware')"><i class="fas fa-tools"></i> خردة</a></li>
             </ul>
         </div>
     </nav>
@@ -727,7 +728,7 @@
     <div id="orderModal" class="order-modal">
         <div class="order-form">
             <h2><i class="fab fa-whatsapp" style="color: #25D366;"></i> طلب سريع</h2>
-            <div id="selectedProduct" class="product-summary" style="background: rgba(255,255,255,0.05); border-right: 5px solid var(--gold);"></div>
+            <div id="selectedProduct" class="product-summary" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; border-right: 5px solid var(--gold);"></div>
             
             <form id="orderForm" onsubmit="event.preventDefault()">
                 <input type="text" id="customerName" placeholder="الاسم الكامل *" required>
@@ -744,11 +745,11 @@
                 </select>
                 <textarea id="notes" placeholder="ملاحظات (اختياري)" rows="2"></textarea>
                 
-                <div class="form-buttons">
-                    <button type="button" class="btn-nardo btn-gold" onclick="sendWhatsAppOrder()">
+                <div class="form-buttons" style="display: flex; gap: 15px; margin-top: 20px;">
+                    <button type="button" class="btn-nardo btn-gold" onclick="sendWhatsAppOrder()" style="flex: 2;">
                         <i class="fab fa-whatsapp"></i> إرسال الطلب
                     </button>
-                    <button type="button" class="btn-nardo" onclick="closeOrderModal()">
+                    <button type="button" class="btn-nardo" onclick="closeOrderModal()" style="flex: 1;">
                         <i class="fas fa-times"></i> إلغاء
                     </button>
                 </div>
@@ -776,7 +777,7 @@
                 </div>
             </div>
             <div class="copyright" style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--gold-deep);">
-                © 2026ناردو برو - جميع الحقوق محفوظة | تصميم rezag ⚡
+                © 2026 ناردو برو - جميع الحقوق محفوظة | تصميم rezag ⚡
             </div>
         </div>
     </footer>
@@ -812,6 +813,8 @@
         // ========== عرض المنتجات بشكل جهنمي ==========
         function displayProducts() {
             const container = document.getElementById('products-container');
+            if (!container) return;
+            
             const filteredProducts = currentFilter === 'all' 
                 ? products 
                 : products.filter(p => p.category === currentFilter);
@@ -863,14 +866,16 @@
             displayInventoryControl();
             
             // تشغيل أنيميشن عند التحديث
-            anime({
-                targets: '.product-card',
-                scale: [0.8, 1],
-                opacity: [0, 1],
-                delay: anime.stagger(50),
-                duration: 800,
-                easing: 'easeOutElastic(1, .5)'
-            });
+            if (anime) {
+                anime({
+                    targets: '.product-card',
+                    scale: [0.8, 1],
+                    opacity: [0, 1],
+                    delay: anime.stagger(50),
+                    duration: 800,
+                    easing: 'easeOutElastic(1, .5)'
+                });
+            }
         }
 
         function filterProducts(category) {
@@ -889,21 +894,30 @@
         function previewImage(event) {
             const file = event.target.files[0];
             if (file) {
+                // التحقق من حجم الملف (5 ميجا كحد أقصى)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('حجم الصورة كبير جداً. الحد الأقصى 5 ميجا');
+                    return;
+                }
+                
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById('previewImg').src = e.target.result;
-                    document.getElementById('imagePreview').style.display = 'block';
-                    document.getElementById('productImage').value = e.target.result;
+                    const previewImg = document.getElementById('previewImg');
+                    const imagePreview = document.getElementById('imagePreview');
+                    const productImage = document.getElementById('productImage');
+                    
+                    if (previewImg && imagePreview && productImage) {
+                        previewImg.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        productImage.value = e.target.result;
+                    }
                 };
                 reader.readAsDataURL(file);
             }
         }
 
         // ========== إضافة/تعديل المنتج ==========
-        let editingId = null;
-
         function showAddProductModal() {
-            editingId = null;
             document.getElementById('modalTitle').innerHTML = '🔥 إضافة منتج جهنمي';
             document.getElementById('productName').value = '';
             document.getElementById('productCategory').value = '';
@@ -918,7 +932,6 @@
         function editProduct(id) {
             const product = products.find(p => p.id === id);
             if (product) {
-                editingId = id;
                 document.getElementById('modalTitle').innerHTML = '⚡ تعديل المنتج';
                 document.getElementById('productName').value = product.name;
                 document.getElementById('productCategory').value = product.category;
@@ -948,6 +961,11 @@
 
             if (!name || !category || !price || !stock) {
                 alert('الرجاء ملء جميع الحقول المطلوبة');
+                return;
+            }
+
+            if (isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+                alert('الرجاء إدخال قيم صحيحة للسعر والكمية');
                 return;
             }
 
@@ -991,12 +1009,14 @@
             closeProductModal();
             
             // أنيميشن نجاح
-            anime({
-                targets: '.admin-panel',
-                scale: [1, 1.02, 1],
-                duration: 500,
-                easing: 'easeInOutQuad'
-            });
+            if (anime) {
+                anime({
+                    targets: '.admin-panel',
+                    scale: [1, 1.02, 1],
+                    duration: 500,
+                    easing: 'easeInOutQuad'
+                });
+            }
         }
 
         function closeProductModal() {
@@ -1015,13 +1035,15 @@
         // ========== عرض لوحة التحكم ==========
         function displayInventoryControl() {
             const container = document.getElementById('inventory-control');
+            if (!container) return;
+            
             container.innerHTML = products.map(product => `
                 <div class="inventory-item">
                     <strong style="color: var(--gold); font-size: 18px;">${product.name}</strong>
-                    <small style="color: #aaa;">${product.categoryName}</small>
+                    <small style="color: #aaa; display: block; margin: 5px 0;">${product.categoryName}</small>
                     <div style="margin: 15px 0; display: flex; gap: 10px; align-items: center;">
                         <span>المخزون:</span>
-                        <input type="number" id="stock-${product.id}" value="${product.stock}" min="0" style="width: 70px; background: transparent; border: 1px solid var(--gold); color: white;">
+                        <input type="number" id="stock-${product.id}" value="${product.stock}" min="0" style="width: 70px; background: rgba(255,255,255,0.1); border: 1px solid var(--gold); color: white; padding: 5px; border-radius: 10px;">
                     </div>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn-nardo" style="flex: 1; padding: 10px;" onclick="updateStockFromAdmin(${product.id})">
@@ -1039,7 +1061,15 @@
         }
 
         function updateStockFromAdmin(id) {
-            const newStock = parseInt(document.getElementById(`stock-${id}`).value);
+            const stockInput = document.getElementById(`stock-${id}`);
+            if (!stockInput) return;
+            
+            const newStock = parseInt(stockInput.value);
+            if (isNaN(newStock) || newStock < 0) {
+                alert('الرجاء إدخال كمية صحيحة');
+                return;
+            }
+            
             const product = products.find(p => p.id === id);
             if (product) {
                 product.stock = newStock;
@@ -1052,16 +1082,32 @@
         function openOrderModal(productId) {
             currentProduct = products.find(p => p.id === productId);
             
+            if (!currentProduct) {
+                alert('المنتج غير موجود');
+                return;
+            }
+            
             if (currentProduct.stock <= 0) {
                 alert('نفد المخزون');
                 return;
             }
 
-            document.getElementById('selectedProduct').innerHTML = `
-                <strong>المنتج:</strong> ${currentProduct.name}<br>
-                <strong>السعر:</strong> ${currentProduct.price.toLocaleString()} دج<br>
-                <strong>المتوفر:</strong> ${currentProduct.stock}
-            `;
+            const selectedProductDiv = document.getElementById('selectedProduct');
+            if (selectedProductDiv) {
+                selectedProductDiv.innerHTML = `
+                    <strong>المنتج:</strong> ${currentProduct.name}<br>
+                    <strong>السعر:</strong> ${currentProduct.price.toLocaleString()} دج<br>
+                    <strong>المتوفر:</strong> ${currentProduct.stock}
+                `;
+            }
+            
+            // إعادة تعيين حقل الكمية
+            const quantityInput = document.getElementById('quantity');
+            if (quantityInput) {
+                quantityInput.value = 1;
+                quantityInput.max = currentProduct.stock;
+            }
+            
             document.getElementById('orderModal').style.display = 'flex';
         }
 
@@ -1075,6 +1121,11 @@
 
             if (!name || !phone || !address || !wilaya) {
                 alert('الرجاء ملء جميع الحقول المطلوبة');
+                return;
+            }
+
+            if (!currentProduct) {
+                alert('حدث خطأ. الرجاء المحاولة مرة أخرى');
                 return;
             }
 
@@ -1110,8 +1161,16 @@
         }
 
         // ========== تهيئة الصفحة ==========
-        loadProducts();
-        displayProducts();
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+            displayProducts();
+            
+            // جعل الفلتر الافتراضي نشطاً
+            const allLink = document.querySelector('.categories-list a[onclick="filterProducts(\'all\')"]');
+            if (allLink) {
+                allLink.classList.add('active');
+            }
+        });
 
         window.onclick = function(event) {
             const modal1 = document.getElementById('orderModal');
