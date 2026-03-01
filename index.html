@@ -735,7 +735,65 @@
             color: var(--nardoo-deep);
         }
 
-        /* ===== باقي الأنماط من الكود الأصلي مع دمج التصميم العصري ===== */
+        /* ===== باقي الأنماط مع إضافة أنماط التجار ===== */
+        
+        /* نظام عرض التجار */
+        .merchant-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--gold-deep);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: 700;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .merchant-level {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: var(--nardoo-deep);
+            font-size: 12px;
+            font-weight: 900;
+            text-align: center;
+            line-height: 20px;
+            margin-left: 5px;
+        }
+        
+        /* بطاقة طلب التاجر */
+        .merchant-request-card {
+            background: var(--glass);
+            border: 1px solid var(--gold);
+            border-radius: 30px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .merchant-request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .request-status {
+            padding: 5px 15px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .status-pending { background: #fbbf24; color: #000; }
+        .status-approved { background: #4ade80; color: #000; }
+        .status-rejected { background: #f87171; color: #fff; }
         
         /* سلة التسوق */
         .cart-sidebar {
@@ -1271,7 +1329,7 @@
     <!-- قائمة الأقسام السريعة -->
     <div class="container">
         <ul class="categories-list" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; list-style: none; margin: 30px 0;">
-            <li><a onclick="filterProducts('all')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border;)" class="active">الكل</a></li>
+            <li><a onclick="filterProducts('all')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);" class="active">الكل</a></li>
             <li><a onclick="filterProducts('clothes')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">ملابس</a></li>
             <li><a onclick="filterProducts('spices')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">توابل</a></li>
             <li><a onclick="filterProducts('phones')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">هواتف</a></li>
@@ -1304,18 +1362,26 @@
             <div class="admin-controls" id="adminControls" style="display: none;">
                 <div class="admin-stats" id="adminStats"></div>
                 
-                <button class="btn-nardo btn-gold" onclick="showAddProductModal()" style="margin-bottom: 30px;">
-                    <i class="fas fa-plus-circle"></i> إضافة منتج جديد
-                </button>
+                <!-- أزرار إدارة المنتجات والتجار -->
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 30px;">
+                    <button class="btn-nardo btn-gold" onclick="showAddProductModal()">
+                        <i class="fas fa-plus-circle"></i> إضافة منتج
+                    </button>
+                    
+                    <button class="btn-nardo btn-gold" onclick="showMerchantRequests()">
+                        <i class="fas fa-store"></i> طلبات التجار <span id="pendingRequestsCount" style="background: red; color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px;">0</span>
+                    </button>
+                    
+                    <button class="btn-nardo" onclick="backupData()">
+                        <i class="fas fa-cloud-upload-alt"></i> نسخ احتياطي
+                    </button>
+                    
+                    <button class="btn-nardo" onclick="restoreData()">
+                        <i class="fas fa-cloud-download-alt"></i> استعادة
+                    </button>
+                </div>
                 
-                <button class="btn-nardo" onclick="backupData()" style="margin-bottom: 30px; margin-right: 10px;">
-                    <i class="fas fa-cloud-upload-alt"></i> نسخ احتياطي
-                </button>
-                
-                <button class="btn-nardo" onclick="restoreData()" style="margin-bottom: 30px;">
-                    <i class="fas fa-cloud-download-alt"></i> استعادة
-                </button>
-                
+                <!-- إدارة المخزون -->
                 <div id="inventory-control" class="inventory-control" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px;"></div>
             </div>
         </div>
@@ -1331,16 +1397,35 @@
                 <button class="btn-nardo" onclick="switchLoginTab('register')" id="registerTabBtn" style="width: 48%;">حساب جديد</button>
             </div>
             
+            <!-- نموذج تسجيل الدخول -->
             <div id="loginForm">
                 <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
                 <input type="password" id="loginPassword" placeholder="كلمة المرور" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
                 <button onclick="handleLogin()" class="btn-nardo btn-gold" style="width: 100%;">دخول</button>
             </div>
             
+            <!-- نموذج تسجيل جديد مع خيار تاجر -->
             <div id="registerForm" style="display: none;">
-                <input type="text" id="regName" placeholder="الاسم الكامل" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
-                <input type="email" id="regEmail" placeholder="البريد الإلكتروني" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
-                <input type="password" id="regPassword" placeholder="كلمة المرور" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                <input type="text" id="regName" placeholder="الاسم الكامل *" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                <input type="email" id="regEmail" placeholder="البريد الإلكتروني *" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                <input type="password" id="regPassword" placeholder="كلمة المرور *" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                
+                <div style="margin: 15px 0; display: flex; align-items: center;">
+                    <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()" style="margin-left: 10px; width: 18px; height: 18px;">
+                    <label for="isMerchant">تسجيل كتاجر</label>
+                </div>
+                
+                <!-- حقول التاجر (تظهر عند الاختيار) -->
+                <div id="merchantFields" style="display: none; margin-bottom: 15px;">
+                    <select id="merchantLevel" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                        <option value="1">المستوى الأول (5 منتجات)</option>
+                        <option value="2">المستوى الثاني (10 منتجات)</option>
+                        <option value="3">المستوى الثالث (15 منتج)</option>
+                    </select>
+                    
+                    <textarea id="merchantDesc" placeholder="وصف نشاطك التجاري" rows="3" style="width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;"></textarea>
+                </div>
+                
                 <button onclick="handleRegister()" class="btn-nardo btn-gold" style="width: 100%;">تسجيل</button>
             </div>
             
@@ -1368,6 +1453,11 @@
                 <input type="number" id="productPrice" placeholder="السعر (دج) *" required min="0" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
                 <input type="number" id="productStock" placeholder="الكمية *" required min="0" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
                 
+                <!-- اختيار التاجر (يظهر للمدير فقط) -->
+                <select id="productMerchant" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                    <option value="">منتج المتجر (عام)</option>
+                </select>
+                
                 <input type="hidden" id="productImage" value="">
                 <input type="hidden" id="editingProductId" value="">
                 
@@ -1383,7 +1473,54 @@
         </div>
     </div>
 
-    <!-- نافذة الطلب -->
+    <!-- نافذة طلبات التجار (للمدير) -->
+    <div id="merchantRequestsModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2><i class="fas fa-store"></i> طلبات انضمام التجار</h2>
+            
+            <div id="merchantRequestsList" style="max-height: 500px; overflow-y: auto; margin: 20px 0;"></div>
+            
+            <button class="btn-nardo" onclick="closeModal('merchantRequestsModal')" style="width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة عرض منتجات التاجر -->
+    <div id="merchantProductsModal" class="modal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <h2><i class="fas fa-store-alt"></i> <span id="merchantNameDisplay"></span></h2>
+            
+            <div id="merchantProductsList" class="products-grid" style="max-height: 500px; overflow-y: auto; margin: 20px 0;"></div>
+            
+            <button class="btn-nardo" onclick="closeModal('merchantProductsModal')" style="width: 100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة طلب عرض تاجر -->
+    <div id="merchantOfferModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-handshake"></i> طلب عرض تاجر</h2>
+            
+            <div id="merchantOfferInfo" style="background: var(--glass); padding: 15px; border-radius: 15px; margin: 20px 0; border-right: 5px solid var(--gold);"></div>
+            
+            <form id="merchantOfferForm" onsubmit="event.preventDefault()">
+                <input type="text" id="offerCustomerName" placeholder="الاسم الكامل *" required style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                <input type="tel" id="offerCustomerPhone" placeholder="رقم الهاتف *" required style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                <textarea id="offerMessage" placeholder="رسالتك للتاجر (اختياري)" rows="3" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;"></textarea>
+                <input type="number" id="offerQuantity" value="1" min="1" max="100" required style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                
+                <div class="form-buttons" style="display: flex; gap: 15px;">
+                    <button type="button" class="btn-nardo btn-gold" onclick="sendMerchantOffer()" style="flex: 2;">
+                        <i class="fab fa-whatsapp"></i> إرسال الطلب
+                    </button>
+                    <button type="button" class="btn-nardo" onclick="closeModal('merchantOfferModal')" style="flex: 1;">
+                        <i class="fas fa-times"></i> إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة الطلب العادي -->
     <div id="orderModal" class="modal">
         <div class="modal-content">
             <h2><i class="fab fa-whatsapp" style="color: #25D366;"></i> طلب سريع</h2>
@@ -1470,7 +1607,9 @@
         let searchTerm = '';
         let cart = [];
         let adminLoggedIn = false;
-        let currentUser = 'زائر';
+        let currentUser = null; // المستخدم الحالي
+        let users = []; // قائمة المستخدمين
+        let merchantRequests = []; // طلبات انضمام التجار
         let reviews = [];
         let orders = [];
         let analytics = {
@@ -1486,6 +1625,13 @@
             'FLAT500': { discount: 500, type: 'fixed' }
         };
         let loyaltyPoints = 0;
+
+        // مستويات التجار وعدد المنتجات المسموح بها
+        const MERCHANT_LIMITS = {
+            1: 5,  // المستوى الأول: 5 منتجات
+            2: 10, // المستوى الثاني: 10 منتجات
+            3: 15  // المستوى الثالث: 15 منتج
+        };
 
         // ========== نظام الإشعارات ==========
         function showNotification(message, type = 'info') {
@@ -1513,36 +1659,68 @@
         }
 
         // ========== تحميل البيانات ==========
-        function loadProducts() {
-            const saved = localStorage.getItem('nardoo_products_pro');
-            const savedCart = localStorage.getItem('nardoo_cart');
-            const savedReviews = localStorage.getItem('nardoo_reviews');
-            const savedOrders = localStorage.getItem('nardoo_orders');
-            const savedTheme = localStorage.getItem('theme');
-            
-            if (saved) {
-                products = JSON.parse(saved);
+        function loadData() {
+            // تحميل المنتجات
+            const savedProducts = localStorage.getItem('nardoo_products_pro');
+            if (savedProducts) {
+                products = JSON.parse(savedProducts);
             } else {
+                // منتجات افتراضية
                 products = [
-                    { id: 1, name: "بهارات برياني أصلية", category: "spices", categoryName: "توابل", price: 4500, stock: 15, image: "", rating: 4.5, reviews: [], coupon: "", discount: 0 },
-                    { id: 2, name: "زيت أرغان للشعر", category: "cosmetic", categoryName: "كوسمتيك", price: 3500, stock: 8, image: "", rating: 4.8, reviews: [], coupon: "", discount: 0 },
-                    { id: 3, name: "زعفران أصلي", category: "spices", categoryName: "توابل", price: 12000, stock: 25, image: "", rating: 5.0, reviews: [], coupon: "", discount: 0 },
-                    { id: 4, name: "ماسك طين طبيعي", category: "cosmetic", categoryName: "كوسمتيك", price: 2500, stock: 3, image: "", rating: 4.3, reviews: [], coupon: "", discount: 0 },
-                    { id: 5, name: "خلطة مندي خاصة", category: "spices", categoryName: "توابل", price: 3800, stock: 7, image: "", rating: 4.0, reviews: [], coupon: "", discount: 0 }
+                    { id: 1, name: "بهارات برياني أصلية", category: "spices", categoryName: "توابل", price: 4500, stock: 15, image: "", rating: 4.5, reviews: [], merchantId: null, approved: true },
+                    { id: 2, name: "زيت أرغان للشعر", category: "cosmetic", categoryName: "كوسمتيك", price: 3500, stock: 8, image: "", rating: 4.8, reviews: [], merchantId: null, approved: true },
+                    { id: 3, name: "زعفران أصلي", category: "spices", categoryName: "توابل", price: 12000, stock: 25, image: "", rating: 5.0, reviews: [], merchantId: null, approved: true },
+                    { id: 4, name: "ماسك طين طبيعي", category: "cosmetic", categoryName: "كوسمتيك", price: 2500, stock: 3, image: "", rating: 4.3, reviews: [], merchantId: null, approved: true },
+                    { id: 5, name: "خلطة مندي خاصة", category: "spices", categoryName: "توابل", price: 3800, stock: 7, image: "", rating: 4.0, reviews: [], merchantId: null, approved: true }
                 ];
             }
             
+            // تحميل المستخدمين
+            const savedUsers = localStorage.getItem('nardoo_users');
+            if (savedUsers) {
+                users = JSON.parse(savedUsers);
+            } else {
+                // مستخدم افتراضي (مدير)
+                users = [
+                    { id: 1, name: 'مدير', email: 'admin@nakha.com', password: 'admin123', role: 'admin' }
+                ];
+            }
+            
+            // تحميل طلبات التجار
+            const savedRequests = localStorage.getItem('nardoo_merchant_requests');
+            if (savedRequests) {
+                merchantRequests = JSON.parse(savedRequests);
+            }
+            
+            // تحميل السلة
+            const savedCart = localStorage.getItem('nardoo_cart');
             if (savedCart) cart = JSON.parse(savedCart);
+            
+            // تحميل التقييمات
+            const savedReviews = localStorage.getItem('nardoo_reviews');
             if (savedReviews) reviews = JSON.parse(savedReviews);
+            
+            // تحميل الطلبات
+            const savedOrders = localStorage.getItem('nardoo_orders');
             if (savedOrders) orders = JSON.parse(savedOrders);
+            
+            // تحميل الثيم
+            const savedTheme = localStorage.getItem('theme');
             if (savedTheme) {
                 isDarkMode = savedTheme === 'dark';
                 if (!isDarkMode) document.body.classList.add('light-mode');
             }
             
+            // تحميل المستخدم الحالي
+            const savedUser = localStorage.getItem('current_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+            }
+            
             updateCartCounter();
             updateAverageRating();
             updateAdminStats();
+            updatePendingRequestsCount();
             
             // إخفاء شاشة التحميل
             setTimeout(() => {
@@ -1553,13 +1731,245 @@
             }, 500);
             
             filterAndDisplayProducts();
+            
+            // ملء قائمة التجار في نموذج المنتج
+            populateMerchantSelect();
         }
 
         function saveToLocalStorage() {
             localStorage.setItem('nardoo_products_pro', JSON.stringify(products));
+            localStorage.setItem('nardoo_users', JSON.stringify(users));
+            localStorage.setItem('nardoo_merchant_requests', JSON.stringify(merchantRequests));
             localStorage.setItem('nardoo_cart', JSON.stringify(cart));
             localStorage.setItem('nardoo_reviews', JSON.stringify(reviews));
             localStorage.setItem('nardoo_orders', JSON.stringify(orders));
+            if (currentUser) {
+                localStorage.setItem('current_user', JSON.stringify(currentUser));
+            } else {
+                localStorage.removeItem('current_user');
+            }
+        }
+
+        // ========== نظام المستخدمين والتجار ==========
+        function toggleMerchantFields() {
+            const isMerchant = document.getElementById('isMerchant').checked;
+            document.getElementById('merchantFields').style.display = isMerchant ? 'block' : 'none';
+        }
+
+        function handleRegister() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const isMerchant = document.getElementById('isMerchant').checked;
+            
+            if (!name || !email || !password) {
+                showNotification('الرجاء ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            // التحقق من عدم وجود البريد الإلكتروني مسبقاً
+            if (users.find(u => u.email === email)) {
+                showNotification('البريد الإلكتروني مستخدم بالفعل', 'error');
+                return;
+            }
+            
+            const newUser = {
+                id: users.length + 1,
+                name: name,
+                email: email,
+                password: password,
+                role: 'customer',
+                createdAt: new Date().toISOString()
+            };
+            
+            // إذا كان تاجراً، ننشئ طلب انضمام
+            if (isMerchant) {
+                const level = parseInt(document.getElementById('merchantLevel').value);
+                const description = document.getElementById('merchantDesc').value;
+                
+                newUser.role = 'merchant_pending';
+                newUser.merchantLevel = level;
+                newUser.merchantDesc = description;
+                
+                // إضافة طلب انضمام
+                merchantRequests.push({
+                    id: merchantRequests.length + 1,
+                    userId: newUser.id,
+                    userName: name,
+                    userEmail: email,
+                    level: level,
+                    description: description,
+                    status: 'pending',
+                    requestDate: new Date().toISOString()
+                });
+            }
+            
+            users.push(newUser);
+            currentUser = newUser;
+            saveToLocalStorage();
+            
+            closeModal('loginModal');
+            showNotification('تم التسجيل بنجاح' + (isMerchant ? '، طلبك قيد المراجعة' : ''), 'success');
+            
+            // تحديث واجهة المستخدم
+            updateUIForUser();
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const user = users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                currentUser = user;
+                saveToLocalStorage();
+                closeModal('loginModal');
+                showNotification(`مرحباً ${user.name}`, 'success');
+                
+                // إذا كان مديراً، نظهر لوحة التحكم
+                if (user.role === 'admin') {
+                    adminLoggedIn = true;
+                    document.getElementById('adminLogin').style.display = 'none';
+                    document.getElementById('adminControls').style.display = 'block';
+                    updateAdminStats();
+                    displayInventoryControl();
+                }
+                
+                updateUIForUser();
+            } else {
+                showNotification('بيانات الدخول غير صحيحة', 'error');
+            }
+        }
+
+        function updateUIForUser() {
+            // تحديث أيقونة المستخدم
+            const userBtn = document.querySelector('.action-btn .far.fa-user').parentElement;
+            if (currentUser) {
+                if (currentUser.role === 'merchant_approved') {
+                    userBtn.innerHTML = '<i class="fas fa-store"></i>';
+                } else if (currentUser.role === 'admin') {
+                    userBtn.innerHTML = '<i class="fas fa-crown"></i>';
+                } else {
+                    userBtn.innerHTML = '<i class="fas fa-user"></i>';
+                }
+            } else {
+                userBtn.innerHTML = '<i class="far fa-user"></i>';
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            adminLoggedIn = false;
+            localStorage.removeItem('current_user');
+            showNotification('تم تسجيل الخروج', 'info');
+            location.reload();
+        }
+
+        // ========== نظام موافقة المدير على التجار ==========
+        function showMerchantRequests() {
+            if (!adminLoggedIn) {
+                showNotification('يجب تسجيل الدخول كمدير أولاً', 'error');
+                return;
+            }
+            
+            const modal = document.getElementById('merchantRequestsModal');
+            const list = document.getElementById('merchantRequestsList');
+            
+            const pendingRequests = merchantRequests.filter(r => r.status === 'pending');
+            
+            if (pendingRequests.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 40px;">لا توجد طلبات انتظار</div>';
+            } else {
+                list.innerHTML = pendingRequests.map(request => `
+                    <div class="merchant-request-card">
+                        <div class="merchant-request-header">
+                            <div>
+                                <strong style="font-size: 18px;">${request.userName}</strong>
+                                <div style="color: var(--gold);">${request.userEmail}</div>
+                            </div>
+                            <span class="request-status status-pending">قيد المراجعة</span>
+                        </div>
+                        <div style="margin: 10px 0;">
+                            <span style="background: var(--gold-deep); padding: 3px 10px; border-radius: 20px;">المستوى ${request.level} (${MERCHANT_LIMITS[request.level]} منتج)</span>
+                        </div>
+                        <p style="margin: 10px 0; color: var(--gold-light);">${request.description || 'لا يوجد وصف'}</p>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button class="btn-nardo" style="background: #4ade80;" onclick="approveMerchant(${request.userId})">
+                                <i class="fas fa-check"></i> موافقة
+                            </button>
+                            <button class="btn-nardo" style="background: #f87171;" onclick="rejectMerchant(${request.userId})">
+                                <i class="fas fa-times"></i> رفض
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function approveMerchant(userId) {
+            const user = users.find(u => u.id === userId);
+            const request = merchantRequests.find(r => r.userId === userId && r.status === 'pending');
+            
+            if (user && request) {
+                user.role = 'merchant_approved';
+                user.merchantLevel = request.level;
+                user.merchantApprovedAt = new Date().toISOString();
+                request.status = 'approved';
+                
+                saveToLocalStorage();
+                showNotification(`تمت الموافقة على ${user.name} كتاجر`, 'success');
+                updatePendingRequestsCount();
+                showMerchantRequests(); // تحديث القائمة
+                populateMerchantSelect(); // تحديث قائمة التجار في نموذج المنتج
+            }
+        }
+
+        function rejectMerchant(userId) {
+            const user = users.find(u => u.id === userId);
+            const request = merchantRequests.find(r => r.userId === userId && r.status === 'pending');
+            
+            if (user && request) {
+                user.role = 'customer'; // يعود عميل عادي
+                request.status = 'rejected';
+                
+                saveToLocalStorage();
+                showNotification(`تم رفض طلب ${user.name}`, 'info');
+                updatePendingRequestsCount();
+                showMerchantRequests();
+            }
+        }
+
+        function updatePendingRequestsCount() {
+            const count = merchantRequests.filter(r => r.status === 'pending').length;
+            document.getElementById('pendingRequestsCount').textContent = count;
+        }
+
+        function populateMerchantSelect() {
+            const select = document.getElementById('productMerchant');
+            if (!select) return;
+            
+            const merchants = users.filter(u => u.role === 'merchant_approved');
+            
+            select.innerHTML = '<option value="">منتج المتجر (عام)</option>';
+            merchants.forEach(merchant => {
+                select.innerHTML += `<option value="${merchant.id}">${merchant.name} (مستوى ${merchant.merchantLevel})</option>`;
+            });
+        }
+
+        // ========== نظام المنتجات للتجار ==========
+        function canAddProduct(merchantId) {
+            if (!merchantId) return true; // منتجات المتجر العامة ليس لها حد
+            
+            const merchant = users.find(u => u.id === merchantId);
+            if (!merchant || merchant.role !== 'merchant_approved') return false;
+            
+            const merchantProducts = products.filter(p => p.merchantId === merchantId && p.approved !== false).length;
+            const limit = MERCHANT_LIMITS[merchant.merchantLevel] || 0;
+            
+            return merchantProducts < limit;
         }
 
         // ========== نظام البحث ==========
@@ -1570,7 +1980,7 @@
         }
 
         function filterAndDisplayProducts() {
-            let filtered = products;
+            let filtered = products.filter(p => p.approved !== false); // فقط المنتجات المقبولة
             
             if (currentFilter !== 'all') {
                 filtered = filtered.filter(p => p.category === currentFilter);
@@ -1605,9 +2015,24 @@
                 } else {
                     stockText = `متوفر (${product.stock})`;
                 }
+                
+                // معلومات التاجر
+                let merchantInfo = '';
+                if (product.merchantId) {
+                    const merchant = users.find(u => u.id === product.merchantId);
+                    if (merchant) {
+                        merchantInfo = `
+                            <div class="merchant-badge">
+                                <i class="fas fa-store"></i> ${merchant.name}
+                                <span class="merchant-level">${merchant.merchantLevel}</span>
+                            </div>
+                        `;
+                    }
+                }
 
                 return `
                     <div class="product-card" data-category="${product.category}">
+                        ${merchantInfo}
                         <div class="product-badge">${product.discount > 0 ? 'خصم ' + product.discount + '%' : 'مميز'}</div>
                         <div class="product-image">
                             <i class="fas ${product.category === 'spices' ? 'fa-mortar-pestle' : product.category === 'cosmetic' ? 'fa-spa' : 'fa-crown'}"></i>
@@ -1626,9 +2051,14 @@
                                 <button class="add-to-cart" onclick="addToCart(${product.id})" ${disabled ? 'disabled' : ''}>
                                     <i class="fas fa-shopping-cart"></i> أضف للسلة
                                 </button>
-                                <button class="wishlist-btn" onclick="openOrderModal(${product.id})">
-                                    <i class="fab fa-whatsapp"></i>
-                                </button>
+                                ${product.merchantId ? 
+                                    `<button class="wishlist-btn" onclick="openMerchantOfferModal(${product.id})">
+                                        <i class="fas fa-handshake"></i>
+                                    </button>` : 
+                                    `<button class="wishlist-btn" onclick="openOrderModal(${product.id})">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </button>`
+                                }
                             </div>
                         </div>
                     </div>
@@ -1673,6 +2103,68 @@
             filterAndDisplayProducts();
         }
 
+        // ========== نظام طلب عرض تاجر ==========
+        function openMerchantOfferModal(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || !product.merchantId) return;
+            
+            const merchant = users.find(u => u.id === product.merchantId);
+            if (!merchant) return;
+            
+            currentProduct = product;
+            
+            document.getElementById('merchantOfferInfo').innerHTML = `
+                <strong>التاجر:</strong> ${merchant.name} (مستوى ${merchant.merchantLevel})<br>
+                <strong>المنتج:</strong> ${product.name}<br>
+                <strong>السعر:</strong> ${product.price.toLocaleString()} دج
+            `;
+            
+            document.getElementById('offerQuantity').value = 1;
+            document.getElementById('offerCustomerName').value = currentUser?.name || '';
+            document.getElementById('offerCustomerPhone').value = '';
+            document.getElementById('offerMessage').value = '';
+            
+            document.getElementById('merchantOfferModal').style.display = 'flex';
+        }
+
+        function sendMerchantOffer() {
+            const name = document.getElementById('offerCustomerName').value;
+            const phone = document.getElementById('offerCustomerPhone').value;
+            const message = document.getElementById('offerMessage').value;
+            const quantity = parseInt(document.getElementById('offerQuantity').value);
+
+            if (!name || !phone) {
+                showNotification('الرجاء ملء الاسم ورقم الهاتف', 'error');
+                return;
+            }
+
+            if (!currentProduct || !currentProduct.merchantId) return;
+            
+            const merchant = users.find(u => u.id === currentProduct.merchantId);
+            if (!merchant) return;
+
+            // رقم واتساب التاجر (يمكن إضافته لاحقاً في بيانات التاجر)
+            const merchantPhone = '213562243648'; // الرقم الافتراضي حالياً
+
+            let whatsappMessage = "🛍️ *طلب عرض تاجر - نكهة وجمال*\n\n";
+            whatsappMessage += `👤 العميل: ${name}\n`;
+            whatsappMessage += `📞 الهاتف: ${phone}\n\n`;
+            whatsappMessage += `🏪 التاجر: ${merchant.name}\n`;
+            whatsappMessage += `📦 المنتج: ${currentProduct.name}\n`;
+            whatsappMessage += `🔢 الكمية: ${quantity}\n`;
+            whatsappMessage += `💰 السعر: ${currentProduct.price.toLocaleString()} دج\n`;
+            whatsappMessage += `💵 المجموع: ${(currentProduct.price * quantity).toLocaleString()} دج\n\n`;
+            
+            if (message) {
+                whatsappMessage += `📝 رسالة: ${message}\n`;
+            }
+
+            window.open(`https://wa.me/${merchantPhone}?text=${encodeURIComponent(whatsappMessage)}`, '_blank');
+            
+            closeModal('merchantOfferModal');
+            showNotification('✅ تم إرسال طلب عرض التاجر بنجاح!', 'success');
+        }
+
         // ========== نظام سلة التسوق ==========
         function toggleCart() {
             document.getElementById('cartSidebar').classList.toggle('open');
@@ -1701,7 +2193,8 @@
                     productId: productId,
                     quantity: 1,
                     price: product.price,
-                    name: product.name
+                    name: product.name,
+                    merchantId: product.merchantId
                 });
             }
             
@@ -1733,10 +2226,13 @@
                 const itemTotal = item.price * item.quantity;
                 total += itemTotal;
                 
+                const merchant = item.merchantId ? users.find(u => u.id === item.merchantId) : null;
+                const merchantText = merchant ? `(تاجر: ${merchant.name})` : '';
+                
                 return `
                     <div class="cart-item">
                         <div style="flex: 1;">
-                            <div style="font-weight: 700;">${item.name}</div>
+                            <div style="font-weight: 700;">${item.name} ${merchantText}</div>
                             <div style="font-size: 14px; color: var(--gold);">${item.price.toLocaleString()} دج</div>
                             <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
                                 <button onclick="updateCartItem(${item.productId}, ${item.quantity - 1})" style="background: var(--glass); border: 1px solid var(--gold); color: var(--gold); width: 30px; height: 30px; border-radius: 10px; cursor: pointer;">-</button>
@@ -1786,20 +2282,37 @@
                 return;
             }
             
-            const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const orderItems = cart.map(item => `${item.name} x${item.quantity}`).join('\n');
+            // تجميع المنتجات حسب التاجر
+            const itemsByMerchant = {};
+            cart.forEach(item => {
+                const key = item.merchantId || 'store';
+                if (!itemsByMerchant[key]) itemsByMerchant[key] = [];
+                itemsByMerchant[key].push(item);
+            });
             
-            currentProduct = { name: 'طلبية متعددة', price: total };
-            document.getElementById('selectedProduct').innerHTML = `
-                <strong>الطلبية:</strong><br>
-                ${orderItems}<br>
-                <strong>المجموع:</strong> ${total.toLocaleString()} دج
-            `;
+            let message = "🛍️ *طلب جديد من نكهة وجمال*\n\n";
             
-            document.getElementById('orderModal').style.display = 'flex';
+            for (const [merchantKey, items] of Object.entries(itemsByMerchant)) {
+                if (merchantKey !== 'store') {
+                    const merchant = users.find(u => u.id == merchantKey);
+                    message += `🏪 *تاجر: ${merchant?.name || 'غير معروف'}*\n`;
+                }
+                
+                let merchantTotal = 0;
+                items.forEach(item => {
+                    message += `📦 ${item.name} x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                    merchantTotal += item.price * item.quantity;
+                });
+                
+                message += `💵 المجموع: ${merchantTotal.toLocaleString()} دج\n\n`;
+            }
+            
+            message += `💰 *الإجمالي الكلي: ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toLocaleString()} دج*`;
+
+            window.open(`https://wa.me/213562243648?text=${encodeURIComponent(message)}`, '_blank');
         }
 
-        // ========== نظام الطلب ==========
+        // ========== نظام الطلب العادي ==========
         function openOrderModal(productId) {
             currentProduct = products.find(p => p.id === productId);
             
@@ -1812,6 +2325,10 @@
             `;
             
             document.getElementById('quantity').value = 1;
+            document.getElementById('customerName').value = currentUser?.name || '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerAddress').value = '';
+            
             document.getElementById('orderModal').style.display = 'flex';
         }
 
@@ -1841,52 +2358,23 @@
             showNotification('✅ تم إرسال طلبك بنجاح!', 'success');
         }
 
-        // ========== نظام تسجيل الدخول ==========
-        function openLoginModal() {
-            document.getElementById('loginModal').style.display = 'flex';
-        }
-
-        function switchLoginTab(tab) {
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            const loginBtn = document.getElementById('loginTabBtn');
-            const registerBtn = document.getElementById('registerTabBtn');
-            
-            if (tab === 'login') {
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
-                loginBtn.classList.add('btn-gold');
-                registerBtn.classList.remove('btn-gold');
-            } else {
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
-                registerBtn.classList.add('btn-gold');
-                loginBtn.classList.remove('btn-gold');
-            }
-        }
-
-        function handleLogin() {
-            showNotification('تم تسجيل الدخول بنجاح', 'success');
-            closeModal('loginModal');
-        }
-
-        function handleRegister() {
-            showNotification('تم إنشاء الحساب بنجاح', 'success');
-            closeModal('loginModal');
-        }
-
         // ========== لوحة تحكم المدير ==========
         function loginAdmin() {
             const username = document.getElementById('adminUsername').value;
             const password = document.getElementById('adminPassword').value;
             
-            if (username === 'azer' && password === 'azer1986@S') {
+            // استخدام بيانات المدير من نظام المستخدمين
+            const admin = users.find(u => u.role === 'admin' && u.email === username && u.password === password);
+            
+            if (admin) {
+                currentUser = admin;
                 adminLoggedIn = true;
                 document.getElementById('adminLogin').style.display = 'none';
                 document.getElementById('adminControls').style.display = 'block';
                 updateAdminStats();
                 displayInventoryControl();
-                showNotification('مرحباً بك في لوحة التحكم', 'success');
+                showNotification(`مرحباً بك ${admin.name}`, 'success');
+                saveToLocalStorage();
             } else {
                 showNotification('بيانات الدخول غير صحيحة', 'error');
             }
@@ -1899,6 +2387,8 @@
             const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
             const outOfStock = products.filter(p => p.stock === 0).length;
             const lowStock = products.filter(p => p.stock > 0 && p.stock < 5).length;
+            const totalMerchants = users.filter(u => u.role === 'merchant_approved').length;
+            const pendingMerchants = merchantRequests.filter(r => r.status === 'pending').length;
             
             statsContainer.innerHTML = `
                 <div class="stat-card">
@@ -1915,6 +2405,11 @@
                     <i class="fas fa-exclamation-triangle"></i>
                     <h4>منتهي / منخفض</h4>
                     <div class="stat-value">${outOfStock} / ${lowStock}</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-store"></i>
+                    <h4>التجار / منتظر</h4>
+                    <div class="stat-value">${totalMerchants} / ${pendingMerchants}</div>
                 </div>
             `;
         }
@@ -1934,10 +2429,17 @@
             const category = document.getElementById('productCategory').value;
             const price = parseInt(document.getElementById('productPrice').value);
             const stock = parseInt(document.getElementById('productStock').value);
+            const merchantId = document.getElementById('productMerchant').value || null;
             const editingId = document.getElementById('editingProductId').value;
 
             if (!name || !category || !price || !stock) {
                 showNotification('الرجاء ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+
+            // التحقق من حد المنتجات للتاجر
+            if (merchantId && !canAddProduct(parseInt(merchantId))) {
+                showNotification('هذا التاجر تجاوز الحد المسموح به من المنتجات', 'error');
                 return;
             }
 
@@ -1958,7 +2460,8 @@
                         category: category,
                         categoryName: categoryNames[category] || 'أخرى',
                         price: price,
-                        stock: stock
+                        stock: stock,
+                        merchantId: merchantId ? parseInt(merchantId) : null
                     };
                 }
                 showNotification('تم تعديل المنتج بنجاح', 'success');
@@ -1971,9 +2474,11 @@
                     categoryName: categoryNames[category] || 'أخرى',
                     price: price,
                     stock: stock,
+                    merchantId: merchantId ? parseInt(merchantId) : null,
                     rating: 0,
                     reviews: [],
-                    discount: 0
+                    discount: 0,
+                    approved: true
                 });
                 showNotification('تم إضافة المنتج بنجاح', 'success');
             }
@@ -1993,6 +2498,7 @@
                 document.getElementById('productCategory').value = product.category;
                 document.getElementById('productPrice').value = product.price;
                 document.getElementById('productStock').value = product.stock;
+                document.getElementById('productMerchant').value = product.merchantId || '';
                 document.getElementById('editingProductId').value = id;
                 document.getElementById('productModal').style.display = 'flex';
             }
@@ -2013,26 +2519,32 @@
             const container = document.getElementById('inventory-control');
             if (!container || !adminLoggedIn) return;
             
-            container.innerHTML = products.map(product => `
-                <div class="inventory-item" style="background: var(--glass); border: 1px solid var(--glass-border); border-radius: 30px; padding: 25px;">
-                    <strong style="color: var(--gold); font-size: 18px;">${product.name}</strong>
-                    <div style="margin: 15px 0;">
-                        <span>المخزون:</span>
-                        <input type="number" id="stock-${product.id}" value="${product.stock}" min="0" style="width: 70px; background: rgba(255,255,255,0.1); border: 1px solid var(--gold); color: white; padding: 5px; border-radius: 10px; margin-right: 10px;">
+            container.innerHTML = products.map(product => {
+                const merchant = product.merchantId ? users.find(u => u.id === product.merchantId) : null;
+                const merchantInfo = merchant ? `(تاجر: ${merchant.name})` : '(عام)';
+                
+                return `
+                    <div class="inventory-item" style="background: var(--glass); border: 1px solid var(--glass-border); border-radius: 30px; padding: 25px;">
+                        <strong style="color: var(--gold); font-size: 18px;">${product.name}</strong>
+                        <div style="font-size: 14px; color: var(--gold-light); margin-bottom: 10px;">${merchantInfo}</div>
+                        <div style="margin: 15px 0;">
+                            <span>المخزون:</span>
+                            <input type="number" id="stock-${product.id}" value="${product.stock}" min="0" style="width: 70px; background: rgba(255,255,255,0.1); border: 1px solid var(--gold); color: white; padding: 5px; border-radius: 10px; margin-right: 10px;">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-nardo" style="flex: 1; padding: 10px;" onclick="updateStockFromAdmin(${product.id})">
+                                <i class="fas fa-save"></i> تحديث
+                            </button>
+                            <button class="btn-nardo" style="flex: 1; background: var(--gold); color: var(--nardoo-deep);" onclick="editProduct(${product.id})">
+                                <i class="fas fa-edit"></i> تعديل
+                            </button>
+                            <button class="btn-nardo" style="flex: 1; background: #dc2626;" onclick="deleteProduct(${product.id})">
+                                <i class="fas fa-trash"></i> حذف
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn-nardo" style="flex: 1; padding: 10px;" onclick="updateStockFromAdmin(${product.id})">
-                            <i class="fas fa-save"></i> تحديث
-                        </button>
-                        <button class="btn-nardo" style="flex: 1; background: var(--gold); color: var(--nardoo-deep);" onclick="editProduct(${product.id})">
-                            <i class="fas fa-edit"></i> تعديل
-                        </button>
-                        <button class="btn-nardo" style="flex: 1; background: #dc2626;" onclick="deleteProduct(${product.id})">
-                            <i class="fas fa-trash"></i> حذف
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function updateStockFromAdmin(id) {
@@ -2078,6 +2590,8 @@
         function backupData() {
             const data = {
                 products: products,
+                users: users,
+                merchantRequests: merchantRequests,
                 orders: orders,
                 reviews: reviews,
                 cart: cart,
@@ -2107,6 +2621,8 @@
                     try {
                         const data = JSON.parse(e.target.result);
                         if (data.products) products = data.products;
+                        if (data.users) users = data.users;
+                        if (data.merchantRequests) merchantRequests = data.merchantRequests;
                         if (data.orders) orders = data.orders;
                         if (data.reviews) reviews = data.reviews;
                         if (data.cart) cart = data.cart;
@@ -2114,6 +2630,7 @@
                         saveToLocalStorage();
                         filterAndDisplayProducts();
                         updateCartCounter();
+                        updatePendingRequestsCount();
                         showNotification('تم استعادة البيانات بنجاح', 'success');
                     } catch (error) {
                         showNotification('خطأ في قراءة الملف', 'error');
@@ -2140,10 +2657,10 @@
 
         // ========== تهيئة الصفحة ==========
         document.addEventListener('DOMContentLoaded', function() {
-            loadProducts();
+            loadData();
             
             window.onclick = function(event) {
-                const modals = ['orderModal', 'productModal', 'qrModal', 'wheelModal', 'loginModal'];
+                const modals = ['orderModal', 'productModal', 'qrModal', 'wheelModal', 'loginModal', 'merchantRequestsModal', 'merchantProductsModal', 'merchantOfferModal'];
                 modals.forEach(modalId => {
                     const modal = document.getElementById(modalId);
                     if (event.target === modal) {
@@ -2183,6 +2700,13 @@
         window.switchLoginTab = switchLoginTab;
         window.handleLogin = handleLogin;
         window.handleRegister = handleRegister;
+        window.toggleMerchantFields = toggleMerchantFields;
+        window.showMerchantRequests = showMerchantRequests;
+        window.approveMerchant = approveMerchant;
+        window.rejectMerchant = rejectMerchant;
+        window.openMerchantOfferModal = openMerchantOfferModal;
+        window.sendMerchantOffer = sendMerchantOffer;
+        window.logout = logout;
     </script>
 </body>
 </html>
