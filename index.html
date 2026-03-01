@@ -735,8 +735,6 @@
             color: var(--nardoo-deep);
         }
 
-        /* ===== باقي الأنماط مع إضافة أنماط التجار ===== */
-        
         /* نظام عرض التجار */
         .merchant-badge {
             position: absolute;
@@ -969,40 +967,6 @@
             font-size: 32px;
             font-weight: 800;
             color: white;
-        }
-
-        /* عجلة الحظ */
-        .wheel {
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            border: 5px solid var(--gold);
-            margin: 0 auto 20px;
-            position: relative;
-            overflow: hidden;
-            transition: transform 3s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-            cursor: pointer;
-            background: conic-gradient(
-                var(--gold) 0deg 60deg,
-                var(--gold-light) 60deg 120deg,
-                var(--gold-deep) 120deg 180deg,
-                var(--gold) 180deg 240deg,
-                var(--gold-light) 240deg 300deg,
-                var(--gold-deep) 300deg 360deg
-            );
-        }
-
-        .wheel::after {
-            content: '🎁';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 40px;
-        }
-
-        .wheel.spinning {
-            transform: rotate(1440deg);
         }
 
         /* الفوتر */
@@ -1294,9 +1258,6 @@
                 <button class="action-btn" onclick="openLoginModal()">
                     <i class="far fa-user"></i>
                 </button>
-                <button class="action-btn" onclick="openWheelModal()">
-                    <i class="fas fa-gift"></i>
-                </button>
                 <button class="action-btn" onclick="toggleCart()">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count" id="cartCounter">0</span>
@@ -1332,6 +1293,7 @@
             <li><a onclick="filterProducts('all')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);" class="active">الكل</a></li>
             <li><a onclick="filterProducts('clothes')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">ملابس</a></li>
             <li><a onclick="filterProducts('spices')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">توابل</a></li>
+            <li><a onclick="filterProducts('cosmetic')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">كوسمتيك</a></li>
             <li><a onclick="filterProducts('phones')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">هواتف</a></li>
             <li><a onclick="filterProducts('hardware')" style="cursor: pointer; padding: 10px 25px; background: var(--glass); border-radius: 40px; color: var(--gold); border: 1px solid var(--glass-border);">خردة</a></li>
         </ul>
@@ -1399,7 +1361,7 @@
             
             <!-- نموذج تسجيل الدخول -->
             <div id="loginForm">
-                <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
+                <input type="text" id="loginEmail" placeholder="اسم المستخدم أو البريد الإلكتروني" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
                 <input type="password" id="loginPassword" placeholder="كلمة المرور" style="width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border: 2px solid var(--glass-border); border-radius: 20px; color: white;">
                 <button onclick="handleLogin()" class="btn-nardo btn-gold" style="width: 100%;">دخول</button>
             </div>
@@ -1544,18 +1506,6 @@
         </div>
     </div>
 
-    <!-- عجلة الحظ -->
-    <div id="wheelModal" class="modal">
-        <div class="modal-content" style="text-align: center;">
-            <h2><i class="fas fa-gift"></i> عجلة الحظ</h2>
-            <div class="wheel-container">
-                <div class="wheel" id="wheel" onclick="spinWheel()"></div>
-                <div class="prize-message" id="prizeMessage" style="margin-top: 20px; color: var(--gold); font-size: 20px;"></div>
-            </div>
-            <button class="btn-nardo btn-gold" onclick="closeModal('wheelModal')" style="margin-top: 20px;">إغلاق</button>
-        </div>
-    </div>
-
     <!-- QR Code -->
     <div id="qrModal" class="modal">
         <div class="modal-content" style="text-align: center;">
@@ -1612,19 +1562,6 @@
         let merchantRequests = []; // طلبات انضمام التجار
         let reviews = [];
         let orders = [];
-        let analytics = {
-            pageViews: {},
-            popularProducts: {},
-            searchQueries: []
-        };
-        let isDarkMode = true;
-        let currentInvoice = null;
-        let coupons = {
-            'NARDOO10': { discount: 10, type: 'percentage' },
-            'WELCOME20': { discount: 20, type: 'percentage' },
-            'FLAT500': { discount: 500, type: 'fixed' }
-        };
-        let loyaltyPoints = 0;
 
         // مستويات التجار وعدد المنتجات المسموح بها
         const MERCHANT_LIMITS = {
@@ -1680,9 +1617,9 @@
             if (savedUsers) {
                 users = JSON.parse(savedUsers);
             } else {
-                // مستخدم افتراضي (مدير)
+                // مستخدم افتراضي (مدير) - تم التعديل هنا
                 users = [
-                    { id: 1, name: 'مدير', email: 'admin@nakha.com', password: 'admin123', role: 'admin' }
+                    { id: 1, name: 'مدير', username: 'azer', email: 'azer@nakha.com', password: '123456', role: 'admin' }
                 ];
             }
             
@@ -1816,10 +1753,11 @@
         }
 
         function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
+            const username = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             
-            const user = users.find(u => u.email === email && u.password === password);
+            // البحث عن المستخدم بالبريد الإلكتروني أو اسم المستخدم
+            const user = users.find(u => (u.email === username || u.username === username) && u.password === password);
             
             if (user) {
                 currentUser = user;
@@ -1944,7 +1882,8 @@
 
         function updatePendingRequestsCount() {
             const count = merchantRequests.filter(r => r.status === 'pending').length;
-            document.getElementById('pendingRequestsCount').textContent = count;
+            const element = document.getElementById('pendingRequestsCount');
+            if (element) element.textContent = count;
         }
 
         function populateMerchantSelect() {
@@ -2035,7 +1974,7 @@
                         ${merchantInfo}
                         <div class="product-badge">${product.discount > 0 ? 'خصم ' + product.discount + '%' : 'مميز'}</div>
                         <div class="product-image">
-                            <i class="fas ${product.category === 'spices' ? 'fa-mortar-pestle' : product.category === 'cosmetic' ? 'fa-spa' : 'fa-crown'}"></i>
+                            <i class="fas ${product.category === 'spices' ? 'fa-mortar-pestle' : product.category === 'cosmetic' ? 'fa-spa' : product.category === 'clothes' ? 'fa-tshirt' : product.category === 'phones' ? 'fa-mobile-alt' : 'fa-crown'}"></i>
                         </div>
                         <div class="product-info">
                             <div class="product-category">
@@ -2364,7 +2303,7 @@
             const password = document.getElementById('adminPassword').value;
             
             // استخدام بيانات المدير من نظام المستخدمين
-            const admin = users.find(u => u.role === 'admin' && u.email === username && u.password === password);
+            const admin = users.find(u => u.role === 'admin' && (u.username === username || u.email === username) && u.password === password);
             
             if (admin) {
                 currentUser = admin;
@@ -2420,6 +2359,7 @@
             document.getElementById('productCategory').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productStock').value = '';
+            document.getElementById('productMerchant').value = '';
             document.getElementById('editingProductId').value = '';
             document.getElementById('productModal').style.display = 'flex';
         }
@@ -2566,26 +2506,6 @@
             }
         }
 
-        // ========== عجلة الحظ ==========
-        function openWheelModal() {
-            document.getElementById('wheelModal').style.display = 'flex';
-            document.getElementById('prizeMessage').innerHTML = '';
-        }
-
-        function spinWheel() {
-            const wheel = document.getElementById('wheel');
-            wheel.classList.add('spinning');
-            
-            const prizes = ['خصم 10%', 'شحن مجاني', 'هدية مفاجئة', 'كوبون 500 دج', 'نقاط مضاعفة', 'حظ أوفر'];
-            const result = prizes[Math.floor(Math.random() * prizes.length)];
-            
-            setTimeout(() => {
-                wheel.classList.remove('spinning');
-                document.getElementById('prizeMessage').innerHTML = `🎉 فزت بـ: ${result}`;
-                showNotification(`تهانينا! فزت بـ ${result}`, 'success');
-            }, 3000);
-        }
-
         // ========== النسخ الاحتياطي ==========
         function backupData() {
             const data = {
@@ -2655,12 +2575,37 @@
             document.getElementById(modalId).style.display = 'none';
         }
 
+        // ========== التبديل بين نوافذ تسجيل الدخول والتسجيل ==========
+        function switchLoginTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginBtn = document.getElementById('loginTabBtn');
+            const registerBtn = document.getElementById('registerTabBtn');
+            
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                loginBtn.classList.add('btn-gold');
+                registerBtn.classList.remove('btn-gold');
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                registerBtn.classList.add('btn-gold');
+                loginBtn.classList.remove('btn-gold');
+            }
+        }
+
+        // ========== فتح نافذة تسجيل الدخول ==========
+        function openLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
         // ========== تهيئة الصفحة ==========
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
             
             window.onclick = function(event) {
-                const modals = ['orderModal', 'productModal', 'qrModal', 'wheelModal', 'loginModal', 'merchantRequestsModal', 'merchantProductsModal', 'merchantOfferModal'];
+                const modals = ['orderModal', 'productModal', 'qrModal', 'loginModal', 'merchantRequestsModal', 'merchantProductsModal', 'merchantOfferModal'];
                 modals.forEach(modalId => {
                     const modal = document.getElementById(modalId);
                     if (event.target === modal) {
@@ -2690,8 +2635,6 @@
         window.updateCartItem = updateCartItem;
         window.removeFromCart = removeFromCart;
         window.checkoutCart = checkoutCart;
-        window.openWheelModal = openWheelModal;
-        window.spinWheel = spinWheel;
         window.loginAdmin = loginAdmin;
         window.backupData = backupData;
         window.restoreData = restoreData;
