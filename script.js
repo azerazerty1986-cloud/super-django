@@ -653,6 +653,39 @@ function searchProducts() {
     searchTerm = document.getElementById('searchInput').value;
     displayProducts();
     analyticsManager.trackEvent('search', { searchTerm });
+    
+    // إظهار تأثير عند البحث
+    const searchBox = document.querySelector('.search-box');
+    searchBox.style.animation = 'pulse 0.5s';
+    setTimeout(() => {
+        searchBox.style.animation = '';
+    }, 500);
+    
+    // إظهار مؤشر البحث
+    showSearchIndicator(searchTerm);
+}
+
+// إظهار مؤشر البحث
+function showSearchIndicator(term) {
+    if (!term) return;
+    
+    const searchWrapper = document.querySelector('.search-wrapper');
+    let indicator = document.querySelector('.search-indicator');
+    
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'search-indicator';
+        searchWrapper.appendChild(indicator);
+    }
+    
+    indicator.innerHTML = `🔍 جاري البحث عن: "${term}"`;
+    
+    // إخفاء المؤشر بعد 3 ثواني
+    setTimeout(() => {
+        if (indicator) {
+            indicator.remove();
+        }
+    }, 3000);
 }
 
 // ========== إدارة السلة ==========
@@ -669,12 +702,13 @@ function saveCart() {
 function updateCartCounter() {
     const count = cart.reduce((sum, item) => sum + item.quantity, 0);
     document.getElementById('cartCounter').textContent = count;
+    updateFixedCartCounter(); // تحديث العداد الثابت
 }
 
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
     if (!product || product.stock <= 0) {
-        showNotification('المنتج غير متوفر', 'error');
+        showAdvancedNotification('المنتج غير متوفر', 'error');
         return;
     }
 
@@ -683,7 +717,7 @@ function addToCart(productId) {
         if (existing.quantity < product.stock) {
             existing.quantity++;
         } else {
-            showNotification('الكمية المتوفرة غير كافية', 'warning');
+            showAdvancedNotification('الكمية المتوفرة غير كافية', 'warning');
             return;
         }
     } else {
@@ -699,8 +733,15 @@ function addToCart(productId) {
     saveCart();
     updateCartCounter();
     updateCartDisplay();
-    showNotification('تمت الإضافة إلى السلة', 'success');
+    showAdvancedNotification('تمت الإضافة إلى السلة', 'success', 'تم بنجاح');
     analyticsManager.trackEvent('addToCart', { productId });
+    
+    // تأثير اهتزاز للسلة الثابتة
+    const fixedCart = document.getElementById('fixedCart');
+    fixedCart.style.animation = 'shake 0.5s';
+    setTimeout(() => {
+        fixedCart.style.animation = 'pulse 2s infinite';
+    }, 500);
 }
 
 function toggleCart() {
@@ -756,7 +797,7 @@ function updateCartItem(productId, newQuantity) {
     }
 
     if (newQuantity > product.stock) {
-        showNotification('الكمية غير متوفرة', 'warning');
+        showAdvancedNotification('الكمية غير متوفرة', 'warning');
         return;
     }
 
@@ -771,12 +812,12 @@ function removeFromCart(productId) {
     saveCart();
     updateCartCounter();
     updateCartDisplay();
-    showNotification('تمت إزالة المنتج من السلة', 'info');
+    showAdvancedNotification('تمت إزالة المنتج من السلة', 'info', 'تم');
 }
 
 function checkoutCart() {
     if (cart.length === 0) {
-        showNotification('السلة فارغة', 'warning');
+        showAdvancedNotification('السلة فارغة', 'warning');
         return;
     }
 
@@ -803,8 +844,134 @@ function checkoutCart() {
     updateCartCounter();
     toggleCart();
 
-    showNotification('تم إرسال الطلب عبر واتساب بنجاح', 'success');
+    showAdvancedNotification('تم إرسال الطلب عبر واتساب بنجاح', 'success', 'طلب جديد');
     analyticsManager.trackEvent('checkout', { orderId: order.id });
+}
+
+// ========== دوال التمرير والصعود والهبوط ==========
+function scrollToTop() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+function scrollToBottom() {
+    window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
+function scrollToElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// إظهار/إخفاء زر العودة للأعلى
+function toggleQuickTopButton() {
+    const quickTopBtn = document.getElementById('quickTopBtn');
+    if (!quickTopBtn) return;
+    
+    if (window.scrollY > 300) {
+        quickTopBtn.classList.add('show');
+    } else {
+        quickTopBtn.classList.remove('show');
+    }
+}
+
+// تحديث عداد السلة الثابت
+function updateFixedCartCounter() {
+    const fixedCounter = document.getElementById('fixedCartCounter');
+    if (fixedCounter) {
+        const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+        fixedCounter.textContent = count;
+    }
+}
+
+// إضافة تأثيرات التمرير للعناصر
+function addScrollAnimations() {
+    const elements = document.querySelectorAll('.product-card, .feature-card, .marquee-item');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('fade-in-up');
+            }
+        });
+    }, { threshold: 0.1 });
+    
+    elements.forEach(element => {
+        observer.observe(element);
+    });
+}
+
+// ========== عداد تنازلي متحرك ==========
+function updateCountdown() {
+    const hoursElement = document.getElementById('hours');
+    const minutesElement = document.getElementById('minutes');
+    const secondsElement = document.getElementById('seconds');
+    const marqueeHours = document.getElementById('marqueeHours');
+    const marqueeMinutes = document.getElementById('marqueeMinutes');
+    const marqueeSeconds = document.getElementById('marqueeSeconds');
+    
+    if (!hoursElement || !minutesElement || !secondsElement) return;
+    
+    let hours = 12;
+    let minutes = 30;
+    let seconds = 45;
+    
+    // تحديث العداد كل ثانية
+    const interval = setInterval(() => {
+        seconds--;
+        
+        if (seconds < 0) {
+            seconds = 59;
+            minutes--;
+            
+            if (minutes < 0) {
+                minutes = 59;
+                hours--;
+                
+                if (hours < 0) {
+                    hours = 12;
+                    minutes = 30;
+                    seconds = 45;
+                }
+            }
+        }
+        
+        // تحديث العرض مع تأثير حركي
+        const displayValue = (num) => num.toString().padStart(2, '0');
+        
+        hoursElement.textContent = displayValue(hours);
+        minutesElement.textContent = displayValue(minutes);
+        secondsElement.textContent = displayValue(seconds);
+        
+        if (marqueeHours) marqueeHours.textContent = displayValue(hours);
+        if (marqueeMinutes) marqueeMinutes.textContent = displayValue(minutes);
+        if (marqueeSeconds) marqueeSeconds.textContent = displayValue(seconds);
+        
+    }, 1000);
+    
+    return interval;
+}
+
+// ========== تحديث أشرطة التقدم ==========
+function updateProgressBars() {
+    const progressFills = document.querySelectorAll('.progress-fill, .marquee-progress-fill');
+    
+    setInterval(() => {
+        progressFills.forEach(fill => {
+            const randomWidth = Math.floor(Math.random() * 50) + 50;
+            fill.style.width = randomWidth + '%';
+        });
+    }, 5000);
 }
 
 // ========== عرض تفاصيل المنتج ==========
@@ -914,10 +1081,10 @@ function handleLogin() {
         // تحديث الواجهة حسب الدور
         updateUIBasedOnRole();
         
-        showNotification(`مرحباً ${user.name}`, 'success');
+        showAdvancedNotification(`مرحباً ${user.name}`, 'success', 'تسجيل دخول ناجح');
         analyticsManager.trackEvent('login', { userId: user.id, role: user.role });
     } else {
-        showNotification('بيانات الدخول غير صحيحة', 'error');
+        showAdvancedNotification('بيانات الدخول غير صحيحة', 'error', 'خطأ');
     }
 }
 
@@ -946,7 +1113,7 @@ function updateUIBasedOnRole() {
             el.style.display = 'block';
         });
         
-        showNotification('مرحباً بك يا مدير - لديك صلاحيات كاملة', 'success');
+        showAdvancedNotification('مرحباً بك يا مدير - لديك صلاحيات كاملة', 'success', 'مدير');
     } 
     else if (currentUser.role === 'merchant_approved') {
         // التاجر: لا يرى لوحة التحكم، يرى لوحة التاجر
@@ -959,7 +1126,7 @@ function updateUIBasedOnRole() {
         // عرض لوحة التاجر
         showMerchantPanel();
         
-        showNotification('مرحباً أيها التاجر - يمكنك إدارة منتجاتك فقط', 'info');
+        showAdvancedNotification('مرحباً أيها التاجر - يمكنك إدارة منتجاتك فقط', 'info', 'تاجر');
     } 
     else {
         // عميل عادي
@@ -1043,12 +1210,12 @@ function handleRegister() {
     const isMerchant = document.getElementById('isMerchant').checked;
 
     if (!name || !email || !password) {
-        showNotification('الرجاء ملء جميع الحقول', 'error');
+        showAdvancedNotification('الرجاء ملء جميع الحقول', 'error', 'خطأ');
         return;
     }
 
     if (users.find(u => u.email === email)) {
-        showNotification('البريد الإلكتروني مستخدم بالفعل', 'error');
+        showAdvancedNotification('البريد الإلكتروني مستخدم بالفعل', 'error', 'خطأ');
         return;
     }
 
@@ -1068,14 +1235,14 @@ function handleRegister() {
 
     users.push(newUser);
     saveUsers();
-    showNotification('تم التسجيل بنجاح' + (isMerchant ? '، طلبك قيد المراجعة' : ''), 'success');
+    showAdvancedNotification('تم التسجيل بنجاح' + (isMerchant ? '، طلبك قيد المراجعة' : ''), 'success', 'مرحباً بك');
     switchAuthTab('login');
 }
 
 // ========== لوحة التحكم (للمدير فقط) ==========
 function openDashboard() {
     if (!currentUser || currentUser.role !== 'admin') {
-        showNotification('غير مصرح لك بالدخول - هذه الصفحة للمدير فقط', 'error');
+        showAdvancedNotification('غير مصرح لك بالدخول - هذه الصفحة للمدير فقط', 'error', 'خطأ');
         return;
     }
 
@@ -1277,7 +1444,7 @@ function showDashboardOrders(container) {
 function updateOrderStatus(orderId, status) {
     if (!currentUser || currentUser.role !== 'admin') return;
     orderManager.updateOrderStatus(orderId, status);
-    showNotification('تم تحديث حالة الطلب', 'success');
+    showAdvancedNotification('تم تحديث حالة الطلب', 'success', 'نجاح');
 }
 
 function showDashboardAnalytics(container) {
@@ -1461,7 +1628,7 @@ function approveMerchant(userId) {
     if (user) {
         user.role = 'merchant_approved';
         saveUsers();
-        showNotification('تمت الموافقة على التاجر', 'success');
+        showAdvancedNotification('تمت الموافقة على التاجر', 'success', 'نجاح');
         openDashboard();
         switchDashboardTab('merchants');
     }
@@ -1474,7 +1641,7 @@ function rejectMerchant(userId) {
     if (user) {
         user.role = 'customer';
         saveUsers();
-        showNotification('تم رفض طلب التاجر', 'info');
+        showAdvancedNotification('تم رفض طلب التاجر', 'info', 'تم');
         openDashboard();
         switchDashboardTab('merchants');
     }
@@ -1483,7 +1650,7 @@ function rejectMerchant(userId) {
 // ========== إدارة المنتجات (مع صلاحيات) ==========
 function showAddProductModal() {
     if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'warning');
+        showAdvancedNotification('يجب تسجيل الدخول أولاً', 'warning', 'تنبيه');
         openLoginModal();
         return;
     }
@@ -1496,7 +1663,7 @@ function showAddProductModal() {
         merchantSelect.innerHTML = `<option value="${currentUser.id}">${currentUser.name}</option>`;
         merchantSelect.disabled = true;
         
-        showNotification('يمكنك إضافة منتج خاص بك فقط', 'info');
+        showAdvancedNotification('يمكنك إضافة منتج خاص بك فقط', 'info', 'تاجر');
     } 
     else if (currentUser.role === 'admin') {
         document.getElementById('modalTitle').textContent = 'إضافة منتج جديد';
@@ -1510,7 +1677,7 @@ function showAddProductModal() {
         merchantSelect.disabled = false;
     } 
     else {
-        showNotification('فقط المدير والتجار يمكنهم إضافة منتجات', 'error');
+        showAdvancedNotification('فقط المدير والتجار يمكنهم إضافة منتجات', 'error', 'خطأ');
         return;
     }
     
@@ -1546,7 +1713,7 @@ function handleImageUpload(event) {
 
 function saveProduct() {
     if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'error');
+        showAdvancedNotification('يجب تسجيل الدخول أولاً', 'error', 'خطأ');
         return;
     }
 
@@ -1558,7 +1725,7 @@ function saveProduct() {
     const imagesData = document.getElementById('productImagesData').value;
 
     if (!name || !category || !price || !stock) {
-        showNotification('الرجاء ملء جميع الحقول', 'error');
+        showAdvancedNotification('الرجاء ملء جميع الحقول', 'error', 'خطأ');
         return;
     }
 
@@ -1577,7 +1744,7 @@ function saveProduct() {
         if (index !== -1) {
             // التحقق من صلاحية التعديل
             if (currentUser.role === 'merchant_approved' && products[index].merchantId !== currentUser.id) {
-                showNotification('لا يمكنك تعديل منتجات الآخرين', 'error');
+                showAdvancedNotification('لا يمكنك تعديل منتجات الآخرين', 'error', 'خطأ');
                 return;
             }
             
@@ -1591,7 +1758,7 @@ function saveProduct() {
                 images: images.length > 0 ? images : products[index].images
             };
         }
-        showNotification('تم تعديل المنتج', 'success');
+        showAdvancedNotification('تم تعديل المنتج', 'success', 'نجاح');
     } else {
         const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
         products.push({
@@ -1604,7 +1771,7 @@ function saveProduct() {
             images: images.length > 0 ? images : ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"],
             merchantId
         });
-        showNotification('تم إضافة المنتج', 'success');
+        showAdvancedNotification('تم إضافة المنتج', 'success', 'نجاح');
     }
 
     saveProducts();
@@ -1621,7 +1788,7 @@ function saveProduct() {
 
 function editProduct(id) {
     if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'error');
+        showAdvancedNotification('يجب تسجيل الدخول أولاً', 'error', 'خطأ');
         return;
     }
 
@@ -1630,7 +1797,7 @@ function editProduct(id) {
 
     // التحقق من صلاحية التعديل
     if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
-        showNotification('لا يمكنك تعديل منتجات الآخرين', 'error');
+        showAdvancedNotification('لا يمكنك تعديل منتجات الآخرين', 'error', 'خطأ');
         return;
     }
 
@@ -1667,7 +1834,7 @@ function editProduct(id) {
 
 function deleteProduct(id) {
     if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'error');
+        showAdvancedNotification('يجب تسجيل الدخول أولاً', 'error', 'خطأ');
         return;
     }
 
@@ -1675,7 +1842,7 @@ function deleteProduct(id) {
     
     // التحقق من صلاحية الحذف
     if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
-        showNotification('لا يمكنك حذف منتجات الآخرين', 'error');
+        showAdvancedNotification('لا يمكنك حذف منتجات الآخرين', 'error', 'خطأ');
         return;
     }
     
@@ -1683,7 +1850,7 @@ function deleteProduct(id) {
         products = products.filter(p => p.id !== id);
         saveProducts();
         displayProducts();
-        showNotification('تم حذف المنتج', 'info');
+        showAdvancedNotification('تم حذف المنتج', 'info', 'تم');
         
         // تحديث لوحة التاجر إذا كان تاجر
         if (currentUser.role === 'merchant_approved') {
@@ -1694,86 +1861,186 @@ function deleteProduct(id) {
     }
 }
 
+// ========== نظام الإشعارات المتقدم ==========
+function showAdvancedNotification(message, type = 'info', title = '') {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const titles = {
+        success: 'نجاح',
+        error: 'خطأ',
+        warning: 'تنبيه',
+        info: 'معلومات'
+    };
+    
+    toast.innerHTML = `
+        <div class="toast-icon ${type}">
+            <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-times' : type === 'warning' ? 'fa-exclamation' : 'fa-info'}"></i>
+        </div>
+        <div class="toast-content">
+            <div class="toast-title">${title || titles[type]}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <div class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// ========== تأثيرات الكتابة ==========
+class TypingAnimation {
+    constructor(element, texts, speed = 100, delay = 2000) {
+        this.element = element;
+        this.texts = texts;
+        this.speed = speed;
+        this.delay = delay;
+        this.currentIndex = 0;
+        this.isDeleting = false;
+        this.text = '';
+    }
+
+    start() {
+        this.type();
+    }
+
+    type() {
+        const current = this.texts[this.currentIndex];
+        
+        if (this.isDeleting) {
+            this.text = current.substring(0, this.text.length - 1);
+        } else {
+            this.text = current.substring(0, this.text.length + 1);
+        }
+
+        this.element.innerHTML = this.text;
+
+        let typeSpeed = this.speed;
+
+        if (this.isDeleting) {
+            typeSpeed /= 2;
+        }
+
+        if (!this.isDeleting && this.text === current) {
+            typeSpeed = this.delay;
+            this.isDeleting = true;
+        } else if (this.isDeleting && this.text === '') {
+            this.isDeleting = false;
+            this.currentIndex = (this.currentIndex + 1) % this.texts.length;
+            typeSpeed = 500;
+        }
+
+        setTimeout(() => this.type(), typeSpeed);
+    }
+}
+
+// ========== نظام المقارنة ==========
+class ProductComparator {
+    constructor() {
+        this.compareList = JSON.parse(localStorage.getItem('compare_list')) || [];
+    }
+
+    addToCompare(product) {
+        if (this.compareList.length >= 4) {
+            showAdvancedNotification('لا يمكن مقارنة أكثر من 4 منتجات', 'warning', 'تنبيه');
+            return false;
+        }
+        
+        if (!this.compareList.find(p => p.id === product.id)) {
+            this.compareList.push(product);
+            localStorage.setItem('compare_list', JSON.stringify(this.compareList));
+            showAdvancedNotification('تمت الإضافة للمقارنة', 'success', 'نجاح');
+            return true;
+        }
+        return false;
+    }
+
+    removeFromCompare(productId) {
+        this.compareList = this.compareList.filter(p => p.id !== productId);
+        localStorage.setItem('compare_list', JSON.stringify(this.compareList));
+    }
+
+    getCompareList() {
+        return this.compareList;
+    }
+
+    clearCompare() {
+        this.compareList = [];
+        localStorage.setItem('compare_list', JSON.stringify(this.compareList));
+    }
+}
+
+const comparator = new ProductComparator();
+
+// ========== تأثيرات الماوس ==========
+function initMouseEffects() {
+    const cursor = document.createElement('div');
+    cursor.className = 'mouse-effect';
+    
+    const cursorDot = document.createElement('div');
+    cursorDot.className = 'mouse-effect-dot';
+    
+    document.body.appendChild(cursor);
+    document.body.appendChild(cursorDot);
+    
+    document.addEventListener('mousemove', (e) => {
+        cursor.style.transform = `translate(${e.clientX - 10}px, ${e.clientY - 10}px)`;
+        cursorDot.style.transform = `translate(${e.clientX - 2}px, ${e.clientY - 2}px)`;
+    });
+    
+    document.querySelectorAll('a, button, .product-card').forEach(el => {
+        el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+        el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+    });
+}
+
+// ========== شريط تقدم التمرير ==========
+function initScrollProgress() {
+    const progressBar = document.createElement('div');
+    progressBar.className = 'scroll-progress';
+    document.body.appendChild(progressBar);
+    
+    window.addEventListener('scroll', () => {
+        const winScroll = document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        progressBar.style.width = scrolled + '%';
+    });
+}
+
+// ========== جسيمات متحركة ==========
+function initParticles() {
+    const particlesContainer = document.createElement('div');
+    particlesContainer.className = 'particles';
+    document.body.appendChild(particlesContainer);
+    
+    for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 10 + 's';
+        particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+        particlesContainer.appendChild(particle);
+    }
+}
+
 // ========== دوال إضافية ==========
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
-}
-// ========== عداد تنازلي متحرك يتغير كل ساعة ==========
-function updateCountdown() {
-    const hoursElement = document.getElementById('hours');
-    const minutesElement = document.getElementById('minutes');
-    const secondsElement = document.getElementById('seconds');
-    
-    if (!hoursElement || !minutesElement || !secondsElement) return;
-    
-    // حساب الوقت المتبقي حتى نهاية اليوم (12 ساعة عشوائية)
-    const now = new Date();
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    // أو استخدام وقت ثابت للعرض (12:30:45)
-    // يمكن تغيير هذه القيم حسب الرغبة
-    
-    let hours = 12;
-    let minutes = 30;
-    let seconds = 45;
-    
-    // تحديث العداد كل ثانية
-    const interval = setInterval(() => {
-        seconds--;
-        
-        if (seconds < 0) {
-            seconds = 59;
-            minutes--;
-            
-            if (minutes < 0) {
-                minutes = 59;
-                hours--;
-                
-                if (hours < 0) {
-                    // إعادة تعيين العداد بعد انتهاء الوقت
-                    hours = 12;
-                    minutes = 30;
-                    seconds = 45;
-                }
-            }
-        }
-        
-        // تحديث العرض مع تأثير حركي
-        hoursElement.style.animation = 'bounce 0.5s';
-        minutesElement.style.animation = 'bounce 0.5s';
-        secondsElement.style.animation = 'bounce 0.5s';
-        
-        hoursElement.textContent = hours.toString().padStart(2, '0');
-        minutesElement.textContent = minutes.toString().padStart(2, '0');
-        secondsElement.textContent = seconds.toString().padStart(2, '0');
-        
-        // إزالة التأثير بعد انتهائه
-        setTimeout(() => {
-            hoursElement.style.animation = '';
-            minutesElement.style.animation = '';
-            secondsElement.style.animation = '';
-        }, 500);
-        
-    }, 1000);
-    
-    return interval;
-}
-
-// ========== تحديث أشرطة التقدم بشكل عشوائي ==========
-function updateProgressBars() {
-    const progressFills = document.querySelectorAll('.progress-fill');
-    
-    setInterval(() => {
-        progressFills.forEach(fill => {
-            // تغيير العرض بشكل عشوائي بين 50% و 100%
-            const randomWidth = Math.floor(Math.random() * 50) + 50;
-            fill.style.width = randomWidth + '%';
-            
-            // إضافة تأثير حركي
-            fill.style.transition = 'width 1s ease-in-out';
-        });
-    }, 5000); // يتغير كل 5 ثواني
 }
 
 // ========== التهيئة ==========
@@ -1805,6 +2072,28 @@ window.onload = function() {
     }, 1000);
 
     analyticsManager.trackPageView('home');
+    
+    // ===== تفعيل التحسينات الجديدة =====
+    updateFixedCartCounter();
+    window.addEventListener('scroll', toggleQuickTopButton);
+    addScrollAnimations();
+    updateCountdown();
+    updateProgressBars();
+    initMouseEffects();
+    initScrollProgress();
+    initParticles();
+    
+    // تفعيل تأثير الكتابة إذا وجد العنصر
+    const typingElement = document.getElementById('typing-text');
+    if (typingElement) {
+        const typing = new TypingAnimation(
+            typingElement,
+            ['نكهة وجمال', 'ناردو برو', 'تسوق آمن', 'جودة عالية'],
+            100,
+            2000
+        );
+        typing.start();
+    }
 };
 
 window.onclick = function(event) {
