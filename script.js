@@ -6,6 +6,7 @@ let cart = [];
 let isDarkMode = true;
 let currentFilter = 'all';
 let searchTerm = '';
+let sortBy = 'newest';
 
 // ========== 2. نظام إدارة الطلبات (مع واتساب) ==========
 class OrderManagementSystem {
@@ -382,7 +383,84 @@ function toggleTheme() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ========== إدارة المنتجات (بدون منتجات افتراضية) ==========
+// ========== دوال التاريخ والوقت ==========
+function getSimpleTimeAgo(dateString) {
+    if (!dateString) return '';
+    
+    const now = new Date();
+    const productDate = new Date(dateString);
+    const diffInSeconds = Math.floor((now - productDate) / 1000);
+    
+    if (diffInSeconds < 60) return 'الآن';
+    if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `منذ ${minutes} ${minutes === 1 ? 'دقيقة' : 'دقائق'}`;
+    }
+    if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `منذ ${hours} ${hours === 1 ? 'ساعة' : 'ساعات'}`;
+    }
+    if (diffInSeconds < 604800) {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `منذ ${days} ${days === 1 ? 'يوم' : 'أيام'}`;
+    }
+    if (diffInSeconds < 2592000) {
+        const weeks = Math.floor(diffInSeconds / 604800);
+        return `منذ ${weeks} ${weeks === 1 ? 'أسبوع' : 'أسابيع'}`;
+    }
+    if (diffInSeconds < 31536000) {
+        const months = Math.floor(diffInSeconds / 2592000);
+        return `منذ ${months} ${months === 1 ? 'شهر' : 'أشهر'}`;
+    }
+    const years = Math.floor(diffInSeconds / 31536000);
+    return `منذ ${years} ${years === 1 ? 'سنة' : 'سنوات'}`;
+}
+
+// ========== دوال تقييم النجوم ==========
+function generateStars(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    let starsHTML = '';
+    
+    for (let i = 0; i < fullStars; i++) {
+        starsHTML += '<i class="fas fa-star star filled"></i>';
+    }
+    
+    if (hasHalfStar) {
+        starsHTML += '<i class="fas fa-star-half-alt star half"></i>';
+    }
+    
+    for (let i = 0; i < emptyStars; i++) {
+        starsHTML += '<i class="far fa-star star"></i>';
+    }
+    
+    return starsHTML;
+}
+
+// ========== دوال الفرز ==========
+function sortProducts(productsArray) {
+    switch(sortBy) {
+        case 'newest':
+            return [...productsArray].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        case 'price_low':
+            return [...productsArray].sort((a, b) => a.price - b.price);
+        case 'price_high':
+            return [...productsArray].sort((a, b) => b.price - a.price);
+        case 'rating':
+            return [...productsArray].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        default:
+            return productsArray;
+    }
+}
+
+function changeSort(value) {
+    sortBy = value;
+    displayProducts();
+}
+
+// ========== إدارة المنتجات ==========
 function loadProducts() {
     const saved = localStorage.getItem('nardoo_products');
     if (saved) {
@@ -419,6 +497,8 @@ function displayProducts() {
             p.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }
+
+    filtered = sortProducts(filtered);
 
     if (filtered.length === 0) {
         container.innerHTML = `
@@ -461,11 +541,20 @@ function displayProducts() {
         else if (product.category === 'other') categoryIcon = 'fas fa-gem';
 
         const merchant = users.find(u => u.id === product.merchantId);
+        const timeAgo = getSimpleTimeAgo(product.createdAt);
 
         return `
             <div class="product-card" data-id="${product.id}">
-                <div class="product-badge">${product.rating || 4.5} ⭐</div>
-                ${product.merchantId ? `<div class="merchant-badge"><i class="fas fa-store"></i> ${merchant?.name || 'تاجر'}</div>` : ''}
+                <div class="product-time-badge">
+                    <i class="far fa-clock"></i> ${timeAgo}
+                </div>
+                
+                ${product.merchantId ? `
+                    <div class="merchant-badge">
+                        <i class="fas fa-store"></i> 
+                        <span class="merchant-name" title="${merchant?.name || 'تاجر'}">${merchant?.name || 'تاجر'}</span>
+                    </div>
+                ` : ''}
                 
                 <div class="product-gallery">
                     <div class="swiper product-swiper-${product.id}">
@@ -482,7 +571,23 @@ function displayProducts() {
                     <div class="product-category">
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
+                    
                     <h3 class="product-title">${product.name}</h3>
+                    
+                    ${!product.merchantId ? `
+                        <div class="product-merchant-info">
+                            <i class="fas fa-shop"></i>
+                            <span>متجر نكهة وجمال</span>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="product-rating">
+                        <div class="stars-container">
+                            ${generateStars(product.rating || 4.5)}
+                        </div>
+                        <span class="rating-value">${(product.rating || 4.5).toFixed(1)}</span>
+                    </div>
+                    
                     <div class="product-price">${product.price.toLocaleString()} <small>دج</small></div>
                     <div class="product-stock ${stockClass}">${stockText}</div>
                     
@@ -739,7 +844,7 @@ function checkoutCart() {
     analyticsManager.trackEvent('checkout', { orderId: order.id });
 }
 
-// ========== دوال التمرير والصعود والهبوط ==========
+// ========== دوال التمرير ==========
 function scrollToTop() {
     window.scrollTo({
         top: 0,
@@ -799,7 +904,7 @@ function addScrollAnimations() {
     });
 }
 
-// ========== عداد تنازلي متحرك ==========
+// ========== عداد تنازلي ==========
 function updateCountdown() {
     const hoursElement = document.getElementById('hours');
     const minutesElement = document.getElementById('minutes');
@@ -848,7 +953,7 @@ function updateCountdown() {
     return interval;
 }
 
-// ========== تحديث أشرطة التقدم ==========
+// ========== أشرطة التقدم ==========
 function updateProgressBars() {
     const progressFills = document.querySelectorAll('.progress-fill, .marquee-progress-fill');
     
@@ -872,6 +977,9 @@ function viewProductDetails(productId) {
         <img src="${img}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px; margin-bottom: 10px;">
     `).join('') || '<div style="height: 300px; background: var(--nardoo); display: flex; align-items: center; justify-content: center; border-radius: 20px;"><i class="fas fa-image" style="font-size: 80px; color: var(--gold);"></i></div>';
 
+    const merchant = users.find(u => u.id === product.merchantId);
+    const timeAgo = getSimpleTimeAgo(product.createdAt);
+
     content.innerHTML = `
         <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
@@ -879,12 +987,30 @@ function viewProductDetails(productId) {
                 <div style="display: grid; gap: 10px;">
                     ${images}
                 </div>
+                <div style="margin-top: 15px; display: flex; gap: 15px; justify-content: center;">
+                    <span class="product-time-badge" style="position: relative; top: 0; right: 0;">
+                        <i class="far fa-clock"></i> ${timeAgo}
+                    </span>
+                    ${product.merchantId ? `
+                        <span class="merchant-badge" style="position: relative; top: 0; left: 0;">
+                            <i class="fas fa-store"></i> ${merchant?.name || 'تاجر'}
+                        </span>
+                    ` : ''}
+                </div>
             </div>
             <div>
                 <div style="margin-bottom: 20px;">
                     <span style="background: var(--gold); padding: 5px 15px; border-radius: 20px; color: var(--bg-primary); font-weight: 700;">${getCategoryName(product.category)}</span>
                 </div>
                 <p style="margin-bottom: 20px; color: var(--text-secondary);">${product.description || 'منتج عالي الجودة من نكهة وجمال'}</p>
+                
+                <div class="product-rating" style="margin-bottom: 20px;">
+                    <div class="stars-container">
+                        ${generateStars(product.rating || 4.5)}
+                    </div>
+                    <span class="rating-value">${(product.rating || 4.5).toFixed(1)}</span>
+                </div>
+                
                 <div style="margin-bottom: 20px;">
                     <span style="font-size: 32px; font-weight: 800; color: var(--gold);">${product.price.toLocaleString()}</span>
                     <small style="color: var(--gold-light);"> دج</small>
@@ -909,7 +1035,7 @@ function viewProductDetails(productId) {
     modal.style.display = 'flex';
 }
 
-// ========== إدارة المستخدمين والصلاحيات ==========
+// ========== إدارة المستخدمين ==========
 function loadUsers() {
     const saved = localStorage.getItem('nardoo_users');
     if (saved) {
@@ -1519,7 +1645,7 @@ function rejectMerchant(userId) {
     }
 }
 
-// ========== إدارة المنتجات (مع صلاحيات) ==========
+// ========== إدارة المنتجات (إضافة، تعديل، حذف) ==========
 function showAddProductModal() {
     console.log('فتح نافذة إضافة منتج');
     console.log('المستخدم الحالي:', currentUser);
@@ -1667,7 +1793,10 @@ function saveProduct() {
             rating: 4.5,
             images: images,
             merchantId: merchantId,
-            soldCount: 0
+            soldCount: 0,
+            createdAt: new Date().toISOString(),
+            createdByName: currentUser.name,
+            createdById: currentUser.id
         };
         
         products.push(newProduct);
