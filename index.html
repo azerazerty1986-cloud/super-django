@@ -23,20 +23,14 @@
     <!-- ربط ملف CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-transition">
-    <!-- شريط تقدم التمرير -->
-    <div class="scroll-progress" id="scrollProgress"></div>
-
-    <!-- جسيمات متحركة -->
-    <div class="particles" id="particles"></div>
-
+<body>
     <!-- شاشة التحميل -->
     <div class="loader" id="loader">
         <div class="loader-spinner"></div>
     </div>
 
-    <!-- نظام الإشعارات المتقدم -->
-    <div class="toast-container" id="toastContainer"></div>
+    <!-- نظام الإشعارات -->
+    <div class="notification-container" id="notificationContainer"></div>
 
     <!-- سلة التسوق الجانبية -->
     <div class="cart-sidebar" id="cartSidebar">
@@ -56,27 +50,6 @@
         </div>
     </div>
 
-    <!-- أيقونة السلة الثابتة -->
-    <div class="fixed-cart" onclick="toggleCart()" id="fixedCart">
-        <i class="fas fa-shopping-cart"></i>
-        <span class="fixed-cart-count" id="fixedCartCounter">0</span>
-    </div>
-
-    <!-- أزرار الصعود والهبوط السريعة -->
-    <div class="navigation-buttons">
-        <button class="nav-btn up-btn" onclick="scrollToTop()" title="الصعود للأعلى">
-            <i class="fas fa-arrow-up"></i>
-        </button>
-        <button class="nav-btn down-btn" onclick="scrollToBottom()" title="الهبوط للأسفل">
-            <i class="fas fa-arrow-down"></i>
-        </button>
-    </div>
-
-    <!-- زر العودة للأعلى السريع -->
-    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn">
-        <i class="fas fa-chevron-up"></i>
-    </button>
-
     <!-- الشريط العلوي -->
     <div class="top-bar">
         <div class="container">
@@ -92,10 +65,9 @@
                 <i class="fas fa-gem"></i>
                 <span>منتجات أصلية 100%</span>
             </div>
-            <div class="theme-toggle-advanced" onclick="toggleTheme()" id="themeToggle">
-                <div class="theme-toggle-slider"></div>
-                <i class="fas fa-sun"></i>
+            <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
                 <i class="fas fa-moon"></i>
+                <span>ليلي</span>
             </div>
         </div>
     </div>
@@ -157,7 +129,7 @@
                 </div>
             </div>
             
-            <!-- تكرار العناصر للحركة المستمرة -->
+            <!-- تكرار للحركة المستمرة -->
             <div class="marquee-item float-item">
                 <i class="fas fa-truck"></i>
                 <span>شحن سريع</span>
@@ -197,13 +169,12 @@
                 </div>
             </div>
             
-            <!-- شريط البحث مع تأثير الكتابة -->
+            <!-- شريط البحث -->
             <div class="search-wrapper">
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
-                    <button onclick="searchProducts()" class="ripple"><i class="fas fa-search"></i></button>
+                    <button onclick="searchProducts()"><i class="fas fa-search"></i></button>
                 </div>
-                <div class="search-indicator" id="searchIndicator"></div>
             </div>
             
             <!-- أزرار الإجراءات -->
@@ -245,33 +216,30 @@
                 <i class="fas fa-gem"></i>
                 <span>منتوجات أخرى</span>
             </a>
-            <a class="nav-link" onclick="openCompareModal()">
-                <i class="fas fa-balance-scale"></i>
-                <span>مقارنة</span>
-                <span class="cart-count" id="compareCount">0</span>
-            </a>
         </nav>
     </div>
 
-    <!-- نص متحرك (Typing Animation) -->
+    <!-- خيارات الفرز -->
     <div class="container">
-        <div class="typing-container">
-            <span id="typing-text"></span>
-            <span class="typing-cursor">|</span>
+        <div class="sort-options">
+            <select class="sort-select" onchange="changeSort(this.value)">
+                <option value="newest">🆕 الأحدث أولاً</option>
+                <option value="price_low">💰 السعر: من الأقل للأعلى</option>
+                <option value="price_high">💰 السعر: من الأعلى للأقل</option>
+                <option value="rating">⭐ التقييم</option>
+            </select>
         </div>
     </div>
 
-    <!-- لوحة التاجر -->
+    <!-- لوحة التاجر (تظهر للتاجر فقط) -->
     <div class="container" id="merchantPanelContainer" style="display: none;"></div>
 
-    <!-- المنتجات مع Skeleton Loading -->
+    <!-- المنتجات - شبكة 3 أعمدة -->
     <div class="container">
-        <div class="products-grid" id="productsContainer">
-            <!-- Skeleton loading سيكون هنا -->
-        </div>
+        <div class="products-grid" id="productsContainer"></div>
     </div>
 
-    <!-- لوحة التحكم للمدير -->
+    <!-- لوحة التحكم (للمدير فقط) -->
     <div class="container dashboard-section admin-only" id="dashboardSection" style="display: none;">
         <div class="dashboard-tabs">
             <button class="dashboard-tab active" onclick="switchDashboardTab('overview')">نظرة عامة</button>
@@ -281,7 +249,9 @@
             <button class="dashboard-tab" onclick="switchDashboardTab('merchants')">التجار</button>
         </div>
 
-        <div class="dashboard-content" id="dashboardContent"></div>
+        <div class="dashboard-content" id="dashboardContent">
+            <!-- المحتوى يتم تعبئته بواسطة JavaScript -->
+        </div>
     </div>
 
     <!-- الفوتر -->
@@ -318,6 +288,29 @@
         </div>
     </footer>
 
+    <!-- أيقونة السلة الثابتة -->
+    <div class="fixed-cart" onclick="toggleCart()" id="fixedCart">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="fixed-cart-count" id="fixedCartCounter">0</span>
+    </div>
+
+    <!-- أزرار الصعود والهبوط -->
+    <div class="navigation-buttons">
+        <button class="nav-btn up-btn" onclick="scrollToTop()" title="الصعود للأعلى">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button class="nav-btn down-btn" onclick="scrollToBottom()" title="الهبوط للأسفل">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+    </div>
+
+    <!-- زر العودة للأعلى -->
+    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- النوافذ المنبثقة -->
+    
     <!-- نافذة تسجيل الدخول -->
     <div class="modal" id="loginModal">
         <div class="modal-content">
@@ -330,6 +323,7 @@
                 <button class="btn-outline-gold" style="flex: 1;" onclick="switchAuthTab('register')">حساب جديد</button>
             </div>
 
+            <!-- نموذج تسجيل الدخول -->
             <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
                 <div class="form-group">
                     <label>اسم المستخدم أو البريد الإلكتروني</label>
@@ -344,6 +338,7 @@
                 </button>
             </form>
 
+            <!-- نموذج التسجيل -->
             <form id="registerForm" style="display: none;" onsubmit="event.preventDefault(); handleRegister();">
                 <div class="form-group">
                     <label>الاسم الكامل</label>
@@ -432,6 +427,7 @@
                     </select>
                 </div>
 
+                <!-- رفع الصور -->
                 <div class="form-group">
                     <label>صور المنتج</label>
                     <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
@@ -459,20 +455,8 @@
 
     <!-- نافذة تفاصيل المنتج -->
     <div class="modal" id="productDetailModal">
-        <div class="modal-content modal-lg" id="productDetailContent"></div>
-    </div>
-
-    <!-- نافذة المقارنة -->
-    <div class="modal" id="compareModal">
-        <div class="modal-content modal-lg">
-            <h2 style="text-align: center; margin-bottom: 30px; color: var(--gold);">
-                <i class="fas fa-balance-scale"></i> مقارنة المنتجات
-            </h2>
-            <div id="compareContent"></div>
-            <div style="display: flex; gap: 15px; margin-top: 30px;">
-                <button class="btn-gold" style="flex: 1;" onclick="clearCompare()">تفريغ المقارنة</button>
-                <button class="btn-outline-gold" style="flex: 1;" onclick="closeModal('compareModal')">إغلاق</button>
-            </div>
+        <div class="modal-content modal-lg" id="productDetailContent">
+            <!-- يتم تعبئتها ديناميكياً -->
         </div>
     </div>
 
