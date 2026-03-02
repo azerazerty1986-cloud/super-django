@@ -16,9 +16,6 @@
     <!-- Chart.js للرسوم البيانية -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    <!-- Anime.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-    
     <!-- Swiper للمعرض -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
@@ -26,7 +23,6 @@
     <style>
         /* ===== المتغيرات العامة ===== */
         :root {
-            /* الألوان الأساسية - الوضع الليلي */
             --bg-primary: #0a1a15;
             --bg-secondary: #1a2f28;
             --bg-card: rgba(26, 47, 40, 0.95);
@@ -45,7 +41,6 @@
             --transition: all 0.3s ease;
         }
 
-        /* الوضع النهاري */
         body.light-mode {
             --bg-primary: #f8f9fa;
             --bg-secondary: #ffffff;
@@ -592,15 +587,6 @@
             -webkit-box-orient: vertical;
         }
 
-        .product-rating {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 8px;
-            color: var(--gold);
-            font-size: 14px;
-        }
-
         .product-price {
             font-size: 22px;
             font-weight: 800;
@@ -1054,74 +1040,6 @@
             border-top: 1px solid var(--gold-dark);
         }
 
-        /* ===== Responsive ===== */
-        @media (max-width: 992px) {
-            .search-wrapper {
-                flex: 0 1 300px;
-            }
-            
-            .logo-text h1 {
-                font-size: 24px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .top-bar .container {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .header-content {
-                flex-direction: column;
-            }
-            
-            .search-wrapper {
-                width: 100%;
-            }
-            
-            .cart-sidebar {
-                width: 100%;
-                left: -100%;
-            }
-        }
-
-        /* ===== تأثيرات إضافية ===== */
-        .glow-text {
-            text-shadow: 0 0 10px var(--gold);
-        }
-
-        .btn-gold {
-            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-            color: var(--bg-primary);
-            border: none;
-            padding: 12px 30px;
-            border-radius: 40px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .btn-gold:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px var(--gold);
-        }
-
-        .btn-outline-gold {
-            background: transparent;
-            border: 2px solid var(--gold);
-            color: var(--gold);
-            padding: 10px 25px;
-            border-radius: 40px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .btn-outline-gold:hover {
-            background: var(--gold);
-            color: var(--bg-primary);
-        }
-
         /* ===== جداول ===== */
         table {
             width: 100%;
@@ -1341,12 +1259,12 @@
             <!-- نموذج تسجيل الدخول -->
             <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
                 <div class="form-group">
-                    <label>البريد الإلكتروني أو اسم المستخدم</label>
-                    <input type="text" class="form-control" id="loginEmail" required>
+                    <label>اسم المستخدم أو البريد الإلكتروني</label>
+                    <input type="text" class="form-control" id="loginEmail" value="azer" placeholder="أدخل azer">
                 </div>
                 <div class="form-group">
                     <label>كلمة المرور</label>
-                    <input type="password" class="form-control" id="loginPassword" required>
+                    <input type="password" class="form-control" id="loginPassword" value="123456" placeholder="أدخل 123456">
                 </div>
                 <button type="submit" class="btn-gold" style="width: 100%; margin-top: 20px;">
                     <i class="fas fa-sign-in-alt"></i> دخول
@@ -1810,6 +1728,37 @@
         const orderManager = new OrderManagementSystem();
         const whatsappManager = new WhatsAppIntegration();
         const analyticsManager = new AnalyticsSystem();
+
+        // ========== إعداد حساب المدير ==========
+        function setupAdminAccount() {
+            try {
+                let users = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
+                
+                // البحث عن حساب المدير
+                const adminExists = users.some(u => u.name === 'azer' || u.email === 'azer@admin.com');
+                
+                if (!adminExists) {
+                    // إضافة حساب المدير الجديد
+                    const adminUser = {
+                        id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+                        name: 'azer',
+                        email: 'azer@admin.com',
+                        password: '123456',
+                        role: 'admin',
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    users.push(adminUser);
+                    localStorage.setItem('nardoo_users', JSON.stringify(users));
+                    console.log('✅ تم إنشاء حساب المدير: azer / 123456');
+                }
+            } catch(e) {
+                console.log('خطأ في إعداد المدير:', e);
+            }
+        }
+
+        // استدعاء الدالة فوراً
+        setupAdminAccount();
 
         // ========== دوال المساعدة ==========
         function showNotification(message, type = 'info') {
@@ -2298,8 +2247,9 @@
             if (saved) {
                 return JSON.parse(saved);
             }
+            // المستخدم الافتراضي إذا لم يكن هناك أي مستخدم
             return [
-                { id: 1, name: 'مدير النظام', email: 'admin@nakha.com', password: 'admin123', role: 'admin' }
+                { id: 1, name: 'azer', email: 'azer@admin.com', password: '123456', role: 'admin' }
             ];
         }
 
@@ -2340,6 +2290,7 @@
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
+            // البحث عن المستخدم
             const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
 
             if (user) {
@@ -2352,6 +2303,7 @@
                 if (user.role === 'admin') {
                     document.getElementById('dashboardBtn').style.display = 'flex';
                     document.getElementById('userBtn').innerHTML = '<i class="fas fa-crown"></i>';
+                    showNotification('مرحباً بك يا مدير', 'success');
                 } else if (user.role === 'merchant_approved') {
                     document.getElementById('dashboardBtn').style.display = 'none';
                     document.getElementById('userBtn').innerHTML = '<i class="fas fa-store"></i>';
