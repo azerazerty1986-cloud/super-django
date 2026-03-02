@@ -382,127 +382,15 @@ function toggleTheme() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ========== إدارة المنتجات ==========
+// ========== إدارة المنتجات (بدون منتجات افتراضية) ==========
 function loadProducts() {
     const saved = localStorage.getItem('nardoo_products');
     if (saved) {
         products = JSON.parse(saved);
+        console.log('تم تحميل المنتجات من localStorage:', products.length);
     } else {
-        // منتجات افتراضية
-        products = [
-            { 
-                id: 1, 
-                name: "عرض رمضان - طقم بهارات كامل", 
-                category: "promo", 
-                price: 3500, 
-                stock: 20, 
-                rating: 5.0,
-                images: [
-                    "https://via.placeholder.com/300/ff6b6b/ffffff?text=عرض+رمضان",
-                    "https://via.placeholder.com/300/ff8787/ffffff?text=Ramadan+Offer"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 2, 
-                name: "بهارات برياني أصلية - خلطة خاصة", 
-                category: "spices", 
-                price: 4500, 
-                stock: 15, 
-                rating: 4.5,
-                images: [
-                    "https://via.placeholder.com/300/ffd93d/000000?text=برياني",
-                    "https://via.placeholder.com/300/ffd700/000000?text=برياني+2"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 3, 
-                name: "زعفران أصلي - درجة أولى", 
-                category: "spices", 
-                price: 12000, 
-                stock: 25, 
-                rating: 5.0,
-                images: [
-                    "https://via.placeholder.com/300/8b0000/ffffff?text=زعفران",
-                    "https://via.placeholder.com/300/a52a2a/ffffff?text=Saffron"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 4, 
-                name: "زيت أرغان للشعر - عضوي 100%", 
-                category: "cosmetic", 
-                price: 3500, 
-                stock: 8, 
-                rating: 4.8,
-                images: [
-                    "https://via.placeholder.com/300/ff9f9f/000000?text=أرغان",
-                    "https://via.placeholder.com/300/ffb6c1/000000?text=Argan"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 5, 
-                name: "ماسك طين طبيعي - للبشرة", 
-                category: "cosmetic", 
-                price: 2500, 
-                stock: 3, 
-                rating: 4.3,
-                images: [
-                    "https://via.placeholder.com/300/228b22/ffffff?text=طين"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 6, 
-                name: "كريم ترطيب للوجه - بزبدة الشيا", 
-                category: "cosmetic", 
-                price: 2800, 
-                stock: 12, 
-                rating: 4.4,
-                images: [
-                    "https://via.placeholder.com/300/8fbc8f/ffffff?text=كريم"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 7, 
-                name: "سماعات بلوتوث لاسلكية", 
-                category: "other", 
-                price: 6500, 
-                stock: 9, 
-                rating: 4.6,
-                images: [
-                    "https://via.placeholder.com/300/4682b4/ffffff?text=سماعات"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 8, 
-                name: "هاتف ذكي - شاشة 6.5 بوصة", 
-                category: "other", 
-                price: 45000, 
-                stock: 5, 
-                rating: 4.7,
-                images: [
-                    "https://via.placeholder.com/300/000000/ffffff?text=هاتف"
-                ],
-                merchantId: null
-            },
-            { 
-                id: 9, 
-                name: "قميص رجالي قطني", 
-                category: "other", 
-                price: 3200, 
-                stock: 4, 
-                rating: 4.2,
-                images: [
-                    "https://via.placeholder.com/300/556b2f/ffffff?text=قميص"
-                ],
-                merchantId: null
-            }
-        ];
+        products = [];
+        console.log('لا توجد منتجات محفوظة، ابدأ بإضافة منتجاتك الخاصة');
     }
     saveProducts();
     displayProducts();
@@ -510,6 +398,7 @@ function loadProducts() {
 
 function saveProducts() {
     localStorage.setItem('nardoo_products', JSON.stringify(products));
+    console.log('تم حفظ المنتجات في localStorage');
 }
 
 function displayProducts() {
@@ -518,11 +407,9 @@ function displayProducts() {
 
     let filtered = products.filter(p => p.stock > 0);
     
-    // إذا كان التاجر يشاهد منتجاته فقط
     if (currentFilter === 'my_products' && currentUser?.role === 'merchant_approved') {
         filtered = filtered.filter(p => p.merchantId === currentUser.id);
     }
-    // التصفية حسب التصنيف العادي
     else if (currentFilter !== 'all') {
         filtered = filtered.filter(p => p.category === currentFilter);
     }
@@ -535,10 +422,19 @@ function displayProducts() {
 
     if (filtered.length === 0) {
         container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
-                <i class="fas fa-box-open" style="font-size: 60px; color: var(--gold); margin-bottom: 20px;"></i>
-                <h3 style="color: var(--gold);">لا توجد منتجات</h3>
-                <p>لا توجد منتجات في هذا القسم</p>
+            <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px;">
+                <i class="fas fa-box-open" style="font-size: 80px; color: var(--gold); margin-bottom: 20px;"></i>
+                <h3 style="color: var(--gold); font-size: 28px; margin-bottom: 15px;">لا توجد منتجات</h3>
+                <p style="color: var(--text-secondary); font-size: 18px; margin-bottom: 30px;">لم تقم بإضافة أي منتجات بعد</p>
+                ${currentUser ? `
+                    <button class="btn-gold" onclick="showAddProductModal()" style="font-size: 18px; padding: 15px 40px;">
+                        <i class="fas fa-plus"></i> إضافة منتج جديد
+                    </button>
+                ` : `
+                    <button class="btn-gold" onclick="openLoginModal()" style="font-size: 18px; padding: 15px 40px;">
+                        <i class="fas fa-sign-in-alt"></i> تسجيل الدخول للإضافة
+                    </button>
+                `}
             </div>
         `;
         return;
@@ -568,7 +464,7 @@ function displayProducts() {
 
         return `
             <div class="product-card" data-id="${product.id}">
-                <div class="product-badge">${product.rating} ⭐</div>
+                <div class="product-badge">${product.rating || 4.5} ⭐</div>
                 ${product.merchantId ? `<div class="merchant-badge"><i class="fas fa-store"></i> ${merchant?.name || 'تاجر'}</div>` : ''}
                 
                 <div class="product-gallery">
@@ -654,18 +550,15 @@ function searchProducts() {
     displayProducts();
     analyticsManager.trackEvent('search', { searchTerm });
     
-    // إظهار تأثير عند البحث
     const searchBox = document.querySelector('.search-box');
     searchBox.style.animation = 'pulse 0.5s';
     setTimeout(() => {
         searchBox.style.animation = '';
     }, 500);
     
-    // إظهار مؤشر البحث
     showSearchIndicator(searchTerm);
 }
 
-// إظهار مؤشر البحث
 function showSearchIndicator(term) {
     if (!term) return;
     
@@ -680,7 +573,6 @@ function showSearchIndicator(term) {
     
     indicator.innerHTML = `🔍 جاري البحث عن: "${term}"`;
     
-    // إخفاء المؤشر بعد 3 ثواني
     setTimeout(() => {
         if (indicator) {
             indicator.remove();
@@ -702,7 +594,7 @@ function saveCart() {
 function updateCartCounter() {
     const count = cart.reduce((sum, item) => sum + item.quantity, 0);
     document.getElementById('cartCounter').textContent = count;
-    updateFixedCartCounter(); // تحديث العداد الثابت
+    updateFixedCartCounter();
 }
 
 function addToCart(productId) {
@@ -736,7 +628,6 @@ function addToCart(productId) {
     showAdvancedNotification('تمت الإضافة إلى السلة', 'success', 'تم بنجاح');
     analyticsManager.trackEvent('addToCart', { productId });
     
-    // تأثير اهتزاز للسلة الثابتة
     const fixedCart = document.getElementById('fixedCart');
     fixedCart.style.animation = 'shake 0.5s';
     setTimeout(() => {
@@ -873,7 +764,6 @@ function scrollToElement(elementId) {
     }
 }
 
-// إظهار/إخفاء زر العودة للأعلى
 function toggleQuickTopButton() {
     const quickTopBtn = document.getElementById('quickTopBtn');
     if (!quickTopBtn) return;
@@ -885,7 +775,6 @@ function toggleQuickTopButton() {
     }
 }
 
-// تحديث عداد السلة الثابت
 function updateFixedCartCounter() {
     const fixedCounter = document.getElementById('fixedCartCounter');
     if (fixedCounter) {
@@ -894,7 +783,6 @@ function updateFixedCartCounter() {
     }
 }
 
-// إضافة تأثيرات التمرير للعناصر
 function addScrollAnimations() {
     const elements = document.querySelectorAll('.product-card, .feature-card, .marquee-item');
     
@@ -926,7 +814,6 @@ function updateCountdown() {
     let minutes = 30;
     let seconds = 45;
     
-    // تحديث العداد كل ثانية
     const interval = setInterval(() => {
         seconds--;
         
@@ -946,7 +833,6 @@ function updateCountdown() {
             }
         }
         
-        // تحديث العرض مع تأثير حركي
         const displayValue = (num) => num.toString().padStart(2, '0');
         
         hoursElement.textContent = displayValue(hours);
@@ -1078,7 +964,6 @@ function handleLogin() {
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         
-        // تحديث الواجهة حسب الدور
         updateUIBasedOnRole();
         
         showAdvancedNotification(`مرحباً ${user.name}`, 'success', 'تسجيل دخول ناجح');
@@ -1091,24 +976,19 @@ function handleLogin() {
 function updateUIBasedOnRole() {
     if (!currentUser) return;
 
-    // إخفاء كل العناصر أولاً
     document.querySelectorAll('.admin-only').forEach(el => {
         el.style.display = 'none';
     });
     
-    // إخفاء لوحة التاجر
     document.getElementById('merchantPanelContainer').style.display = 'none';
     
-    // إزالة زر "منتجاتي" إذا كان موجوداً
     const myProductsBtn = document.getElementById('myProductsBtn');
     if (myProductsBtn) myProductsBtn.remove();
 
     if (currentUser.role === 'admin') {
-        // المدير: يظهر زر لوحة التحكم
         document.getElementById('dashboardBtn').style.display = 'flex';
         document.getElementById('userBtn').innerHTML = '<i class="fas fa-crown"></i>';
         
-        // إظهار العناصر الخاصة بالمدير
         document.querySelectorAll('.admin-only').forEach(el => {
             el.style.display = 'block';
         });
@@ -1116,26 +996,20 @@ function updateUIBasedOnRole() {
         showAdvancedNotification('مرحباً بك يا مدير - لديك صلاحيات كاملة', 'success', 'مدير');
     } 
     else if (currentUser.role === 'merchant_approved') {
-        // التاجر: لا يرى لوحة التحكم، يرى لوحة التاجر
         document.getElementById('dashboardBtn').style.display = 'none';
         document.getElementById('userBtn').innerHTML = '<i class="fas fa-store"></i>';
         
-        // إضافة زر "منتجاتي" في القائمة
         addMerchantMenuButton();
-        
-        // عرض لوحة التاجر
         showMerchantPanel();
         
         showAdvancedNotification('مرحباً أيها التاجر - يمكنك إدارة منتجاتك فقط', 'info', 'تاجر');
     } 
     else {
-        // عميل عادي
         document.getElementById('dashboardBtn').style.display = 'none';
         document.getElementById('userBtn').innerHTML = '<i class="fas fa-user"></i>';
     }
 }
 
-// إضافة زر للتاجر لعرض منتجاته
 function addMerchantMenuButton() {
     const navMenu = document.getElementById('mainNav');
     if (navMenu && !document.getElementById('myProductsBtn')) {
@@ -1148,7 +1022,6 @@ function addMerchantMenuButton() {
     }
 }
 
-// عرض منتجات التاجر فقط
 function viewMyProducts() {
     if (!currentUser || currentUser.role !== 'merchant_approved') return;
     currentFilter = 'my_products';
@@ -1161,7 +1034,6 @@ function viewMyProducts() {
     displayProducts();
 }
 
-// عرض لوحة التاجر
 function showMerchantPanel() {
     if (!currentUser || currentUser.role !== 'merchant_approved') return;
     
@@ -1649,6 +1521,9 @@ function rejectMerchant(userId) {
 
 // ========== إدارة المنتجات (مع صلاحيات) ==========
 function showAddProductModal() {
+    console.log('فتح نافذة إضافة منتج');
+    console.log('المستخدم الحالي:', currentUser);
+    
     if (!currentUser) {
         showAdvancedNotification('يجب تسجيل الدخول أولاً', 'warning', 'تنبيه');
         openLoginModal();
@@ -1658,7 +1533,6 @@ function showAddProductModal() {
     if (currentUser.role === 'merchant_approved') {
         document.getElementById('modalTitle').textContent = 'إضافة منتج جديد (خاص بك)';
         
-        // تعيين التاجر تلقائياً لمنتجاته
         const merchantSelect = document.getElementById('productMerchant');
         merchantSelect.innerHTML = `<option value="${currentUser.id}">${currentUser.name}</option>`;
         merchantSelect.disabled = true;
@@ -1668,7 +1542,6 @@ function showAddProductModal() {
     else if (currentUser.role === 'admin') {
         document.getElementById('modalTitle').textContent = 'إضافة منتج جديد';
         
-        // تعبئة قائمة التجار للمدير
         const merchantSelect = document.getElementById('productMerchant');
         merchantSelect.innerHTML = '<option value="">منتج عام</option>';
         users.filter(u => u.role === 'merchant_approved').forEach(m => {
@@ -1690,12 +1563,16 @@ function showAddProductModal() {
     document.getElementById('productImagesData').value = '';
 
     document.getElementById('productModal').style.display = 'flex';
+    console.log('تم فتح النافذة بنجاح');
 }
 
 function handleImageUpload(event) {
+    console.log('رفع الصور:', event.target.files);
     const files = event.target.files;
     const preview = document.getElementById('imagePreview');
     const imagesData = [];
+
+    preview.innerHTML = '';
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -1705,6 +1582,7 @@ function handleImageUpload(event) {
             preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
             imagesData.push(e.target.result);
             document.getElementById('productImagesData').value = JSON.stringify(imagesData);
+            console.log('تمت إضافة صورة:', i+1);
         };
 
         reader.readAsDataURL(file);
@@ -1712,6 +1590,8 @@ function handleImageUpload(event) {
 }
 
 function saveProduct() {
+    console.log('بدء حفظ المنتج');
+    
     if (!currentUser) {
         showAdvancedNotification('يجب تسجيل الدخول أولاً', 'error', 'خطأ');
         return;
@@ -1724,12 +1604,18 @@ function saveProduct() {
     const editingId = document.getElementById('editingProductId').value;
     const imagesData = document.getElementById('productImagesData').value;
 
+    console.log('بيانات المنتج:', { name, category, price, stock, editingId });
+
     if (!name || !category || !price || !stock) {
         showAdvancedNotification('الرجاء ملء جميع الحقول', 'error', 'خطأ');
         return;
     }
 
-    // تحديد merchantId حسب الدور
+    if (price <= 0 || stock < 0) {
+        showAdvancedNotification('السعر والكمية يجب أن تكون أرقام صحيحة', 'error', 'خطأ');
+        return;
+    }
+
     let merchantId = null;
     if (currentUser.role === 'merchant_approved') {
         merchantId = currentUser.id;
@@ -1737,12 +1623,21 @@ function saveProduct() {
         merchantId = document.getElementById('productMerchant').value || null;
     }
 
-    const images = imagesData ? JSON.parse(imagesData) : [];
+    let images = [];
+    try {
+        images = imagesData ? JSON.parse(imagesData) : [];
+    } catch(e) {
+        console.log('خطأ في قراءة الصور:', e);
+        images = [];
+    }
+
+    if (images.length === 0) {
+        images = ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"];
+    }
 
     if (editingId) {
         const index = products.findIndex(p => p.id == editingId);
         if (index !== -1) {
-            // التحقق من صلاحية التعديل
             if (currentUser.role === 'merchant_approved' && products[index].merchantId !== currentUser.id) {
                 showAdvancedNotification('لا يمكنك تعديل منتجات الآخرين', 'error', 'خطأ');
                 return;
@@ -1750,35 +1645,40 @@ function saveProduct() {
             
             products[index] = {
                 ...products[index],
-                name,
-                category,
-                price,
-                stock,
-                merchantId,
-                images: images.length > 0 ? images : products[index].images
+                name: name,
+                category: category,
+                price: price,
+                stock: stock,
+                merchantId: merchantId,
+                images: images,
+                rating: products[index].rating || 4.5
             };
+            console.log('تم تعديل المنتج:', products[index]);
+            showAdvancedNotification('تم تعديل المنتج بنجاح', 'success', 'نجاح');
         }
-        showAdvancedNotification('تم تعديل المنتج', 'success', 'نجاح');
     } else {
         const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-        products.push({
+        const newProduct = {
             id: newId,
-            name,
-            category,
-            price,
-            stock,
+            name: name,
+            category: category,
+            price: price,
+            stock: stock,
             rating: 4.5,
-            images: images.length > 0 ? images : ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"],
-            merchantId
-        });
-        showAdvancedNotification('تم إضافة المنتج', 'success', 'نجاح');
+            images: images,
+            merchantId: merchantId,
+            soldCount: 0
+        };
+        
+        products.push(newProduct);
+        console.log('تم إضافة منتج جديد:', newProduct);
+        showAdvancedNotification('تم إضافة المنتج بنجاح', 'success', 'نجاح');
     }
 
     saveProducts();
     displayProducts();
     closeModal('productModal');
     
-    // تحديث لوحة التاجر إذا كان تاجر
     if (currentUser.role === 'merchant_approved') {
         showMerchantPanel();
     }
@@ -1795,7 +1695,6 @@ function editProduct(id) {
     const product = products.find(p => p.id === id);
     if (!product) return;
 
-    // التحقق من صلاحية التعديل
     if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
         showAdvancedNotification('لا يمكنك تعديل منتجات الآخرين', 'error', 'خطأ');
         return;
@@ -1808,7 +1707,6 @@ function editProduct(id) {
     document.getElementById('productStock').value = product.stock;
     document.getElementById('editingProductId').value = id;
 
-    // تعطيل/تمكين حقل التاجر حسب الدور
     const merchantSelect = document.getElementById('productMerchant');
     if (currentUser.role === 'merchant_approved') {
         merchantSelect.innerHTML = `<option value="${currentUser.id}">${currentUser.name}</option>`;
@@ -1840,7 +1738,6 @@ function deleteProduct(id) {
 
     const product = products.find(p => p.id === id);
     
-    // التحقق من صلاحية الحذف
     if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
         showAdvancedNotification('لا يمكنك حذف منتجات الآخرين', 'error', 'خطأ');
         return;
@@ -1852,7 +1749,6 @@ function deleteProduct(id) {
         displayProducts();
         showAdvancedNotification('تم حذف المنتج', 'info', 'تم');
         
-        // تحديث لوحة التاجر إذا كان تاجر
         if (currentUser.role === 'merchant_approved') {
             showMerchantPanel();
         }
@@ -2073,7 +1969,6 @@ window.onload = function() {
 
     analyticsManager.trackPageView('home');
     
-    // ===== تفعيل التحسينات الجديدة =====
     updateFixedCartCounter();
     window.addEventListener('scroll', toggleQuickTopButton);
     addScrollAnimations();
@@ -2083,7 +1978,6 @@ window.onload = function() {
     initScrollProgress();
     initParticles();
     
-    // تفعيل تأثير الكتابة إذا وجد العنصر
     const typingElement = document.getElementById('typing-text');
     if (typingElement) {
         const typing = new TypingAnimation(
