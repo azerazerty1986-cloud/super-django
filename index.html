@@ -40,6 +40,8 @@
             --blue-dark: #2980b9;
             --red: #e74c3c;
             --red-dark: #c0392b;
+            --green: #25D366;
+            --green-dark: #128C7E;
             --glass: rgba(255, 255, 255, 0.08);
             --glass-border: rgba(255, 255, 255, 0.15);
             --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -362,7 +364,7 @@
             justify-content: center;
         }
 
-        /* ===== القائمة الرئيسية - تصميم جديد ===== */
+        /* ===== القائمة الرئيسية ===== */
         .nav-menu {
             background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
             backdrop-filter: blur(10px);
@@ -414,12 +416,6 @@
             color: var(--bg-primary);
         }
 
-        .nav-link i {
-            color: var(--gold);
-            transition: var(--transition);
-            font-size: 16px;
-        }
-
         .nav-link:hover i {
             color: var(--bg-primary);
             transform: scale(1.1);
@@ -435,13 +431,53 @@
             color: var(--bg-primary);
         }
 
-        /* تخصيص ألوان لكل قسم */
-        .nav-link[data-category="promo"] i { color: #ff6b6b; }
-        .nav-link[data-category="spices"] i { color: #ffd93d; }
-        .nav-link[data-category="cosmetic"] i { color: #ff9f9f; }
-        .nav-link[data-category="other"] i { color: #a8e6cf; }
+        .nav-link i {
+            color: var(--gold);
+            transition: var(--transition);
+            font-size: 16px;
+        }
 
-        /* ===== الفلاتر - تصميم جديد ===== */
+        /* ===== لوحة التاجر ===== */
+        .merchant-panel {
+            background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+            border-radius: 30px;
+            padding: 25px;
+            margin: 20px 0;
+            color: white;
+            box-shadow: 0 10px 30px rgba(155, 89, 182, 0.3);
+            border: 2px solid var(--gold);
+        }
+
+        .merchant-panel h3 {
+            color: white;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .merchant-panel .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .merchant-panel .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .merchant-panel .stat-item .number {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--gold);
+        }
+
+        /* ===== الفلاتر ===== */
         .filters-section {
             margin: 30px 0;
         }
@@ -485,10 +521,6 @@
             border-color: var(--gold);
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
-        }
-
-        .category-btn:hover::before {
-            opacity: 0.1;
         }
 
         .category-btn.active {
@@ -948,7 +980,7 @@
         .checkout-btn {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #25D366, #128C7E);
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
             color: white;
             border: none;
             border-radius: 25px;
@@ -964,10 +996,10 @@
 
         .checkout-btn:hover {
             transform: scale(1.02);
-            box-shadow: 0 0 30px #25D366;
+            box-shadow: 0 0 30px var(--green);
         }
 
-        /* ===== لوحة التحكم ===== */
+        /* ===== لوحة التحكم (للمدير فقط) ===== */
         .dashboard-section {
             margin: 40px 0;
         }
@@ -1072,6 +1104,11 @@
         .form-control:focus {
             border-color: var(--gold);
             outline: none;
+        }
+
+        .form-control:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
 
         .image-upload-area {
@@ -1233,6 +1270,14 @@
             background: var(--gold);
             color: var(--bg-primary);
         }
+
+        .admin-only {
+            display: block;
+        }
+
+        .merchant-only {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -1257,7 +1302,7 @@
                 <span id="cartTotal">0 دج</span>
             </div>
             <button class="checkout-btn" onclick="checkoutCart()">
-                <i class="fab fa-whatsapp"></i> إتمام الطلب
+                <i class="fab fa-whatsapp"></i> إتمام الطلب عبر واتساب
             </button>
         </div>
     </div>
@@ -1314,7 +1359,7 @@
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count" id="cartCounter">0</span>
                 </button>
-                <button class="action-btn" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
+                <button class="action-btn admin-only" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
                     <i class="fas fa-chart-line"></i>
                 </button>
             </div>
@@ -1330,33 +1375,33 @@
         </div>
     </div>
 
-    <!-- القائمة الرئيسية - تصميم جديد بدون تكرار -->
+    <!-- القائمة الرئيسية -->
     <div class="container">
-        <nav class="nav-menu">
-            <a class="nav-link active" onclick="filterProducts('all')" data-category="all">
+        <nav class="nav-menu" id="mainNav">
+            <a class="nav-link active" onclick="filterProducts('all')">
                 <i class="fas fa-home"></i>
                 <span>الرئيسية</span>
             </a>
-            <a class="nav-link" onclick="filterProducts('promo')" data-category="promo">
+            <a class="nav-link" onclick="filterProducts('promo')">
                 <i class="fas fa-fire"></i>
                 <span>برموسيو</span>
             </a>
-            <a class="nav-link" onclick="filterProducts('spices')" data-category="spices">
+            <a class="nav-link" onclick="filterProducts('spices')">
                 <i class="fas fa-mortar-pestle"></i>
                 <span>توابل</span>
             </a>
-            <a class="nav-link" onclick="filterProducts('cosmetic')" data-category="cosmetic">
+            <a class="nav-link" onclick="filterProducts('cosmetic')">
                 <i class="fas fa-spa"></i>
                 <span>كوسمتيك</span>
             </a>
-            <a class="nav-link" onclick="filterProducts('other')" data-category="other">
+            <a class="nav-link" onclick="filterProducts('other')">
                 <i class="fas fa-gem"></i>
                 <span>منتوجات أخرى</span>
             </a>
         </nav>
     </div>
 
-    <!-- الفلاتر - تصميم جديد بدون تكرار -->
+    <!-- الفلاتر -->
     <div class="container filters-section">
         <div class="categories-filter" id="categoryFilters">
             <button class="category-btn active" onclick="filterProducts('all')">الكل</button>
@@ -1367,13 +1412,16 @@
         </div>
     </div>
 
+    <!-- لوحة التاجر (تظهر للتاجر فقط) -->
+    <div class="container" id="merchantPanelContainer" style="display: none;"></div>
+
     <!-- المنتجات - شبكة 3 أعمدة -->
     <div class="container">
         <div class="products-grid" id="productsContainer"></div>
     </div>
 
-    <!-- لوحة التحكم -->
-    <div class="container dashboard-section" id="dashboardSection" style="display: none;">
+    <!-- لوحة التحكم (للمدير فقط) -->
+    <div class="container dashboard-section admin-only" id="dashboardSection" style="display: none;">
         <div class="dashboard-tabs">
             <button class="dashboard-tab active" onclick="switchDashboardTab('overview')">نظرة عامة</button>
             <button class="dashboard-tab" onclick="switchDashboardTab('orders')">الطلبات</button>
@@ -1532,7 +1580,7 @@
                     <input type="number" class="form-control" id="productStock" required min="0">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="merchantSelectGroup">
                     <label>التاجر</label>
                     <select class="form-control" id="productMerchant">
                         <option value="">منتج عام</option>
@@ -1582,7 +1630,7 @@
         let currentFilter = 'all';
         let searchTerm = '';
 
-        // ========== 2. نظام إدارة الطلبات ==========
+        // ========== 2. نظام إدارة الطلبات (مع واتساب) ==========
         class OrderManagementSystem {
             constructor() {
                 this.orders = this.loadOrders();
@@ -1709,7 +1757,7 @@
             }
         }
 
-        // ========== 3. نظام الواتساب ==========
+        // ========== 3. نظام الواتساب (معدل) ==========
         class WhatsAppIntegration {
             constructor() {
                 this.storePhone = '213562243648';
@@ -1728,7 +1776,7 @@
             formatOrderMessage(orderData) {
                 const {
                     items = [],
-                    customerName = '',
+                    customerName = currentUser?.name || 'عميل',
                     customerPhone = '',
                     customerAddress = '',
                     paymentMethod = 'الواتساب',
@@ -1741,13 +1789,13 @@
 
                 message += '👤 *العميل:*\n';
                 message += `  • الاسم: ${customerName}\n`;
-                message += `  • الهاتف: ${customerPhone}\n`;
-                message += `  • العنوان: ${customerAddress}\n\n`;
+                message += `  • الهاتف: ${customerPhone || 'غير متوفر'}\n`;
+                message += `  • العنوان: ${customerAddress || 'غير محدد'}\n\n`;
 
                 message += '📦 *المنتجات:*\n';
                 items.forEach((item, i) => {
                     message += `  ${i+1}. ${item.name}\n`;
-                    message += `     • ${item.price} دج × ${item.quantity}\n`;
+                    message += `     • ${item.price.toLocaleString()} دج × ${item.quantity}\n`;
                 });
 
                 const subtotal = items.reduce((s, i) => s + (i.price * i.quantity), 0);
@@ -1755,9 +1803,9 @@
                 const total = subtotal + shipping;
 
                 message += '\n💰 *المجموع:*\n';
-                message += `  • المجموع الفرعي: ${subtotal} دج\n`;
+                message += `  • المجموع الفرعي: ${subtotal.toLocaleString()} دج\n`;
                 message += `  • الشحن: ${shipping} دج\n`;
-                message += `  • *الإجمالي: ${total} دج*\n\n`;
+                message += `  • *الإجمالي: ${total.toLocaleString()} دج*\n\n`;
 
                 message += `💳 *الدفع:* ${paymentMethod}\n`;
                 if (notes) message += `📝 *ملاحظات:* ${notes}\n`;
@@ -1767,6 +1815,7 @@
             }
 
             calculateShipping(address) {
+                if (!address) return 800;
                 const rates = {
                     'الجزائر': 500,
                     'وهران': 700,
@@ -1818,7 +1867,7 @@
             }
         }
 
-        // ========== 4. نظام التحليلات ==========
+        // ========== 4. نظام التحليلات (للمدير فقط) ==========
         class AnalyticsSystem {
             constructor() {
                 this.events = this.loadEvents();
@@ -1962,7 +2011,7 @@
             if (saved) {
                 products = JSON.parse(saved);
             } else {
-                // منتجات افتراضية مع التصنيفات الجديدة
+                // منتجات افتراضية
                 products = [
                     { 
                         id: 1, 
@@ -2092,7 +2141,12 @@
 
             let filtered = products.filter(p => p.stock > 0);
             
-            if (currentFilter !== 'all') {
+            // إذا كان التاجر يشاهد منتجاته فقط
+            if (currentFilter === 'my_products' && currentUser?.role === 'merchant_approved') {
+                filtered = filtered.filter(p => p.merchantId === currentUser.id);
+            }
+            // التصفية حسب التصنيف العادي
+            else if (currentFilter !== 'all') {
                 filtered = filtered.filter(p => p.category === currentFilter);
             }
 
@@ -2100,6 +2154,17 @@
                 filtered = filtered.filter(p => 
                     p.name.toLowerCase().includes(searchTerm.toLowerCase())
                 );
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
+                        <i class="fas fa-box-open" style="font-size: 60px; color: var(--gold); margin-bottom: 20px;"></i>
+                        <h3 style="color: var(--gold);">لا توجد منتجات</h3>
+                        <p>لا توجد منتجات في هذا القسم</p>
+                    </div>
+                `;
+                return;
             }
 
             container.innerHTML = filtered.map(product => {
@@ -2116,17 +2181,18 @@
                     </div>
                 `).join('');
 
-                // اختيار أيقونة حسب القسم
                 let categoryIcon = 'fas fa-tag';
                 if (product.category === 'promo') categoryIcon = 'fas fa-fire';
                 else if (product.category === 'spices') categoryIcon = 'fas fa-mortar-pestle';
                 else if (product.category === 'cosmetic') categoryIcon = 'fas fa-spa';
                 else if (product.category === 'other') categoryIcon = 'fas fa-gem';
 
+                const merchant = users.find(u => u.id === product.merchantId);
+
                 return `
                     <div class="product-card" data-id="${product.id}">
                         <div class="product-badge">${product.rating} ⭐</div>
-                        ${product.merchantId ? '<div class="merchant-badge"><i class="fas fa-store"></i> تاجر</div>' : ''}
+                        ${product.merchantId ? `<div class="merchant-badge"><i class="fas fa-store"></i> ${merchant?.name || 'تاجر'}</div>` : ''}
                         
                         <div class="product-gallery">
                             <div class="swiper product-swiper-${product.id}">
@@ -2360,7 +2426,7 @@
             updateCartCounter();
             toggleCart();
 
-            showNotification('تم إرسال الطلب بنجاح', 'success');
+            showNotification('تم إرسال الطلب عبر واتساب بنجاح', 'success');
             analyticsManager.trackEvent('checkout', { orderId: order.id });
         }
 
@@ -2413,7 +2479,7 @@
             modal.style.display = 'flex';
         }
 
-        // ========== إدارة المستخدمين ==========
+        // ========== إدارة المستخدمين والصلاحيات ==========
         function loadUsers() {
             const saved = localStorage.getItem('nardoo_users');
             if (saved) {
@@ -2467,24 +2533,130 @@
                 currentUser = user;
                 localStorage.setItem('current_user', JSON.stringify(user));
                 closeModal('loginModal');
+                
+                // تحديث الواجهة حسب الدور
+                updateUIBasedOnRole();
+                
                 showNotification(`مرحباً ${user.name}`, 'success');
-
-                if (user.role === 'admin') {
-                    document.getElementById('dashboardBtn').style.display = 'flex';
-                    document.getElementById('userBtn').innerHTML = '<i class="fas fa-crown"></i>';
-                    showNotification('مرحباً بك يا مدير', 'success');
-                } else if (user.role === 'merchant_approved') {
-                    document.getElementById('dashboardBtn').style.display = 'none';
-                    document.getElementById('userBtn').innerHTML = '<i class="fas fa-store"></i>';
-                } else {
-                    document.getElementById('dashboardBtn').style.display = 'none';
-                    document.getElementById('userBtn').innerHTML = '<i class="fas fa-user"></i>';
-                }
-
-                analyticsManager.trackEvent('login', { userId: user.id });
+                analyticsManager.trackEvent('login', { userId: user.id, role: user.role });
             } else {
                 showNotification('بيانات الدخول غير صحيحة', 'error');
             }
+        }
+
+        function updateUIBasedOnRole() {
+            if (!currentUser) return;
+
+            // إخفاء كل العناصر أولاً
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // إخفاء لوحة التاجر
+            document.getElementById('merchantPanelContainer').style.display = 'none';
+            
+            // إزالة زر "منتجاتي" إذا كان موجوداً
+            const myProductsBtn = document.getElementById('myProductsBtn');
+            if (myProductsBtn) myProductsBtn.remove();
+
+            if (currentUser.role === 'admin') {
+                // المدير: يظهر زر لوحة التحكم
+                document.getElementById('dashboardBtn').style.display = 'flex';
+                document.getElementById('userBtn').innerHTML = '<i class="fas fa-crown"></i>';
+                
+                // إظهار العناصر الخاصة بالمدير
+                document.querySelectorAll('.admin-only').forEach(el => {
+                    el.style.display = 'block';
+                });
+                
+                showNotification('مرحباً بك يا مدير - لديك صلاحيات كاملة', 'success');
+            } 
+            else if (currentUser.role === 'merchant_approved') {
+                // التاجر: لا يرى لوحة التحكم، يرى لوحة التاجر
+                document.getElementById('dashboardBtn').style.display = 'none';
+                document.getElementById('userBtn').innerHTML = '<i class="fas fa-store"></i>';
+                
+                // إضافة زر "منتجاتي" في القائمة
+                addMerchantMenuButton();
+                
+                // عرض لوحة التاجر
+                showMerchantPanel();
+                
+                showNotification('مرحباً أيها التاجر - يمكنك إدارة منتجاتك فقط', 'info');
+            } 
+            else {
+                // عميل عادي
+                document.getElementById('dashboardBtn').style.display = 'none';
+                document.getElementById('userBtn').innerHTML = '<i class="fas fa-user"></i>';
+            }
+        }
+
+        // إضافة زر للتاجر لعرض منتجاته
+        function addMerchantMenuButton() {
+            const navMenu = document.getElementById('mainNav');
+            if (navMenu && !document.getElementById('myProductsBtn')) {
+                const btn = document.createElement('a');
+                btn.className = 'nav-link';
+                btn.id = 'myProductsBtn';
+                btn.setAttribute('onclick', 'viewMyProducts()');
+                btn.innerHTML = '<i class="fas fa-box"></i><span>منتجاتي</span>';
+                navMenu.appendChild(btn);
+            }
+        }
+
+        // عرض منتجات التاجر فقط
+        function viewMyProducts() {
+            if (!currentUser || currentUser.role !== 'merchant_approved') return;
+            currentFilter = 'my_products';
+            
+            document.querySelectorAll('.nav-link, .category-btn').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            document.getElementById('myProductsBtn').classList.add('active');
+            displayProducts();
+        }
+
+        // عرض لوحة التاجر
+        function showMerchantPanel() {
+            if (!currentUser || currentUser.role !== 'merchant_approved') return;
+            
+            const merchantProducts = products.filter(p => p.merchantId === currentUser.id);
+            const totalSales = merchantProducts.reduce((sum, p) => sum + (p.price * (p.soldCount || 0)), 0);
+            
+            const panelContainer = document.getElementById('merchantPanelContainer');
+            panelContainer.style.display = 'block';
+            
+            panelContainer.innerHTML = `
+                <div class="merchant-panel">
+                    <h3>
+                        <i class="fas fa-store"></i>
+                        لوحة التاجر - ${currentUser.name}
+                    </h3>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="number">${merchantProducts.length}</div>
+                            <div>إجمالي المنتجات</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="number">${merchantProducts.filter(p => p.stock > 0).length}</div>
+                            <div>المنتجات المتاحة</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="number">${totalSales.toLocaleString()} دج</div>
+                            <div>إجمالي المبيعات</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-top: 20px; justify-content: center;">
+                        <button class="btn-gold" onclick="showAddProductModal()">
+                            <i class="fas fa-plus"></i> إضافة منتج جديد
+                        </button>
+                        <button class="btn-outline-gold" onclick="viewMyProducts()">
+                            <i class="fas fa-box"></i> عرض منتجاتي
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         function handleRegister() {
@@ -2523,10 +2695,10 @@
             switchAuthTab('login');
         }
 
-        // ========== لوحة التحكم ==========
+        // ========== لوحة التحكم (للمدير فقط) ==========
         function openDashboard() {
             if (!currentUser || currentUser.role !== 'admin') {
-                showNotification('غير مصرح لك بالدخول', 'error');
+                showNotification('غير مصرح لك بالدخول - هذه الصفحة للمدير فقط', 'error');
                 return;
             }
 
@@ -2536,6 +2708,8 @@
         }
 
         function switchDashboardTab(tab) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const tabs = document.querySelectorAll('.dashboard-tab');
             tabs.forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
@@ -2562,6 +2736,8 @@
         }
 
         function showDashboardOverview(container) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const orderStats = orderManager.getOrderStatistics();
             const whatsappStats = whatsappManager.getSalesStatistics();
             const analytics = analyticsManager.generateComprehensiveReport();
@@ -2668,6 +2844,8 @@
         }
 
         function showDashboardOrders(container) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const orders = orderManager.orders;
 
             container.innerHTML = `
@@ -2720,11 +2898,14 @@
         }
 
         function updateOrderStatus(orderId, status) {
+            if (!currentUser || currentUser.role !== 'admin') return;
             orderManager.updateOrderStatus(orderId, status);
             showNotification('تم تحديث حالة الطلب', 'success');
         }
 
         function showDashboardAnalytics(container) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const analytics = analyticsManager.generateComprehensiveReport();
             const eventsByType = Object.entries(analytics.eventsByType).map(([type, count]) => ({ type, count }));
 
@@ -2795,6 +2976,8 @@
         }
 
         function showDashboardProducts(container) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                     <h3 style="color: var(--gold);">إدارة المنتجات</h3>
@@ -2811,33 +2994,38 @@
                                 <th>القسم</th>
                                 <th>السعر</th>
                                 <th>الكمية</th>
+                                <th>التاجر</th>
                                 <th>التقييم</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${products.map(product => `
-                                <tr>
-                                    <td>${product.name}</td>
-                                    <td>${getCategoryName(product.category)}</td>
-                                    <td style="color: var(--gold); font-weight: 700;">${product.price.toLocaleString()} دج</td>
-                                    <td>
-                                        <span class="${product.stock <= 0 ? 'out-of-stock' : product.stock < 5 ? 'low-stock' : 'in-stock'}" 
-                                              style="padding: 3px 10px; border-radius: 20px; font-size: 12px;">
-                                            ${product.stock}
-                                        </span>
-                                    </td>
-                                    <td>${product.rating} ⭐</td>
-                                    <td>
-                                        <button class="btn-outline-gold" onclick="editProduct(${product.id})" style="padding: 5px 10px; margin-left: 5px;">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn-outline-gold" onclick="deleteProduct(${product.id})" style="padding: 5px 10px; background: #f87171; color: white;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('')}
+                            ${products.map(product => {
+                                const merchant = users.find(u => u.id === product.merchantId);
+                                return `
+                                    <tr>
+                                        <td>${product.name}</td>
+                                        <td>${getCategoryName(product.category)}</td>
+                                        <td style="color: var(--gold); font-weight: 700;">${product.price.toLocaleString()} دج</td>
+                                        <td>
+                                            <span class="${product.stock <= 0 ? 'out-of-stock' : product.stock < 5 ? 'low-stock' : 'in-stock'}" 
+                                                  style="padding: 3px 10px; border-radius: 20px; font-size: 12px;">
+                                                ${product.stock}
+                                            </span>
+                                        </td>
+                                        <td>${merchant ? merchant.name : 'منتج عام'}</td>
+                                        <td>${product.rating} ⭐</td>
+                                        <td>
+                                            <button class="btn-outline-gold" onclick="editProduct(${product.id})" style="padding: 5px 10px; margin-left: 5px;">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn-outline-gold" onclick="deleteProduct(${product.id})" style="padding: 5px 10px; background: #f87171; color: white;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -2845,6 +3033,8 @@
         }
 
         function showDashboardMerchants(container) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const pendingMerchants = users.filter(u => u.role === 'merchant_pending');
             const approvedMerchants = users.filter(u => u.role === 'merchant_approved');
 
@@ -2888,6 +3078,8 @@
         }
 
         function approveMerchant(userId) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const user = users.find(u => u.id === userId);
             if (user) {
                 user.role = 'merchant_approved';
@@ -2899,6 +3091,8 @@
         }
 
         function rejectMerchant(userId) {
+            if (!currentUser || currentUser.role !== 'admin') return;
+            
             const user = users.find(u => u.id === userId);
             if (user) {
                 user.role = 'customer';
@@ -2909,23 +3103,47 @@
             }
         }
 
-        // ========== إدارة المنتجات (للمدير) ==========
+        // ========== إدارة المنتجات (مع صلاحيات) ==========
         function showAddProductModal() {
-            document.getElementById('modalTitle').textContent = 'إضافة منتج جديد';
+            if (!currentUser) {
+                showNotification('يجب تسجيل الدخول أولاً', 'warning');
+                openLoginModal();
+                return;
+            }
+
+            if (currentUser.role === 'merchant_approved') {
+                document.getElementById('modalTitle').textContent = 'إضافة منتج جديد (خاص بك)';
+                
+                // تعيين التاجر تلقائياً لمنتجاته
+                const merchantSelect = document.getElementById('productMerchant');
+                merchantSelect.innerHTML = `<option value="${currentUser.id}">${currentUser.name}</option>`;
+                merchantSelect.disabled = true;
+                
+                showNotification('يمكنك إضافة منتج خاص بك فقط', 'info');
+            } 
+            else if (currentUser.role === 'admin') {
+                document.getElementById('modalTitle').textContent = 'إضافة منتج جديد';
+                
+                // تعبئة قائمة التجار للمدير
+                const merchantSelect = document.getElementById('productMerchant');
+                merchantSelect.innerHTML = '<option value="">منتج عام</option>';
+                users.filter(u => u.role === 'merchant_approved').forEach(m => {
+                    merchantSelect.innerHTML += `<option value="${m.id}">${m.name} (مستوى ${m.merchantLevel})</option>`;
+                });
+                merchantSelect.disabled = false;
+            } 
+            else {
+                showNotification('فقط المدير والتجار يمكنهم إضافة منتجات', 'error');
+                return;
+            }
+            
             document.getElementById('productName').value = '';
             document.getElementById('productCategory').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productStock').value = '';
-            document.getElementById('productMerchant').value = '';
             document.getElementById('editingProductId').value = '';
             document.getElementById('imagePreview').innerHTML = '';
             document.getElementById('productImagesData').value = '';
-            
-            const merchantSelect = document.getElementById('productMerchant');
-            merchantSelect.innerHTML = '<option value="">منتج عام</option>';
-            users.filter(u => u.role === 'merchant_approved').forEach(m => {
-                merchantSelect.innerHTML += `<option value="${m.id}">${m.name} (مستوى ${m.merchantLevel})</option>`;
-            });
 
             document.getElementById('productModal').style.display = 'flex';
         }
@@ -2950,11 +3168,15 @@
         }
 
         function saveProduct() {
+            if (!currentUser) {
+                showNotification('يجب تسجيل الدخول أولاً', 'error');
+                return;
+            }
+
             const name = document.getElementById('productName').value;
             const category = document.getElementById('productCategory').value;
             const price = parseInt(document.getElementById('productPrice').value);
             const stock = parseInt(document.getElementById('productStock').value);
-            const merchantId = document.getElementById('productMerchant').value || null;
             const editingId = document.getElementById('editingProductId').value;
             const imagesData = document.getElementById('productImagesData').value;
 
@@ -2963,18 +3185,32 @@
                 return;
             }
 
+            // تحديد merchantId حسب الدور
+            let merchantId = null;
+            if (currentUser.role === 'merchant_approved') {
+                merchantId = currentUser.id;
+            } else if (currentUser.role === 'admin') {
+                merchantId = document.getElementById('productMerchant').value || null;
+            }
+
             const images = imagesData ? JSON.parse(imagesData) : [];
 
             if (editingId) {
                 const index = products.findIndex(p => p.id == editingId);
                 if (index !== -1) {
+                    // التحقق من صلاحية التعديل
+                    if (currentUser.role === 'merchant_approved' && products[index].merchantId !== currentUser.id) {
+                        showNotification('لا يمكنك تعديل منتجات الآخرين', 'error');
+                        return;
+                    }
+                    
                     products[index] = {
                         ...products[index],
                         name,
                         category,
                         price,
                         stock,
-                        merchantId: merchantId ? parseInt(merchantId) : null,
+                        merchantId,
                         images: images.length > 0 ? images : products[index].images
                     };
                 }
@@ -2989,7 +3225,7 @@
                     stock,
                     rating: 4.5,
                     images: images.length > 0 ? images : ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"],
-                    merchantId: merchantId ? parseInt(merchantId) : null
+                    merchantId
                 });
                 showNotification('تم إضافة المنتج', 'success');
             }
@@ -2997,20 +3233,49 @@
             saveProducts();
             displayProducts();
             closeModal('productModal');
-            analyticsManager.trackEvent('productAdded', { name });
+            
+            // تحديث لوحة التاجر إذا كان تاجر
+            if (currentUser.role === 'merchant_approved') {
+                showMerchantPanel();
+            }
+            
+            analyticsManager.trackEvent('productAdded', { name, merchantId });
         }
 
         function editProduct(id) {
+            if (!currentUser) {
+                showNotification('يجب تسجيل الدخول أولاً', 'error');
+                return;
+            }
+
             const product = products.find(p => p.id === id);
             if (!product) return;
+
+            // التحقق من صلاحية التعديل
+            if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
+                showNotification('لا يمكنك تعديل منتجات الآخرين', 'error');
+                return;
+            }
 
             document.getElementById('modalTitle').textContent = 'تعديل المنتج';
             document.getElementById('productName').value = product.name;
             document.getElementById('productCategory').value = product.category;
             document.getElementById('productPrice').value = product.price;
             document.getElementById('productStock').value = product.stock;
-            document.getElementById('productMerchant').value = product.merchantId || '';
             document.getElementById('editingProductId').value = id;
+
+            // تعطيل/تمكين حقل التاجر حسب الدور
+            const merchantSelect = document.getElementById('productMerchant');
+            if (currentUser.role === 'merchant_approved') {
+                merchantSelect.innerHTML = `<option value="${currentUser.id}">${currentUser.name}</option>`;
+                merchantSelect.disabled = true;
+            } else if (currentUser.role === 'admin') {
+                merchantSelect.innerHTML = '<option value="">منتج عام</option>';
+                users.filter(u => u.role === 'merchant_approved').forEach(m => {
+                    merchantSelect.innerHTML += `<option value="${m.id}" ${product.merchantId === m.id ? 'selected' : ''}>${m.name}</option>`;
+                });
+                merchantSelect.disabled = false;
+            }
 
             const preview = document.getElementById('imagePreview');
             preview.innerHTML = '';
@@ -3024,11 +3289,30 @@
         }
 
         function deleteProduct(id) {
+            if (!currentUser) {
+                showNotification('يجب تسجيل الدخول أولاً', 'error');
+                return;
+            }
+
+            const product = products.find(p => p.id === id);
+            
+            // التحقق من صلاحية الحذف
+            if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
+                showNotification('لا يمكنك حذف منتجات الآخرين', 'error');
+                return;
+            }
+            
             if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
                 products = products.filter(p => p.id !== id);
                 saveProducts();
                 displayProducts();
                 showNotification('تم حذف المنتج', 'info');
+                
+                // تحديث لوحة التاجر إذا كان تاجر
+                if (currentUser.role === 'merchant_approved') {
+                    showMerchantPanel();
+                }
+                
                 analyticsManager.trackEvent('productDeleted', { productId: id });
             }
         }
@@ -3046,16 +3330,7 @@
             const savedUser = localStorage.getItem('current_user');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
-                if (currentUser.role === 'admin') {
-                    document.getElementById('dashboardBtn').style.display = 'flex';
-                    document.getElementById('userBtn').innerHTML = '<i class="fas fa-crown"></i>';
-                } else if (currentUser.role === 'merchant_approved') {
-                    document.getElementById('dashboardBtn').style.display = 'none';
-                    document.getElementById('userBtn').innerHTML = '<i class="fas fa-store"></i>';
-                } else {
-                    document.getElementById('dashboardBtn').style.display = 'none';
-                    document.getElementById('userBtn').innerHTML = '<i class="fas fa-user"></i>';
-                }
+                updateUIBasedOnRole();
             }
 
             const savedTheme = localStorage.getItem('theme');
