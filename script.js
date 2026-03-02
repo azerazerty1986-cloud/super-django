@@ -1698,6 +1698,83 @@ function deleteProduct(id) {
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
+// ========== عداد تنازلي متحرك يتغير كل ساعة ==========
+function updateCountdown() {
+    const hoursElement = document.getElementById('hours');
+    const minutesElement = document.getElementById('minutes');
+    const secondsElement = document.getElementById('seconds');
+    
+    if (!hoursElement || !minutesElement || !secondsElement) return;
+    
+    // حساب الوقت المتبقي حتى نهاية اليوم (12 ساعة عشوائية)
+    const now = new Date();
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    // أو استخدام وقت ثابت للعرض (12:30:45)
+    // يمكن تغيير هذه القيم حسب الرغبة
+    
+    let hours = 12;
+    let minutes = 30;
+    let seconds = 45;
+    
+    // تحديث العداد كل ثانية
+    const interval = setInterval(() => {
+        seconds--;
+        
+        if (seconds < 0) {
+            seconds = 59;
+            minutes--;
+            
+            if (minutes < 0) {
+                minutes = 59;
+                hours--;
+                
+                if (hours < 0) {
+                    // إعادة تعيين العداد بعد انتهاء الوقت
+                    hours = 12;
+                    minutes = 30;
+                    seconds = 45;
+                }
+            }
+        }
+        
+        // تحديث العرض مع تأثير حركي
+        hoursElement.style.animation = 'bounce 0.5s';
+        minutesElement.style.animation = 'bounce 0.5s';
+        secondsElement.style.animation = 'bounce 0.5s';
+        
+        hoursElement.textContent = hours.toString().padStart(2, '0');
+        minutesElement.textContent = minutes.toString().padStart(2, '0');
+        secondsElement.textContent = seconds.toString().padStart(2, '0');
+        
+        // إزالة التأثير بعد انتهائه
+        setTimeout(() => {
+            hoursElement.style.animation = '';
+            minutesElement.style.animation = '';
+            secondsElement.style.animation = '';
+        }, 500);
+        
+    }, 1000);
+    
+    return interval;
+}
+
+// ========== تحديث أشرطة التقدم بشكل عشوائي ==========
+function updateProgressBars() {
+    const progressFills = document.querySelectorAll('.progress-fill');
+    
+    setInterval(() => {
+        progressFills.forEach(fill => {
+            // تغيير العرض بشكل عشوائي بين 50% و 100%
+            const randomWidth = Math.floor(Math.random() * 50) + 50;
+            fill.style.width = randomWidth + '%';
+            
+            // إضافة تأثير حركي
+            fill.style.transition = 'width 1s ease-in-out';
+        });
+    }, 5000); // يتغير كل 5 ثواني
+}
 
 // ========== التهيئة ==========
 window.onload = function() {
