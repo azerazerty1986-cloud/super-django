@@ -612,8 +612,8 @@ function displayProducts() {
                         nextEl: '.swiper-button-next',
                         prevEl: '.swiper-button-prev',
                     },
-                    loop: images.length > 1,
-                    autoplay: images.length > 1 ? {
+                    loop: product.images?.length > 1,
+                    autoplay: product.images?.length > 1 ? {
                         delay: 3000,
                         disableOnInteraction: false,
                     } : false,
