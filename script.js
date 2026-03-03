@@ -1,3 +1,24 @@
+// ========== إعداد Firebase ==========
+const firebaseConfig = {
+  apiKey: "AIzaSyCIaPIxbyrHk4QKQn4ku_SsO1DN_uODMPI",
+  authDomain: "nardoo-store.firebaseapp.com",
+  projectId: "nardoo-store",
+  storageBucket: "nardoo-store.firebasestorage.app",
+  messagingSenderId: "1045731605028",
+  appId: "1:1045731605028:web:8553ef40975fff293236b1"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+};
+
+// تهيئة Firebase
+firebase.initializeApp(firebaseConfig);
+
+// إنشاء مراجع للخدمات
+const db = firebase.firestore();
+const storage = firebase.storage();
+const auth = firebase.auth();
 // ========== 1. النظام الأساسي ==========
 // المتغيرات العامة
 let products = [];
