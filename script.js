@@ -1,12 +1,11 @@
-// ========== إعداد Firebase ==========
 // ========== 1. إعداد Firebase ==========
 const firebaseConfig = {
-    apiKey: "AIzaSyCIaPIxbyrHk4QKQn4ku_SsO1DN_uODMPI",
+    apiKey: "AIzaSyCIaPIxbyku_SsO1DN_uODMPI",
     authDomain: "nardoo-store.firebaseapp.com",
     projectId: "nardoo-store",
     storageBucket: "nardoo-store.firebasestorage.app",
     messagingSenderId: "1045731605028",
-    appId: "1:1045731605028:web:8553ef40975fff293236b1"
+    appId: "1:1045731605028:web:8575fff293236b1"
 };
 
 // تهيئة Firebase
@@ -17,7 +16,7 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 const auth = firebase.auth();
 
-// ========== 1. النظام الأساسي ==========
+// ========== 2. النظام الأساسي ==========
 // المتغيرات العامة
 let products = [];
 let currentUser = null;
@@ -27,7 +26,7 @@ let currentFilter = 'all';
 let searchTerm = '';
 let sortBy = 'newest';
 
-// ========== 2. نظام إدارة الطلبات (مع واتساب) ==========
+// ========== 3. نظام إدارة الطلبات (كامل) ==========
 class OrderManagementSystem {
     constructor() {
         this.orders = this.loadOrders();
@@ -154,7 +153,7 @@ class OrderManagementSystem {
     }
 }
 
-// ========== 3. نظام الواتساب (معدل) ==========
+// ========== 4. نظام الواتساب (كامل) ==========
 class WhatsAppIntegration {
     constructor() {
         this.storePhone = '213562243648';
@@ -264,7 +263,7 @@ class WhatsAppIntegration {
     }
 }
 
-// ========== 4. نظام التحليلات (للمدير فقط) ==========
+// ========== 5. نظام التحليلات (كامل) ==========
 class AnalyticsSystem {
     constructor() {
         this.events = this.loadEvents();
@@ -347,12 +346,12 @@ class AnalyticsSystem {
     }
 }
 
-// ========== إنشاء الكائنات ==========
+// ========== 6. إنشاء الكائنات ==========
 const orderManager = new OrderManagementSystem();
 const whatsappManager = new WhatsAppIntegration();
 const analyticsManager = new AnalyticsSystem();
 
-// ========== إعداد حساب المدير ==========
+// ========== 7. إعداد حساب المدير ==========
 function setupAdminAccount() {
     try {
         let users = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
@@ -379,7 +378,7 @@ function setupAdminAccount() {
 
 setupAdminAccount();
 
-// ========== دوال المساعدة ==========
+// ========== 8. دوال المساعدة ==========
 function showNotification(message, type = 'info') {
     const container = document.getElementById('notificationContainer');
     const notification = document.createElement('div');
@@ -402,7 +401,7 @@ function toggleTheme() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ========== دوال التاريخ والوقت ==========
+// ========== 9. دوال التاريخ والوقت ==========
 function getSimpleTimeAgo(dateString) {
     if (!dateString) return '';
     
@@ -435,7 +434,7 @@ function getSimpleTimeAgo(dateString) {
     return `منذ ${years} ${years === 1 ? 'سنة' : 'سنوات'}`;
 }
 
-// ========== دوال تقييم النجوم ==========
+// ========== 10. دوال تقييم النجوم ==========
 function generateStars(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -458,7 +457,7 @@ function generateStars(rating) {
     return starsHTML;
 }
 
-// ========== دوال الفرز ==========
+// ========== 11. دوال الفرز ==========
 function sortProducts(productsArray) {
     switch(sortBy) {
         case 'newest':
@@ -479,23 +478,37 @@ function changeSort(value) {
     displayProducts();
 }
 
-// ========== إدارة المنتجات ==========
-function loadProducts() {
-    const saved = localStorage.getItem('nardoo_products');
-    if (saved) {
-        products = JSON.parse(saved);
-        console.log('تم تحميل المنتجات من localStorage:', products.length);
-    } else {
+// ========== 12. إدارة المنتجات (كاملة مع Firebase) ==========
+async function loadProducts() {
+    try {
+        const querySnapshot = await db.collection("products").get();
         products = [];
-        console.log('لا توجد منتجات محفوظة، ابدأ بإضافة منتجاتك الخاصة');
+        querySnapshot.forEach((doc) => {
+            products.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+        console.log('تم تحميل المنتجات من Firebase:', products.length);
+        displayProducts();
+    } catch (error) {
+        console.error('خطأ في تحميل المنتجات:', error);
+        const saved = localStorage.getItem('nardoo_products');
+        if (saved) {
+            products = JSON.parse(saved);
+            console.log('تم تحميل المنتجات من localStorage كاحتياطي');
+            displayProducts();
+        } else {
+            products = [];
+            displayProducts();
+        }
+        showAdvancedNotification('خطأ في الاتصال بقاعدة البيانات', 'warning');
     }
-    saveProducts();
-    displayProducts();
 }
 
 function saveProducts() {
     localStorage.setItem('nardoo_products', JSON.stringify(products));
-    console.log('تم حفظ المنتجات في localStorage');
+    console.log('تم حفظ نسخة احتياطية في localStorage');
 }
 
 function displayProducts() {
@@ -704,7 +717,7 @@ function showSearchIndicator(term) {
     }, 3000);
 }
 
-// ========== إدارة السلة ==========
+// ========== 13. إدارة السلة (كاملة) ==========
 function loadCart() {
     const saved = localStorage.getItem('nardoo_cart');
     cart = saved ? JSON.parse(saved) : [];
@@ -863,7 +876,7 @@ function checkoutCart() {
     analyticsManager.trackEvent('checkout', { orderId: order.id });
 }
 
-// ========== دوال التمرير ==========
+// ========== 14. دوال التمرير ==========
 function scrollToTop() {
     window.scrollTo({
         top: 0,
@@ -923,7 +936,7 @@ function addScrollAnimations() {
     });
 }
 
-// ========== عداد تنازلي ==========
+// ========== 15. عداد تنازلي ==========
 function updateCountdown() {
     const hoursElement = document.getElementById('hours');
     const minutesElement = document.getElementById('minutes');
@@ -972,7 +985,7 @@ function updateCountdown() {
     return interval;
 }
 
-// ========== أشرطة التقدم ==========
+// ========== 16. أشرطة التقدم ==========
 function updateProgressBars() {
     const progressFills = document.querySelectorAll('.progress-fill, .marquee-progress-fill');
     
@@ -984,7 +997,7 @@ function updateProgressBars() {
     }, 5000);
 }
 
-// ========== عرض تفاصيل المنتج ==========
+// ========== 17. عرض تفاصيل المنتج ==========
 function viewProductDetails(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
@@ -1054,7 +1067,7 @@ function viewProductDetails(productId) {
     modal.style.display = 'flex';
 }
 
-// ========== إدارة المستخدمين ==========
+// ========== 18. إدارة المستخدمين (كاملة) ==========
 function loadUsers() {
     const saved = localStorage.getItem('nardoo_users');
     if (saved) {
@@ -1256,7 +1269,7 @@ function handleRegister() {
     switchAuthTab('login');
 }
 
-// ========== لوحة التحكم (للمدير فقط) ==========
+// ========== 19. لوحة التحكم (كاملة) ==========
 function openDashboard() {
     if (!currentUser || currentUser.role !== 'admin') {
         showAdvancedNotification('غير مصرح لك بالدخول - هذه الصفحة للمدير فقط', 'error', 'خطأ');
@@ -1664,7 +1677,40 @@ function rejectMerchant(userId) {
     }
 }
 
-// ========== إدارة المنتجات (إضافة، تعديل، حذف) ==========
+// ========== 20. إدارة المنتجات (إضافة، تعديل، حذف) مع Firebase ==========
+async function saveProductToFirebase(product) {
+    try {
+        const docRef = await db.collection("products").add(product);
+        console.log('تم حفظ المنتج في Firebase:', docRef.id);
+        return docRef.id;
+    } catch (error) {
+        console.error('خطأ في حفظ المنتج في Firebase:', error);
+        return null;
+    }
+}
+
+async function updateProductInFirebase(productId, productData) {
+    try {
+        await db.collection("products").doc(productId).update(productData);
+        console.log('تم تحديث المنتج في Firebase:', productId);
+        return true;
+    } catch (error) {
+        console.error('خطأ في تحديث المنتج:', error);
+        return false;
+    }
+}
+
+async function deleteProductFromFirebase(productId) {
+    try {
+        await db.collection("products").doc(productId).delete();
+        console.log('تم حذف المنتج من Firebase:', productId);
+        return true;
+    } catch (error) {
+        console.error('خطأ في حذف المنتج:', error);
+        return false;
+    }
+}
+
 function showAddProductModal() {
     console.log('فتح نافذة إضافة منتج');
     console.log('المستخدم الحالي:', currentUser);
@@ -1734,7 +1780,7 @@ function handleImageUpload(event) {
     }
 }
 
-function saveProduct() {
+async function saveProduct() {
     console.log('بدء حفظ المنتج');
     
     if (!currentUser) {
@@ -1780,47 +1826,48 @@ function saveProduct() {
         images = ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"];
     }
 
+    const productData = {
+        name: name,
+        category: category,
+        price: price,
+        stock: stock,
+        rating: 4.5,
+        images: images,
+        merchantId: merchantId,
+        soldCount: 0,
+        createdAt: new Date().toISOString(),
+        createdByName: currentUser.name,
+        createdById: currentUser.id
+    };
+
     if (editingId) {
-        const index = products.findIndex(p => p.id == editingId);
-        if (index !== -1) {
-            if (currentUser.role === 'merchant_approved' && products[index].merchantId !== currentUser.id) {
+        const product = products.find(p => p.id === editingId);
+        if (product) {
+            if (currentUser.role === 'merchant_approved' && product.merchantId !== currentUser.id) {
                 showAdvancedNotification('لا يمكنك تعديل منتجات الآخرين', 'error', 'خطأ');
                 return;
             }
             
-            products[index] = {
-                ...products[index],
-                name: name,
-                category: category,
-                price: price,
-                stock: stock,
-                merchantId: merchantId,
-                images: images,
-                rating: products[index].rating || 4.5
-            };
-            console.log('تم تعديل المنتج:', products[index]);
-            showAdvancedNotification('تم تعديل المنتج بنجاح', 'success', 'نجاح');
+            const success = await updateProductInFirebase(editingId, productData);
+            if (success) {
+                const index = products.findIndex(p => p.id === editingId);
+                if (index !== -1) {
+                    products[index] = { ...productData, id: editingId };
+                }
+                showAdvancedNotification('تم تعديل المنتج بنجاح', 'success', 'نجاح');
+            }
         }
     } else {
-        const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
-        const newProduct = {
-            id: newId,
-            name: name,
-            category: category,
-            price: price,
-            stock: stock,
-            rating: 4.5,
-            images: images,
-            merchantId: merchantId,
-            soldCount: 0,
-            createdAt: new Date().toISOString(),
-            createdByName: currentUser.name,
-            createdById: currentUser.id
-        };
-        
-        products.push(newProduct);
-        console.log('تم إضافة منتج جديد:', newProduct);
-        showAdvancedNotification('تم إضافة المنتج بنجاح', 'success', 'نجاح');
+        const firebaseId = await saveProductToFirebase(productData);
+        if (firebaseId) {
+            products.push({
+                id: firebaseId,
+                ...productData
+            });
+            showAdvancedNotification('تم إضافة المنتج بنجاح', 'success', 'نجاح');
+        } else {
+            showAdvancedNotification('فشل حفظ المنتج في Firebase', 'error', 'خطأ');
+        }
     }
 
     saveProducts();
@@ -1834,7 +1881,7 @@ function saveProduct() {
     analyticsManager.trackEvent('productAdded', { name, merchantId });
 }
 
-function editProduct(id) {
+async function editProduct(id) {
     if (!currentUser) {
         showAdvancedNotification('يجب تسجيل الدخول أولاً', 'error', 'خطأ');
         return;
@@ -1878,7 +1925,7 @@ function editProduct(id) {
     document.getElementById('productModal').style.display = 'flex';
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
     if (!currentUser) {
         showAdvancedNotification('يجب تسجيل الدخول أولاً', 'error', 'خطأ');
         return;
@@ -1892,20 +1939,25 @@ function deleteProduct(id) {
     }
     
     if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-        products = products.filter(p => p.id !== id);
-        saveProducts();
-        displayProducts();
-        showAdvancedNotification('تم حذف المنتج', 'info', 'تم');
-        
-        if (currentUser.role === 'merchant_approved') {
-            showMerchantPanel();
+        const success = await deleteProductFromFirebase(id);
+        if (success) {
+            products = products.filter(p => p.id !== id);
+            saveProducts();
+            displayProducts();
+            showAdvancedNotification('تم حذف المنتج', 'info', 'تم');
+            
+            if (currentUser.role === 'merchant_approved') {
+                showMerchantPanel();
+            }
+            
+            analyticsManager.trackEvent('productDeleted', { productId: id });
+        } else {
+            showAdvancedNotification('فشل حذف المنتج من Firebase', 'error', 'خطأ');
         }
-        
-        analyticsManager.trackEvent('productDeleted', { productId: id });
     }
 }
 
-// ========== نظام الإشعارات المتقدم ==========
+// ========== 21. نظام الإشعارات المتقدم ==========
 function showAdvancedNotification(message, type = 'info', title = '') {
     let container = document.querySelector('.toast-container');
     if (!container) {
@@ -1946,7 +1998,7 @@ function showAdvancedNotification(message, type = 'info', title = '') {
     }, 3000);
 }
 
-// ========== تأثيرات الكتابة ==========
+// ========== 22. تأثيرات الكتابة ==========
 class TypingAnimation {
     constructor(element, texts, speed = 100, delay = 2000) {
         this.element = element;
@@ -1992,7 +2044,7 @@ class TypingAnimation {
     }
 }
 
-// ========== نظام المقارنة ==========
+// ========== 23. نظام المقارنة ==========
 class ProductComparator {
     constructor() {
         this.compareList = JSON.parse(localStorage.getItem('compare_list')) || [];
@@ -2030,7 +2082,7 @@ class ProductComparator {
 
 const comparator = new ProductComparator();
 
-// ========== تأثيرات الماوس ==========
+// ========== 24. تأثيرات الماوس ==========
 function initMouseEffects() {
     const cursor = document.createElement('div');
     cursor.className = 'mouse-effect';
@@ -2052,7 +2104,7 @@ function initMouseEffects() {
     });
 }
 
-// ========== شريط تقدم التمرير ==========
+// ========== 25. شريط تقدم التمرير ==========
 function initScrollProgress() {
     const progressBar = document.createElement('div');
     progressBar.className = 'scroll-progress';
@@ -2066,7 +2118,7 @@ function initScrollProgress() {
     });
 }
 
-// ========== جسيمات متحركة ==========
+// ========== 26. جسيمات متحركة ==========
 function initParticles() {
     const particlesContainer = document.createElement('div');
     particlesContainer.className = 'particles';
@@ -2082,12 +2134,12 @@ function initParticles() {
     }
 }
 
-// ========== دوال إضافية ==========
+// ========== 27. دوال إضافية ==========
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 
-// ========== التهيئة ==========
+// ========== 28. التهيئة (onload) ==========
 window.onload = function() {
     loadProducts();
     loadCart();
