@@ -1,11 +1,11 @@
 // ========== 1. إعداد Firebase ==========
 const firebaseConfig = {
-    apiKey: "AIzaSyCIaPIxbyku_SsO1DN_uODMPI",
+    apiKey: "AIzaSyCIaPIxbyrHk4QKQn4ku_SsO1DN_uODMPI",
     authDomain: "nardoo-store.firebaseapp.com",
     projectId: "nardoo-store",
     storageBucket: "nardoo-store.firebasestorage.app",
     messagingSenderId: "1045731605028",
-    appId: "1:1045731605028:web:8575fff293236b1"
+    appId: "1:1045731605028:web:8553ef40975fff293236b1"
 };
 
 // تهيئة Firebase
