@@ -362,7 +362,7 @@ function setupAdminAccount() {
                 id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
                 name: 'azer',
                 email: 'azer@admin.com',
-                password: '123456',
+                password: '123@',
                 role: 'admin',
                 createdAt: new Date().toISOString()
             };
