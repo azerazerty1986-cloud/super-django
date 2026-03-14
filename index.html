@@ -24,7 +24,7 @@
       border: none; border-radius: 8px; 
     }
     button:hover { background: #2ea043; }
-    #status { margin: 20px; font-size: 18px; color: #f85149; }
+    #status { margin: 20px; font-size: 18px; min-height: 30px; }
   </style>
 </head>
 <body>
@@ -47,17 +47,37 @@
 
     async function startStream() {
       try {
+        // التحقق من دعم المتصفح
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("متصفحك لا يدعم الكاميرا");
+        }
+        
         stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 1280, height: 720 },
-          audio: true  // غيّر إلى false لو ما تبغى صوت
+          audio: true
         });
         
         video.srcObject = stream;
         status.textContent = "البث شغال! 🎥🔴";
         status.style.color = "#3fb950";
+        
       } catch (err) {
         console.error("خطأ:", err);
-        status.textContent = "خطأ: " + err.message + " (تأكد من السماح بالكاميرا)";
+        
+        // رسائل خطأ مخصصة حسب نوع الخطأ
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          status.textContent = "❌ تم رفض الإذن - الرجاء السماح بالكاميرا من إعدادات المتصفح";
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          status.textContent = "❌ لا توجد كاميرا متصلة";
+        } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+          status.textContent = "❌ الكاميرا مستخدمة من تطبيق آخر";
+        } else if (err.name === "OverconstrainedError") {
+          status.textContent = "❌ الإعدادات المطلوبة غير متوفرة في الكاميرا";
+        } else {
+          status.textContent = "❌ خطأ: " + err.message;
+        }
+        
+        status.style.color = "#f85149";
       }
     }
 
@@ -70,9 +90,6 @@
         status.style.color = "#c9d1d9";
       }
     }
-
-    // تلقائي عند التحميل (اختياري، شيل التعليق لو تبي)
-    // startStream();
   </script>
 
   <footer style="margin-top: 40px; font-size: 14px;">
