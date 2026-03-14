@@ -1,484 +1,402 @@
-<!-- ===== سلة التسوق الجانبية ===== -->
-<div class="cart-sidebar" id="cartSidebar">
-    <div class="cart-header">
-        <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
-        <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نكهة وجمال | ناردو برو - المتجر الاجتماعي</title>
+    
+    <!-- ===== الخطوط ===== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- ===== Font Awesome ===== -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- ===== ربط ملف CSS ===== -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ===== شاشة التحميل ===== -->
+    <div class="loader" id="loader">
+        <div class="loader-spinner"></div>
     </div>
-    <div class="cart-items" id="cartItems">
-        <!-- سيتم تعبئتها ديناميكياً عبر JavaScript -->
-    </div>
-    <div class="cart-footer">
-        <div class="cart-total">
-            <span>المجموع:</span>
-            <span id="cartTotal">0 دج</span>
+
+    <!-- ===== نظام الإشعارات ===== -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ===== سلة التسوق الجانبية ===== -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
+            <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
         </div>
-        <button class="checkout-btn" onclick="checkoutCart()">
-            <i class="fab fa-whatsapp"></i> إتمام الطلب
-        </button>
-    </div>
-</div>
-
-<style>
-/* أنماط سلة التسوق الجانبية - متوافقة مع فيسبوك */
-.cart-sidebar {
-    position: fixed;
-    top: 0;
-    left: -400px;
-    width: 400px;
-    height: 100vh;
-    background: var(--bg-secondary, #1a2f28);
-    backdrop-filter: blur(20px);
-    border-left: 2px solid var(--gold, #d4af37);
-    z-index: 2000;
-    transition: left 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    padding: 20px;
-    box-shadow: var(--shadow, 0 10px 30px rgba(0,0,0,0.5));
-}
-
-.cart-sidebar.open { left: 0; }
-
-.cart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 20px;
-    border-bottom: 2px solid var(--gold, #d4af37);
-    margin-bottom: 20px;
-}
-
-.cart-header h3 { 
-    color: var(--gold, #d4af37); 
-    font-size: 24px; 
-    margin: 0;
-}
-
-.close-cart { 
-    color: var(--gold, #d4af37); 
-    font-size: 24px; 
-    cursor: pointer; 
-    transition: all 0.3s ease; 
-}
-
-.close-cart:hover { 
-    transform: scale(1.2); 
-    color: var(--gold-light, #f4e3b1); 
-}
-
-.cart-items { 
-    flex: 1; 
-    overflow-y: auto; 
-    margin-bottom: 20px; 
-}
-
-.cart-item {
-    display: flex;
-    gap: 15px;
-    padding: 15px;
-    background: var(--glass, rgba(255,255,255,0.08));
-    border-radius: 15px;
-    margin-bottom: 15px;
-    border: 1px solid var(--glass-border, rgba(255,255,255,0.15));
-    transition: all 0.3s ease;
-}
-
-.cart-item:hover {
-    transform: translateX(-5px);
-    border-color: var(--gold, #d4af37);
-}
-
-.cart-item-image {
-    width: 70px;
-    height: 70px;
-    border-radius: 10px;
-    object-fit: cover;
-    border: 2px solid var(--gold, #d4af37);
-}
-
-.cart-item-details { flex: 1; }
-
-.cart-item-title { 
-    font-weight: 700; 
-    margin-bottom: 5px; 
-    font-size: 14px; 
-    color: var(--text-primary, #ffffff);
-}
-
-.cart-item-price { 
-    color: var(--gold, #d4af37); 
-    font-size: 14px; 
-    font-weight: 700; 
-}
-
-.cart-item-quantity {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.quantity-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: var(--glass, rgba(255,255,255,0.08));
-    border: 1px solid var(--gold, #d4af37);
-    color: var(--gold, #d4af37);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.quantity-btn:hover { 
-    background: var(--gold, #d4af37); 
-    color: var(--bg-primary, #0a1a15); 
-}
-
-.quantity-btn.delete-btn {
-    background: #f87171;
-    border-color: #f87171;
-    color: white;
-}
-
-.quantity-btn.delete-btn:hover {
-    background: #ef4444;
-}
-
-.cart-footer {
-    border-top: 2px solid var(--gold, #d4af37);
-    padding-top: 20px;
-}
-
-.cart-total {
-    display: flex;
-    justify-content: space-between;
-    color: var(--gold, #d4af37);
-    font-size: 20px;
-    font-weight: 800;
-    margin-bottom: 20px;
-}
-
-.checkout-btn {
-    width: 100%;
-    padding: 15px;
-    background: linear-gradient(135deg, #25D366, #128C7E);
-    color: white;
-    border: none;
-    border-radius: 25px;
-    font-weight: 800;
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.checkout-btn:hover { 
-    transform: translateY(-3px); 
-    box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3); 
-}
-
-/* رسالة السلة الفارغة */
-.empty-cart {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-secondary, #e0e0e0);
-}
-
-.empty-cart i {
-    font-size: 60px;
-    color: var(--gold, #d4af37);
-    margin-bottom: 20px;
-    opacity: 0.5;
-}
-
-.empty-cart p {
-    font-size: 16px;
-    margin: 0;
-}
-
-/* تحسينات للشاشات الصغيرة */
-@media (max-width: 768px) {
-    .cart-sidebar {
-        width: 100%;
-        left: -100%;
-    }
-    
-    .cart-item-image {
-        width: 50px;
-        height: 50px;
-    }
-    
-    .cart-item-title {
-        font-size: 13px;
-    }
-    
-    .cart-item-price {
-        font-size: 13px;
-    }
-}
-</style>
-
-<script>
-// دوال السلة - متوافقة مع ملف JS الرئيسي
-function loadCart() {
-    const saved = localStorage.getItem('nardoo_cart');
-    cart = saved ? JSON.parse(saved) : [];
-    updateCartCounter();
-    updateCartDisplay();
-}
-
-function saveCart() {
-    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
-}
-
-function updateCartCounter() {
-    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const counter = document.getElementById('cartCounter');
-    const fixedCounter = document.getElementById('fixedCartCounter');
-    
-    if (counter) counter.textContent = count;
-    if (fixedCounter) fixedCounter.textContent = count;
-}
-
-function addToCart(productId) {
-    const product = products.find(p => p.id == productId);
-    if (!product || product.stock <= 0) {
-        showNotification('المنتج غير متوفر', 'error');
-        return;
-    }
-
-    const existing = cart.find(item => item.productId == productId);
-    if (existing) {
-        if (existing.quantity < product.stock) {
-            existing.quantity++;
-        } else {
-            showNotification('الكمية غير كافية', 'warning');
-            return;
-        }
-    } else {
-        cart.push({
-            productId,
-            name: product.name,
-            price: product.price,
-            quantity: 1,
-            merchantName: product.merchantName,
-            merchantTelegram: product.merchantTelegram,
-            image: product.images && product.images.length > 0 ? product.images[0] : null
-        });
-    }
-
-    saveCart();
-    updateCartCounter();
-    updateCartDisplay();
-    showNotification('✅ تمت الإضافة إلى السلة', 'success');
-}
-
-function toggleCart() {
-    document.getElementById('cartSidebar').classList.toggle('open');
-    updateCartDisplay();
-}
-
-function updateCartDisplay() {
-    const itemsDiv = document.getElementById('cartItems');
-    const totalSpan = document.getElementById('cartTotal');
-
-    if (!itemsDiv) return;
-
-    if (cart.length === 0) {
-        itemsDiv.innerHTML = `
-            <div class="empty-cart">
-                <i class="fas fa-shopping-basket"></i>
-                <p>السلة فارغة</p>
-                <p style="font-size: 14px; margin-top: 10px;">أضف منتجات من المتجر</p>
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>المجموع:</span>
+                <span id="cartTotal">0 دج</span>
             </div>
-        `;
-        if (totalSpan) totalSpan.textContent = '0 دج';
-        return;
-    }
+            <button class="checkout-btn" onclick="checkoutCart()">
+                <i class="fab fa-whatsapp"></i> إتمام الطلب
+            </button>
+        </div>
+    </div>
 
-    let total = 0;
-    itemsDiv.innerHTML = cart.map(item => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
-        const imageUrl = item.image || "https://via.placeholder.com/70/2c5e4f/ffffff?text=منتج";
-        
-        return `
-            <div class="cart-item">
-                <img src="${imageUrl}" class="cart-item-image" onerror="this.src='https://via.placeholder.com/70/2c5e4f/ffffff?text=منتج'">
-                <div class="cart-item-details">
-                    <div class="cart-item-title">${item.name}</div>
-                    <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
-                    <div class="cart-item-quantity">
-                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity - 1})">-</button>
-                        <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
-                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity + 1})">+</button>
-                        <button class="quantity-btn delete-btn" onclick="removeFromCart(${item.productId})" title="حذف">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+    <!-- ===== الشريط العلوي ===== -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar-item">
+                <i class="fas fa-truck-fast"></i>
+                <span>شحن مجاني للطلبات فوق 5000 دج</span>
+            </div>
+            <div class="top-bar-item">
+                <i class="fas fa-headset"></i>
+                <span>دعم VIP 24/7</span>
+            </div>
+            <div class="top-bar-item">
+                <i class="fas fa-gem"></i>
+                <span>منتجات أصلية 100%</span>
+            </div>
+            <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+                <i class="fas fa-moon"></i>
+                <span>ليلي</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== شريط العروض المتحرك ===== -->
+    <div class="marquee-bar">
+        <div class="marquee-content">
+            <div class="marquee-item float-item">
+                <i class="fas fa-fire"></i>
+                <span>تخفيضات تصل 50%</span>
+                <div class="marquee-progress"><div class="marquee-progress-fill" style="width:50%"></div></div>
+            </div>
+            <div class="marquee-item bounce-item">
+                <i class="fas fa-gem"></i>
+                <span>عروض حصرية</span>
+                <div class="marquee-progress"><div class="marquee-progress-fill" style="width:75%"></div></div>
+            </div>
+            <div class="marquee-item pulse-item">
+                <i class="fas fa-clock"></i>
+                <span>الوقت: <span id="marqueeHours">12</span>:<span id="marqueeMinutes">30</span>:<span id="marqueeSeconds">45</span></span>
+                <div class="marquee-progress"><div class="marquee-progress-fill" style="width:60%"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== الهيدر الرئيسي ===== -->
+    <header class="main-header">
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+                <div class="logo-text">
+                    <h1>نكهة وجمال</h1>
+                    <span>ناردو برو 2026</span>
                 </div>
             </div>
-        `;
-    }).join('');
+            
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
+                    <button onclick="searchProducts()"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <button class="action-btn" onclick="openLoginModal()" id="userBtn">
+                    <i class="far fa-user"></i>
+                </button>
+                <button class="action-btn" onclick="toggleCart()">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cartCounter">0</span>
+                </button>
+                <button class="action-btn" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
+                    <i class="fas fa-chart-line"></i>
+                </button>
+            </div>
+        </div>
+    </header>
 
-    if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} دج`;
-}
+    <!-- ===== القائمة الرئيسية ===== -->
+    <div class="container">
+        <nav class="nav-menu" id="mainNav">
+            <a class="nav-link active" onclick="filterProducts('all')"><i class="fas fa-home"></i> الرئيسية</a>
+            <a class="nav-link" onclick="filterProducts('promo')"><i class="fas fa-fire"></i> برومسيون</a>
+            <a class="nav-link" onclick="filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a>
+            <a class="nav-link" onclick="filterProducts('cosmetic')"><i class="fas fa-spa"></i> كوسمتيك</a>
+            <a class="nav-link" onclick="filterProducts('other')"><i class="fas fa-gem"></i> منتوجات أخرى</a>
+        </nav>
+    </div>
 
-function updateCartItem(productId, newQuantity) {
-    const item = cart.find(i => i.productId == productId);
-    const product = products.find(p => p.id == productId);
+    <!-- ===== نص متحرك ===== -->
+    <div class="container">
+        <div class="typing-container">
+            <span id="typing-text"></span>
+        </div>
+    </div>
 
-    if (newQuantity <= 0) {
-        removeFromCart(productId);
-        return;
-    }
+    <!-- ===== لوحة التاجر ===== -->
+    <div class="container" id="merchantPanelContainer" style="display: none;"></div>
 
-    if (newQuantity > product.stock) {
-        showNotification('الكمية غير متوفرة', 'warning');
-        return;
-    }
+    <!-- ===== المنتجات ===== -->
+    <div class="container">
+        <div class="products-grid" id="productsContainer"></div>
+    </div>
 
-    item.quantity = newQuantity;
-    saveCart();
-    updateCartCounter();
-    updateCartDisplay();
-}
+    <!-- ===== لوحة التحكم (للمدير) ===== -->
+    <div class="container dashboard-section" id="dashboardSection" style="display: none;">
+        <div class="dashboard-tabs">
+            <button class="dashboard-tab active" onclick="switchDashboardTab('overview')">نظرة عامة</button>
+            <button class="dashboard-tab" onclick="switchDashboardTab('orders')">الطلبات</button>
+            <button class="dashboard-tab" onclick="switchDashboardTab('products')">المنتجات</button>
+            <button class="dashboard-tab" onclick="switchDashboardTab('merchants')">التجار</button>
+            <button class="dashboard-tab" onclick="switchDashboardTab('users')">المستخدمين</button>
+        </div>
+        <div class="dashboard-content" id="dashboardContent"></div>
+    </div>
 
-function removeFromCart(productId) {
-    cart = cart.filter(i => i.productId != productId);
-    saveCart();
-    updateCartCounter();
-    updateCartDisplay();
-    showNotification('تمت إزالة المنتج', 'info');
-}
+    <!-- ===== الفوتر ===== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-col">
+                    <h3>نكهة وجمال</h3>
+                    <p><i class="fas fa-store"></i> المتجر الذكي المتكامل</p>
+                    <p><i class="fas fa-star"></i> التقييم: 4.8/5</p>
+                </div>
+                <div class="footer-col">
+                    <h3>اتصل بنا</h3>
+                    <p><i class="fab fa-whatsapp"></i> +213 562243648</p>
+                    <p><i class="fas fa-envelope"></i> info@nardoo.com</p>
+                </div>
+            </div>
+            <div class="copyright">© 2026 نكهة وجمال | جميع الحقوق محفوظة</div>
+        </div>
+    </footer>
 
-async function checkoutCart() {
-    if (cart.length === 0) {
-        showNotification('السلة فارغة', 'warning');
-        return;
-    }
+    <!-- ===== أيقونات ثابتة ===== -->
+    <div class="fixed-cart" onclick="toggleCart()" id="fixedCart">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="fixed-cart-count" id="fixedCartCounter">0</span>
+    </div>
 
-    if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'warning');
-        openLoginModal();
-        return;
-    }
+    <div class="add-product-btn" onclick="showAddProductModal()" id="addProductBtn">
+        <i class="fas fa-plus"></i>
+    </div>
 
-    const customerPhone = prompt('📞 رقم الهاتف:', currentUser.phone || '');
-    if (!customerPhone) return;
+    <div class="navigation-buttons">
+        <button class="nav-btn up-btn" onclick="scrollToTop()"><i class="fas fa-arrow-up"></i></button>
+        <button class="nav-btn down-btn" onclick="scrollToBottom()"><i class="fas fa-arrow-down"></i></button>
+    </div>
+
+    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn"><i class="fas fa-chevron-up"></i></button>
+
+    <!-- ===== نافذة تسجيل الدخول ===== -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <h2 style="text-align:center; margin-bottom:30px; color:var(--gold);">تسجيل الدخول</h2>
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button class="btn-gold" style="flex:1;" onclick="switchAuthTab('login')">دخول</button>
+                <button class="btn-outline-gold" style="flex:1;" onclick="switchAuthTab('register')">تسجيل</button>
+            </div>
+
+            <!-- ===== نموذج تسجيل الدخول ===== -->
+            <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+                <div class="form-group">
+                    <label>📧 البريد الإلكتروني</label>
+                    <input type="email" class="form-control" id="loginEmail" required placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label>🔑 كلمة المرور</label>
+                    <input type="password" class="form-control" id="loginPassword" required placeholder="أدخل كلمة المرور">
+                </div>
+                <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
+            </form>
+
+            <!-- ===== نموذج التسجيل الجديد مع جميع الحقول ===== -->
+            <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); handleRegister();">
+                <div class="form-group">
+                    <label>👤 الاسم الكامل</label>
+                    <input type="text" class="form-control" id="regName" required placeholder="أدخل اسمك الكامل">
+                </div>
+                
+                <div class="form-group">
+                    <label>📧 البريد الإلكتروني</label>
+                    <input type="email" class="form-control" id="regEmail" required placeholder="example@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>🔑 كلمة المرور</label>
+                    <input type="password" class="form-control" id="regPassword" required placeholder="أدخل كلمة المرور">
+                </div>
+                
+                <div class="form-group">
+                    <label>📱 رقم الهاتف</label>
+                    <input type="tel" class="form-control" id="regPhone" required placeholder="05XXXXXXXX">
+                </div>
+                
+                <div class="form-group">
+                    <label>📱 معرف تليجرام (اختياري)</label>
+                    <input type="text" class="form-control" id="regTelegram" placeholder="@username">
+                    <small style="color: #888; display: block; margin-top: 5px;">أدخل معرفك في تليجرام ليتواصل معك العملاء</small>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()">
+                        <span>تسجيل كتاجر</span>
+                    </label>
+                </div>
+                
+                <!-- ===== حقول التاجر (تظهر عند اختيار تسجيل كتاجر) ===== -->
+                <div id="merchantFields" style="display:none;">
+                    <div class="form-group">
+                        <label>🏪 اسم المتجر</label>
+                        <input type="text" class="form-control" id="storeName" placeholder="أدخل اسم متجرك">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>🏷️ تخصص المتجر</label>
+                        <select class="form-control" id="merchantCategory">
+                            <option value="spices">توابل</option>
+                            <option value="cosmetic">كوسمتيك</option>
+                            <option value="promo">برومسيون</option>
+                            <option value="other">أخرى</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📊 مستوى التاجر</label>
+                        <select class="form-control" id="merchantLevel">
+                            <option value="1">المستوى الأول</option>
+                            <option value="2" selected>المستوى الثاني</option>
+                            <option value="3">المستوى الثالث</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-gold" style="width:100%; margin-top:20px;">تسجيل</button>
+            </form>
+
+            <button class="btn-outline-gold" style="width:100%; margin-top:15px;" onclick="closeModal('loginModal')">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- ===== نافذة إضافة منتج ===== -->
+    <div class="modal" id="productModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color:var(--gold);">➕ إضافة منتج جديد</h2>
+                <button class="close-btn" onclick="closeModal('productModal')" style="background: none; border: none; color: var(--gold); font-size: 28px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <form id="productForm" class="product-form" onsubmit="event.preventDefault(); saveProduct();">
+                <!-- حقل معرف تليجرام (يظهر إذا كان المستخدم تاجر وليس لديه معرف) -->
+                <div class="form-group" id="merchantTelegramField" style="display: none;">
+                    <label>📱 معرف تليجرام الخاص بك</label>
+                    <input type="text" class="form-control" id="merchantTelegram" placeholder="@username">
+                    <small style="color: #888;">أدخل معرفك في تليجرام ليتمكن العملاء من التواصل</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>📦 اسم المنتج</label>
+                    <input type="text" class="form-control" id="productName" required placeholder="أدخل اسم المنتج">
+                </div>
+                
+                <div class="form-group">
+                    <label>🏷️ القسم</label>
+                    <select class="form-control" id="productCategory" required>
+                        <option value="promo">برومسيون</option>
+                        <option value="spices">توابل</option>
+                        <option value="cosmetic">كوسمتيك</option>
+                        <option value="other">منتوجات أخرى</option>
+                    </select>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>💰 السعر (دج)</label>
+                        <input type="number" class="form-control" id="productPrice" required min="0" placeholder="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📊 الكمية</label>
+                        <input type="number" class="form-control" id="productStock" required min="0" placeholder="0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>📝 وصف المنتج</label>
+                    <textarea class="form-control" id="productDescription" rows="3" placeholder="أدخل وصف المنتج..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>🔗 رابط الصورة (اختياري)</label>
+                    <input type="url" class="form-control" id="productImage" placeholder="https://example.com/image.jpg">
+                </div>
+                
+                <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>أو اضغط لرفع صورة من جهازك</p>
+                </div>
+                
+                <input type="file" id="productImages" accept="image/*" style="display:none;" onchange="handleImageUpload(event)" multiple>
+                <div class="image-preview" id="imagePreview"></div>
+                <input type="hidden" id="productImagesData">
+
+                <div style="display: flex; gap: 15px; margin-top: 20px;">
+                    <button type="submit" class="btn-gold" style="flex: 2;">
+                        <i class="fas fa-cloud-upload-alt"></i> حفظ المنتج
+                    </button>
+                    <button type="button" class="btn-outline-gold" style="flex: 1;" onclick="closeModal('productModal')">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== نافذة تفاصيل المنتج ===== -->
+    <div class="modal" id="productDetailModal">
+        <div class="modal-content modal-lg" id="productDetailContent"></div>
+    </div>
+
+    <!-- ===== نافذة لوحة التاجر ===== -->
+    <div class="modal" id="merchantDashboardModal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color:var(--gold);"><i class="fas fa-store"></i> لوحة تحكم التاجر</h2>
+                <button class="close-btn" onclick="closeModal('merchantDashboardModal')" style="background: none; border: none; color: var(--gold); font-size: 28px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body" id="merchantDashboardContent" style="max-height: 80vh; overflow-y: auto;"></div>
+        </div>
+    </div>
     
-    const customerAddress = prompt('📍 عنوان التوصيل:', '');
-    if (!customerAddress) return;
-
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = 800;
-    const total = subtotal + shipping;
-
-    const order = {
-        orderId: Date.now(),
-        customerName: currentUser.name,
-        customerPhone: customerPhone,
-        customerAddress: customerAddress,
-        items: [...cart],
-        subtotal: subtotal,
-        shipping: shipping,
-        total: total,
-        createdAt: new Date().toISOString()
-    };
-
-    // تجميع الطلبات حسب التاجر
-    const ordersByMerchant = {};
-    cart.forEach(item => {
-        if (!ordersByMerchant[item.merchantName]) {
-            ordersByMerchant[item.merchantName] = {
-                merchantTelegram: item.merchantTelegram,
-                items: []
-            };
-        }
-        ordersByMerchant[item.merchantName].items.push(item);
-    });
-
-    // إرسال إشعار لكل تاجر
-    for (const [merchantName, merchantData] of Object.entries(ordersByMerchant)) {
-        const merchantItems = merchantData.items;
-        const merchantTotal = merchantItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        
-        const message = `🟢 **طلب جديد**
-        
-👤 الزبون: ${order.customerName}
-📞 الهاتف: ${order.customerPhone}
-📍 العنوان: ${order.customerAddress}
-🏪 التاجر: ${merchantName}
-
-📦 **المنتجات:**
-${merchantItems.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج`).join('\n')}
-
-💰 إجمالي الطلب: ${merchantTotal} دج
-➕ تكلفة التوصيل: ${shipping} دج
-💵 الإجمالي الكلي: ${merchantTotal + shipping} دج
-
-🆔 رقم الطلب: ${order.orderId}
-📅 التاريخ: ${new Date().toLocaleString('ar-EG')}
-
-✅ سيتم التواصل معك قريباً`;
-
-        if (merchantData.merchantTelegram) {
-            try {
-                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: merchantData.merchantTelegram.replace('@', ''),
-                        text: message,
-                        parse_mode: 'Markdown'
-                    })
-                });
-            } catch (error) {
-                console.error('❌ فشل إرسال إشعار للتاجر:', error);
-            }
-        }
-    }
-
-    // إرسال إشعار للقناة
-    const channelMessage = `🟢 **طلب جديد في المتجر**
-        
-👤 الزبون: ${order.customerName}
-📞 الهاتف: ${order.customerPhone}
-📍 العنوان: ${order.customerAddress}
-
-📦 **المنتجات:**
-${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج (${i.merchantName})`).join('\n')}
-
-💰 الإجمالي: ${order.total} دج
-🆔 رقم الطلب: ${order.orderId}`;
-
-    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: TELEGRAM.channelId,
-            text: channelMessage,
-            parse_mode: 'Markdown'
-        })
-    });
-
-    // حفظ الطلب
-    const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
-    orders.push(order);
-    localStorage.setItem('nardoo_orders', JSON.stringify(orders));
-
-    cart = [];
-    saveCart();
-    updateCartCounter();
-    toggleCart();
+    <!-- ===== نافذة منتجات التاجر ===== -->
+    <div class="modal" id="merchantProductsModal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color:var(--gold);"><i class="fas fa-boxes"></i> منتجاتي</h2>
+                <button class="close-btn" onclick="closeModal('merchantProductsModal')" style="background: none; border: none; color: var(--gold); font-size: 28px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body" id="merchantProductsContent" style="max-height: 80vh; overflow-y: auto;"></div>
+        </div>
+    </div>
     
-    showNotification('✅ تم إرسال الطلب بنجاح، سيتم التواصل معك قريباً', 'success');
-}
-</script>
+    <!-- ===== نافذة طلبات التاجر ===== -->
+    <div class="modal" id="merchantOrdersModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color:var(--gold);"><i class="fas fa-shopping-bag"></i> طلباتي</h2>
+                <button class="close-btn" onclick="closeModal('merchantOrdersModal')" style="background: none; border: none; color: var(--gold); font-size: 28px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body" id="merchantOrdersContent" style="max-height: 80vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- ===== ربط ملف JavaScript ===== -->
+    <script src="script.js"></script>
+</body>
+</html>
