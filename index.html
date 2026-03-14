@@ -1,1356 +1,484 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - تصميم فيسبوك كامل</title>
-    
-    <!-- الخطوط -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <style>
-        /* ========== متغيرات الألوان ========== */
-        :root {
-            /* ألوان فيسبوك الأصلية */
-            --fb-bg: #f0f2f5;
-            --fb-white: #ffffff;
-            --fb-text: #050505;
-            --fb-text-secondary: #65676b;
-            --fb-blue: #1877f2;
-            --fb-green: #42b72a;
-            --fb-red: #f02849;
-            --fb-border: #ced0d4;
-            --fb-hover: #e4e6e9;
-            --fb-comment-bg: #f0f2f5;
-            --fb-header: #ffffff;
-            
-            /* ألوان ذهبية للمتجر */
-            --gold: #d4af37;
-            --gold-dark: #b38f2c;
-            --gold-light: #f4e3b1;
-            
-            /* ألوان المستخدمين */
-            --admin: #e74c3c;
-            --merchant: #9b59b6;
-            --buyer: #3498db;
-            
-            /* الوضع الليلي */
-            --bg-dark: #1a2f28;
-            --text-dark: #ffffff;
-        }
-
-        body {
-            font-family: 'Cairo', sans-serif;
-            background: var(--fb-bg);
-            color: var(--fb-text);
-            margin: 0;
-            padding: 0;
-            line-height: 1.6;
-            direction: rtl;
-        }
-
-        /* الوضع الليلي */
-        body.dark-mode {
-            background: #1a2f28;
-            color: #ffffff;
-        }
-
-        body.dark-mode .fb-header {
-            background: #0a1a15;
-            border-bottom-color: var(--gold);
-        }
-
-        body.dark-mode .fb-post {
-            background: #1a2f28;
-            border-color: var(--gold);
-        }
-
-        body.dark-mode .fb-search {
-            background: #2c5e4f;
-        }
-
-        body.dark-mode .fb-search input {
-            color: white;
-        }
-
-        body.dark-mode .fb-search input::placeholder {
-            color: #e0e0e0;
-        }
-
-        body.dark-mode .post-time {
-            color: #e0e0e0;
-        }
-
-        body.dark-mode .comment-content {
-            background: #2c5e4f;
-            color: white;
-        }
-
-        .container {
-            max-width: 680px;
-            margin: 0 auto;
-            padding: 0 15px;
-        }
-
-        /* ===== شريط العلوي مثل فيسبوك ===== */
-        .fb-header {
-            background: var(--fb-header);
-            border-bottom: 1px solid var(--fb-border);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            padding: 8px 0;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .fb-header .container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 15px;
-        }
-
-        .fb-logo {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .fb-logo i {
-            font-size: 40px;
-            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-            padding: 8px;
-            border-radius: 50%;
-            color: white;
-        }
-
-        .fb-logo span {
-            font-size: 24px;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .fb-search {
-            background: var(--fb-bg);
-            border-radius: 50px;
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 0 1 300px;
-        }
-
-        .fb-search i {
-            color: var(--fb-text-secondary);
-        }
-
-        .fb-search input {
-            border: none;
-            background: transparent;
-            outline: none;
-            width: 100%;
-            font-family: 'Cairo', sans-serif;
-        }
-
-        .fb-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .fb-actions button {
-            background: var(--fb-bg);
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            color: var(--fb-text);
-            font-size: 18px;
-            transition: all 0.3s;
-        }
-
-        .fb-actions button:hover {
-            background: var(--fb-hover);
-        }
-
-        /* ===== القائمة العلوية ===== */
-        .fb-nav {
-            background: var(--fb-white);
-            border-bottom: 1px solid var(--fb-border);
-            padding: 8px 0;
-        }
-
-        body.dark-mode .fb-nav {
-            background: #0a1a15;
-        }
-
-        .fb-nav .container {
-            display: flex;
-            gap: 15px;
-            overflow-x: auto;
-            padding: 0 15px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 50px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.3s;
-            color: var(--fb-text-secondary);
-        }
-
-        .nav-item:hover {
-            background: var(--fb-hover);
-        }
-
-        .nav-item.active {
-            background: var(--gold);
-            color: white;
-        }
-
-        body.dark-mode .nav-item {
-            color: #e0e0e0;
-        }
-
-        body.dark-mode .nav-item:hover {
-            background: var(--gold-dark);
-        }
-
-        /* ===== فيد المنشورات ===== */
-        .posts-feed {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        /* ===== بطاقة المنشور مثل فيسبوك ===== */
-        .fb-post {
-            background: var(--fb-white);
-            border-radius: 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow: hidden;
-            border: 1px solid var(--fb-border);
-            margin-bottom: 20px;
-        }
-
-        /* ===== رأس المنشور ===== */
-        .post-header {
-            display: flex;
-            align-items: center;
-            padding: 16px;
-            gap: 12px;
-            position: relative;
-            border-bottom: 1px solid var(--fb-border);
-        }
-
-        .post-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: white;
-            position: relative;
-            border: 3px solid var(--gold);
-        }
-
-        .post-avatar.admin {
-            background: linear-gradient(135deg, var(--admin), #c0392b);
-        }
-
-        .post-avatar.merchant {
-            background: linear-gradient(135deg, var(--merchant), #8e44ad);
-        }
-
-        .post-avatar.buyer {
-            background: linear-gradient(135deg, var(--buyer), #2980b9);
-        }
-
-        .avatar-status {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 14px;
-            height: 14px;
-            background: #31a24c;
-            border-radius: 50%;
-            border: 2px solid var(--fb-white);
-        }
-
-        .post-info {
-            flex: 1;
-        }
-
-        .post-info h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .post-info h3 i {
-            font-size: 14px;
-            color: var(--gold);
-        }
-
-        .post-time {
-            font-size: 13px;
-            color: var(--fb-text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 2px;
-        }
-
-        .user-badge {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .user-badge.admin {
-            background: var(--admin);
-        }
-
-        .user-badge.merchant {
-            background: var(--merchant);
-        }
-
-        .user-badge.buyer {
-            background: var(--buyer);
-        }
-
-        /* ===== محتوى المنشور ===== */
-        .post-content {
-            padding: 16px;
-        }
-
-        .post-text {
-            font-size: 16px;
-            margin-bottom: 16px;
-            line-height: 1.6;
-        }
-
-        /* ===== بطاقة المنتج داخل المنشور ===== */
-        .product-embed {
-            background: var(--fb-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--fb-border);
-            margin-bottom: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .product-embed:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .product-embed img {
-            width: 100%;
-            height: 350px;
-            object-fit: cover;
-            border-bottom: 2px solid var(--gold);
-        }
-
-        .product-details {
-            padding: 16px;
-        }
-
-        .product-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin: 0 0 8px;
-            color: var(--gold-dark);
-        }
-
-        .product-price {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--gold);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .product-price small {
-            font-size: 14px;
-            color: var(--fb-text-secondary);
-            font-weight: normal;
-        }
-
-        .product-meta {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .product-meta i {
-            color: var(--gold);
-            margin-left: 5px;
-        }
-
-        .add-to-cart-btn {
-            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.3s;
-        }
-
-        .add-to-cart-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(212,175,55,0.3);
-        }
-
-        /* ===== أزرار التفاعل ===== */
-        .post-actions {
-            display: flex;
-            border-top: 1px solid var(--fb-border);
-            border-bottom: 1px solid var(--fb-border);
-            padding: 8px 0;
-            margin: 16px 0;
-        }
-
-        .post-action {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px;
-            background: none;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--fb-text-secondary);
-            cursor: pointer;
-            transition: all 0.3s;
-            font-family: 'Cairo', sans-serif;
-        }
-
-        .post-action:hover {
-            background: var(--fb-hover);
-        }
-
-        .post-action.liked {
-            color: var(--fb-red);
-        }
-
-        .post-action.liked i {
-            font-weight: 900;
-            animation: likePop 0.3s;
-        }
-
-        @keyframes likePop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-            100% { transform: scale(1); }
-        }
-
-        /* ===== إحصائيات المنشور ===== */
-        .post-stats {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            color: var(--fb-text-secondary);
-            font-size: 14px;
-        }
-
-        .likes-count i, .comments-count i {
-            margin-left: 5px;
-        }
-
-        .likes-count i {
-            color: var(--fb-red);
-        }
-
-        .comments-count i {
-            color: var(--gold);
-        }
-
-        /* ===== قسم التعليقات ===== */
-        .comments-section {
-            margin-top: 16px;
-        }
-
-        .comment {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-
-        .comment-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 700;
-            border: 2px solid var(--gold);
-            flex-shrink: 0;
-        }
-
-        .comment-avatar.admin {
-            background: var(--admin);
-        }
-
-        .comment-avatar.merchant {
-            background: var(--merchant);
-        }
-
-        .comment-avatar.buyer {
-            background: var(--buyer);
-        }
-
-        .comment-content {
-            flex: 1;
-            background: var(--fb-comment-bg);
-            padding: 12px 16px;
-            border-radius: 18px;
-        }
-
-        .comment-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 5px;
-            flex-wrap: wrap;
-        }
-
-        .comment-author {
-            font-weight: 700;
-            color: var(--gold-dark);
-        }
-
-        .comment-time {
-            font-size: 11px;
-            color: var(--fb-text-secondary);
-        }
-
-        .comment-text {
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .comment-actions {
-            display: flex;
-            gap: 15px;
-        }
-
-        .comment-action {
-            font-size: 12px;
-            color: var(--fb-text-secondary);
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-family: 'Cairo', sans-serif;
-        }
-
-        .comment-action:hover {
-            color: var(--gold);
-        }
-
-        .comment-reply {
-            margin-right: 52px;
-            margin-top: 10px;
-            padding-right: 15px;
-            border-right: 2px solid var(--gold);
-        }
-
-        /* ===== صندوق إضافة تعليق ===== */
-        .add-comment {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--fb-border);
-        }
-
-        .add-comment-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--gold);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-
-        .add-comment-input {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--fb-comment-bg);
-            border-radius: 50px;
-            padding: 0 5px 0 15px;
-            border: 1px solid var(--fb-border);
-        }
-
-        .add-comment-input input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            padding: 10px 0;
-            outline: none;
-            font-family: 'Cairo', sans-serif;
-        }
-
-        .add-comment-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--gold);
-            border: none;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .add-comment-btn:hover {
-            transform: scale(1.1);
-        }
-
-        /* ===== سلة التسوق الجانبية ===== */
-        .cart-sidebar {
-            position: fixed;
-            top: 0;
-            left: -400px;
-            width: 400px;
-            height: 100vh;
-            background: var(--fb-white);
-            border-left: 2px solid var(--gold);
-            z-index: 2000;
-            transition: left 0.3s ease;
-            padding: 20px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-            overflow-y: auto;
-        }
-
-        body.dark-mode .cart-sidebar {
-            background: #1a2f28;
-            color: white;
-        }
-
-        .cart-sidebar.open {
-            left: 0;
-        }
-
-        .cart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--gold);
-            margin-bottom: 20px;
-        }
-
-        .cart-header h3 {
-            margin: 0;
-            color: var(--gold);
-        }
-
-        .close-cart {
-            cursor: pointer;
-            font-size: 24px;
-            color: var(--gold);
-        }
-
-        .cart-items {
-            min-height: 200px;
-            margin-bottom: 20px;
-        }
-
-        .cart-item {
-            display: flex;
-            gap: 15px;
-            padding: 10px;
-            background: var(--fb-bg);
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-
-        .cart-item-details {
-            flex: 1;
-        }
-
-        .cart-item-title {
-            font-weight: 700;
-        }
-
-        .cart-item-price {
-            color: var(--gold);
-            font-weight: 600;
-        }
-
-        .cart-item-quantity {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 5px;
-        }
-
-        .quantity-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            background: var(--gold);
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-weight: 700;
-        }
-
-        .cart-footer {
-            border-top: 2px solid var(--gold);
-            padding-top: 15px;
-        }
-
-        .cart-total {
-            display: flex;
-            justify-content: space-between;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--gold);
-            margin-bottom: 15px;
-        }
-
-        .checkout-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #25D366, #128C7E);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        /* ===== أيقونة السلة الثابتة ===== */
-        .fixed-cart {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(212,175,55,0.3);
-            z-index: 999;
-            animation: pulse 2s infinite;
-            border: 2px solid white;
-        }
-
-        .fixed-cart i {
-            font-size: 28px;
-            color: white;
-        }
-
-        .fixed-cart-count {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--fb-red);
-            color: white;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            border: 2px solid white;
-        }
-
-        /* ===== زر إضافة منتج ===== */
-        .add-product-btn {
-            position: fixed;
-            bottom: 100px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--fb-green), #128C7E);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(66,183,42,0.3);
-            z-index: 999;
-            border: 2px solid white;
-        }
-
-        .add-product-btn i {
-            font-size: 28px;
-            color: white;
-        }
-
-        /* ===== تأثيرات ===== */
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        /* ===== تحسينات للشاشات الصغيرة ===== */
-        @media (max-width: 768px) {
-            .cart-sidebar {
-                width: 100%;
-                left: -100%;
-            }
-            
-            .product-embed img {
-                height: 250px;
-            }
-            
-            .fb-logo span {
-                display: none;
-            }
-            
-            .fb-search {
-                flex: 1;
-            }
-            
-            .user-badge {
-                position: static;
-                margin-right: auto;
-            }
-            
-            .comment-reply {
-                margin-right: 30px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- شريط فيسبوك العلوي -->
-    <div class="fb-header">
-        <div class="container">
-            <div class="fb-logo">
-                <i class="fas fa-leaf"></i>
-                <span>ناردو برو</span>
-            </div>
-            
-            <div class="fb-search">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="ابحث في ناردو برو...">
-            </div>
-            
-            <div class="fb-actions">
-                <button onclick="toggleTheme()" id="themeBtn">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button onclick="openLoginModal()">
-                    <i class="fas fa-user-circle"></i>
-                </button>
-                <button onclick="toggleCart()">
-                    <i class="fas fa-shopping-cart"></i>
-                </button>
-            </div>
-        </div>
+<!-- ===== سلة التسوق الجانبية ===== -->
+<div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+        <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
+        <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
     </div>
-
-    <!-- القائمة السفلية مثل فيسبوك -->
-    <div class="fb-nav">
-        <div class="container">
-            <div class="nav-item active">
-                <i class="fas fa-home"></i>
-                <span>الرئيسية</span>
-            </div>
-            <div class="nav-item">
-                <i class="fas fa-fire"></i>
-                <span>برومسيون</span>
-            </div>
-            <div class="nav-item">
-                <i class="fas fa-mortar-pestle"></i>
-                <span>توابل</span>
-            </div>
-            <div class="nav-item">
-                <i class="fas fa-spa"></i>
-                <span>كوسمتيك</span>
-            </div>
-            <div class="nav-item">
-                <i class="fas fa-gem"></i>
-                <span>منتوجات أخرى</span>
-            </div>
-            <div class="nav-item">
-                <i class="fas fa-store"></i>
-                <span>متجري</span>
-            </div>
-        </div>
+    <div class="cart-items" id="cartItems">
+        <!-- سيتم تعبئتها ديناميكياً عبر JavaScript -->
     </div>
-
-    <!-- سلة التسوق الجانبية -->
-    <div class="cart-sidebar" id="cartSidebar">
-        <div class="cart-header">
-            <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
-            <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
+    <div class="cart-footer">
+        <div class="cart-total">
+            <span>المجموع:</span>
+            <span id="cartTotal">0 دج</span>
         </div>
-        <div class="cart-items" id="cartItems">
-            <div style="text-align: center; color: #888; padding: 40px;">
-                <i class="fas fa-shopping-basket" style="font-size: 60px; margin-bottom: 20px;"></i>
+        <button class="checkout-btn" onclick="checkoutCart()">
+            <i class="fab fa-whatsapp"></i> إتمام الطلب
+        </button>
+    </div>
+</div>
+
+<style>
+/* أنماط سلة التسوق الجانبية - متوافقة مع فيسبوك */
+.cart-sidebar {
+    position: fixed;
+    top: 0;
+    left: -400px;
+    width: 400px;
+    height: 100vh;
+    background: var(--bg-secondary, #1a2f28);
+    backdrop-filter: blur(20px);
+    border-left: 2px solid var(--gold, #d4af37);
+    z-index: 2000;
+    transition: left 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0,0,0,0.5));
+}
+
+.cart-sidebar.open { left: 0; }
+
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--gold, #d4af37);
+    margin-bottom: 20px;
+}
+
+.cart-header h3 { 
+    color: var(--gold, #d4af37); 
+    font-size: 24px; 
+    margin: 0;
+}
+
+.close-cart { 
+    color: var(--gold, #d4af37); 
+    font-size: 24px; 
+    cursor: pointer; 
+    transition: all 0.3s ease; 
+}
+
+.close-cart:hover { 
+    transform: scale(1.2); 
+    color: var(--gold-light, #f4e3b1); 
+}
+
+.cart-items { 
+    flex: 1; 
+    overflow-y: auto; 
+    margin-bottom: 20px; 
+}
+
+.cart-item {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    background: var(--glass, rgba(255,255,255,0.08));
+    border-radius: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--glass-border, rgba(255,255,255,0.15));
+    transition: all 0.3s ease;
+}
+
+.cart-item:hover {
+    transform: translateX(-5px);
+    border-color: var(--gold, #d4af37);
+}
+
+.cart-item-image {
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid var(--gold, #d4af37);
+}
+
+.cart-item-details { flex: 1; }
+
+.cart-item-title { 
+    font-weight: 700; 
+    margin-bottom: 5px; 
+    font-size: 14px; 
+    color: var(--text-primary, #ffffff);
+}
+
+.cart-item-price { 
+    color: var(--gold, #d4af37); 
+    font-size: 14px; 
+    font-weight: 700; 
+}
+
+.cart-item-quantity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.quantity-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--glass, rgba(255,255,255,0.08));
+    border: 1px solid var(--gold, #d4af37);
+    color: var(--gold, #d4af37);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quantity-btn:hover { 
+    background: var(--gold, #d4af37); 
+    color: var(--bg-primary, #0a1a15); 
+}
+
+.quantity-btn.delete-btn {
+    background: #f87171;
+    border-color: #f87171;
+    color: white;
+}
+
+.quantity-btn.delete-btn:hover {
+    background: #ef4444;
+}
+
+.cart-footer {
+    border-top: 2px solid var(--gold, #d4af37);
+    padding-top: 20px;
+}
+
+.cart-total {
+    display: flex;
+    justify-content: space-between;
+    color: var(--gold, #d4af37);
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.checkout-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-weight: 800;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.checkout-btn:hover { 
+    transform: translateY(-3px); 
+    box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3); 
+}
+
+/* رسالة السلة الفارغة */
+.empty-cart {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary, #e0e0e0);
+}
+
+.empty-cart i {
+    font-size: 60px;
+    color: var(--gold, #d4af37);
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.empty-cart p {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* تحسينات للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .cart-sidebar {
+        width: 100%;
+        left: -100%;
+    }
+    
+    .cart-item-image {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .cart-item-title {
+        font-size: 13px;
+    }
+    
+    .cart-item-price {
+        font-size: 13px;
+    }
+}
+</style>
+
+<script>
+// دوال السلة - متوافقة مع ملف JS الرئيسي
+function loadCart() {
+    const saved = localStorage.getItem('nardoo_cart');
+    cart = saved ? JSON.parse(saved) : [];
+    updateCartCounter();
+    updateCartDisplay();
+}
+
+function saveCart() {
+    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
+}
+
+function updateCartCounter() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const counter = document.getElementById('cartCounter');
+    const fixedCounter = document.getElementById('fixedCartCounter');
+    
+    if (counter) counter.textContent = count;
+    if (fixedCounter) fixedCounter.textContent = count;
+}
+
+function addToCart(productId) {
+    const product = products.find(p => p.id == productId);
+    if (!product || product.stock <= 0) {
+        showNotification('المنتج غير متوفر', 'error');
+        return;
+    }
+
+    const existing = cart.find(item => item.productId == productId);
+    if (existing) {
+        if (existing.quantity < product.stock) {
+            existing.quantity++;
+        } else {
+            showNotification('الكمية غير كافية', 'warning');
+            return;
+        }
+    } else {
+        cart.push({
+            productId,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+            merchantName: product.merchantName,
+            merchantTelegram: product.merchantTelegram,
+            image: product.images && product.images.length > 0 ? product.images[0] : null
+        });
+    }
+
+    saveCart();
+    updateCartCounter();
+    updateCartDisplay();
+    showNotification('✅ تمت الإضافة إلى السلة', 'success');
+}
+
+function toggleCart() {
+    document.getElementById('cartSidebar').classList.toggle('open');
+    updateCartDisplay();
+}
+
+function updateCartDisplay() {
+    const itemsDiv = document.getElementById('cartItems');
+    const totalSpan = document.getElementById('cartTotal');
+
+    if (!itemsDiv) return;
+
+    if (cart.length === 0) {
+        itemsDiv.innerHTML = `
+            <div class="empty-cart">
+                <i class="fas fa-shopping-basket"></i>
                 <p>السلة فارغة</p>
+                <p style="font-size: 14px; margin-top: 10px;">أضف منتجات من المتجر</p>
             </div>
-        </div>
-        <div class="cart-footer">
-            <div class="cart-total">
-                <span>المجموع:</span>
-                <span id="cartTotal">0 دج</span>
-            </div>
-            <button class="checkout-btn" onclick="checkoutCart()">
-                <i class="fab fa-whatsapp"></i> إتمام الطلب
-            </button>
-        </div>
-    </div>
+        `;
+        if (totalSpan) totalSpan.textContent = '0 دج';
+        return;
+    }
 
-    <!-- فيد المنشورات -->
-    <div class="container">
-        <div class="posts-feed">
-            
-            <!-- ===== منشور تاجر ===== -->
-            <div class="fb-post">
-                <!-- رأس المنشور -->
-                <div class="post-header">
-                    <div class="post-avatar merchant">
-                        <i class="fas fa-store"></i>
-                        <span class="avatar-status"></span>
-                    </div>
-                    <div class="post-info">
-                        <h3>
-                            عطارة الشرق
-                            <i class="fas fa-check-circle" style="color: var(--gold);"></i>
-                        </h3>
-                        <div class="post-time">
-                            <i class="far fa-clock"></i>
-                            منذ ساعتين
-                            <i class="fas fa-globe" style="margin-right: 5px;"></i>
-                        </div>
-                    </div>
-                    <div class="user-badge merchant">
-                        <i class="fas fa-store-alt"></i>
-                        تاجر
-                    </div>
-                </div>
-
-                <!-- محتوى المنشور -->
-                <div class="post-content">
-                    <p class="post-text">
-                        🌟 توابل طبيعية 100% من أجود الأنواع ✨
-                    </p>
-
-                    <!-- بطاقة المنتج -->
-                    <div class="product-embed">
-                        <img src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=600" alt="بهارات">
-                        <div class="product-details">
-                            <h3 class="product-title">خلطة بهارات مشكلة فاخرة</h3>
-                            <div class="product-price">
-                                1200 <small>دج</small>
-                            </div>
-                            <div class="product-meta">
-                                <span><i class="fas fa-box"></i> متوفر: 15 قطعة</span>
-                                <span><i class="fas fa-star" style="color: var(--gold);"></i> 4.8</span>
-                            </div>
-                            <button class="add-to-cart-btn" onclick="addToCart(1)">
-                                <i class="fas fa-cart-plus"></i>
-                                أضف إلى السلة
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- أزرار التفاعل -->
-                    <div class="post-actions">
-                        <button class="post-action" onclick="toggleLike(this)">
-                            <i class="far fa-thumbs-up"></i>
-                            إعجاب
+    let total = 0;
+    itemsDiv.innerHTML = cart.map(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        const imageUrl = item.image || "https://via.placeholder.com/70/2c5e4f/ffffff?text=منتج";
+        
+        return `
+            <div class="cart-item">
+                <img src="${imageUrl}" class="cart-item-image" onerror="this.src='https://via.placeholder.com/70/2c5e4f/ffffff?text=منتج'">
+                <div class="cart-item-details">
+                    <div class="cart-item-title">${item.name}</div>
+                    <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+                    <div class="cart-item-quantity">
+                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity - 1})">-</button>
+                        <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
+                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity + 1})">+</button>
+                        <button class="quantity-btn delete-btn" onclick="removeFromCart(${item.productId})" title="حذف">
+                            <i class="fas fa-trash"></i>
                         </button>
-                        <button class="post-action">
-                            <i class="far fa-comment"></i>
-                            تعليق
-                        </button>
-                        <button class="post-action">
-                            <i class="far fa-share-square"></i>
-                            مشاركة
-                        </button>
-                    </div>
-
-                    <!-- الإحصائيات -->
-                    <div class="post-stats">
-                        <span class="likes-count">
-                            <i class="fas fa-thumbs-up"></i> 24
-                        </span>
-                        <span class="comments-count">
-                            <i class="fas fa-comment"></i> 12 تعليق
-                        </span>
-                    </div>
-
-                    <!-- التعليقات -->
-                    <div class="comments-section">
-                        <!-- تعليق مشتري -->
-                        <div class="comment">
-                            <div class="comment-avatar buyer">
-                                <span>م</span>
-                            </div>
-                            <div class="comment-content">
-                                <div class="comment-header">
-                                    <span class="comment-author">محمد الأمين</span>
-                                    <span class="comment-time">منذ ساعة</span>
-                                </div>
-                                <p class="comment-text">منتج رائع جداً، استخدمته وكانت نتيجته ممتازة ✨</p>
-                                <div class="comment-actions">
-                                    <button class="comment-action">إعجاب</button>
-                                    <button class="comment-action">رد</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- رد التاجر -->
-                        <div class="comment comment-reply">
-                            <div class="comment-avatar merchant">
-                                <i class="fas fa-store"></i>
-                            </div>
-                            <div class="comment-content">
-                                <div class="comment-header">
-                                    <span class="comment-author">عطارة الشرق</span>
-                                    <span class="comment-badge" style="background: var(--gold); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">تاجر</span>
-                                    <span class="comment-time">منذ 45 دقيقة</span>
-                                </div>
-                                <p class="comment-text">شكراً لك محمد، نتمنى لك تجربة ممتعة ❤️</p>
-                                <div class="comment-actions">
-                                    <button class="comment-action">إعجاب</button>
-                                    <button class="comment-action">رد</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- صندوق إضافة تعليق -->
-                        <div class="add-comment">
-                            <div class="add-comment-avatar">
-                                <i class="far fa-user"></i>
-                            </div>
-                            <div class="add-comment-input">
-                                <input type="text" placeholder="أكتب تعليقاً...">
-                                <button class="add-comment-btn">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
+        `;
+    }).join('');
 
-            <!-- ===== منشور مدير ===== -->
-            <div class="fb-post">
-                <div class="post-header">
-                    <div class="post-avatar admin">
-                        <i class="fas fa-crown"></i>
-                        <span class="avatar-status"></span>
-                    </div>
-                    <div class="post-info">
-                        <h3>
-                            إدارة ناردو برو
-                            <i class="fas fa-check-circle" style="color: var(--gold);"></i>
-                        </h3>
-                        <div class="post-time">
-                            <i class="far fa-clock"></i>
-                            منذ 5 ساعات
-                        </div>
-                    </div>
-                    <div class="user-badge admin">
-                        <i class="fas fa-shield-alt"></i>
-                        مدير
-                    </div>
-                </div>
+    if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} دج`;
+}
 
-                <div class="post-content">
-                    <p class="post-text">
-                        🎉 عروض حصرية بمناسبة افتتاح المتجر 🎉
-                    </p>
+function updateCartItem(productId, newQuantity) {
+    const item = cart.find(i => i.productId == productId);
+    const product = products.find(p => p.id == productId);
 
-                    <div class="product-embed">
-                        <img src="https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=600" alt="عرض">
-                        <div class="product-details">
-                            <h3 class="product-title">حزمة العناية بالبشرة</h3>
-                            <div class="product-price">
-                                3500 <small>دج</small>
-                                <span style="font-size: 14px; color: #e74c3c; text-decoration: line-through; margin-right: 10px;">5000 دج</span>
-                            </div>
-                            <div class="product-meta">
-                                <span><i class="fas fa-box"></i> متوفر: 8 قطع</span>
-                                <span><i class="fas fa-star" style="color: var(--gold);"></i> 4.9</span>
-                            </div>
-                            <button class="add-to-cart-btn" onclick="addToCart(2)">
-                                <i class="fas fa-cart-plus"></i>
-                                أضف إلى السلة
-                            </button>
-                        </div>
-                    </div>
+    if (newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+    }
 
-                    <div class="post-actions">
-                        <button class="post-action" onclick="toggleLike(this)">
-                            <i class="far fa-thumbs-up"></i>
-                            إعجاب
-                        </button>
-                        <button class="post-action">
-                            <i class="far fa-comment"></i>
-                            تعليق
-                        </button>
-                        <button class="post-action">
-                            <i class="far fa-share-square"></i>
-                            مشاركة
-                        </button>
-                    </div>
+    if (newQuantity > product.stock) {
+        showNotification('الكمية غير متوفرة', 'warning');
+        return;
+    }
 
-                    <div class="post-stats">
-                        <span class="likes-count"><i class="fas fa-thumbs-up"></i> 56</span>
-                        <span class="comments-count"><i class="fas fa-comment"></i> 8 تعليق</span>
-                    </div>
-                </div>
-            </div>
+    item.quantity = newQuantity;
+    saveCart();
+    updateCartCounter();
+    updateCartDisplay();
+}
 
-            <!-- ===== منشور مشتري ===== -->
-            <div class="fb-post">
-                <div class="post-header">
-                    <div class="post-avatar buyer">
-                        <span>س</span>
-                        <span class="avatar-status"></span>
-                    </div>
-                    <div class="post-info">
-                        <h3>
-                            سارة أحمد
-                        </h3>
-                        <div class="post-time">
-                            <i class="far fa-clock"></i>
-                            منذ يوم
-                        </div>
-                    </div>
-                    <div class="user-badge buyer">
-                        <i class="fas fa-user"></i>
-                        مشتري
-                    </div>
-                </div>
+function removeFromCart(productId) {
+    cart = cart.filter(i => i.productId != productId);
+    saveCart();
+    updateCartCounter();
+    updateCartDisplay();
+    showNotification('تمت إزالة المنتج', 'info');
+}
 
-                <div class="post-content">
-                    <p class="post-text">
-                        🌸 تجربتي مع منتجات العناية بالشعر كانت رائعة 🌸
-                    </p>
+async function checkoutCart() {
+    if (cart.length === 0) {
+        showNotification('السلة فارغة', 'warning');
+        return;
+    }
 
-                    <div class="product-embed">
-                        <img src="https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=600" alt="زيت أركان">
-                        <div class="product-details">
-                            <h3 class="product-title">زيت أركان عضوي</h3>
-                            <div class="product-price">
-                                1800 <small>دج</small>
-                            </div>
-                            <div class="product-meta">
-                                <span><i class="fas fa-box"></i> متوفر: 20 قطعة</span>
-                                <span><i class="fas fa-star" style="color: var(--gold);"></i> 4.7</span>
-                            </div>
-                            <button class="add-to-cart-btn" onclick="addToCart(3)">
-                                <i class="fas fa-cart-plus"></i>
-                                أضف إلى السلة
-                            </button>
-                        </div>
-                    </div>
+    if (!currentUser) {
+        showNotification('يجب تسجيل الدخول أولاً', 'warning');
+        openLoginModal();
+        return;
+    }
 
-                    <div class="post-actions">
-                        <button class="post-action liked" onclick="toggleLike(this)">
-                            <i class="fas fa-thumbs-up"></i>
-                            15
-                        </button>
-                        <button class="post-action">
-                            <i class="far fa-comment"></i>
-                            تعليق
-                        </button>
-                        <button class="post-action">
-                            <i class="far fa-share-square"></i>
-                            مشاركة
-                        </button>
-                    </div>
+    const customerPhone = prompt('📞 رقم الهاتف:', currentUser.phone || '');
+    if (!customerPhone) return;
+    
+    const customerAddress = prompt('📍 عنوان التوصيل:', '');
+    if (!customerAddress) return;
 
-                    <div class="post-stats">
-                        <span class="likes-count"><i class="fas fa-thumbs-up"></i> 15</span>
-                        <span class="comments-count"><i class="fas fa-comment"></i> 3 تعليق</span>
-                    </div>
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shipping = 800;
+    const total = subtotal + shipping;
 
-                    <div class="comments-section">
-                        <div class="comment">
-                            <div class="comment-avatar merchant">
-                                <i class="fas fa-store"></i>
-                            </div>
-                            <div class="comment-content">
-                                <div class="comment-header">
-                                    <span class="comment-author">متجر العناية</span>
-                                    <span class="comment-time">منذ 12 ساعة</span>
-                                </div>
-                                <p class="comment-text">شكراً لتجربتك الجميلة، منتجاتنا طبيعية 100% ❤️</p>
-                                <div class="comment-actions">
-                                    <button class="comment-action">إعجاب</button>
-                                    <button class="comment-action">رد</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    const order = {
+        orderId: Date.now(),
+        customerName: currentUser.name,
+        customerPhone: customerPhone,
+        customerAddress: customerAddress,
+        items: [...cart],
+        subtotal: subtotal,
+        shipping: shipping,
+        total: total,
+        createdAt: new Date().toISOString()
+    };
 
-    <!-- أيقونات ثابتة -->
-    <div class="fixed-cart" onclick="toggleCart()">
-        <i class="fas fa-shopping-cart"></i>
-        <span class="fixed-cart-count">3</span>
-    </div>
-
-    <div class="add-product-btn" onclick="showAddProductModal()">
-        <i class="fas fa-plus"></i>
-    </div>
-
-    <!-- نافذة تسجيل الدخول -->
-    <div class="modal" id="loginModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 30px; border-radius: 20px; max-width: 400px; width: 90%;">
-            <h2 style="color: var(--gold); text-align: center;">تسجيل الدخول</h2>
-            <p style="text-align: center;">نافذة تسجيل الدخول - للعرض فقط</p>
-            <button onclick="closeLoginModal()" style="width: 100%; padding: 10px; background: var(--gold); border: none; border-radius: 10px; color: white; font-weight: 700; cursor: pointer;">إغلاق</button>
-        </div>
-    </div>
-
-    <!-- نافذة إضافة منتج -->
-    <div class="modal" id="productModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%;">
-            <h2 style="color: var(--gold); text-align: center;">إضافة منتج جديد</h2>
-            <p style="text-align: center;">نافذة إضافة منتج - للعرض فقط</p>
-            <button onclick="closeProductModal()" style="width: 100%; padding: 10px; background: var(--gold); border: none; border-radius: 10px; color: white; font-weight: 700; cursor: pointer;">إغلاق</button>
-        </div>
-    </div>
-
-    <script>
-        // متغيرات عامة
-        let cart = [];
-        let isDarkMode = false;
-
-        // دوال السلة
-        function toggleCart() {
-            document.getElementById('cartSidebar').classList.toggle('open');
+    // تجميع الطلبات حسب التاجر
+    const ordersByMerchant = {};
+    cart.forEach(item => {
+        if (!ordersByMerchant[item.merchantName]) {
+            ordersByMerchant[item.merchantName] = {
+                merchantTelegram: item.merchantTelegram,
+                items: []
+            };
         }
+        ordersByMerchant[item.merchantName].items.push(item);
+    });
 
-        function addToCart(productId) {
-            cart.push({id: productId});
-            updateCartCount();
-            alert('تمت إضافة المنتج إلى السلة');
-        }
+    // إرسال إشعار لكل تاجر
+    for (const [merchantName, merchantData] of Object.entries(ordersByMerchant)) {
+        const merchantItems = merchantData.items;
+        const merchantTotal = merchantItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        const message = `🟢 **طلب جديد**
+        
+👤 الزبون: ${order.customerName}
+📞 الهاتف: ${order.customerPhone}
+📍 العنوان: ${order.customerAddress}
+🏪 التاجر: ${merchantName}
 
-        function updateCartCount() {
-            document.querySelectorAll('.fixed-cart-count').forEach(el => {
-                el.textContent = cart.length;
-            });
-        }
+📦 **المنتجات:**
+${merchantItems.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج`).join('\n')}
 
-        function checkoutCart() {
-            alert('سيتم تحويلك إلى واتساب لإتمام الطلب');
-        }
+💰 إجمالي الطلب: ${merchantTotal} دج
+➕ تكلفة التوصيل: ${shipping} دج
+💵 الإجمالي الكلي: ${merchantTotal + shipping} دج
 
-        // دوال التفاعل
-        function toggleLike(btn) {
-            btn.classList.toggle('liked');
-            if (btn.classList.contains('liked')) {
-                btn.innerHTML = '<i class="fas fa-thumbs-up"></i> إعجاب';
-            } else {
-                btn.innerHTML = '<i class="far fa-thumbs-up"></i> إعجاب';
+🆔 رقم الطلب: ${order.orderId}
+📅 التاريخ: ${new Date().toLocaleString('ar-EG')}
+
+✅ سيتم التواصل معك قريباً`;
+
+        if (merchantData.merchantTelegram) {
+            try {
+                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: merchantData.merchantTelegram.replace('@', ''),
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            } catch (error) {
+                console.error('❌ فشل إرسال إشعار للتاجر:', error);
             }
         }
+    }
 
-        // دوال الثيم
-        function toggleTheme() {
-            isDarkMode = !isDarkMode;
-            document.body.classList.toggle('dark-mode', isDarkMode);
-            const themeBtn = document.getElementById('themeBtn');
-            if (isDarkMode) {
-                themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
-            } else {
-                themeBtn.innerHTML = '<i class="fas fa-moon"></i>';
-            }
-        }
+    // إرسال إشعار للقناة
+    const channelMessage = `🟢 **طلب جديد في المتجر**
+        
+👤 الزبون: ${order.customerName}
+📞 الهاتف: ${order.customerPhone}
+📍 العنوان: ${order.customerAddress}
 
-        // دوال النوافذ
-        function openLoginModal() {
-            document.getElementById('loginModal').style.display = 'flex';
-        }
+📦 **المنتجات:**
+${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج (${i.merchantName})`).join('\n')}
 
-        function closeLoginModal() {
-            document.getElementById('loginModal').style.display = 'none';
-        }
+💰 الإجمالي: ${order.total} دج
+🆔 رقم الطلب: ${order.orderId}`;
 
-        function showAddProductModal() {
-            document.getElementById('productModal').style.display = 'flex';
-        }
+    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: TELEGRAM.channelId,
+            text: channelMessage,
+            parse_mode: 'Markdown'
+        })
+    });
 
-        function closeProductModal() {
-            document.getElementById('productModal').style.display = 'none';
-        }
+    // حفظ الطلب
+    const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
+    orders.push(order);
+    localStorage.setItem('nardoo_orders', JSON.stringify(orders));
 
-        // إغلاق النوافذ عند النقر خارجها
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
-            }
-        }
-
-        // التمرير السلس
-        function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // تحديث وقت المنشورات (للعرض فقط)
-        console.log('✅ تم تحميل تصميم فيسبوك بنجاح');
-    </script>
-</body>
-</html>
+    cart = [];
+    saveCart();
+    updateCartCounter();
+    toggleCart();
+    
+    showNotification('✅ تم إرسال الطلب بنجاح، سيتم التواصل معك قريباً', 'success');
+}
+</script>
