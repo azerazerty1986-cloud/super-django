@@ -122,16 +122,15 @@
         }
         @keyframes pulse { 50% { transform: scale(1.1); } }
         
-        /* المسرح المستمر */
-        .theater-area {
+        /* منطقة العرض (الألبوم) */
+        .album-display {
             background: linear-gradient(145deg, #1a1f2b, #0d1117);
             border: 3px solid #ffd700;
             border-radius: 15px;
             padding: 15px;
             margin: 15px 0;
-            box-shadow: 0 0 20px rgba(255,215,0,0.2);
         }
-        .theater-header {
+        .album-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -146,23 +145,20 @@
         }
         @keyframes blink { 50% { opacity: 0.3; } }
         
-        .theater-screen {
+        .album-preview {
             background: black;
             border-radius: 10px;
-            min-height: 180px;
+            min-height: 150px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             color: #666;
             font-size: 14px;
             border: 1px solid #ffd700;
             margin-bottom: 10px;
-            padding: 15px;
-            text-align: center;
         }
         
-        .theater-info {
+        .album-info {
             display: flex;
             justify-content: space-between;
             font-size: 14px;
@@ -172,8 +168,8 @@
             border-radius: 8px;
         }
         
-        /* الألبومات */
-        .albums-area {
+        /* قائمة الألبومات */
+        .albums-list {
             background: #1a1f2b;
             border: 2px solid #ffd700;
             border-radius: 15px;
@@ -183,46 +179,32 @@
         .albums-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
             margin-bottom: 10px;
             color: #ffd700;
-            border-bottom: 1px solid #ffd700;
-            padding-bottom: 5px;
-        }
-        .album-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 5px;
         }
         .album-item {
             background: #2d333b;
-            padding: 8px 5px;
+            padding: 10px;
+            margin: 5px 0;
             border-radius: 8px;
-            text-align: center;
-            font-size: 11px;
-            border-right: 2px solid #ffd700;
-            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-right: 3px solid #ffd700;
             cursor: pointer;
         }
         .album-item:hover {
-            transform: scale(1.05);
             background: #ffd70020;
         }
-        .album-item .album-num {
-            display: block;
+        .album-number {
             background: #ffd700;
             color: black;
-            border-radius: 10px;
-            padding: 2px;
-            margin-bottom: 5px;
+            padding: 2px 10px;
+            border-radius: 12px;
             font-weight: bold;
-            font-size: 12px;
         }
-        .album-item .count {
-            font-size: 10px;
+        .album-time {
+            font-size: 12px;
             color: #8b949e;
         }
         
@@ -260,20 +242,10 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            transition: all 0.3s;
-        }
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
-        }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
         .btn-success { background: #238636; color: white; }
         .btn-danger { background: #da3633; color: white; }
         .btn-live { background: #ffd700; color: black; }
-        .btn-test { background: #6e7681; color: white; }
         
         .control-group {
             display: grid;
@@ -281,15 +253,14 @@
             gap: 10px;
         }
 
-        .album-note {
-            margin-top: 10px;
-            padding: 8px;
-            background: #ffd70010;
-            border-radius: 8px;
-            font-size: 12px;
-            color: #ffd700;
+        .note {
             text-align: center;
+            color: #ffd700;
+            font-size: 12px;
+            margin: 10px 0;
+            padding: 5px;
             border: 1px dashed #ffd700;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -297,7 +268,7 @@
     <div class="container">
         <div class="header">
             <h1>🎬 مسرح الألبومات المتتابعة</h1>
-            <p style="color: #ffd700;">تشغيل تلقائي مستمر</p>
+            <p>تشغيل تلقائي للمقاطع المتتالية</p>
         </div>
 
         <!-- معلومات التاجر -->
@@ -305,7 +276,7 @@
             <div class="merchant-avatar">ن</div>
             <div style="flex: 1;">
                 <div style="color: #ffd700; font-size: 18px;">@nardoo_merchant</div>
-                <div class="broadcast-id" id="broadcastIdDisplay">البث الحالي: -</div>
+                <div class="broadcast-id" id="broadcastIdDisplay">البث: -</div>
             </div>
         </div>
 
@@ -317,41 +288,38 @@
             </div>
             <div class="status-badge" id="cameraStatus">⏹️ متوقفة</div>
             
-            <!-- العد التنازلي -->
             <div class="countdown-layer" id="countdownLayer" style="display: none;">
                 <div class="countdown-circle" id="countdownNumber">5</div>
-                <div style="color: #ffd700; margin-top: 15px;">تجهيز المسرح...</div>
+                <div style="color: #ffd700;">تجهيز البث...</div>
             </div>
         </div>
 
-        <!-- المسرح المستمر (آخر ألبوم) -->
-        <div class="theater-area">
-            <div class="theater-header">
-                <span>🎭 المسرح المستمر (تشغيل تلقائي)</span>
-                <span class="live-badge" id="theaterLiveBadge">⚪ غير نشط</span>
+        <!-- الألبوم الحالي (آخر مجموعة مرسلة) -->
+        <div class="album-display">
+            <div class="album-header">
+                <span>📀 آخر ألبوم مرسل</span>
+                <span class="live-badge" id="liveStatus">⚪</span>
             </div>
             
-            <div class="theater-screen" id="theaterScreen">
-                <span id="theaterMessage">⏳ المسرح في انتظار البث...</span>
-                <div style="margin-top: 10px; font-size: 12px;" id="theaterSubMessage"></div>
+            <div class="album-preview" id="albumPreview">
+                <span id="albumMessage">لا يوجد ألبوم بعد</span>
             </div>
             
-            <div class="theater-info">
-                <span>📀 الألبوم: <span id="currentAlbum">0</span></span>
-                <span>🎬 المقاطع: <span id="albumSegments">0</span>/3</span>
-                <span>⏱️ تحديث: 10 ث</span>
+            <div class="album-info">
+                <span>الألبوم: <span id="currentAlbumNum">0</span></span>
+                <span>المقاطع: <span id="albumRange">-</span></span>
+                <span>⏱️ 3 مقاطع</span>
             </div>
         </div>
 
-        <!-- الألبومات المرسلة -->
-        <div class="albums-area">
+        <!-- قائمة الألبومات المرسلة -->
+        <div class="albums-list">
             <div class="albums-header">
                 <span>📚 الألبومات المرسلة</span>
-                <span class="folder-stats" id="albumsCount">0 ألبوم</span>
+                <span id="albumsCount">0</span>
             </div>
-            
-            <div class="album-grid" id="albumsGrid">
-                <div style="grid-column: span 3; text-align: center; color: #666; padding: 20px;">
+            <div id="albumsContainer">
+                <div style="text-align: center; color: #666; padding: 20px;">
                     لا توجد ألبومات بعد
                 </div>
             </div>
@@ -360,16 +328,16 @@
         <!-- إحصائيات -->
         <div class="stats-row">
             <div class="stat-box">
-                <div class="stat-value" id="statRecorded">0</div>
-                <div>تم التسجيل</div>
+                <div class="stat-value" id="statVideos">0</div>
+                <div>مقاطع</div>
             </div>
             <div class="stat-box">
                 <div class="stat-value" id="statAlbums">0</div>
                 <div>ألبومات</div>
             </div>
             <div class="stat-box">
-                <div class="stat-value" id="statSent">0</div>
-                <div>مقاطع مرسلة</div>
+                <div class="stat-value" id="statTime">00:00</div>
+                <div>المدة</div>
             </div>
         </div>
 
@@ -378,9 +346,8 @@
             <button class="btn-success" onclick="startCamera()" id="startBtn">
                 ▶️ تشغيل الكاميرا
             </button>
-            
             <button class="btn-danger" onclick="stopCamera()" id="stopBtn" style="display: none;">
-                ⏹️ إيقاف الكاميرا
+                ⏹️ إيقاف
             </button>
         </div>
 
@@ -392,18 +359,9 @@
             ⏹️ إنهاء البث
         </button>
 
-        <button class="btn-test" onclick="testSystem()" id="testBtn">
-            🔧 اختبار الاتصال
-        </button>
-
-        <!-- ملاحظة عن الألبومات -->
-        <div class="album-note">
-            📌 الألبومات ترسل كل 3 مقاطع - تشغيل تلقائي مستمر في تليجرام
+        <div class="note">
+            📌 يتم إرسال الألبومات كل 3 مقاطع - تشغيل تلقائي متواصل
         </div>
-
-        <p style="text-align: center; margin-top: 10px; color: #6e7681; font-size: 12px;" id="systemStatus">
-            نظام الألبومات المتتابعة جاهز
-        </p>
     </div>
 
     <script>
@@ -411,9 +369,7 @@
         const BOT_TOKEN = '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0';
         const CHANNEL_ID = '-1003822964890';
         const MERCHANT = '@nardoo_merchant';
-        
-        // معرف ثابت للمسرح (موضوع واحد فقط)
-        const THEATER_TOPIC_ID = '1';
+        const TOPIC_ID = '1'; // موضوع واحد للمسرح
 
         // متغيرات النظام
         let stream = null;
@@ -422,17 +378,12 @@
         let mediaRecorder = null;
         let broadcastId = null;
         
-        // المصفوفات
-        let recordedVideos = []; // كل الفيديوهات المسجلة
-        let albums = []; // الألبومات المرسلة
-        let currentAlbumVideos = []; // فيديوهات الألبوم الحالي
-        let pendingVideos = []; // فيديوهات تنتظر الإرسال
+        // تخزين الفيديوهات
+        let allVideos = [];
+        let albums = [];
+        let currentAlbumVideos = [];
+        let segmentNumber = 0;
         
-        let currentSegment = 0;
-        let currentAlbumNumber = 0;
-        let recordingTimeout = null;
-        let albumTimer = null;
-
         // عناصر DOM
         const video = document.getElementById('video');
         const cameraStatus = document.getElementById('cameraStatus');
@@ -445,23 +396,20 @@
         const countdownLayer = document.getElementById('countdownLayer');
         const countdownNumber = document.getElementById('countdownNumber');
         const broadcastIdDisplay = document.getElementById('broadcastIdDisplay');
+        const liveStatus = document.getElementById('liveStatus');
         
-        // عناصر المسرح
-        const theaterScreen = document.getElementById('theaterScreen');
-        const theaterMessage = document.getElementById('theaterMessage');
-        const theaterSubMessage = document.getElementById('theaterSubMessage');
-        const currentAlbum = document.getElementById('currentAlbum');
-        const albumSegments = document.getElementById('albumSegments');
-        const theaterLiveBadge = document.getElementById('theaterLiveBadge');
-        
-        // عناصر الألبومات
-        const albumsGrid = document.getElementById('albumsGrid');
+        // عناصر الألبوم
+        const albumPreview = document.getElementById('albumPreview');
+        const albumMessage = document.getElementById('albumMessage');
+        const currentAlbumNum = document.getElementById('currentAlbumNum');
+        const albumRange = document.getElementById('albumRange');
+        const albumsContainer = document.getElementById('albumsContainer');
         const albumsCount = document.getElementById('albumsCount');
         
         // عناصر الإحصائيات
-        const statRecorded = document.getElementById('statRecorded');
+        const statVideos = document.getElementById('statVideos');
         const statAlbums = document.getElementById('statAlbums');
-        const statSent = document.getElementById('statSent');
+        const statTime = document.getElementById('statTime');
 
         // تشغيل الكاميرا
         async function startCamera() {
@@ -481,24 +429,16 @@
                 stopBtn.style.display = 'block';
                 liveBtn.disabled = false;
                 
-                setupMediaRecorder();
+                // تجهيز مسجل الفيديو
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp8,opus'
+                });
+                
+                mediaRecorder.ondataavailable = handleVideoData;
                 
             } catch (err) {
                 cameraStatus.innerHTML = '❌ خطأ: ' + err.message;
             }
-        }
-
-        // تجهيز مسجل الفيديو
-        function setupMediaRecorder() {
-            try {
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'video/webm;codecs=vp8,opus'
-                });
-            } catch (e) {
-                mediaRecorder = new MediaRecorder(stream);
-            }
-            
-            mediaRecorder.ondataavailable = handleNewVideo;
         }
 
         // بدء البث
@@ -508,34 +448,26 @@
                 return;
             }
 
-            // إنشاء معرف فريد للبث
+            // إنشاء معرف البث
             broadcastId = 'A' + Date.now().toString(36).substring(2, 8).toUpperCase();
-            broadcastIdDisplay.innerHTML = `البث الحالي: <span style="color:#ffd700">${broadcastId}</span>`;
+            broadcastIdDisplay.innerHTML = `البث: <span style="color:#ffd700">${broadcastId}</span>`;
             
-            // تجهيز المصفوفات
-            recordedVideos = [];
+            // تجهيز البيانات
+            allVideos = [];
             albums = [];
             currentAlbumVideos = [];
-            pendingVideos = [];
-            currentSegment = 0;
-            currentAlbumNumber = 0;
+            segmentNumber = 0;
             
             // تحديث الواجهة
-            updateAllDisplays();
+            updateStats();
+            updateAlbumsList();
             
-            // إظهار العد التنازلي
+            // العد التنازلي
             countdownLayer.style.display = 'flex';
-            
-            // العد التنازلي 5 ثواني
             for (let i = 5; i > 0; i--) {
                 countdownNumber.textContent = i;
                 await new Promise(r => setTimeout(r, 1000));
             }
-            
-            // إرسال إشعار بدء البث
-            await sendBroadcastStartNotification();
-            
-            // إخفاء العد التنازلي
             countdownLayer.style.display = 'none';
             
             // بدء البث
@@ -543,151 +475,116 @@
             merchantOverlay.style.display = 'flex';
             liveBtn.style.display = 'none';
             stopLiveBtn.style.display = 'block';
+            liveStatus.innerHTML = '🔴';
+            liveStatus.style.color = 'red';
             
             cameraStatus.innerHTML = '🔴 بث مباشر';
-            theaterLiveBadge.innerHTML = '🔴 بث نشط';
-            theaterLiveBadge.style.color = 'red';
-            theaterMessage.innerHTML = '📺 جاري تسجيل المقاطع...';
+            albumMessage.innerHTML = '📹 جاري تسجيل المقاطع...';
             
-            // بدأ التسجيل المتسلسل (كل 10 ثواني)
+            // إرسال إشعار البدء
+            await sendStartNotification();
+            
+            // بدء التسجيل المتسلسل
             startRecording();
-            
-            // بدأ تجميع الألبومات
-            startAlbumCollection();
         }
 
-        // إرسال إشعار بدء البث
-        async function sendBroadcastStartNotification() {
+        // إرسال إشعار البدء
+        async function sendStartNotification() {
             try {
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: CHANNEL_ID,
-                        message_thread_id: THEATER_TOPIC_ID,
-                        text: `🎬 **بدء بث جديد - مسرح الألبومات**\n\n` +
+                        message_thread_id: TOPIC_ID,
+                        text: `🎬 **بدأ بث جديد - مسرح الألبومات**\n\n` +
                               `👤 **التاجر:** ${MERCHANT}\n` +
                               `🆔 **معرف البث:** \`${broadcastId}\`\n` +
-                              `⏰ **وقت البدء:** ${new Date().toLocaleTimeString('ar-EG')}\n\n` +
-                              `📀 سيتم إرسال ألبومات كل 3 مقاطع\n` +
-                              `▶️ تشغيل تلقائي مستمر\n\n` +
-                              `#بث_${broadcastId}`,
+                              `⏰ **وقت البدء:** ${new Date().toLocaleTimeString()}\n\n` +
+                              `📀 سيتم إرسال ألبوم كل 3 مقاطع\n` +
+                              `▶️ تشغيل تلقائي مستمر`,
                         parse_mode: 'Markdown'
                     })
                 });
-                
-            } catch (error) {
-                console.log('خطأ في إرسال الإشعار:', error);
-            }
+            } catch (error) {}
         }
 
-        // بدأ التسجيل المتسلسل
+        // بدء التسجيل المتسلسل
         function startRecording() {
-            recordNextSegment();
+            recordNext();
         }
 
         // تسجيل المقطع التالي
-        function recordNextSegment() {
+        function recordNext() {
             if (!isLive) return;
             
-            currentSegment++;
-            currentSegmentNum.textContent = currentSegment;
+            segmentNumber++;
+            currentSegmentNum.textContent = segmentNumber;
             
-            // بدأ تسجيل مقطع جديد
             mediaRecorder.start();
             
-            // إيقاف التسجيل بعد 10 ثواني
-            recordingTimeout = setTimeout(() => {
-                if (isLive && mediaRecorder && mediaRecorder.state === 'recording') {
+            setTimeout(() => {
+                if (isLive && mediaRecorder.state === 'recording') {
                     mediaRecorder.stop();
                     
-                    // تسجيل المقطع التالي بعد ثانية
                     setTimeout(() => {
-                        if (isLive) {
-                            recordNextSegment();
-                        }
+                        if (isLive) recordNext();
                     }, 1000);
                 }
             }, 10000); // 10 ثواني
         }
 
-        // بدأ تجميع الألبومات
-        function startAlbumCollection() {
-            albumTimer = setInterval(() => {
-                checkAndSendAlbum();
-            }, 2000); // فحص كل ثانيتين
-        }
-
-        // معالجة فيديو جديد
-        function handleNewVideo(event) {
+        // معالجة بيانات الفيديو
+        function handleVideoData(event) {
             if (event.data.size > 0 && isLive) {
                 const videoData = {
-                    number: currentSegment,
+                    number: segmentNumber,
                     data: event.data,
                     broadcastId: broadcastId,
-                    size: (event.data.size / 1024).toFixed(2) + ' KB',
-                    timestamp: Date.now()
+                    blob: new Blob([event.data], { type: 'video/mp4' })
                 };
                 
-                // إضافة إلى المصفوفات
-                recordedVideos.push(videoData);
+                allVideos.push(videoData);
+                currentAlbumVideos.push(videoData);
                 
-                // إضافة إلى ألبوم الانتظار
-                pendingVideos.push(videoData);
-                
-                // تحديث الإحصائيات
                 updateStats();
                 
-                // تحديث عرض المسرح
-                updateTheaterDisplay();
+                // إذا اكتمل 3 مقاطع، أرسل ألبوم
+                if (currentAlbumVideos.length === 3) {
+                    sendAlbum();
+                }
             }
         }
 
-        // فحص وإرسال الألبوم
-        function checkAndSendAlbum() {
-            if (!isLive) return;
+        // إرسال ألبوم
+        async function sendAlbum() {
+            const albumNumber = albums.length + 1;
+            const videos = [...currentAlbumVideos];
+            const startNum = videos[0].number;
+            const endNum = videos[2].number;
             
-            // إذا اكتمل 3 مقاطع في ألبوم الانتظار
-            if (pendingVideos.length >= 3) {
-                // أخذ أول 3 مقاطع
-                const albumVideos = pendingVideos.splice(0, 3);
-                sendAlbumToTelegram(albumVideos);
-            }
-        }
-
-        // إرسال ألبوم إلى تليجرام
-        async function sendAlbumToTelegram(albumVideos) {
             try {
-                currentAlbumNumber++;
-                
-                // تجهيز وسائط الألبوم (Media Group)
+                // تجهيز media group
                 const media = [];
+                const formData = new FormData();
                 
-                for (let i = 0; i < albumVideos.length; i++) {
-                    const video = albumVideos[i];
-                    const videoFile = new File([video.data], `segment_${video.number}.mp4`, { type: 'video/mp4' });
-                    
-                    // تحويل الملف إلى blob URL
-                    const blob = new Blob([video.data], { type: 'video/mp4' });
+                for (let i = 0; i < videos.length; i++) {
+                    const video = videos[i];
+                    const fileName = `video_${video.number}.mp4`;
+                    const videoFile = new File([video.data], fileName, { type: 'video/mp4' });
                     
                     media.push({
                         type: 'video',
-                        media: `attach://video${i}`,
-                        caption: i === 0 ? `🎬 **ألبوم ${currentAlbumNumber} - مقاطع ${albumVideos[0].number}-${albumVideos[2].number}**\n\n👤 ${MERCHANT}\n🆔 بث: ${broadcastId}\n\n▶️ تشغيل تلقائي مستمر` : ''
+                        media: `attach://${fileName}`,
+                        caption: i === 0 ? `📀 **ألبوم ${albumNumber}**\n👤 ${MERCHANT}\n📹 مقاطع ${startNum}-${endNum}\n🆔 ${broadcastId}` : ''
                     });
+                    
+                    formData.append(fileName, videoFile);
                 }
-
-                // تجهيز FormData
-                const formData = new FormData();
-                formData.append('chat_id', CHANNEL_ID);
-                formData.append('message_thread_id', THEATER_TOPIC_ID);
-                formData.append('media', JSON.stringify(media));
                 
-                // إضافة ملفات الفيديو
-                for (let i = 0; i < albumVideos.length; i++) {
-                    const videoFile = new File([albumVideos[i].data], `video${i}.mp4`, { type: 'video/mp4' });
-                    formData.append(`video${i}`, videoFile);
-                }
+                formData.append('chat_id', CHANNEL_ID);
+                formData.append('message_thread_id', TOPIC_ID);
+                formData.append('media', JSON.stringify(media));
 
                 // إرسال الألبوم
                 const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup`, {
@@ -700,146 +597,109 @@
                 if (result.ok) {
                     // حفظ الألبوم
                     albums.push({
-                        number: currentAlbumNumber,
-                        videos: albumVideos.map(v => v.number),
-                        messageIds: result.result.map(r => r.message_id),
-                        time: new Date().toLocaleTimeString()
+                        number: albumNumber,
+                        start: startNum,
+                        end: endNum,
+                        time: new Date().toLocaleTimeString(),
+                        messageIds: result.result.map(r => r.message_id)
                     });
                     
                     // تحديث العرض
-                    updateAlbumsDisplay();
+                    albumMessage.innerHTML = `📀 الألبوم ${albumNumber} (مقاطع ${startNum}-${endNum})`;
+                    currentAlbumNum.textContent = albumNumber;
+                    albumRange.textContent = `${startNum}-${endNum}`;
                     
-                    // تحديث المسرح بآخر ألبوم
-                    theaterMessage.innerHTML = `🎥 الألبوم ${currentAlbumNumber} - مقاطع ${albumVideos[0].number}-${albumVideos[2].number}`;
-                    theaterSubMessage.innerHTML = `معرف البث: ${broadcastId}`;
-                    currentAlbum.textContent = currentAlbumNumber;
-                    
-                    // تحديث الإحصائيات
+                    updateAlbumsList();
                     updateStats();
+                    
+                    // تفريغ الألبوم الحالي
+                    currentAlbumVideos = [];
                 }
-
+                
             } catch (error) {
                 console.log('خطأ في إرسال الألبوم:', error);
             }
         }
 
-        // تحديث عرض المسرح
-        function updateTheaterDisplay() {
-            if (pendingVideos.length > 0) {
-                albumSegments.textContent = `${pendingVideos.length}/3`;
-            }
-        }
-
-        // تحديث عرض الألبومات
-        function updateAlbumsDisplay() {
+        // تحديث قائمة الألبومات
+        function updateAlbumsList() {
             let html = '';
             
-            // عرض آخر 6 ألبومات
-            const recentAlbums = [...albums].slice(-6);
-            
-            recentAlbums.forEach(album => {
-                html += `<div class="album-item" onclick="window.open('https://t.me/c/${CHANNEL_ID.replace('-100', '')}/${album.messageIds[0]}')">
-                    <span class="album-num">ألبوم ${album.number}</span>
-                    <span>مقاطع ${album.videos.join('-')}</span>
-                    <span class="count">${album.time}</span>
-                </div>`;
+            [...albums].reverse().forEach(album => {
+                html += `
+                    <div class="album-item" onclick="window.open('https://t.me/c/${CHANNEL_ID.replace('-100', '')}/${album.messageIds[0]}')">
+                        <span class="album-number">ألبوم ${album.number}</span>
+                        <span>مقاطع ${album.start}-${album.end}</span>
+                        <span class="album-time">${album.time}</span>
+                    </div>
+                `;
             });
             
-            // تعبئة الفراغ
-            for (let i = recentAlbums.length; i < 6; i++) {
-                html += `<div class="album-item" style="opacity: 0.2;">
-                    <span class="album-num">ألبوم ${albums.length + i + 1}</span>
-                    <span>---</span>
-                    <span class="count">--:--</span>
-                </div>`;
+            if (albums.length === 0) {
+                html = '<div style="text-align: center; color: #666; padding: 20px;">لا توجد ألبومات بعد</div>';
             }
             
-            albumsGrid.innerHTML = html;
+            albumsContainer.innerHTML = html;
             albumsCount.textContent = `${albums.length} ألبوم`;
+            statAlbums.textContent = albums.length;
         }
 
         // تحديث الإحصائيات
         function updateStats() {
-            statRecorded.textContent = recordedVideos.length;
-            statAlbums.textContent = albums.length;
-            statSent.textContent = albums.length * 3;
-        }
-
-        // تحديث جميع شاشات العرض
-        function updateAllDisplays() {
-            updateStats();
-            updateAlbumsDisplay();
+            statVideos.textContent = allVideos.length;
+            
+            const minutes = Math.floor(allVideos.length * 10 / 60);
+            const seconds = (allVideos.length * 10) % 60;
+            statTime.textContent = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
         }
 
         // إنهاء البث
         async function stopBroadcast() {
-            // إيقاف جميع العمليات
             isLive = false;
             
-            if (recordingTimeout) {
-                clearTimeout(recordingTimeout);
-            }
-            
-            if (albumTimer) {
-                clearInterval(albumTimer);
-            }
-            
             if (mediaRecorder && mediaRecorder.state === 'recording') {
-                try {
-                    mediaRecorder.stop();
-                } catch (e) {}
+                mediaRecorder.stop();
             }
             
-            // إرسال أي مقاطع متبقية كألبوم أخير
-            if (pendingVideos.length > 0) {
-                await sendAlbumToTelegram(pendingVideos);
-                pendingVideos = [];
+            // إرسال أي مقاطع متبقية
+            if (currentAlbumVideos.length > 0) {
+                await sendAlbum();
             }
             
             // تحديث الواجهة
             merchantOverlay.style.display = 'none';
             liveBtn.style.display = 'block';
             stopLiveBtn.style.display = 'none';
+            liveStatus.innerHTML = '⚪';
+            
             cameraStatus.innerHTML = '✅ تم إنهاء البث';
-            theaterLiveBadge.innerHTML = '⚪ غير نشط';
-            theaterLiveBadge.style.color = '#666';
             
-            theaterMessage.innerHTML = '⏳ المسرح في انتظار البث...';
-            theaterSubMessage.innerHTML = '';
+            // إرسال إشعار الانتهاء
+            const totalMinutes = Math.floor(allVideos.length * 10 / 60);
+            const totalSeconds = (allVideos.length * 10) % 60;
             
-            // حساب المدة الإجمالية
-            const totalMinutes = Math.floor(recordedVideos.length * 10 / 60);
-            const totalSeconds = (recordedVideos.length * 10) % 60;
-            const totalTime = `${totalMinutes.toString().padStart(2,'0')}:${totalSeconds.toString().padStart(2,'0')}`;
-            
-            // إرسال إشعار انتهاء البث
             try {
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: CHANNEL_ID,
-                        message_thread_id: THEATER_TOPIC_ID,
-                        text: `✅ **انتهى البث المباشر**\n\n` +
-                              `👤 **التاجر:** ${MERCHANT}\n` +
-                              `🆔 **معرف البث:** \`${broadcastId}\`\n` +
-                              `⏱️ **المدة:** ${totalTime}\n` +
-                              `📀 **الألبومات:** ${albums.length}\n` +
-                              `🎬 **المقاطع:** ${recordedVideos.length}\n\n` +
-                              `شكراً لمتابعتكم 🌟\n\n` +
-                              `#انتهى_بث_${broadcastId}`,
+                        message_thread_id: TOPIC_ID,
+                        text: `✅ **انتهى البث**\n\n` +
+                              `👤 ${MERCHANT}\n` +
+                              `🆔 ${broadcastId}\n` +
+                              `📊 المقاطع: ${allVideos.length}\n` +
+                              `📀 الألبومات: ${albums.length}\n` +
+                              `⏱️ المدة: ${totalMinutes}:${totalSeconds.toString().padStart(2,'0')}`,
                         parse_mode: 'Markdown'
                     })
                 });
-                
             } catch (error) {}
         }
 
         // إيقاف الكاميرا
         function stopCamera() {
-            if (isLive) {
-                stopBroadcast();
-            }
+            if (isLive) stopBroadcast();
             
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -848,37 +708,17 @@
                 cameraActive = false;
             }
             
-            cameraStatus.innerHTML = '⏹️ الكاميرا متوقفة';
+            cameraStatus.innerHTML = '⏹️ متوقفة';
             startBtn.style.display = 'block';
             stopBtn.style.display = 'none';
             liveBtn.disabled = true;
             merchantOverlay.style.display = 'none';
         }
 
-        // اختبار النظام
-        async function testSystem() {
-            const statusEl = document.getElementById('systemStatus');
-            statusEl.innerHTML = '🔄 جاري اختبار الاتصال...';
-            
-            try {
-                const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
-                const data = await response.json();
-                
-                if (data.ok) {
-                    statusEl.innerHTML = '✅ نظام الألبومات جاهز ✓';
-                    
-                    // اختبار إرسال ألبوم تجريبي صغير
-                    console.log('البوت يعمل بشكل جيد');
-                } else {
-                    statusEl.innerHTML = '❌ خطأ في البوت';
-                }
-            } catch (error) {
-                statusEl.innerHTML = '❌ لا يمكن الاتصال';
-            }
-        }
-
-        // تشغيل اختبار تلقائي عند التحميل
-        window.onload = testSystem;
+        // اختبار بسيط
+        window.onload = function() {
+            console.log('نظام الألبومات جاهز');
+        };
     </script>
 </body>
 </html>
