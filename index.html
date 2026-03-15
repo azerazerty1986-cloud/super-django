@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 إرسال فيديو مباشر - ناردو برو</title>
+    <title>📹 بث مباشر - ناردو برو</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -71,6 +71,80 @@
             padding: 5px 15px;
             border-radius: 15px;
             font-size: 12px;
+            z-index: 5;
+        }
+        
+        /* طبقة العد التنازلي - تظهر فوق الفيديو */
+        .countdown-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+        
+        .countdown-circle {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255, 215, 0, 0.15);
+            border: 4px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+            animation: pulse-circle 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-circle {
+            0% { transform: scale(1); box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(255, 215, 0, 0.6); }
+            100% { transform: scale(1); box-shadow: 0 0 30px rgba(255, 215, 0, 0.3); }
+        }
+        
+        .countdown-number {
+            font-size: 120px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+            line-height: 1;
+            font-family: 'Arial Black', sans-serif;
+        }
+        
+        .countdown-label {
+            font-size: 28px;
+            color: white;
+            font-weight: bold;
+            margin-top: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        .countdown-hint {
+            font-size: 16px;
+            color: #ffd700;
+            margin-top: 15px;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 20px;
+            border-radius: 50px;
+            border: 1px solid #ffd700;
+        }
+        
+        /* تأثير تغيير الأرقام */
+        .countdown-number.exit {
+            animation: exitNumber 0.5s ease-out forwards;
+        }
+        
+        @keyframes exitNumber {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
         }
         
         .controls {
@@ -99,6 +173,11 @@
         button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         
         .btn-success {
@@ -173,6 +252,7 @@
             font-weight: bold;
             margin: 10px 0;
             animation: blink 1s infinite;
+            font-size: 18px;
         }
         
         @keyframes blink {
@@ -180,20 +260,13 @@
             50% { opacity: 0.3; }
         }
         
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #2d333b;
-            border-radius: 4px;
+        .timer-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            text-align: center;
             margin: 10px 0;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: #ffd700;
-            width: 0%;
-            transition: width 0.3s;
+            font-family: monospace;
         }
         
         .footer {
@@ -207,13 +280,22 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fab fa-telegram"></i> إرسال فيديو مباشر</h1>
-            <p>سجل فيديو وأرسله مرة واحدة</p>
+            <h1><i class="fab fa-telegram"></i> بث مباشر</h1>
+            <p>عد تنازلي 5 ثواني ثم يبدأ البث</p>
         </div>
 
-        <!-- حالة التسجيل -->
+        <!-- مؤشر التسجيل -->
         <div class="recording-indicator" id="recordingIndicator" style="display: none;">
-            <i class="fas fa-circle"></i> جاري التسجيل... <span id="countdown">30</span> ثانية
+            <i class="fas fa-circle"></i> جاري البث المباشر... <span id="liveTime">00:00</span>
+        </div>
+
+        <!-- طبقة العد التنازلي - مخفية في البداية -->
+        <div id="countdownLayer" class="countdown-layer" style="display: none;">
+            <div class="countdown-circle">
+                <div class="countdown-number" id="countdownNumber">5</div>
+            </div>
+            <div class="countdown-label">إستعد للبث</div>
+            <div class="countdown-hint" id="countdownHint">إبتسم، أنت على الهواء قريباً ✨</div>
         </div>
 
         <!-- فيديو الكاميرا -->
@@ -222,11 +304,6 @@
             <div class="video-overlay" id="videoOverlay">
                 <i class="fas fa-camera"></i> الكاميرا متوقفة
             </div>
-        </div>
-
-        <!-- شريط التقدم -->
-        <div class="progress-bar" id="progressBar" style="display: none;">
-            <div class="progress-fill" id="progressFill"></div>
         </div>
 
         <!-- أزرار التحكم -->
@@ -239,13 +316,13 @@
             </button>
         </div>
 
-        <!-- أزرار التسجيل والإرسال -->
+        <!-- أزرار البث والإرسال -->
         <div class="controls" id="recordControls" style="display: none;">
-            <button class="btn-video" onclick="startRecording()" id="recordBtn">
-                <i class="fas fa-circle"></i> بدء التسجيل
+            <button class="btn-video" onclick="startCountdown()" id="recordBtn">
+                <i class="fas fa-circle"></i> بدء البث المباشر
             </button>
             <button class="btn-danger" onclick="stopRecording()" id="stopRecordBtn" style="display: none;">
-                <i class="fas fa-square"></i> إيقاف التسجيل
+                <i class="fas fa-square"></i> إنهاء البث
             </button>
             <button class="btn-telegram" onclick="sendVideo()" id="sendBtn" disabled>
                 <i class="fab fa-telegram"></i> إرسال الفيديو
@@ -260,7 +337,7 @@
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="recordTime">00:00</div>
-                <div class="stat-label">مدة التسجيل</div>
+                <div class="stat-label">مدة البث</div>
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="videoSize">0</div>
@@ -268,24 +345,12 @@
             </div>
         </div>
 
-        <!-- اختيار المدة -->
-        <div class="input-group">
-            <label><i class="fas fa-clock"></i> مدة التسجيل</label>
-            <select id="durationSelect">
-                <option value="10">10 ثواني (سريع)</option>
-                <option value="30" selected>30 ثانية (موصى به)</option>
-                <option value="60">دقيقة واحدة</option>
-                <option value="120">دقيقتين</option>
-                <option value="300">5 دقائق</option>
-            </select>
-        </div>
-
         <!-- اختيار الجودة -->
         <div class="input-group">
-            <label><i class="fas fa-video"></i> جودة الفيديو</label>
+            <label><i class="fas fa-video"></i> جودة البث</label>
             <select id="qualitySelect">
-                <option value="480">480p (حجم صغير)</option>
-                <option value="720" selected>720p HD (موصى به)</option>
+                <option value="480">480p</option>
+                <option value="720" selected>720p HD</option>
                 <option value="1080">1080p Full HD</option>
             </select>
         </div>
@@ -296,10 +361,10 @@
             <input type="text" id="merchantName" value="@nardoo_merchant">
         </div>
 
-        <!-- وصف الفيديو -->
+        <!-- وصف البث -->
         <div class="input-group">
-            <label><i class="fas fa-align-left"></i> وصف الفيديو</label>
-            <textarea id="videoDescription" rows="2">🎥 فيديو جديد - منتجات مميزة</textarea>
+            <label><i class="fas fa-align-left"></i> وصف البث</label>
+            <textarea id="videoDescription" rows="2">🔴 بث مباشر - منتجات حصرية</textarea>
         </div>
 
         <!-- رابط المنتج -->
@@ -321,7 +386,7 @@
         </div>
 
         <div class="footer">
-            <span id="botStatus">⚪ جاري التحقق...</span> | ناردو برو 2026
+            <span id="botStatus">⚪ جاري التحقق...</span> | بث مباشر - ناردو برو 2026
         </div>
     </div>
 
@@ -345,9 +410,9 @@
         let mediaRecorder = null;
         let recordedChunks = [];
         let isRecording = false;
-        let recordingTimer = null;
         let recordSeconds = 0;
         let timerInterval = null;
+        let countdownInterval = null;
         
         // عناصر DOM
         const video = document.getElementById('video');
@@ -360,13 +425,17 @@
         const stopRecordBtn = document.getElementById('stopRecordBtn');
         const sendBtn = document.getElementById('sendBtn');
         const recordingIndicator = document.getElementById('recordingIndicator');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const countdown = document.getElementById('countdown');
+        const liveTime = document.getElementById('liveTime');
+        const countdownLayer = document.getElementById('countdownLayer');
+        const countdownNumber = document.getElementById('countdownNumber');
+        const countdownHint = document.getElementById('countdownHint');
         const cameraStatus = document.getElementById('cameraStatus');
         const recordTime = document.getElementById('recordTime');
         const videoSize = document.getElementById('videoSize');
         const botStatus = document.getElementById('botStatus');
+
+        // أصوات العد التنازلي (اختياري - يمكن تفعيلها إذا أردت)
+        // const beepSound = new Audio('data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQR33McQQYH3t/EoIYtAgA+lM4UIZgwEk4K7yGfKyQwCsbXy4/wA==');
 
         // ========== تشغيل الكاميرا ==========
         async function startCamera() {
@@ -388,13 +457,13 @@
                 cameraActive = true;
                 
                 // تحديث الواجهة
-                videoOverlay.innerHTML = `<i class="fas fa-circle" style="color: #00ff00;"></i> ${quality}p`;
+                videoOverlay.innerHTML = `<i class="fas fa-circle" style="color: #00ff00;"></i> ${quality}p - جاهز`;
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-block';
                 recordControls.style.display = 'flex';
                 cameraStatus.innerHTML = '✓';
                 cameraStatus.style.color = '#00ff00';
-                statusText.innerHTML = '✅ الكاميرا جاهزة! اختر المدة وسجل';
+                statusText.innerHTML = '✅ الكاميرا جاهزة! اضغط "بدء البث المباشر"';
                 
                 // تجهيز مسجل الفيديو
                 setupMediaRecorder();
@@ -429,29 +498,68 @@
                 recordBtn.style.display = 'inline-block';
                 stopRecordBtn.style.display = 'none';
                 recordingIndicator.style.display = 'none';
-                progressBar.style.display = 'none';
                 sendBtn.disabled = false;
                 
-                statusText.innerHTML = '✅ تم التسجيل! اضغط إرسال';
+                statusText.innerHTML = '✅ تم البث! اضغط إرسال';
             };
         }
 
-        // ========== تحديث حجم الفيديو ==========
-        function updateVideoSize() {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
-            videoSize.textContent = sizeMB + ' MB';
-        }
-
-        // ========== بدء التسجيل ==========
-        function startRecording() {
+        // ========== بدء العد التنازلي ==========
+        function startCountdown() {
             if (!cameraActive || !mediaRecorder) {
                 alert('❌ شغل الكاميرا أولاً');
                 return;
             }
             
-            const duration = parseInt(document.getElementById('durationSelect').value);
+            // تعطيل زر البث أثناء العد التنازلي
+            recordBtn.disabled = true;
             
+            // إظهار طبقة العد التنازلي
+            countdownLayer.style.display = 'flex';
+            
+            let count = 5;
+            countdownNumber.textContent = count;
+            countdownHint.textContent = 'إستعد... البث سيبدأ بعد 5 ثواني';
+            
+            // تغيير نص التراكب
+            videoOverlay.innerHTML = `<i class="fas fa-hourglass-half"></i> العد التنازلي... ${count}`;
+            
+            countdownInterval = setInterval(() => {
+                count--;
+                countdownNumber.textContent = count;
+                
+                // تحديث نص التراكب
+                videoOverlay.innerHTML = `<i class="fas fa-hourglass-half"></i> العد التنازلي... ${count}`;
+                
+                // تغيير لون الرقم في آخر ثانية
+                if (count === 1) {
+                    countdownNumber.style.color = '#ff4444';
+                    countdownHint.textContent = 'إبتسم... آخر ثانية! 📸';
+                } else if (count === 2) {
+                    countdownHint.textContent = 'جهز نفسك...';
+                } else if (count === 3) {
+                    countdownHint.textContent = 'إستعد...';
+                }
+                
+                // صوت تنبيه (اختياري - يمكن إضافة صوت إذا أردت)
+                // beepSound.play();
+                
+                if (count === 0) {
+                    clearInterval(countdownInterval);
+                    
+                    // إخفاء العد التنازلي
+                    countdownLayer.style.display = 'none';
+                    recordBtn.disabled = false;
+                    countdownNumber.style.color = '#ffd700'; // إعادة اللون الأصلي
+                    
+                    // بدء التسجيل الفعلي
+                    startRecording();
+                }
+            }, 1000);
+        }
+
+        // ========== بدء التسجيل المباشر ==========
+        function startRecording() {
             recordedChunks = [];
             mediaRecorder.start();
             isRecording = true;
@@ -461,46 +569,47 @@
             recordBtn.style.display = 'none';
             stopRecordBtn.style.display = 'inline-block';
             recordingIndicator.style.display = 'block';
-            progressBar.style.display = 'block';
             sendBtn.disabled = true;
             
-            countdown.textContent = duration;
-            progressFill.style.width = '0%';
+            videoOverlay.innerHTML = `<i class="fas fa-circle" style="color: #ff0000;"></i> 🔴 بث مباشر`;
             
-            // عداد الوقت
+            // عداد الوقت المباشر
             timerInterval = setInterval(() => {
                 recordSeconds++;
                 const minutes = Math.floor(recordSeconds / 60);
                 const seconds = recordSeconds % 60;
-                recordTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                recordTime.textContent = timeString;
+                liveTime.textContent = timeString;
             }, 1000);
             
-            // العد التنازلي
-            let timeLeft = duration;
-            const countdownInterval = setInterval(() => {
-                timeLeft--;
-                countdown.textContent = timeLeft;
-                progressFill.style.width = `${((duration - timeLeft) / duration) * 100}%`;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    if (isRecording) {
-                        stopRecording();
-                    }
-                }
-            }, 1000);
-            
-            statusText.innerHTML = `🎥 جاري التسجيل (${duration} ثانية)...`;
+            statusText.innerHTML = '🔴 جاري البث المباشر... اضغط "إنهاء البث" عندما تنتهي';
         }
 
-        // ========== إيقاف التسجيل مبكراً ==========
+        // ========== إنهاء البث ==========
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 mediaRecorder.stop();
+                videoOverlay.innerHTML = `<i class="fas fa-circle" style="color: #00ff00;"></i> تم إنهاء البث`;
+                
+                // إلغاء أي عد تنازلي إذا كان نشطاً
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownLayer.style.display = 'none';
+                    recordBtn.disabled = false;
+                    countdownNumber.style.color = '#ffd700';
+                }
             }
         }
 
-        // ========== إرسال فيديو واحد إلى تليجرام ==========
+        // ========== تحديث حجم الفيديو ==========
+        function updateVideoSize() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+            videoSize.textContent = sizeMB + ' MB';
+        }
+
+        // ========== إرسال الفيديو إلى تليجرام ==========
         async function sendVideo() {
             if (recordedChunks.length === 0) {
                 alert('❌ لا يوجد فيديو مسجل');
@@ -512,12 +621,12 @@
             const productLink = document.getElementById('productLink').value;
             const quality = document.getElementById('qualitySelect').value;
 
-            statusText.innerHTML = '🔄 جاري رفع الفيديو إلى تليجرام...';
+            statusText.innerHTML = '🔄 جاري رفع البث إلى تليجرام...';
             sendBtn.disabled = true;
             
             try {
                 const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-                const videoFile = new File([videoBlob], 'video.mp4', { type: 'video/mp4' });
+                const videoFile = new File([videoBlob], 'live_broadcast.mp4', { type: 'video/mp4' });
                 
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
@@ -526,7 +635,7 @@
                 const minutes = Math.floor(recordSeconds / 60);
                 const seconds = recordSeconds % 60;
                 
-                const caption = `🎥 **فيديو جديد**
+                const caption = `🔴 **بث مباشر**
 
 👤 **التاجر:** ${merchant}
 📝 ${description}
@@ -536,7 +645,7 @@
 
 🔗 رابط المنتج: ${productLink}
 
-#فيديو #ناردو_برو`;
+#بث_مباشر #ناردو_برو`;
 
                 formData.append('caption', caption);
                 
@@ -559,9 +668,9 @@
                 const result = await response.json();
 
                 if (result.ok) {
-                    statusText.innerHTML = '✅ تم إرسال الفيديو بنجاح إلى القناة!';
+                    statusText.innerHTML = '✅ تم إرسال البث المباشر بنجاح إلى القناة!';
                     
-                    alert(`✅ تم الإرسال بنجاح!\n\n📹 الفيديو وصل للقناة\n⏱️ المدة: ${minutes}:${seconds.toString().padStart(2, '0')}\n📦 الحجم: ${videoSize.textContent}`);
+                    alert(`✅ تم الإرسال بنجاح!\n\n📹 البث المباشر وصل للقناة\n⏱️ المدة: ${minutes}:${seconds.toString().padStart(2, '0')}\n📦 الحجم: ${videoSize.textContent}`);
                     
                     // تنظيف
                     recordedChunks = [];
@@ -585,6 +694,13 @@
                     stopRecording();
                 }
                 
+                // إلغاء أي عد تنازلي
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownLayer.style.display = 'none';
+                    recordBtn.disabled = false;
+                }
+                
                 stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
                 stream = null;
@@ -595,7 +711,6 @@
                 stopBtn.style.display = 'none';
                 recordControls.style.display = 'none';
                 recordingIndicator.style.display = 'none';
-                progressBar.style.display = 'none';
                 cameraStatus.innerHTML = '✗';
                 recordTime.textContent = '00:00';
                 statusText.innerHTML = '⏹️ الكاميرا متوقفة';
@@ -605,6 +720,7 @@
         // ========== اختبار البوت ==========
         async function testBot() {
             try {
+                botStatus.innerHTML = '🔄 جاري الاتصال...';
                 const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getMe`);
                 const data = await response.json();
                 
@@ -617,7 +733,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             chat_id: TELEGRAM.channelId,
-                            text: `✅ **نظام إرسال الفيديو جاهز**\n📹 أرسل فيديو واحد مباشر`,
+                            text: `✅ **نظام البث المباشر جاهز**\n📹 عد تنازلي 5 ثواني ثم يبدأ البث`,
                             parse_mode: 'Markdown'
                         })
                     });
