@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>📺 البث المتسلسل مع مجلد ومسرح - ناردو برو</title>
+    <title>📺 البث المتسلسل - ناردو برو</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -122,13 +122,14 @@
         }
         @keyframes pulse { 50% { transform: scale(1.1); } }
         
-        /* منطقة المسرح (عرض الفيديو) */
+        /* المسرح الثابت */
         .theater-area {
-            background: #1a1f2b;
+            background: linear-gradient(145deg, #1a1f2b, #0d1117);
             border: 3px solid #ffd700;
             border-radius: 15px;
             padding: 15px;
             margin: 15px 0;
+            box-shadow: 0 0 20px rgba(255,215,0,0.2);
         }
         .theater-header {
             display: flex;
@@ -136,6 +137,8 @@
             align-items: center;
             margin-bottom: 10px;
             color: #ffd700;
+            border-bottom: 1px solid #ffd700;
+            padding-bottom: 5px;
         }
         .live-badge {
             color: red;
@@ -148,12 +151,15 @@
             border-radius: 10px;
             min-height: 180px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             color: #666;
             font-size: 14px;
             border: 1px solid #ffd700;
             margin-bottom: 10px;
+            padding: 15px;
+            text-align: center;
         }
         
         .theater-info {
@@ -161,33 +167,54 @@
             justify-content: space-between;
             font-size: 14px;
             color: #8b949e;
+            background: #2d333b;
+            padding: 8px;
+            border-radius: 8px;
         }
         
-        /* مجلد الاستقبال */
+        /* المجلد الثابت */
         .folder-area {
-            background: #2d333b;
-            border-radius: 10px;
+            background: #1a1f2b;
+            border: 2px solid #ffd700;
+            border-radius: 15px;
             padding: 15px;
             margin: 15px 0;
         }
         .folder-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
             color: #ffd700;
+            border-bottom: 1px solid #ffd700;
+            padding-bottom: 5px;
+        }
+        .folder-stats {
+            font-size: 12px;
+            background: #2d333b;
+            padding: 3px 8px;
+            border-radius: 12px;
         }
         .folder-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 5px;
         }
         .folder-item {
-            background: #1a1f2b;
-            padding: 8px;
+            background: #2d333b;
+            padding: 8px 5px;
             border-radius: 8px;
             text-align: center;
-            font-size: 12px;
+            font-size: 11px;
             border-right: 2px solid #ffd700;
+            transition: all 0.3s;
+        }
+        .folder-item:hover {
+            transform: scale(1.05);
+            background: #ffd70020;
         }
         .folder-item .number {
             display: block;
@@ -197,6 +224,11 @@
             padding: 2px;
             margin-bottom: 5px;
             font-weight: bold;
+            font-size: 12px;
+        }
+        .folder-item .time {
+            font-size: 9px;
+            color: #8b949e;
         }
         
         /* إحصائيات */
@@ -211,6 +243,7 @@
             padding: 10px;
             border-radius: 10px;
             text-align: center;
+            border: 1px solid #ffd700;
         }
         .stat-value {
             color: #ffd700;
@@ -232,6 +265,15 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            transition: all 0.3s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .btn-success { background: #238636; color: white; }
         .btn-danger { background: #da3633; color: white; }
@@ -243,20 +285,28 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
+
+        .broadcast-history {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #8b949e;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📺 البث المتسلسل مع مجلد ومسرح</h1>
+            <h1>📺 البث المتسلسل</h1>
+            <p style="color: #ffd700;">مجلد ومسرح ثابتان</p>
         </div>
 
-        <!-- معلومات التاجر والمعرف -->
+        <!-- معلومات التاجر -->
         <div class="merchant-info">
             <div class="merchant-avatar">ن</div>
             <div style="flex: 1;">
-                <div style="color: #ffd700;">@nardoo_merchant</div>
-                <div class="broadcast-id" id="broadcastIdDisplay">-</div>
+                <div style="color: #ffd700; font-size: 18px;">@nardoo_merchant</div>
+                <div class="broadcast-id" id="broadcastIdDisplay">البث الحالي: -</div>
             </div>
         </div>
 
@@ -264,47 +314,51 @@
         <div class="video-container">
             <video id="video" autoplay playsinline muted></video>
             <div class="overlay" id="merchantOverlay" style="display: none;">
-                🎥 المقطع <span id="currentSegmentNum">0</span>
+                🎥 تسجيل المقطع <span id="currentSegmentNum">0</span>
             </div>
             <div class="status-badge" id="cameraStatus">⏹️ متوقفة</div>
             
-            <!-- طبقة العد التنازلي -->
+            <!-- العد التنازلي -->
             <div class="countdown-layer" id="countdownLayer" style="display: none;">
                 <div class="countdown-circle" id="countdownNumber">5</div>
-                <div style="color: #ffd700; margin-top: 15px;">تجهيز المجلد والمسرح...</div>
+                <div style="color: #ffd700; margin-top: 15px;">تجهيز البث...</div>
             </div>
         </div>
 
-        <!-- منطقة المسرح (عرض الفيديو) -->
+        <!-- المسرح الثابت للعرض -->
         <div class="theater-area">
             <div class="theater-header">
-                <span>🎭 منطقة العرض المباشر</span>
-                <span class="live-badge" id="theaterLiveBadge">🔴 مباشر</span>
+                <span>🎭 مسرح العرض المباشر</span>
+                <span class="live-badge" id="theaterLiveBadge">⚪ غير نشط</span>
             </div>
             
             <div class="theater-screen" id="theaterScreen">
-                <span id="theaterMessage">⏳ إنتظار وصول الفيديو الأول...</span>
+                <span id="theaterMessage">⏳ المسرح في انتظار البث...</span>
+                <div style="margin-top: 10px; font-size: 12px;" id="theaterSubMessage"></div>
             </div>
             
             <div class="theater-info">
-                <span>الآن: <span id="currentDisplayNum">0</span>/<span id="totalSegments">0</span></span>
-                <span>تأخير: <span id="delayInfo">10</span> ثواني</span>
+                <span>🎬 الآن: <span id="currentDisplayNum">0</span></span>
+                <span>📊 إجمالي: <span id="totalSegments">0</span></span>
+                <span>⏱️ تأخير: 10 ث</span>
             </div>
         </div>
 
-        <!-- مجلد الاستقبال -->
+        <!-- المجلد الثابت للاستقبال -->
         <div class="folder-area">
             <div class="folder-header">
-                <span>📁 مجلد الاستقبال</span>
-                <span id="folderCount">0 فيديو</span>
+                <span>📁 مجلد استقبال الفيديوهات</span>
+                <span class="folder-stats" id="folderCount">0 فيديو</span>
             </div>
             
             <div class="folder-grid" id="folderGrid">
-                <div style="grid-column: span 3; text-align: center; color: #666;">لا توجد فيديوهات</div>
+                <div style="grid-column: span 4; text-align: center; color: #666; padding: 20px;">
+                    لا توجد فيديوهات في المجلد
+                </div>
             </div>
         </div>
 
-        <!-- إحصائيات -->
+        <!-- إحصائيات البث -->
         <div class="stats-row">
             <div class="stat-box">
                 <div class="stat-value" id="statRecorded">0</div>
@@ -332,7 +386,7 @@
         </div>
 
         <button class="btn-live" onclick="startBroadcast()" id="liveBtn" disabled>
-            🔴 بدء البث المباشر المتسلسل
+            🔴 بدء البث المباشر
         </button>
 
         <button class="btn-danger" onclick="stopBroadcast()" id="stopLiveBtn" style="display: none;">
@@ -340,11 +394,16 @@
         </button>
 
         <button class="btn-test" onclick="testSystem()" id="testBtn">
-            🔧 اختبار النظام
+            🔧 اختبار الاتصال
         </button>
 
+        <!-- سجل البثوث السابقة -->
+        <div class="broadcast-history" id="broadcastHistory">
+            آخر بث: <span id="lastBroadcast">-</span>
+        </div>
+
         <p style="text-align: center; margin-top: 10px; color: #6e7681; font-size: 12px;" id="systemStatus">
-            نظام المجلد والمسرح جاهز
+            مجلد ومسرح ثابتان ✓
         </p>
     </div>
 
@@ -354,9 +413,9 @@
         const CHANNEL_ID = '-1003822964890';
         const MERCHANT = '@nardoo_merchant';
         
-        // معرفات المواضيع (حسب الصور)
-        const FOLDER_TOPIC_ID = '1'; // موضوع المجلد
-        const THEATER_TOPIC_ID = '2'; // موضوع المسرح
+        // معرفات ثابتة للمواضيع (مجلد واحد ومسرح واحد فقط)
+        const FOLDER_TOPIC_ID = '1'; // مجلد ثابت لكل الفيديوهات
+        const THEATER_TOPIC_ID = '2'; // مسرح ثابت للعرض
 
         // متغيرات النظام
         let stream = null;
@@ -374,6 +433,7 @@
         let nextToDisplay = 1;
         let recordingTimeout = null;
         let displayInterval = null;
+        let lastBroadcastTime = null;
 
         // عناصر DOM
         const video = document.getElementById('video');
@@ -391,6 +451,7 @@
         // عناصر المسرح
         const theaterScreen = document.getElementById('theaterScreen');
         const theaterMessage = document.getElementById('theaterMessage');
+        const theaterSubMessage = document.getElementById('theaterSubMessage');
         const currentDisplayNum = document.getElementById('currentDisplayNum');
         const totalSegments = document.getElementById('totalSegments');
         const theaterLiveBadge = document.getElementById('theaterLiveBadge');
@@ -403,7 +464,9 @@
         const statRecorded = document.getElementById('statRecorded');
         const statFolder = document.getElementById('statFolder');
         const statDisplayed = document.getElementById('statDisplayed');
-        const delayInfo = document.getElementById('delayInfo');
+        
+        // سجل البثوث
+        const lastBroadcastEl = document.getElementById('lastBroadcast');
 
         // تشغيل الكاميرا
         async function startCamera() {
@@ -450,11 +513,11 @@
                 return;
             }
 
-            // إنشاء معرف فريد للبث (مثل LIVEMMR797LU)
-            broadcastId = 'LIVE' + Math.random().toString(36).substring(2, 10).toUpperCase();
-            broadcastIdDisplay.textContent = broadcastId;
+            // إنشاء معرف فريد للبث (للتمييز فقط)
+            broadcastId = 'B' + Date.now().toString(36).substring(2, 8).toUpperCase();
+            broadcastIdDisplay.innerHTML = `البث الحالي: <span style="color:#ffd700">${broadcastId}</span>`;
             
-            // تجهيز المصفوفات
+            // تجهيز المصفوفات للبث الجديد
             recordedVideos = [];
             folderVideos = [];
             displayedVideos = [];
@@ -473,8 +536,8 @@
                 await new Promise(r => setTimeout(r, 1000));
             }
             
-            // تجهيز المجلد والمسرح في تليجرام
-            await setupTelegramTopics();
+            // إرسال إشعار بدء البث إلى المجلد والمسرح
+            await sendBroadcastStartNotification();
             
             // إخفاء العد التنازلي
             countdownLayer.style.display = 'none';
@@ -486,6 +549,11 @@
             stopLiveBtn.style.display = 'block';
             
             cameraStatus.innerHTML = '🔴 بث مباشر';
+            theaterLiveBadge.innerHTML = '🔴 بث نشط';
+            theaterLiveBadge.style.color = 'red';
+            theaterMessage.innerHTML = '📺 جاري تحضير البث...';
+            
+            lastBroadcastTime = new Date();
             
             // بدأ التسجيل المتسلسل (كل 10 ثواني)
             startRecording();
@@ -494,46 +562,47 @@
             startTheaterDisplay();
         }
 
-        // تجهيز المواضيع في تليجرام
-        async function setupTelegramTopics() {
+        // إرسال إشعار بدء البث إلى المجلد والمسرح الثابتين
+        async function sendBroadcastStartNotification() {
             try {
-                // 1. إشعار فتح مجلد الاستقبال
+                // إشعار للمجلد الثابت
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: CHANNEL_ID,
                         message_thread_id: FOLDER_TOPIC_ID,
-                        text: `📁 **تم فتح مجلد البث**\n\n` +
+                        text: `📁 **بدء بث جديد في المجلد**\n\n` +
                               `👤 **التاجر:** ${MERCHANT}\n` +
                               `🆔 **معرف البث:** \`${broadcastId}\`\n` +
                               `⏰ **وقت البدء:** ${new Date().toLocaleTimeString('ar-EG')}\n\n` +
-                              `📹 سيتم استقبال فيديو كل 10 ثواني\n` +
+                              `📹 سيتم إضافة فيديو كل 10 ثواني\n` +
                               `🔢 الأرقام التسلسلية: 1، 2، 3...\n\n` +
-                              `#مجلد_${broadcastId}`,
+                              `#بث_جديد_${broadcastId}`,
                         parse_mode: 'Markdown'
                     })
                 });
 
-                // 2. إشعار فتح منطقة المسرح
+                // إشعار للمسرح الثابت
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: CHANNEL_ID,
                         message_thread_id: THEATER_TOPIC_ID,
-                        text: `🎭 **منطقة العرض المباشر**\n\n` +
+                        text: `🎭 **بدء بث جديد في المسرح**\n\n` +
                               `👤 **التاجر:** ${MERCHANT}\n` +
-                              `🆔 **معرف البث:** \`${broadcastId}\`\n\n` +
-                              `⏳ بانتظار وصول الفيديو الأول...\n` +
-                              `⚡ تأخير 10 ثواني عن التسجيل\n\n` +
-                              `#عرض_${broadcastId}`,
+                              `🆔 **معرف البث:** \`${broadcastId}\`\n` +
+                              `⏰ **وقت البدء:** ${new Date().toLocaleTimeString('ar-EG')}\n\n` +
+                              `⚡ تأخير 10 ثواني عن التسجيل\n` +
+                              `📺 سيتم عرض المقاطع بالترتيب\n\n` +
+                              `#بث_جديد_${broadcastId}`,
                         parse_mode: 'Markdown'
                     })
                 });
                 
             } catch (error) {
-                console.log('خطأ في تجهيز المواضيع:', error);
+                console.log('خطأ في إرسال الإشعارات:', error);
             }
         }
 
@@ -574,6 +643,7 @@
                     number: currentSegment,
                     data: event.data,
                     timestamp: Date.now(),
+                    broadcastId: broadcastId,
                     size: (event.data.size / 1024).toFixed(2) + ' KB',
                     folderMessageId: null
                 };
@@ -585,7 +655,7 @@
                 // تحديث الإحصائيات
                 updateStats();
                 
-                // إرسال إلى مجلد تليجرام
+                // إرسال إلى المجلد الثابت في تليجرام
                 sendToFolder(videoData);
                 
                 // تحديث عرض المجلد
@@ -593,7 +663,7 @@
             }
         }
 
-        // إرسال إلى مجلد تليجرام
+        // إرسال إلى المجلد الثابت
         async function sendToFolder(videoData) {
             try {
                 const formData = new FormData();
@@ -604,11 +674,12 @@
                 formData.append('message_thread_id', FOLDER_TOPIC_ID);
                 
                 const caption = `📁 **مقطع جديد في المجلد**\n\n` +
-                                `🆔 **معرف البث:** \`${broadcastId}\`\n` +
+                                `👤 **التاجر:** ${MERCHANT}\n` +
+                                `🆔 **معرف البث:** \`${videoData.broadcastId}\`\n` +
                                 `🔢 **رقم المقطع:** ${videoData.number}\n` +
-                                `⏱️ **وقت التسجيل:** بعد ${videoData.number * 10} ثانية\n` +
+                                `⏱️ **وقت التسجيل:** ${new Date().toLocaleTimeString('ar-EG')}\n` +
                                 `📦 **الحجم:** ${videoData.size}\n\n` +
-                                `#مجلد_${broadcastId} #مقطع_${videoData.number}`;
+                                `#مقطع_${videoData.number} #بث_${videoData.broadcastId}`;
 
                 formData.append('caption', caption);
 
@@ -635,11 +706,11 @@
             }, 2000); // فحص كل ثانيتين
         }
 
-        // فحص وعرض المقطع التالي
+        // فحص وعرض المقطع التالي في المسرح
         function checkAndDisplayNext() {
             if (!isLive) return;
             
-            // البحث عن المقطع التالي في folderVideos
+            // البحث عن المقطع التالي
             const nextVideo = folderVideos.find(v => v.number === nextToDisplay);
             
             if (nextVideo) {
@@ -649,10 +720,8 @@
                     publishToTheater(nextVideo);
                     nextToDisplay++;
                     
-                    // إزالة من folderVideos
+                    // نقل من المجلد إلى المعروض
                     folderVideos = folderVideos.filter(v => v.number !== nextVideo.number);
-                    
-                    // إضافة إلى displayedVideos
                     displayedVideos.push(nextVideo);
                     
                     // تحديث الواجهة
@@ -663,7 +732,7 @@
             }
         }
 
-        // نشر المقطع في المسرح (تليجرام)
+        // نشر المقطع في المسرح الثابت
         async function publishToTheater(videoData) {
             try {
                 const formData = new FormData();
@@ -673,14 +742,13 @@
                 formData.append('video', videoFile);
                 formData.append('message_thread_id', THEATER_TOPIC_ID);
                 
-                const total = recordedVideos.length;
-                const caption = `🎭 **البث المباشر - المقطع ${videoData.number}**\n\n` +
+                const caption = `🎭 **عرض مقطع في المسرح**\n\n` +
                                 `👤 **التاجر:** ${MERCHANT}\n` +
-                                `🆔 **معرف البث:** \`${broadcastId}\`\n` +
-                                `🔢 **الترتيب:** ${videoData.number}/${total || '?'}\n` +
-                                `⏱️ **وقت العرض:** ${new Date().toLocaleTimeString('ar-EG')}\n\n` +
-                                `⚡ تأخير 10 ثواني عن التسجيل\n\n` +
-                                `#عرض_${broadcastId} #مقطع_${videoData.number}`;
+                                `🆔 **معرف البث:** \`${videoData.broadcastId}\`\n` +
+                                `🔢 **رقم المقطع:** ${videoData.number}\n` +
+                                `⏱️ **وقت العرض:** ${new Date().toLocaleTimeString('ar-EG')}\n` +
+                                `⚡ **تأخير:** 10 ثواني\n\n` +
+                                `#عرض_مقطع_${videoData.number} #بث_${videoData.broadcastId}`;
 
                 formData.append('caption', caption);
 
@@ -697,10 +765,11 @@
         // تحديث عرض المسرح
         function updateTheaterDisplay(videoData) {
             theaterMessage.innerHTML = `🎥 جاري عرض المقطع ${videoData.number}`;
+            theaterSubMessage.innerHTML = `معرف البث: ${videoData.broadcastId}`;
             currentDisplayNum.textContent = videoData.number;
             totalSegments.textContent = recordedVideos.length;
             
-            // تغيير لون الخلفية كمؤشر
+            // تأثير بصري
             theaterScreen.style.background = '#0a0c10';
             setTimeout(() => {
                 theaterScreen.style.background = 'black';
@@ -711,21 +780,24 @@
         function updateFolderDisplay() {
             let html = '';
             
-            // عرض آخر 3 مقاطع في المجلد
-            const recentVideos = [...folderVideos].slice(-3);
+            // عرض آخر 8 مقاطع في المجلد
+            const recentVideos = [...folderVideos].slice(-8);
             
             recentVideos.forEach(v => {
+                const time = new Date(v.timestamp).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
                 html += `<div class="folder-item">
                     <span class="number">#${v.number}</span>
                     <span>${v.size}</span>
+                    <span class="time">${time}</span>
                 </div>`;
             });
             
-            // إضافة مقاطع وهمية إذا كان العدد أقل من 3
-            for (let i = recentVideos.length; i < 3; i++) {
-                html += `<div class="folder-item" style="opacity: 0.3;">
+            // تعبئة الفراغ إذا كان العدد أقل من 8
+            for (let i = recentVideos.length; i < 8; i++) {
+                html += `<div class="folder-item" style="opacity: 0.2;">
                     <span class="number">#${i+1}</span>
                     <span>---</span>
+                    <span class="time">--:--:--</span>
                 </div>`;
             }
             
@@ -770,30 +842,56 @@
             liveBtn.style.display = 'block';
             stopLiveBtn.style.display = 'none';
             cameraStatus.innerHTML = '✅ تم إنهاء البث';
-            theaterLiveBadge.style.opacity = '0.5';
+            theaterLiveBadge.innerHTML = '⚪ غير نشط';
+            theaterLiveBadge.style.color = '#666';
+            
+            theaterMessage.innerHTML = '⏳ المسرح في انتظار البث...';
+            theaterSubMessage.innerHTML = '';
             
             // حساب المدة الإجمالية
             const totalMinutes = Math.floor(recordedVideos.length * 10 / 60);
             const totalSeconds = (recordedVideos.length * 10) % 60;
             const totalTime = `${totalMinutes.toString().padStart(2,'0')}:${totalSeconds.toString().padStart(2,'0')}`;
             
-            // إرسال إشعار انتهاء البث
+            // تحديث سجل البثوث
+            lastBroadcastEl.innerHTML = `${broadcastId} (${totalTime})`;
+            
+            // إرسال إشعار انتهاء البث إلى المجلد والمسرح
             try {
+                // إشعار انتهاء للمجلد
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: CHANNEL_ID,
-                        text: `✅ **انتهى البث المباشر**\n\n` +
+                        message_thread_id: FOLDER_TOPIC_ID,
+                        text: `✅ **انتهى البث في المجلد**\n\n` +
                               `👤 **التاجر:** ${MERCHANT}\n` +
                               `🆔 **معرف البث:** \`${broadcastId}\`\n` +
-                              `⏱️ **المدة الإجمالية:** ${totalTime}\n` +
-                              `📊 **إجمالي المقاطع:** ${recordedVideos.length}\n\n` +
-                              `شكراً لمتابعتكم 🌟\n\n` +
-                              `#انتهى_البث_${broadcastId}`,
+                              `⏱️ **المدة:** ${totalTime}\n` +
+                              `📊 **المقاطع:** ${recordedVideos.length}\n\n` +
+                              `#انتهى_بث_${broadcastId}`,
                         parse_mode: 'Markdown'
                     })
                 });
+
+                // إشعار انتهاء للمسرح
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CHANNEL_ID,
+                        message_thread_id: THEATER_TOPIC_ID,
+                        text: `✅ **انتهى البث في المسرح**\n\n` +
+                              `👤 **التاجر:** ${MERCHANT}\n` +
+                              `🆔 **معرف البث:** \`${broadcastId}\`\n` +
+                              `⏱️ **المدة:** ${totalTime}\n` +
+                              `📊 **المقاطع المعروضة:** ${displayedVideos.length}\n\n` +
+                              `#انتهى_عرض_${broadcastId}`,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                
             } catch (error) {}
         }
 
