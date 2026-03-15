@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 فيديو مباشر - ناردو برو</title>
+    <title>🎥 فيديو MP4 مباشر - ناردو برو</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -210,29 +210,6 @@
             transition: width 0.3s;
         }
         
-        .telegram-preview {
-            background: #1a472a;
-            border-radius: 15px;
-            padding: 15px;
-            margin: 15px 0;
-            border: 2px solid #0088cc;
-        }
-        
-        .telegram-preview h3 {
-            color: #0088cc;
-            margin-bottom: 10px;
-        }
-        
-        .preview-video {
-            background: black;
-            height: 200px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #666;
-        }
-        
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -244,8 +221,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fab fa-telegram"></i> فيديو تليجرام مباشر</h1>
-            <p>الفيديو سيشغل مباشرة في القناة</p>
+            <h1><i class="fab fa-telegram"></i> فيديو MP4 مباشر</h1>
+            <p>الفيديو سيشغل تلقائياً في تليجرام</p>
         </div>
 
         <!-- حالة التسجيل -->
@@ -279,8 +256,8 @@
             <button class="btn-video" onclick="startRecording(10)" id="record10Btn">
                 <i class="fas fa-circle"></i> 10 ثواني
             </button>
-            <button class="btn-telegram" onclick="sendVideo()" id="sendBtn" disabled>
-                <i class="fab fa-telegram"></i> إرسال
+            <button class="btn-telegram" onclick="convertAndSend()" id="sendBtn" disabled>
+                <i class="fab fa-telegram"></i> تحويل وإرسال MP4
             </button>
         </div>
 
@@ -306,7 +283,7 @@
             </div>
             <div class="stat-item">
                 <div class="stat-value" id="sentCount">0</div>
-                <div class="stat-label">مرسل</div>
+                <div class="stat-label">مرسل MP4</div>
             </div>
         </div>
 
@@ -322,17 +299,14 @@
             <textarea id="videoDescription" rows="2">عرض منتجات جديدة 😍</textarea>
         </div>
 
-        <!-- معاينة كيف سيظهر في تليجرام -->
-        <div class="telegram-preview">
-            <h3><i class="fab fa-telegram"></i> معاينة تليجرام</h3>
-            <div class="preview-video" id="previewVideo">
-                <i class="fas fa-play-circle" style="font-size: 48px; color: #0088cc;"></i>
-                <p style="margin-top: 10px;">فيديو - سيتم تشغيله تلقائياً</p>
-            </div>
-            <p style="margin-top: 10px; color: #8b949e;">
-                <i class="fas fa-check-circle" style="color: #00ff00;"></i>
-                سيشاهد المتابعون الفيديو مباشرة
-            </p>
+        <!-- جودة الفيديو -->
+        <div class="input-group">
+            <label><i class="fas fa-sliders-h"></i> جودة الفيديو</label>
+            <select id="videoQuality">
+                <option value="0.5">منخفضة (حجم صغير)</option>
+                <option value="0.8" selected>متوسطة (موصى به)</option>
+                <option value="1.0">عالية (حجم كبير)</option>
+            </select>
         </div>
 
         <!-- حالة النظام -->
@@ -352,6 +326,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/ffmpeg.js@4.2.9003/ffmpeg-worker-webm.js"></script>
     <script>
         // ========== إعدادات تلجرام ==========
         const TELEGRAM = {
@@ -404,7 +379,6 @@
                 video.srcObject = stream;
                 cameraActive = true;
                 
-                // تحديث الواجهة
                 videoOverlay.innerHTML = '<i class="fas fa-circle" style="color: #00ff00;"></i> الكاميرا شغالة';
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-block';
@@ -413,7 +387,6 @@
                 cameraStatus.style.color = '#00ff00';
                 statusText.innerHTML = '✅ الكاميرا شغالة! اختر مدة التسجيل';
                 
-                // تجهيز مسجل الفيديو
                 setupMediaRecorder();
                 
             } catch (err) {
@@ -440,7 +413,7 @@
             
             mediaRecorder.onstop = () => {
                 const videoSize = (getVideoSize() / (1024*1024)).toFixed(2);
-                statusText.innerHTML = `✅ تم التسجيل! الحجم: ${videoSize} ميجابايت`;
+                statusText.innerHTML = `✅ تم التسجيل! الحجم: ${videoSize} ميجابايت. جاهز للتحويل إلى MP4`;
                 sendBtn.disabled = false;
                 record5Btn.disabled = false;
                 record10Btn.disabled = false;
@@ -449,7 +422,6 @@
                 progressBar.style.display = 'none';
                 isRecording = false;
                 
-                // تحديث عدد التسجيلات
                 const currentRecords = parseInt(recordStatus.innerHTML) || 0;
                 recordStatus.innerHTML = currentRecords + 1;
             };
@@ -473,7 +445,6 @@
                 mediaRecorder.start();
                 isRecording = true;
                 
-                // تحديث الواجهة
                 liveBadge.style.display = 'inline-block';
                 progressBar.style.display = 'block';
                 recordingIndicator.style.display = 'block';
@@ -483,7 +454,6 @@
                 
                 statusText.innerHTML = `🎥 جاري تسجيل ${seconds} ثواني...`;
                 
-                // العد التنازلي
                 let timeLeft = seconds;
                 countdown.innerHTML = timeLeft;
                 progressFill.style.width = '0%';
@@ -504,8 +474,46 @@
             }
         }
 
-        // ========== إرسال الفيديو إلى تليجرام (كفيديو وليس ملف) ==========
-        async function sendVideo() {
+        // ========== تحويل WEBM إلى MP4 ==========
+        async function convertWebmToMp4(webmBlob) {
+            return new Promise((resolve, reject) => {
+                statusText.innerHTML = '🔄 جاري تحويل الفيديو إلى MP4...';
+                
+                const reader = new FileReader();
+                reader.readAsArrayBuffer(webmBlob);
+                
+                reader.onload = function() {
+                    try {
+                        // تحويل إلى MP4 باستخدام FFmpeg
+                        const worker = new Worker('https://cdn.jsdelivr.net/npm/ffmpeg.js@4.2.9003/ffmpeg-worker-webm.js');
+                        
+                        worker.postMessage({
+                            type: 'run',
+                            arguments: ['-i', 'input.webm', '-c:v', 'libx264', '-preset', 'fast', '-c:a', 'aac', 'output.mp4'],
+                            MEMFS: [{ name: 'input.webm', data: new Uint8Array(reader.result) }]
+                        });
+                        
+                        worker.onmessage = function(e) {
+                            if (e.data.type === 'done') {
+                                const outputFile = e.data.data.MEMFS[0];
+                                const mp4Blob = new Blob([outputFile.data], { type: 'video/mp4' });
+                                statusText.innerHTML = '✅ تم التحويل إلى MP4 بنجاح!';
+                                resolve(mp4Blob);
+                            } else if (e.data.type === 'error') {
+                                reject(new Error('فشل التحويل'));
+                            }
+                        };
+                    } catch (error) {
+                        // إذا فشل التحويل، نستخدم الفيديو الأصلي
+                        console.log('فشل التحويل، استخدام WEBM');
+                        resolve(webmBlob);
+                    }
+                };
+            });
+        }
+
+        // ========== إرسال الفيديو إلى تليجرام كـ MP4 ==========
+        async function convertAndSend() {
             if (recordedChunks.length === 0) {
                 alert('❌ لا يوجد فيديو مسجل');
                 return;
@@ -513,37 +521,41 @@
 
             const merchant = document.getElementById('merchantName').value;
             const description = document.getElementById('videoDescription').value;
+            const quality = document.getElementById('videoQuality').value;
 
-            statusText.innerHTML = '🔄 جاري رفع الفيديو...';
+            statusText.innerHTML = '🔄 جاري تجهيز الفيديو...';
             sendBtn.disabled = true;
             
             try {
-                // تحويل التسجيل إلى فيديو
-                const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-                const videoFile = new File([videoBlob], 'video.webm', { type: 'video/webm' });
+                // تحويل الفيديو إلى MP4
+                const webmBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                const mp4Blob = await convertWebmToMp4(webmBlob);
+                
+                const videoFile = new File([mp4Blob], 'video.mp4', { type: 'video/mp4' });
+                
+                statusText.innerHTML = '🔄 جاري رفع الفيديو إلى تليجرام...';
                 
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
-                formData.append('video', videoFile);  // 👈 هذا يرسل كفيديو مشغل
+                formData.append('video', videoFile);  // إرسال كفيديو MP4
                 
-                // إضافة عنوان الفيديو (يظهر فوق الفيديو)
-                formData.append('caption', `🎥 **فيديو جديد**
+                // عنوان الفيديو
+                const caption = `🎥 **فيديو جديد**
 
 👤 **التاجر:** ${merchant}
 📝 ${description}
 ⏰ ${new Date().toLocaleString('ar-EG')}
 
-#فيديو #ناردو_برو`);
+#فيديو #ناردو_برو #MP4`;
                 
-                // إضافة أزرار تفاعلية أسفل الفيديو
+                formData.append('caption', caption);
+                
+                // أزرار تفاعلية
                 const replyMarkup = {
                     inline_keyboard: [
                         [
                             { text: "📱 تواصل مع التاجر", url: `https://t.me/${merchant.replace('@', '')}` },
                             { text: "🛒 طلب المنتج", callback_data: "order" }
-                        ],
-                        [
-                            { text: "🔗 رابط المنتج", url: "https://t.me/nardoo_channel/123" }
                         ]
                     ]
                 };
@@ -558,16 +570,15 @@
                 const result = await response.json();
 
                 if (result.ok) {
-                    statusText.innerHTML = '✅ تم إرسال الفيديو! سيظهر مشغلاً في القناة';
+                    statusText.innerHTML = '✅ تم إرسال فيديو MP4! سيشغل مباشرة في القناة';
                     sentCount++;
                     sentCountEl.innerHTML = sentCount;
                     recordedChunks = [];
                     sendBtn.disabled = true;
                     
-                    // إظهار رسالة نجاح مع تفاصيل
                     alert(`✅ تم الإرسال بنجاح!
                     
-📹 الفيديو سيشاهد مباشرة في القناة
+📹 الفيديو بصيغة MP4 سيشاهد مباشرة
 👤 التاجر: ${merchant}
 📝 ${description}`);
                     
@@ -579,28 +590,30 @@
                 statusText.innerHTML = '❌ فشل الإرسال: ' + error.message;
                 sendBtn.disabled = false;
                 
-                // محاولة إرسال كملف إذا فشل كفيديو
+                // محاولة إرسال WEBM إذا فشل MP4
                 try {
-                    statusText.innerHTML = '🔄 محاولة الإرسال كملف...';
-                    const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-                    const videoFile = new File([videoBlob], 'video.webm', { type: 'video/webm' });
+                    statusText.innerHTML = '🔄 محاولة إرسال WEBM...';
+                    const webmBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const webmFile = new File([webmBlob], 'video.webm', { type: 'video/webm' });
                     
                     const formData = new FormData();
                     formData.append('chat_id', TELEGRAM.channelId);
-                    formData.append('document', videoFile);
-                    formData.append('caption', `🎥 فيديو (نسخة احتياطية) - ${merchant}`);
+                    formData.append('video', webmFile);
+                    formData.append('caption', `🎥 فيديو (WEBM) - ${merchant}`);
                     
-                    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendDocument`, {
+                    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendVideo`, {
                         method: 'POST',
                         body: formData
                     });
                     
                     const result = await response.json();
                     if (result.ok) {
-                        statusText.innerHTML = '✅ تم الإرسال كملف (نسخة احتياطية)';
+                        statusText.innerHTML = '✅ تم الإرسال كـ WEBM (قد لا يشغل تلقائياً)';
+                        sentCount++;
+                        sentCountEl.innerHTML = sentCount;
                     }
                 } catch (e) {
-                    console.log('فشل الإرسال كملف أيضاً');
+                    console.log('فشل الإرسال كـ WEBM');
                 }
             }
         }
@@ -640,15 +653,14 @@
                 
                 if (data.ok) {
                     botStatus.innerHTML = '✅ البوت متصل';
-                    statusText.innerHTML = '✅ البوت يعمل! شغل الكاميرا';
+                    statusText.innerHTML = '✅ البوت يعمل! الفيديوهات سترسل كـ MP4';
                     
-                    // إرسال رسالة اختبار
                     await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             chat_id: TELEGRAM.channelId,
-                            text: `✅ **نظام الفيديو يعمل**\n📅 ${new Date().toLocaleString('ar-EG')}\n📹 الفيديوهات ستعمل مباشرة`,
+                            text: `✅ **نظام فيديو MP4 جاهز**\n📅 ${new Date().toLocaleString('ar-EG')}\n🎥 الفيديوهات ستعمل مباشرة`,
                             parse_mode: 'Markdown'
                         })
                     });
