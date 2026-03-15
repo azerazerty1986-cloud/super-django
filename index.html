@@ -200,6 +200,22 @@
             50% { opacity: 0.3; }
         }
         
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #2d333b;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #ffd700;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -212,7 +228,7 @@
     <div class="container">
         <div class="header">
             <h1>📹 بث الفيديو المباشر</h1>
-            <p>تسجيل فيديو وإرسال إلى تليجرام</p>
+            <p>تسجيل فيديو قصير وإرسال إلى تليجرام</p>
         </div>
 
         <!-- حالة البث -->
@@ -238,17 +254,22 @@
             </button>
         </div>
 
-        <!-- أزرار التسجيل والإرسال -->
+        <!-- أزرار التسجيل (مدة قصيرة) -->
         <div class="controls">
-            <button class="btn-video" onclick="startRecording()" id="recordBtn">
-                <i class="fas fa-circle"></i> بدء التسجيل
+            <button class="btn-video" onclick="startRecording(5)" id="record5sBtn">
+                <i class="fas fa-circle"></i> تسجيل 5 ثواني
             </button>
-            <button class="btn-danger" onclick="stopRecording()" id="stopRecordBtn" style="display: none;">
-                <i class="fas fa-square"></i> إيقاف التسجيل
+            <button class="btn-video" onclick="startRecording(10)" id="record10sBtn">
+                <i class="fas fa-circle"></i> تسجيل 10 ثواني
             </button>
-            <button class="btn-telegram" onclick="sendVideo()">
-                <i class="fab fa-telegram"></i> إرسال الفيديو
+            <button class="btn-telegram" onclick="sendVideo()" id="sendBtn">
+                <i class="fab fa-telegram"></i> إرسال
             </button>
+        </div>
+
+        <!-- شريط التقدم -->
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
         </div>
 
         <!-- إحصائيات -->
@@ -289,9 +310,18 @@
                 <option value="-1003822964890">📢 القناة الرئيسية (-1003822964890)</option>
                 <option value="7461896689">👤 المدير (7461896689)</option>
                 <option value="@nardoo_channel">📱 @nardoo_channel</option>
-                <option value="@nardoo_test">🧪 @nardoo_test</option>
             </select>
             <input type="text" id="customChannel" value="-1003822964890" placeholder="معرف مخصص" style="margin-top: 10px;">
+        </div>
+
+        <!-- حجم الفيديو -->
+        <div class="input-group">
+            <label><i class="fas fa-weight"></i> جودة الفيديو</label>
+            <select id="videoQuality">
+                <option value="0.5">منخفضة (حجم صغير)</option>
+                <option value="0.8" selected>متوسطة (موصى به)</option>
+                <option value="1.0">عالية (حجم كبير)</option>
+            </select>
         </div>
 
         <!-- حالة التسجيل والإرسال -->
@@ -302,7 +332,7 @@
 
         <!-- مؤشر التسجيل -->
         <div id="recordingIndicator" class="recording-indicator" style="display: none;">
-            <i class="fas fa-circle"></i> جاري تسجيل الفيديو...
+            <i class="fas fa-circle"></i> جاري تسجيل الفيديو... <span id="recordingCountdown">5</span> ثواني
         </div>
 
         <!-- اختبار البوت -->
@@ -336,7 +366,7 @@
         let sentCount = 0;
         let timerInterval = null;
         let viewers = 127;
-        let recordingStartTime = null;
+        let recordingTimeout = null;
         
         // عناصر DOM
         const video = document.getElementById('video');
@@ -348,9 +378,13 @@
         const streamTimeEl = document.getElementById('streamTime');
         const sentCountEl = document.getElementById('sentCount');
         const botStatus = document.getElementById('botStatus');
-        const recordBtn = document.getElementById('recordBtn');
-        const stopRecordBtn = document.getElementById('stopRecordBtn');
         const recordingIndicator = document.getElementById('recordingIndicator');
+        const recordingCountdown = document.getElementById('recordingCountdown');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const record5sBtn = document.getElementById('record5sBtn');
+        const record10sBtn = document.getElementById('record10sBtn');
+        const sendBtn = document.getElementById('sendBtn');
 
         // ========== تحديث القناة ==========
         function updateChannel() {
@@ -405,10 +439,10 @@
                 
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
+                        width: { ideal: 480 }, // تصغير الدقة لتقليل حجم الفيديو
+                        height: { ideal: 360 }
                     },
-                    audio: true // تفعيل الصوت للفيديو
+                    audio: true
                 });
                 
                 video.srcObject = stream;
@@ -416,7 +450,7 @@
                 
                 liveBadge.style.display = 'inline-block';
                 videoOverlay.innerHTML = '<i class="fas fa-circle" style="color: #ff0000;"></i> الكاميرا شغالة';
-                statusText.innerHTML = '✅ الكاميرا شغالة! يمكنك بدء التسجيل';
+                statusText.innerHTML = '✅ الكاميرا شغالة! اختر مدة التسجيل';
                 statusBox.style.borderRightColor = '#4caf50';
                 
                 // تجهيز مسجل الفيديو
@@ -433,9 +467,13 @@
         // ========== تجهيز مسجل الفيديو ==========
         function setupMediaRecorder() {
             recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'video/webm;codecs=vp9,opus'
-            });
+            try {
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp8,opus' // استخدام كودك أصغر
+                });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
             
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
@@ -444,16 +482,24 @@
             };
             
             mediaRecorder.onstop = () => {
-                statusText.innerHTML = '✅ تم إيقاف التسجيل. اضغط "إرسال الفيديو"';
-                recordBtn.style.display = 'block';
-                stopRecordBtn.style.display = 'none';
+                statusText.innerHTML = `✅ تم التسجيل! حجم الفيديو: ${(getVideoSize() / (1024*1024)).toFixed(2)} ميجابايت. اضغط "إرسال"`;
+                record5sBtn.disabled = false;
+                record10sBtn.disabled = false;
+                sendBtn.disabled = false;
                 recordingIndicator.style.display = 'none';
+                progressBar.style.display = 'none';
                 isRecording = false;
             };
         }
 
-        // ========== بدء تسجيل الفيديو ==========
-        function startRecording() {
+        // ========== حساب حجم الفيديو ==========
+        function getVideoSize() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            return blob.size;
+        }
+
+        // ========== بدء تسجيل الفيديو بمدة محددة ==========
+        function startRecording(seconds) {
             if (!cameraActive) {
                 alert('❌ شغل الكاميرا أولاً');
                 return;
@@ -463,19 +509,32 @@
                 recordedChunks = [];
                 mediaRecorder.start();
                 isRecording = true;
-                recordingStartTime = Date.now();
                 
-                recordBtn.style.display = 'none';
-                stopRecordBtn.style.display = 'block';
+                record5sBtn.disabled = true;
+                record10sBtn.disabled = true;
+                sendBtn.disabled = true;
+                
                 recordingIndicator.style.display = 'block';
-                statusText.innerHTML = '🎥 جاري تسجيل الفيديو...';
-            }
-        }
-
-        // ========== إيقاف تسجيل الفيديو ==========
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
+                progressBar.style.display = 'block';
+                statusText.innerHTML = `🎥 جاري تسجيل ${seconds} ثواني...`;
+                
+                let countdown = seconds;
+                recordingCountdown.textContent = countdown;
+                
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    recordingCountdown.textContent = countdown;
+                    progressFill.style.width = `${((seconds - countdown) / seconds) * 100}%`;
+                }, 1000);
+                
+                // إيقاف التسجيل بعد المدة المحددة
+                recordingTimeout = setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                        clearInterval(countdownInterval);
+                        progressFill.style.width = '100%';
+                    }
+                }, seconds * 1000);
             }
         }
 
@@ -483,7 +542,10 @@
         function stopCamera() {
             if (stream) {
                 if (isRecording) {
-                    stopRecording();
+                    clearTimeout(recordingTimeout);
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
                 }
                 
                 stream.getTracks().forEach(track => track.stop());
@@ -496,9 +558,11 @@
                 statusText.innerHTML = '⏹️ الكاميرا متوقفة';
                 statusBox.style.borderRightColor = '#ffd700';
                 
-                recordBtn.style.display = 'block';
-                stopRecordBtn.style.display = 'none';
                 recordingIndicator.style.display = 'none';
+                progressBar.style.display = 'none';
+                record5sBtn.disabled = false;
+                record10sBtn.disabled = false;
+                sendBtn.disabled = false;
                 
                 clearInterval(timerInterval);
                 streamTime = 0;
@@ -529,21 +593,23 @@
             const merchantUsername = document.getElementById('merchantUsername').value;
             const description = document.getElementById('streamDescription').value;
             const productUrl = document.getElementById('productUrl').value;
+            const quality = document.getElementById('videoQuality').value;
 
-            statusText.innerHTML = '🔄 جاري رفع الفيديو إلى تليجرام...';
+            statusText.innerHTML = '🔄 جاري تجهيز الفيديو...';
+            sendBtn.disabled = true;
             
             try {
                 // تحويل التسجيل إلى ملف فيديو
                 const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                const videoSize = (videoBlob.size / (1024*1024)).toFixed(2);
+                
+                statusText.innerHTML = `🔄 جاري رفع الفيديو (${videoSize} ميجابايت)...`;
+                
                 const videoFile = new File([videoBlob], 'stream.webm', { type: 'video/webm' });
                 
                 const formData = new FormData();
                 formData.append('chat_id', channelId);
                 formData.append('video', videoFile);
-                
-                const duration = Math.floor((Date.now() - recordingStartTime) / 1000) || 30;
-                const minutes = Math.floor(duration / 60);
-                const seconds = duration % 60;
                 
                 const caption = `🎥 **بث مباشر الآن**
 
@@ -551,7 +617,7 @@
 📝 ${description}
 ⏰ الوقت: ${new Date().toLocaleString('ar-EG')}
 👥 المشاهدين: ${viewers}
-⏱️ مدة الفيديو: ${minutes}:${seconds.toString().padStart(2, '0')}
+📦 حجم الفيديو: ${videoSize} ميجابايت
 
 🔗 رابط المنتج: ${productUrl}
 
@@ -577,7 +643,7 @@
                 const result = await response.json();
 
                 if (result.ok) {
-                    statusText.innerHTML = "✅ تم إرسال الفيديو إلى تليجرام بنجاح!";
+                    statusText.innerHTML = `✅ تم إرسال الفيديو (${videoSize} ميجابايت) إلى تليجرام!`;
                     statusBox.style.borderRightColor = '#4caf50';
                     
                     sentCount++;
@@ -594,6 +660,8 @@
                 statusText.innerHTML = "❌ فشل الإرسال: " + error.message;
                 statusBox.style.borderRightColor = '#f85149';
                 console.error('خطأ:', error);
+            } finally {
+                sendBtn.disabled = false;
             }
         }
 
