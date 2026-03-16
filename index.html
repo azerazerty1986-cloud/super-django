@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 البومات ذكية 2 - نسخة مستقرة</title>
+    <title>📹 البومات ذكية 2 - فلترة فورية + جلب سريع</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -45,16 +45,17 @@
             font-size: 14px;
         }
         
-        .warning-box {
-            background: #da3633;
+        .badge-live {
+            background: #0088cc;
             color: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            text-align: center;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 16px;
             font-weight: bold;
-            border: 2px solid #ffd700;
-            display: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
         }
         
         .dual-video-container {
@@ -136,6 +137,32 @@
             border: 2px solid #ffd700;
         }
         
+        .filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .filter-header span {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .instant-filter-badge {
+            background: #4caf50;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
         .filter-row {
             display: flex;
             align-items: center;
@@ -185,6 +212,16 @@
             font-weight: bold;
         }
         
+        .instant-filter-info {
+            background: #2d333b;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+            color: #4caf50;
+            font-size: 13px;
+        }
+        
         .filter-range {
             background: #2d333b;
             padding: 8px;
@@ -216,6 +253,14 @@
             display: flex;
             gap: 15px;
             font-size: 12px;
+        }
+        
+        .auto-fetch-info {
+            background: #2d333b;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            color: #ffd700;
         }
         
         .simulation-status {
@@ -455,7 +500,10 @@
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-store"></i> ألبومات ذكية 2</h1>
-            <p>@nardoo_merchant | نسخة مستقرة</p>
+            <p>@nardoo_merchant | فلترة فورية + جلب سريع</p>
+            <div class="badge-live">
+                <i class="fas fa-bolt"></i> فلترة مباشرة | جلب بعد 7 ثواني
+            </div>
         </div>
 
         <!-- شاشات العرض -->
@@ -478,41 +526,45 @@
             <div class="video-wrapper">
                 <video id="simulatedVideo" autoplay playsinline></video>
                 <div class="video-label">🔄 محاكاة البث</div>
-                <div class="simulate-badge" id="simulateIndicator">⏳ جاري التحميل</div>
+                <div class="simulate-badge" id="simulateIndicator">⏳ انتظار 7ث</div>
             </div>
         </div>
 
-        <!-- فلترة الوقت -->
+        <!-- فلترة الوقت - فورية -->
         <div class="filter-panel">
+            <div class="filter-header">
+                <span><i class="fas fa-clock"></i> فلترة الوقت</span>
+                <span class="instant-filter-badge" id="instantFilterStatus">⏱️ فلترة فورية</span>
+            </div>
+            
             <div class="filter-row">
                 <span class="filter-label">التاجر:</span>
                 <span class="filter-value">@nardoo_merchant</span>
             </div>
             
             <div class="time-inputs">
-                <input type="text" id="startTime" value="00:00:00" placeholder="00:00:00">
+                <input type="text" id="startTime" value="00:00:00" placeholder="00:00:00" oninput="instantFilter()">
                 <span>→</span>
-                <input type="text" id="endTime" value="23:59:59" placeholder="23:59:59">
+                <input type="text" id="endTime" value="23:59:59" placeholder="23:59:59" oninput="instantFilter()">
+            </div>
+            
+            <div class="instant-filter-info" id="instantFilterInfo">
+                ✨ الفلترة تطبق فوراً عند الكتابة
             </div>
             
             <div class="filter-range" id="filterRange">
                 النطاق: 00:00:00 - 23:59:59
             </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-switch" onclick="applyTimeFilter()" style="flex:2">تطبيق الفلترة</button>
-                <button class="btn-switch" onclick="clearTimeFilter()" style="flex:1">إلغاء</button>
-                <button class="btn-switch" onclick="fetchTelegramVideos()" style="flex:1">🔄 جلب</button>
-            </div>
         </div>
 
-        <!-- قائمة الفيديوهات -->
+        <!-- قائمة الفيديوهات مع مؤقت الجلب -->
         <div class="telegram-feed">
             <div class="feed-header">
                 <span>📹 فيديوهات التاجر</span>
                 <div class="feed-stats">
                     <span id="totalVideosCount">0</span> | 
                     <span id="filteredVideosCount">0</span>
+                    <span class="auto-fetch-info" id="autoFetchInfo">⏱️ جلب بعد 7ث</span>
                 </div>
             </div>
             
@@ -521,9 +573,9 @@
             </div>
             
             <div class="video-list" id="videoList">
-                <div class="video-thumb" onclick="fetchTelegramVideos()">
+                <div class="video-thumb" onclick="manualFetch()">
                     <i class="fas fa-sync-alt"></i>
-                    <span>تحديث</span>
+                    <span>جلب يدوي</span>
                 </div>
             </div>
         </div>
@@ -597,12 +649,8 @@
             <span id="statusText">انقر "تشغيل الكاميرا" للبدء</span>
         </div>
 
-        <div class="warning-box" id="warningBox">
-            ⚠️ بوت آخر يعمل - يتم إعادة المحاولة...
-        </div>
-
         <div class="footer">
-            <span>ID: SMARTPFAK2J | @nardoo_merchant | محاكاة البث نشطة</span>
+            <span>ID: SMARTPFAK2J | فلترة فورية | جلب تلقائي 7ث</span>
         </div>
     </div>
 
@@ -615,8 +663,8 @@
 
         const MERCHANT_ID = '@nardoo_merchant';
         
-        // ========== معرف فريد لهذه النسخة ==========
-        const SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+        // ========== معرف فريد ==========
+        const SESSION_ID = 'session_' + Date.now();
         let lastMessageId = 0;
         let fetchInProgress = false;
         
@@ -634,25 +682,28 @@
         let albums = [];
         let totalChunksCount = 0;
         
-        // ========== متغيرات الفلترة ==========
+        // ========== متغيرات الفلترة الفورية ==========
         let allVideos = [];
         let filteredVideos = [];
         let startTimeSec = 0;
         let endTimeSec = 86399;
-        let timeFilterActive = false;
         
         // ========== متغيرات المحاكاة ==========
         let simulationActive = true;
         let currentVideoIndex = -1;
         let isSimulating = false;
         
+        // ========== مؤقت الجلب التلقائي ==========
+        let fetchTimer = null;
+        
         // عناصر DOM
         const liveVideo = document.getElementById('liveVideo');
         const simulatedVideo = document.getElementById('simulatedVideo');
         const statusText = document.getElementById('statusText');
-        const warningBox = document.getElementById('warningBox');
         const simulateIndicator = document.getElementById('simulateIndicator');
         const simulationStatus = document.getElementById('simulationStatus');
+        const autoFetchInfo = document.getElementById('autoFetchInfo');
+        const instantFilterInfo = document.getElementById('instantFilterInfo');
 
         // ========== دوال الوقت ==========
         function timeToSeconds(timeStr) {
@@ -680,26 +731,72 @@
             return match ? match[1] : null;
         }
 
-        // ========== جلب الفيديوهات من تيليجرام (بدون Conflict) ==========
-        async function fetchTelegramVideos() {
-            if (fetchInProgress) {
-                console.log('جلب قيد التنفيذ...');
-                return;
+        // ========== فلترة فورية (تطبق مع كل حرف) ==========
+        function instantFilter() {
+            const startStr = document.getElementById('startTime').value;
+            const endStr = document.getElementById('endTime').value;
+            
+            // تحويل إلى ثواني
+            startTimeSec = timeToSeconds(startStr);
+            endTimeSec = timeToSeconds(endStr);
+            
+            // تحديث النطاق المعروض
+            document.getElementById('filterRange').innerHTML = 
+                `النطاق: ${secondsToTime(startTimeSec)} - ${secondsToTime(endTimeSec)}`;
+            
+            // تطبيق الفلترة فوراً
+            applyFilterToVideos();
+            updateVideoList();
+            
+            // تحديث حالة المحاكاة
+            if (filteredVideos.length > 0 && simulationActive) {
+                startSimulation();
             }
+            
+            instantFilterInfo.innerHTML = '✨ تم تطبيق الفلترة فوراً';
+        }
+
+        // ========== تطبيق فلترة الوقت ==========
+        function applyFilterToVideos() {
+            filteredVideos = allVideos.filter(video => {
+                if (!video.timeSeconds) return false;
+                
+                if (endTimeSec >= startTimeSec) {
+                    return video.timeSeconds >= startTimeSec && video.timeSeconds <= endTimeSec;
+                } else {
+                    return video.timeSeconds >= startTimeSec || video.timeSeconds <= endTimeSec;
+                }
+            });
+            
+            document.getElementById('filteredVideosCount').textContent = filteredVideos.length;
+        }
+
+        // ========== بدء مؤقت الجلب بعد 7 ثواني ==========
+        function startFetchTimer() {
+            if (fetchTimer) {
+                clearTimeout(fetchTimer);
+            }
+            
+            autoFetchInfo.innerHTML = '⏱️ جلب بعد 7ث';
+            simulateIndicator.innerHTML = '⏳ 7ث للجلب';
+            
+            fetchTimer = setTimeout(() => {
+                fetchTelegramVideos();
+                autoFetchInfo.innerHTML = '🔄 جاري الجلب...';
+            }, 7000); // 7 ثواني بالضبط
+        }
+
+        // ========== جلب الفيديوهات ==========
+        async function fetchTelegramVideos() {
+            if (fetchInProgress) return;
             
             fetchInProgress = true;
             simulateIndicator.innerHTML = '🔄 جلب...';
+            autoFetchInfo.innerHTML = '🔄 جاري الجلب';
             
             try {
-                // استخدام endpoint مختلف لتجنب Conflict
                 const url = `https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?timeout=10&limit=50&offset=${lastMessageId}`;
-                
                 const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error: ${response.status}`);
-                }
-                
                 const data = await response.json();
                 
                 if (data.ok) {
@@ -724,7 +821,7 @@
                         })
                         .filter(v => v.hasMerchant);
                     
-                    // دمج مع الفيديوهات القديمة (بدون تكرار)
+                    // دمج مع الفيديوهات القديمة
                     const newVideos = videos.filter(v => 
                         !allVideos.some(old => old.fileId === v.fileId)
                     );
@@ -736,18 +833,13 @@
                     
                     // تحديث الواجهة
                     document.getElementById('totalVideosCount').textContent = allVideos.length;
-                    document.getElementById('filteredVideosCount').textContent = filteredVideos.length;
-                    
                     updateVideoList();
                     
-                    statusText.innerHTML = `✅ تم جلب ${newVideos.length} فيديو جديد`;
+                    statusText.innerHTML = `✅ تم جلب ${newVideos.length} فيديو`;
                     simulateIndicator.innerHTML = `📹 ${filteredVideos.length} فيديو`;
                     
-                    // إخفاء التحذير
-                    warningBox.style.display = 'none';
-                    
-                    // بدء المحاكاة إذا كانت مفعلة
-                    if (simulationActive && filteredVideos.length > 0 && !isSimulating) {
+                    // بدء المحاكاة إذا كان هناك فيديوهات
+                    if (filteredVideos.length > 0 && simulationActive && !isSimulating) {
                         startSimulation();
                     }
                     
@@ -756,79 +848,31 @@
                 }
                 
             } catch (error) {
-                console.error('Fetch error:', error);
-                
-                if (error.message.includes('Conflict')) {
-                    warningBox.style.display = 'block';
-                    statusText.innerHTML = '⚠️ بوت آخر يعمل - جلب يدوي فقط';
-                } else {
-                    statusText.innerHTML = '❌ فشل الجلب: ' + error.message;
-                }
-                
+                console.error(error);
                 simulateIndicator.innerHTML = '⚠️ خطأ';
+                statusText.innerHTML = '❌ فشل الجلب';
                 
             } finally {
                 fetchInProgress = false;
+                // إعادة تشغيل المؤقت
+                startFetchTimer();
             }
         }
 
-        // ========== تطبيق فلترة الوقت ==========
-        function applyFilterToVideos() {
-            if (!timeFilterActive) {
-                filteredVideos = allVideos;
-            } else {
-                filteredVideos = allVideos.filter(video => {
-                    if (!video.timeSeconds) return false;
-                    
-                    if (endTimeSec >= startTimeSec) {
-                        return video.timeSeconds >= startTimeSec && video.timeSeconds <= endTimeSec;
-                    } else {
-                        return video.timeSeconds >= startTimeSec || video.timeSeconds <= endTimeSec;
-                    }
-                });
+        // ========== جلب يدوي ==========
+        function manualFetch() {
+            if (fetchTimer) {
+                clearTimeout(fetchTimer);
             }
-            
-            document.getElementById('filteredVideosCount').textContent = filteredVideos.length;
-        }
-
-        function applyTimeFilter() {
-            const startStr = document.getElementById('startTime').value;
-            const endStr = document.getElementById('endTime').value;
-            
-            startTimeSec = timeToSeconds(startStr);
-            endTimeSec = timeToSeconds(endStr);
-            timeFilterActive = true;
-            
-            document.getElementById('filterRange').innerHTML = 
-                `النطاق: ${secondsToTime(startTimeSec)} - ${secondsToTime(endTimeSec)}`;
-            
-            applyFilterToVideos();
-            updateVideoList();
-            
-            statusText.innerHTML = `⏱️ تم تطبيق الفلترة`;
-        }
-
-        function clearTimeFilter() {
-            timeFilterActive = false;
-            startTimeSec = 0;
-            endTimeSec = 86399;
-            
-            document.getElementById('startTime').value = '00:00:00';
-            document.getElementById('endTime').value = '23:59:59';
-            document.getElementById('filterRange').innerHTML = 'النطاق: 00:00:00 - 23:59:59';
-            
-            applyFilterToVideos();
-            updateVideoList();
-            
-            statusText.innerHTML = '🔄 تم إلغاء الفلترة';
+            fetchTelegramVideos();
         }
 
         // ========== تحديث قائمة الفيديوهات ==========
         function updateVideoList() {
             let html = `
-                <div class="video-thumb" onclick="fetchTelegramVideos()">
+                <div class="video-thumb" onclick="manualFetch()">
                     <i class="fas fa-sync-alt"></i>
-                    <span>تحديث</span>
+                    <span>جلب يدوي</span>
                 </div>
             `;
             
@@ -846,11 +890,18 @@
                 `;
             });
             
-            if (filteredVideos.length === 0) {
+            if (filteredVideos.length === 0 && allVideos.length > 0) {
                 html += `
-                    <div class="video-thumb" style="opacity:0.5; cursor:default">
-                        <i class="fas fa-video-slash"></i>
-                        <span>لا توجد فيديوهات</span>
+                    <div class="video-thumb" style="opacity:0.7">
+                        <i class="fas fa-clock"></i>
+                        <span>لا يوجد في نطاق الوقت</span>
+                    </div>
+                `;
+            } else if (allVideos.length === 0) {
+                html += `
+                    <div class="video-thumb" style="opacity:0.5">
+                        <i class="fas fa-hourglass"></i>
+                        <span>انتظار الجلب...</span>
                     </div>
                 `;
             }
@@ -950,8 +1001,8 @@
                 
                 statusText.innerHTML = '✅ الكاميرا جاهزة';
                 
-                // جلب الفيديوهات بعد ثانيتين
-                setTimeout(fetchTelegramVideos, 2000);
+                // بدء مؤقت الجلب بعد 7 ثواني
+                startFetchTimer();
                 
             } catch (err) {
                 statusText.innerHTML = '❌ خطأ: ' + err.message;
@@ -1111,9 +1162,6 @@
                     albumsCount.textContent = albums.length;
                     statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber}`;
                     
-                    // جلب الفيديوهات بعد الإرسال
-                    setTimeout(fetchTelegramVideos, 3000);
-                    
                 } else {
                     throw new Error(result.description);
                 }
@@ -1144,10 +1192,10 @@
         window.onload = function() {
             testTelegramBot();
             
-            // جلب الفيديوهات كل 15 ثانية
-            setInterval(fetchTelegramVideos, 15000);
+            // فلترة فورية نشطة
+            instantFilterInfo.innerHTML = '✨ الفلترة تطبق فوراً عند الكتابة';
             
-            console.log('✅ الجلسة:', SESSION_ID);
+            console.log('✅ نظام فلترة فورية + جلب بعد 7 ثواني');
         };
     </script>
 </body>
