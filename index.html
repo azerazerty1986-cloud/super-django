@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 بث مباشر بالألبومات - ناردو برو</title>
+    <title>📹 بث مباشر بالألبومات - ناردو برو (إصدار مخصص)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -75,12 +75,10 @@
             background: #1a1a1a;
         }
         
-        /* الكاميرا الأمامية (معكوسة) */
         .front-camera {
             transform: scaleX(-1);
         }
         
-        /* الكاميرا الخلفية (طبيعية) */
         .back-camera {
             transform: scaleX(1);
         }
@@ -189,16 +187,41 @@
             font-size: 18px;
         }
         
-        /* عداد 10 مقاطع */
-        .counter-10 {
+        /* عداد ديناميكي حسب الألبوم */
+        .counter-container {
+            margin: 15px 0;
+        }
+        
+        .album-target-info {
+            background: #ffd70022;
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
             display: flex;
             justify-content: space-between;
-            margin: 15px 0;
+            align-items: center;
+        }
+        
+        .target-badge {
+            background: #0088cc;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .counter-custom {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
             gap: 5px;
+            flex-wrap: wrap;
         }
         
         .counter-block {
-            flex: 1;
+            flex: 1 0 30px;
             height: 40px;
             background: #2d333b;
             border-radius: 8px;
@@ -210,6 +233,7 @@
             position: relative;
             overflow: hidden;
             font-size: 14px;
+            min-width: 35px;
         }
         
         .counter-block.filled {
@@ -245,6 +269,7 @@
             text-align: center;
             border: 2px solid transparent;
             transition: all 0.3s;
+            cursor: pointer;
         }
         
         .timeline-item.completed {
@@ -264,7 +289,7 @@
             color: #ffd700;
         }
         
-        .timeline-badge {
+        .timeline-target {
             background: #0088cc;
             color: white;
             border-radius: 12px;
@@ -396,11 +421,58 @@
             font-size: 14px;
         }
         
+        .album-config {
+            background: #1a1f2b;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #ffd700;
+        }
+        
+        .config-title {
+            color: #ffd700;
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .config-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .config-item {
+            background: #2d333b;
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .config-item span {
+            color: #0088cc;
+            font-weight: bold;
+        }
+        
         .footer {
             text-align: center;
             margin-top: 20px;
             color: #6e7681;
             font-size: 12px;
+        }
+        
+        .status-box {
+            background: #1a1f2b;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+            border: 1px solid #2d333b;
         }
     </style>
 </head>
@@ -408,9 +480,9 @@
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-store"></i> بث مباشر بالألبومات</h1>
-            <p>@nardoo_merchant | كاميرا أمامية/خلفية | 10 مقاطع لكل ألبوم</p>
+            <p>@nardoo_merchant | إصدار مخصص | ألبومات حسب الطلب</p>
             <div class="telegram-badge">
-                <i class="fab fa-telegram"></i> ألبومات تلقائية كل 10 مقاطع
+                <i class="fab fa-telegram"></i> تكوين الألبوم: 9,5,6,8,10,10...
             </div>
         </div>
 
@@ -455,6 +527,28 @@
             </div>
         </div>
 
+        <!-- تكوين الألبومات -->
+        <div class="album-config">
+            <div class="config-title">
+                <i class="fas fa-sliders-h"></i> تكوين الألبومات المخصص
+            </div>
+            <div class="config-list" id="albumConfigList"></div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <input type="number" id="newAlbumSize" placeholder="عدد المقاطع" min="1" max="20" value="10" style="flex: 2;">
+                <button onclick="addAlbumSize()" style="flex: 1; padding: 10px; background: #0088cc; color: white; border: none; border-radius: 8px;">
+                    <i class="fas fa-plus"></i> إضافة
+                </button>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                <button onclick="setDefaultConfig()" style="padding: 8px; background: #2d333b; color: white; border: 1px solid #ffd700; border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-redo-alt"></i> استعادة: 9,5,6,8
+                </button>
+                <button onclick="clearConfig()" style="padding: 8px; background: #da3633; color: white; border: none; border-radius: 8px; font-size: 12px;">
+                    <i class="fas fa-trash"></i> مسح الكل
+                </button>
+            </div>
+        </div>
+
         <!-- إحصائيات الألبومات -->
         <div class="album-stats">
             <div class="stat-row">
@@ -471,8 +565,14 @@
             </div>
         </div>
 
-        <!-- عداد 10 مقاطع -->
-        <div class="counter-10" id="counter10"></div>
+        <!-- معلومات الألبوم الحالي وعداده -->
+        <div class="counter-container" id="counterContainer" style="display: none;">
+            <div class="album-target-info">
+                <span><i class="fas fa-layer-group"></i> الألبوم <span id="currentAlbumNumber">1</span></span>
+                <span class="target-badge" id="targetBadge">الهدف: 10</span>
+            </div>
+            <div class="counter-custom" id="counterCustom"></div>
+        </div>
 
         <!-- الخط الزمني للألبومات -->
         <div class="albums-timeline" id="albumsTimeline"></div>
@@ -503,10 +603,16 @@
         <div class="input-group">
             <label><i class="fas fa-clock"></i> مدة المقطع (ثانية)</label>
             <select id="chunkDuration">
-                <option value="3">3 ثواني (سريع)</option>
+                <option value="1">1 ثانية (سريع جداً)</option>
+                <option value="2">2 ثانية</option>
+                <option value="3">3 ثواني</option>
+                <option value="4">4 ثواني</option>
                 <option value="5">5 ثواني</option>
-                <option value="10" selected>10 ثواني (ممتاز)</option>
-                <option value="15">15 ثانية</option>
+                <option value="6">6 ثواني</option>
+                <option value="7">7 ثواني</option>
+                <option value="8">8 ثواني</option>
+                <option value="9" selected>9 ثواني (للألبوم الأول)</option>
+                <option value="10">10 ثواني</option>
             </select>
         </div>
 
@@ -526,7 +632,7 @@
         </div>
 
         <div class="footer">
-            <span id="botStatus">⚪ جاري التحقق...</span> | ألبومات 10/10 | كاميرا أمامية/خلفية
+            <span id="botStatus">⚪ جاري التحقق...</span> | ألبومات مخصصة | كاميرا أمامية/خلفية
         </div>
     </div>
 
@@ -547,8 +653,9 @@
         let totalSeconds = 0;
         let timerInterval = null;
         
-        // متغيرات الألبومات
-        const ALBUM_SIZE = 10;
+        // متغيرات الألبومات المخصصة
+        let albumSizes = [9, 5, 6, 8]; // التكوين الافتراضي: أول ألبوم 9 مقاطع، ثاني 5، ثالث 6، رابع 8
+        let currentAlbumIndex = 0; // مؤشر الألبوم الحالي (يبدأ من 0)
         let currentAlbum = [];
         let albums = [];
         let totalChunksCount = 0;
@@ -572,15 +679,30 @@
         const totalTime = document.getElementById('totalTime');
         const albumsCount = document.getElementById('albumsCount');
         const totalChunks = document.getElementById('totalChunks');
-        const counter10 = document.getElementById('counter10');
+        const counterContainer = document.getElementById('counterContainer');
+        const counterCustom = document.getElementById('counterCustom');
+        const currentAlbumNumber = document.getElementById('currentAlbumNumber');
+        const targetBadge = document.getElementById('targetBadge');
         const albumsTimeline = document.getElementById('albumsTimeline');
         const merchantOverlay = document.getElementById('merchantOverlay');
         const botStatus = document.getElementById('botStatus');
+        const albumConfigList = document.getElementById('albumConfigList');
 
-        // ========== تحديث عداد 10 ==========
-        function updateCounter10() {
+        // ========== الحصول على حجم الألبوم الحالي ==========
+        function getCurrentAlbumTarget() {
+            if (currentAlbumIndex < albumSizes.length) {
+                return albumSizes[currentAlbumIndex];
+            } else {
+                // إذا تجاوزنا الألبومات المحددة، نستخدم 10 كقيمة افتراضية
+                return 10;
+            }
+        }
+
+        // ========== تحديث عداد المقاطع ==========
+        function updateCounterCustom() {
+            const target = getCurrentAlbumTarget();
             let html = '';
-            for (let i = 0; i < ALBUM_SIZE; i++) {
+            for (let i = 0; i < target; i++) {
                 let filled = i < currentAlbum.length;
                 let isCurrent = i === currentAlbum.length;
                 html += `
@@ -589,7 +711,18 @@
                     </div>
                 `;
             }
-            counter10.innerHTML = html;
+            counterCustom.innerHTML = html;
+            
+            // تحديث معلومات الألبوم
+            currentAlbumNumber.textContent = currentAlbumIndex + 1;
+            targetBadge.textContent = `الهدف: ${target}`;
+            
+            // إظهار/إخفاء العداد حسب حالة البث
+            if (isLiveStreaming) {
+                counterContainer.style.display = 'block';
+            } else {
+                counterContainer.style.display = 'none';
+            }
         }
 
         // ========== تحديث الخط الزمني ==========
@@ -600,21 +733,71 @@
                 html += `
                     <div class="timeline-item completed" onclick="viewAlbum(${index})">
                         <div class="timeline-number">${index + 1}</div>
-                        <div class="timeline-badge">${album.chunks.length}</div>
+                        <div class="timeline-target">${album.target}</div>
                     </div>
                 `;
             });
             
-            if (currentAlbum.length > 0 || albums.length === 0) {
+            if (isLiveStreaming) {
                 html += `
                     <div class="timeline-item active">
                         <div class="timeline-number">${albums.length + 1}</div>
-                        <div class="timeline-badge">${currentAlbum.length}/${ALBUM_SIZE}</div>
+                        <div class="timeline-target">${getCurrentAlbumTarget()}</div>
                     </div>
                 `;
             }
             
             albumsTimeline.innerHTML = html;
+        }
+
+        // ========== تحديث قائمة تكوين الألبومات ==========
+        function updateAlbumConfigList() {
+            let html = '';
+            albumSizes.forEach((size, index) => {
+                html += `
+                    <div class="config-item">
+                        <span>${index + 1}</span>
+                        <i class="fas fa-video"></i>
+                        ${size}
+                        <i class="fas fa-times" style="color: #da3633; cursor: pointer; margin-right: 5px;" onclick="removeAlbumSize(${index})"></i>
+                    </div>
+                `;
+            });
+            if (albumSizes.length === 0) {
+                html = '<div style="color: #8b949e; text-align: center; width: 100%;">لم يتم تحديد أي ألبوم (سيتم استخدام 10 افتراضي)</div>';
+            }
+            albumConfigList.innerHTML = html;
+        }
+
+        // ========== إضافة حجم ألبوم جديد ==========
+        function addAlbumSize() {
+            const input = document.getElementById('newAlbumSize');
+            const size = parseInt(input.value);
+            if (size > 0 && size <= 30) {
+                albumSizes.push(size);
+                updateAlbumConfigList();
+                input.value = 10;
+            } else {
+                alert('الرجاء إدخال رقم بين 1 و 30');
+            }
+        }
+
+        // ========== إزالة حجم ألبوم ==========
+        function removeAlbumSize(index) {
+            albumSizes.splice(index, 1);
+            updateAlbumConfigList();
+        }
+
+        // ========== استعادة التكوين الافتراضي ==========
+        function setDefaultConfig() {
+            albumSizes = [9, 5, 6, 8];
+            updateAlbumConfigList();
+        }
+
+        // ========== مسح التكوين ==========
+        function clearConfig() {
+            albumSizes = [];
+            updateAlbumConfigList();
         }
 
         // ========== تشغيل الكاميرا ==========
@@ -681,8 +864,15 @@
                 return;
             }
             
+            if (albumSizes.length === 0) {
+                // إذا لم يتم تحديد أحجام، نستخدم 10 كقيمة افتراضية
+                albumSizes = [10];
+                updateAlbumConfigList();
+            }
+            
             isLiveStreaming = true;
             totalSeconds = 0;
+            currentAlbumIndex = 0;
             currentAlbum = [];
             albums = [];
             totalChunksCount = 0;
@@ -704,7 +894,7 @@
                 liveTime.textContent = totalTime.textContent;
             }, 1000);
             
-            updateCounter10();
+            updateCounterCustom();
             updateTimeline();
             recordChunk();
         }
@@ -738,11 +928,15 @@
                 totalChunksCount++;
                 
                 totalChunks.textContent = totalChunksCount;
-                updateCounter10();
+                updateCounterCustom();
                 updateTimeline();
                 
-                if (currentAlbum.length === ALBUM_SIZE) {
+                // التحقق إذا اكتمل الألبوم الحالي
+                const target = getCurrentAlbumTarget();
+                if (currentAlbum.length === target) {
                     await sendAlbum();
+                    currentAlbumIndex++; // الانتقال للألبوم التالي
+                    currentAlbum = []; // بدء ألبوم جديد
                 }
                 
                 setTimeout(recordChunk, 500);
@@ -758,16 +952,17 @@
             const albumNumber = albums.length + 1;
             const description = document.getElementById('videoDescription').value;
             const productLink = document.getElementById('productLink').value;
+            const target = getCurrentAlbumTarget();
             
             try {
-                statusText.innerHTML = `🔄 جاري إرسال الألبوم ${albumNumber}...`;
+                statusText.innerHTML = `🔄 جاري إرسال الألبوم ${albumNumber} (${currentAlbum.length}/${target})...`;
                 
                 const mediaGroup = [];
                 for (let i = 0; i < currentAlbum.length; i++) {
                     mediaGroup.push({
                         type: 'video',
                         media: `attach://video${i}`,
-                        caption: i === 0 ? `🎬 **الألبوم ${albumNumber}**\n\n🏪 التاجر: ${MERCHANT_ID}\n📸 الكاميرا: ${cameraType.textContent}\n⏱️ الوقت: ${totalTime.textContent}\n\n📝 ${description}` : '',
+                        caption: i === 0 ? `🎬 **الألبوم ${albumNumber}**\n\n🏪 التاجر: ${MERCHANT_ID}\n📸 الكاميرا: ${cameraType.textContent}\n⏱️ الوقت: ${totalTime.textContent}\n📊 عدد المقاطع: ${currentAlbum.length}/${target}\n\n📝 ${description}` : '',
                         parse_mode: 'Markdown'
                     });
                 }
@@ -792,13 +987,13 @@
                         number: albumNumber,
                         chunks: [...currentAlbum],
                         time: totalTime.textContent,
-                        camera: cameraType.textContent
+                        camera: cameraType.textContent,
+                        target: target,
+                        actual: currentAlbum.length
                     });
                     
                     albumsCount.textContent = albums.length;
-                    currentAlbum = [];
                     
-                    updateCounter10();
                     updateTimeline();
                     
                     statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber}`;
@@ -848,6 +1043,7 @@
             merchantOverlay.style.display = 'none';
             switchBtn.disabled = false;
             switchCameraBtn.style.display = 'flex';
+            counterContainer.style.display = 'none';
             
             statusText.innerHTML = '⏹️ تم إنهاء البث';
             
@@ -884,6 +1080,7 @@
             switchCameraBtn.style.display = 'none';
             liveIndicator.style.display = 'none';
             merchantOverlay.style.display = 'none';
+            counterContainer.style.display = 'none';
             
             statusText.innerHTML = '⏹️ الكاميرا متوقفة';
         }
@@ -891,7 +1088,7 @@
         // ========== عرض ألبوم ==========
         function viewAlbum(index) {
             const album = albums[index];
-            alert(`الألبوم ${album.number}\nالوقت: ${album.time}\nالمقاطع: ${album.chunks.length}/10\nالكاميرا: ${album.camera}`);
+            alert(`الألبوم ${album.number}\nالوقت: ${album.time}\nالمقاطع: ${album.actual}/${album.target}\nالكاميرا: ${album.camera}`);
         }
 
         // ========== اختبار البوت ==========
@@ -914,6 +1111,7 @@
         // التهيئة
         window.onload = function() {
             testBot();
+            updateAlbumConfigList();
         };
     </script>
 </body>
