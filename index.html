@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 البومات ذكية 2 - مع شاشة متأخرة</title>
+    <title>📹 البومات ذكية 2 - مع تشغيل فيديوهات تيليجرام</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -114,6 +114,64 @@
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
+        }
+        
+        .telegram-feed {
+            background: #1a1f2b;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #0088cc;
+        }
+        
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #0088cc;
+            font-weight: bold;
+        }
+        
+        .video-list {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        
+        .video-thumb {
+            min-width: 80px;
+            height: 80px;
+            background: #2d333b;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .video-thumb:hover {
+            border-color: #ffd700;
+            transform: scale(1.05);
+        }
+        
+        .video-thumb.active {
+            border-color: #4caf50;
+            background: #4caf5033;
+        }
+        
+        .video-thumb i {
+            font-size: 24px;
+            color: #ffd700;
+        }
+        
+        .video-thumb span {
+            font-size: 10px;
+            margin-top: 5px;
         }
         
         .merchant-overlay {
@@ -536,25 +594,40 @@
             width: 80px;
             text-align: center;
         }
+
+        .playlist-control {
+            margin: 10px 0;
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .playlist-btn {
+            flex: 1;
+            padding: 8px;
+            min-width: 60px;
+            background: #2d333b;
+            border: 1px solid #444;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-store"></i> ألبومات ذكية 2</h1>
-            <p>@nardoo_merchant | بث متأخر 5 ثواني</p>
+            <p>@nardoo_merchant | تشغيل فيديوهات تيليجرام</p>
             <div class="telegram-badge">
-                <i class="fab fa-telegram"></i> شاشة عرض موازية
+                <i class="fab fa-telegram"></i> الفيديوهات تصل وتعرض متأخرة
             </div>
         </div>
 
         <!-- شاشات العرض المزدوجة -->
         <div class="dual-video-container">
-            <!-- الشاشة الرئيسية (بث مباشر) -->
+            <!-- الشاشة الرئيسية (كاميرا) -->
             <div class="video-wrapper">
                 <video id="liveVideo" autoplay playsinline></video>
                 <div class="video-label">
-                    <i class="fas fa-circle" style="color: #ff0000; font-size: 8px;"></i> مباشر
+                    <i class="fas fa-circle" style="color: #ff0000; font-size: 8px;"></i> كاميرا مباشر
                 </div>
                 <div id="merchantOverlay" class="merchant-overlay" style="display: none;">
                     <i class="fas fa-store"></i>
@@ -568,22 +641,53 @@
                 </div>
             </div>
 
-            <!-- الشاشة المتأخرة (Delay 5s) -->
+            <!-- الشاشة المتأخرة (تعرض فيديوهات تيليجرام) -->
             <div class="video-wrapper">
                 <video id="delayedVideo" autoplay playsinline></video>
                 <div class="video-label">
-                    <i class="fas fa-hourglass-half"></i> متأخر
+                    <i class="fas fa-hourglass-half"></i> فيديوهات تيليجرام
                 </div>
-                <div class="delay-badge" id="delayBadge">⏱️ 5 ثواني</div>
+                <div class="delay-badge" id="delayBadge">⏱️ تشغيل متأخر</div>
             </div>
         </div>
 
         <!-- التحكم بالتأخير -->
         <div class="delay-control">
-            <label><i class="fas fa-clock"></i> مدة التأخير (ثواني):</label>
-            <input type="number" id="delayDuration" min="1" max="30" value="5" step="1">
+            <label><i class="fas fa-clock"></i> تأخير التشغيل (ثواني):</label>
+            <input type="number" id="delayDuration" min="1" max="60" value="5" step="1">
             <button class="btn-switch" onclick="updateDelay()" style="padding: 8px; min-width: auto;">
                 <i class="fas fa-sync-alt"></i> تحديث
+            </button>
+        </div>
+
+        <!-- قائمة فيديوهات تيليجرام المستلمة -->
+        <div class="telegram-feed">
+            <div class="feed-header">
+                <span><i class="fab fa-telegram"></i> فيديوهات تيليجرام المستلمة</span>
+                <span id="videosCount">0 فيديو</span>
+            </div>
+            <div class="video-list" id="videoList">
+                <!-- سيتم إضافة الفيديوهات هنا ديناميكياً -->
+                <div class="video-thumb" onclick="refreshVideos()">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>تحديث</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- تحكم قائمة التشغيل -->
+        <div class="playlist-control">
+            <button class="btn-switch playlist-btn" onclick="playAllVideos()">
+                <i class="fas fa-play"></i> تشغيل الكل
+            </button>
+            <button class="btn-switch playlist-btn" onclick="shuffleVideos()">
+                <i class="fas fa-random"></i> عشوائي
+            </button>
+            <button class="btn-switch playlist-btn" onclick="repeatVideos()">
+                <i class="fas fa-redo"></i> تكرار
+            </button>
+            <button class="btn-switch playlist-btn" onclick="clearQueue()">
+                <i class="fas fa-trash"></i> مسح
             </button>
         </div>
 
@@ -603,8 +707,8 @@
 
         <!-- باند الألبوم الذكي -->
         <div class="album-badge">
-            <i class="fas fa-layer-group"></i> ألبوم ذكي 2 | بث متأخر 5ث
-            <br><small>شاشة رئيسية + شاشة مراقبة</small>
+            <i class="fas fa-layer-group"></i> ألبوم ذكي 2 | تشغيل فيديوهات تيليجرام
+            <br><small>تعرض في النافذة المتأخرة</small>
         </div>
 
         <!-- اختبار اتصال تيليجرام -->
@@ -627,8 +731,8 @@
                 <span class="stat-value" id="totalChunks">0</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label"><i class="fas fa-hourglass-half"></i> حالة التأخير:</span>
-                <span class="stat-value" id="delayStatus">5 ثواني</span>
+                <span class="stat-label"><i class="fas fa-download"></i> فيديوهات مستلمة:</span>
+                <span class="stat-value" id="receivedVideosCount">0</span>
             </div>
         </div>
 
@@ -636,14 +740,14 @@
         <div class="album-config-panel">
             <div class="config-row">
                 <span class="config-label"><i class="fas fa-cog"></i> نوع الألبوم:</span>
-                <span class="config-value">ذكي 2 - مع تأخير</span>
+                <span class="config-value">ذكي 2 - تشغيل متأخر</span>
             </div>
             <div class="config-row">
                 <span class="config-label"><i class="fas fa-ruler"></i> حجم الألبوم:</span>
                 <span class="config-value" id="albumSizeDisplay">3 مقاطع</span>
             </div>
             <div class="config-row">
-                <span class="config-label"><i class="fas fa-hourglass-start"></i> تأخير العرض:</span>
+                <span class="config-label"><i class="fas fa-hourglass-start"></i> تأخير التشغيل:</span>
                 <span class="config-value" id="delayValueDisplay">5 ثواني</span>
             </div>
         </div>
@@ -707,6 +811,12 @@
                 <span class="config-label"><i class="fas fa-hashtag"></i> معرف القناة:</span>
                 <span class="config-value" id="channelIdDisplay">-1003822964890</span>
             </div>
+            <div class="config-row">
+                <span class="config-label"><i class="fas fa-download"></i> جلب الفيديوهات:</span>
+                <button class="btn-switch" onclick="fetchTelegramVideos()" style="padding: 5px; min-width: auto;">
+                    <i class="fas fa-sync-alt"></i> جلب الآن
+                </button>
+            </div>
         </div>
 
         <!-- حالة النظام -->
@@ -715,7 +825,7 @@
         </div>
 
         <div class="footer">
-            <span>ID: SMARTPFAK2J | شاشة عرض متأخرة 5ث</span>
+            <span>ID: SMARTPFAK2J | فيديوهات تيليجرام تعرض متأخرة</span>
         </div>
     </div>
 
@@ -745,11 +855,17 @@
         // الكاميرا
         let currentFacingMode = 'user';
         
-        // ========== نظام التأخير ==========
+        // ========== نظام التشغيل المتأخر للفيديوهات ==========
         let delayDuration = 5; // 5 ثواني افتراضياً
-        let frameBuffer = []; // مخزن الإطارات المتأخرة
-        let isDelayActive = false;
-        let delayInterval = null;
+        let videoQueue = []; // قائمة انتظار الفيديوهات
+        let currentVideoIndex = -1;
+        let isPlaying = false;
+        let playNextTimeout = null;
+        let repeatMode = false; // false, true for repeat all
+        let shuffleMode = false;
+        
+        // ========== فيديوهات تيليجرام المستلمة ==========
+        let receivedVideos = [];
         
         // عناصر DOM
         const liveVideo = document.getElementById('liveVideo');
@@ -774,92 +890,262 @@
         const delayValueDisplay = document.getElementById('delayValueDisplay');
         const delayBadge = document.getElementById('delayBadge');
         const delayDurationInput = document.getElementById('delayDuration');
+        const videoList = document.getElementById('videoList');
+        const videosCount = document.getElementById('videosCount');
+        const receivedVideosCount = document.getElementById('receivedVideosCount');
 
         // ========== تحديث التأخير ==========
         function updateDelay() {
             const newDelay = parseInt(delayDurationInput.value);
-            if (newDelay >= 1 && newDelay <= 30) {
+            if (newDelay >= 1 && newDelay <= 60) {
                 delayDuration = newDelay;
-                delayStatus.textContent = delayDuration + ' ثواني';
                 delayValueDisplay.textContent = delayDuration + ' ثواني';
-                delayBadge.innerHTML = `⏱️ ${delayDuration} ثواني`;
-                
-                // إعادة تعيين المخزن المؤقت
-                frameBuffer = [];
-                console.log(`⏱️ تم تحديث التأخير إلى ${delayDuration} ثواني`);
-                
-                // إعادة تشغيل نظام التأخير إذا كان نشطاً
-                if (isDelayActive) {
-                    stopDelaySystem();
-                    startDelaySystem();
-                }
+                delayBadge.innerHTML = `⏱️ تأخير ${delayDuration}ث`;
+                console.log(`⏱️ تم تحديث تأخير التشغيل إلى ${delayDuration} ثواني`);
             }
         }
 
-        // ========== بدء نظام التأخير ==========
-        function startDelaySystem() {
-            if (!stream || !isLiveStreaming) return;
-            
-            isDelayActive = true;
-            
-            // إنشاء Canvas لالتقاط الإطارات
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // ضبط حجم Canvas ليتناسب مع الفيديو
-            canvas.width = 640;
-            canvas.height = 480;
-            
-            // بدء التقاط الإطارات
-            delayInterval = setInterval(() => {
-                if (!isDelayActive || !stream) return;
+        // ========== جلب فيديوهات تيليجرام ==========
+        async function fetchTelegramVideos() {
+            try {
+                statusText.innerHTML = '🔄 جاري جلب الفيديوهات من تيليجرام...';
                 
-                // التقاط الإطار الحالي من الفيديو المباشر
-                ctx.drawImage(liveVideo, 0, 0, canvas.width, canvas.height);
+                // جلب آخر 10 رسائل من القناة
+                const response = await fetch(
+                    `https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?timeout=5`
+                );
                 
-                // تحويل الإطار إلى صورة
-                const frameData = canvas.toDataURL('image/jpeg', 0.7); // جودة 70%
+                const data = await response.json();
                 
-                // إضافة الإطار إلى المخزن
-                frameBuffer.push(frameData);
-                
-                // التحقق من حجم المخزن (عدد الإطارات = التأخير × FPS)
-                // نفترض FPS ~ 30 إطار في الثانية
-                const maxFrames = delayDuration * 30;
-                if (frameBuffer.length > maxFrames) {
-                    // إزالة أقدم إطار
-                    frameBuffer.shift();
+                if (data.ok) {
+                    receivedVideos = [];
+                    
+                    // تصفية الرسائل التي تحتوي على فيديو
+                    data.result.forEach(update => {
+                        if (update.channel_post && update.channel_post.video) {
+                            const video = update.channel_post.video;
+                            const fileId = video.file_id;
+                            
+                            receivedVideos.push({
+                                fileId: fileId,
+                                caption: update.channel_post.caption || 'فيديو بدون وصف',
+                                date: new Date(update.channel_post.date * 1000).toLocaleString('ar-EG'),
+                                duration: video.duration,
+                                messageId: update.channel_post.message_id
+                            });
+                        }
+                    });
+                    
+                    // تحديث الواجهة
+                    updateVideoList();
+                    receivedVideosCount.textContent = receivedVideos.length;
+                    videosCount.textContent = receivedVideos.length + ' فيديو';
+                    
+                    statusText.innerHTML = `✅ تم جلب ${receivedVideos.length} فيديو من القناة`;
+                    
+                    if (receivedVideos.length > 0) {
+                        // إضافة الفيديوهات لقائمة التشغيل
+                        addVideosToQueue(receivedVideos);
+                    }
+                } else {
+                    throw new Error(data.description);
                 }
                 
-                // عرض الإطار المتأخر (أقدم إطار في المخزن)
-                if (frameBuffer.length > 0) {
-                    // اختيار الإطار المناسب حسب التأخير
-                    const frameIndex = Math.max(0, frameBuffer.length - (delayDuration * 30));
-                    if (frameIndex < frameBuffer.length) {
-                        const delayedFrame = frameBuffer[frameIndex];
-                        
-                        // تحويل الصورة إلى Blob ثم إلى URL
-                        fetch(delayedFrame)
-                            .then(res => res.blob())
-                            .then(blob => {
-                                const url = URL.createObjectURL(blob);
-                                delayedVideo.src = url;
-                                delayedVideo.play().catch(e => console.log('تأخير التشغيل:', e));
-                            });
+            } catch (error) {
+                statusText.innerHTML = '❌ فشل جلب الفيديوهات: ' + error.message;
+                console.error('Fetch error:', error);
+            }
+        }
+
+        // ========== تحديث قائمة الفيديوهات المعروضة ==========
+        function updateVideoList() {
+            let html = `
+                <div class="video-thumb" onclick="fetchTelegramVideos()">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>تحديث</span>
+                </div>
+            `;
+            
+            receivedVideos.forEach((video, index) => {
+                html += `
+                    <div class="video-thumb ${index === currentVideoIndex ? 'active' : ''}" 
+                         onclick="playVideoFromList(${index})">
+                        <i class="fas fa-video"></i>
+                        <span>فيديو ${index + 1}</span>
+                        <span style="font-size: 8px;">${video.duration || '?'}ث</span>
+                    </div>
+                `;
+            });
+            
+            videoList.innerHTML = html;
+        }
+
+        // ========== إضافة فيديوهات لقائمة التشغيل ==========
+        function addVideosToQueue(videos) {
+            videos.forEach(video => {
+                videoQueue.push({
+                    ...video,
+                    url: `https://api.telegram.org/file/bot${TELEGRAM.botToken}/videos/${video.fileId}`
+                });
+            });
+            
+            console.log(`📋 تم إضافة ${videos.length} فيديو لقائمة التشغيل`);
+            
+            // إذا لم يكن هناك فيديو قيد التشغيل، شغل الأول
+            if (!isPlaying && videoQueue.length > 0) {
+                playNextInQueue();
+            }
+        }
+
+        // ========== تشغيل الفيديو التالي في قائمة الانتظار ==========
+        function playNextInQueue() {
+            if (videoQueue.length === 0) return;
+            
+            // إلغاء أي تايمر سابق
+            if (playNextTimeout) {
+                clearTimeout(playNextTimeout);
+                playNextTimeout = null;
+            }
+            
+            // تحديد الفهرس التالي
+            if (shuffleMode) {
+                // اختيار عشوائي
+                let randomIndex;
+                do {
+                    randomIndex = Math.floor(Math.random() * videoQueue.length);
+                } while (randomIndex === currentVideoIndex && videoQueue.length > 1);
+                currentVideoIndex = randomIndex;
+            } else {
+                // تسلسلي
+                if (currentVideoIndex < videoQueue.length - 1) {
+                    currentVideoIndex++;
+                } else {
+                    if (repeatMode) {
+                        currentVideoIndex = 0; // تكرار من الأول
+                    } else {
+                        isPlaying = false;
+                        return;
                     }
                 }
-            }, 33); // ~30 FPS
+            }
+            
+            const video = videoQueue[currentVideoIndex];
+            playVideoWithDelay(video);
         }
 
-        // ========== إيقاف نظام التأخير ==========
-        function stopDelaySystem() {
-            isDelayActive = false;
-            if (delayInterval) {
-                clearInterval(delayInterval);
-                delayInterval = null;
+        // ========== تشغيل فيديو مع تأخير ==========
+        async function playVideoWithDelay(video) {
+            try {
+                statusText.innerHTML = `⏳ جلب فيديو ${currentVideoIndex + 1}/${videoQueue.length}...`;
+                
+                // جلب رابط التحميل للفيديو
+                const response = await fetch(
+                    `https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${video.fileId}`
+                );
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    const filePath = data.result.file_path;
+                    const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${filePath}`;
+                    
+                    // تعيين مصدر الفيديو
+                    delayedVideo.src = videoUrl;
+                    
+                    // تشغيل مع التأخير
+                    setTimeout(() => {
+                        delayedVideo.play()
+                            .then(() => {
+                                isPlaying = true;
+                                statusText.innerHTML = `▶️ تشغيل فيديو ${currentVideoIndex + 1}/${videoQueue.length} بعد ${delayDuration} ثواني`;
+                                updateVideoList();
+                                
+                                // جدولة الفيديو التالي
+                                delayedVideo.onended = () => {
+                                    console.log('🎬 انتهى الفيديو، تشغيل التالي...');
+                                    playNextInQueue();
+                                };
+                            })
+                            .catch(e => {
+                                console.error('❌ فشل تشغيل الفيديو:', e);
+                                playNextInQueue();
+                            });
+                    }, delayDuration * 1000);
+                    
+                } else {
+                    throw new Error('فشل جلب رابط الفيديو');
+                }
+                
+            } catch (error) {
+                statusText.innerHTML = '❌ خطأ في تشغيل الفيديو: ' + error.message;
+                playNextInQueue();
             }
-            frameBuffer = [];
+        }
+
+        // ========== تشغيل فيديو محدد من القائمة ==========
+        function playVideoFromList(index) {
+            if (index >= 0 && index < videoQueue.length) {
+                currentVideoIndex = index - 1; // -1 عشان التشغيل التالي يبدأ منه
+                playNextInQueue();
+            }
+        }
+
+        // ========== تشغيل كل الفيديوهات ==========
+        function playAllVideos() {
+            if (videoQueue.length > 0) {
+                currentVideoIndex = -1;
+                playNextInQueue();
+            }
+        }
+
+        // ========== تشغيل عشوائي ==========
+        function shuffleVideos() {
+            shuffleMode = !shuffleMode;
+            statusText.innerHTML = shuffleMode ? '🔀 تشغيل عشوائي مفعل' : '➡️ تشغيل تسلسلي';
+        }
+
+        // ========== تكرار ==========
+        function repeatVideos() {
+            repeatMode = !repeatMode;
+            statusText.innerHTML = repeatMode ? '🔁 تكرار مفعل' : '⏹️ تكرار معطل';
+        }
+
+        // ========== مسح قائمة التشغيل ==========
+        function clearQueue() {
+            videoQueue = [];
+            currentVideoIndex = -1;
+            isPlaying = false;
+            delayedVideo.pause();
             delayedVideo.src = '';
+            if (playNextTimeout) {
+                clearTimeout(playNextTimeout);
+                playNextTimeout = null;
+            }
+            statusText.innerHTML = '🗑️ تم مسح قائمة التشغيل';
+            updateVideoList();
+        }
+
+        // ========== تحديث قائمة التشغيل من الألبومات المرسلة ==========
+        function updatePlaylistFromAlbums() {
+            const newVideos = [];
+            albums.forEach(album => {
+                if (album.videoUrls) {
+                    album.videoUrls.forEach(url => {
+                        newVideos.push({
+                            url: url,
+                            caption: `ألبوم ${album.number}`,
+                            duration: 3
+                        });
+                    });
+                }
+            });
+            
+            if (newVideos.length > 0) {
+                videoQueue = [...videoQueue, ...newVideos];
+                receivedVideosCount.textContent = videoQueue.length;
+                videosCount.textContent = videoQueue.length + ' فيديو';
+                updateVideoList();
+            }
         }
 
         // ========== اختبار بوت تيليجرام ==========
@@ -874,6 +1160,10 @@
                 if (data.ok) {
                     botStatus.innerHTML = '✅ البوت متصل وجاهز للإرسال';
                     botStatus.style.color = '#4caf50';
+                    
+                    // جلب الفيديوهات تلقائياً عند الاتصال
+                    setTimeout(fetchTelegramVideos, 2000);
+                    
                     return true;
                 } else {
                     botStatus.innerHTML = '❌ فشل الاتصال بالبوت - تأكد من التوكن';
@@ -939,8 +1229,6 @@
                 stopLiveStream();
             }
             
-            stopDelaySystem();
-            
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 liveVideo.srcObject = null;
@@ -1001,9 +1289,6 @@
                 merchantOverlay.style.display = 'flex';
                 switchBtn.disabled = true;
                 switchCameraBtn.style.display = 'none';
-                
-                // بدء نظام التأخير
-                startDelaySystem();
                 
                 statusText.innerHTML = '🔴 البث المباشر نشط...';
                 
@@ -1165,19 +1450,38 @@
                 const result = await response.json();
                 
                 if (result.ok) {
+                    // حفظ معلومات الفيديو المرسل
+                    const videoUrls = currentAlbum.map((_, i) => 
+                        `https://api.telegram.org/file/bot${TELEGRAM.botToken}/videos/album${albumNumber}_${i+1}.mp4`
+                    );
+                    
                     albums.push({
                         number: albumNumber,
                         chunks: [...currentAlbum],
                         time: totalTime.textContent,
                         camera: cameraType.textContent,
                         actual: currentAlbum.length,
-                        delay: delayDuration
+                        delay: delayDuration,
+                        videoUrls: videoUrls
                     });
                     
                     albumsCount.textContent = albums.length;
                     updateTimeline();
                     
                     statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber} بنجاح!`;
+                    
+                    // إضافة الفيديو المرسل إلى قائمة التشغيل
+                    const newVideo = {
+                        fileId: `album${albumNumber}`,
+                        caption: `ألبوم ${albumNumber}`,
+                        duration: 3,
+                        url: videoUrls[0]
+                    };
+                    
+                    videoQueue.push(newVideo);
+                    receivedVideosCount.textContent = videoQueue.length;
+                    videosCount.textContent = videoQueue.length + ' فيديو';
+                    updateVideoList();
                     
                 } else {
                     throw new Error(result.description);
@@ -1193,7 +1497,6 @@
         // ========== إنهاء البث ==========
         async function stopLiveStream() {
             isLiveStreaming = false;
-            stopDelaySystem();
             
             if (currentAlbum.length > 0) {
                 await sendAlbum();
@@ -1232,6 +1535,11 @@
             alert(`📦 الألبوم ${album.number}\n⏱️ الوقت: ${album.time}\n🎬 المقاطع: ${album.actual}/3\n📸 الكاميرا: ${album.camera}\n⏱️ التأخير: ${album.delay} ثواني`);
         }
 
+        // ========== تحديث قائمة الفيديوهات ==========
+        function refreshVideos() {
+            fetchTelegramVideos();
+        }
+
         // ========== تهيئة الصفحة ==========
         window.onload = function() {
             testTelegramBot();
@@ -1240,9 +1548,11 @@
             document.getElementById('botTokenDisplay').textContent = TELEGRAM.botToken.substring(0, 20) + '...';
             document.getElementById('channelIdDisplay').textContent = TELEGRAM.channelId;
             
-            delayStatus.textContent = delayDuration + ' ثواني';
             delayValueDisplay.textContent = delayDuration + ' ثواني';
-            delayBadge.innerHTML = `⏱️ ${delayDuration} ثواني`;
+            delayBadge.innerHTML = `⏱️ تأخير ${delayDuration}ث`;
+            
+            // محاولة جلب الفيديوهات كل 30 ثانية
+            setInterval(fetchTelegramVideos, 30000);
         };
     </script>
 </body>
