@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 البومات ذكية 2 - ناردو برو</title>
+    <title>📹 البومات ذكية 2 - مع شاشة متأخرة</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -58,32 +58,62 @@
             margin: 10px 0;
         }
         
-        .video-container {
-            position: relative;
+        .dual-video-container {
+            display: flex;
+            gap: 10px;
             margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .video-wrapper {
+            flex: 1 1 calc(50% - 5px);
+            min-width: 200px;
+            position: relative;
             border-radius: 15px;
             overflow: hidden;
             border: 3px solid #ffd700;
             background: black;
-            min-height: 350px;
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
         }
         
-        video {
+        .video-wrapper video {
             width: 100%;
             height: auto;
             display: block;
             background: #1a1a1a;
-            min-height: 350px;
+            min-height: 200px;
             object-fit: cover;
         }
         
-        .front-camera {
-            transform: scaleX(-1);
+        .video-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffd700;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            z-index: 10;
+            border: 1px solid #ffd700;
         }
         
-        .back-camera {
-            transform: scaleX(1);
+        .delay-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ff0000;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            z-index: 10;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         
         .merchant-overlay {
@@ -109,8 +139,8 @@
             right: 10px;
             background: rgba(0, 0, 0, 0.7);
             color: white;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -119,7 +149,7 @@
             z-index: 20;
             border: 2px solid #ffd700;
             transition: all 0.3s;
-            font-size: 20px;
+            font-size: 16px;
         }
         
         .camera-switch-btn:hover {
@@ -486,39 +516,75 @@
         .danger-text {
             color: #da3633;
         }
+
+        .delay-control {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #1a1f2b;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .delay-control label {
+            margin: 0;
+            color: #ffd700;
+        }
+        
+        .delay-control input {
+            width: 80px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-store"></i> ألبومات ذكية 2</h1>
-            <p>@nardoo_merchant | استمرارية | مقاطع 4-6</p>
+            <p>@nardoo_merchant | بث متأخر 5 ثواني</p>
             <div class="telegram-badge">
-                <i class="fab fa-telegram"></i> الألبومات مجمعة في القناة
+                <i class="fab fa-telegram"></i> شاشة عرض موازية
             </div>
         </div>
 
-        <!-- فيديو الكاميرا -->
-        <div class="video-container">
-            <video id="video" autoplay playsinline></video>
-            
-            <div id="merchantOverlay" class="merchant-overlay" style="display: none;">
-                <i class="fas fa-store"></i>
-                <span>@nardoo_merchant</span>
-                <span style="background: #ffd700; color: black; padding: 2px 8px; border-radius: 12px;">تاجر</span>
+        <!-- شاشات العرض المزدوجة -->
+        <div class="dual-video-container">
+            <!-- الشاشة الرئيسية (بث مباشر) -->
+            <div class="video-wrapper">
+                <video id="liveVideo" autoplay playsinline></video>
+                <div class="video-label">
+                    <i class="fas fa-circle" style="color: #ff0000; font-size: 8px;"></i> مباشر
+                </div>
+                <div id="merchantOverlay" class="merchant-overlay" style="display: none;">
+                    <i class="fas fa-store"></i>
+                    <span>@nardoo_merchant</span>
+                </div>
+                <div class="camera-indicator" id="cameraIndicator">
+                    <i class="fas fa-camera"></i> <span id="cameraType">أمامية</span>
+                </div>
+                <div class="camera-switch-btn" onclick="switchCamera()" id="switchCameraBtn" style="display: none;">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
             </div>
-            
-            <div class="camera-indicator" id="cameraIndicator">
-                <i class="fas fa-camera"></i> <span id="cameraType">أمامية</span>
+
+            <!-- الشاشة المتأخرة (Delay 5s) -->
+            <div class="video-wrapper">
+                <video id="delayedVideo" autoplay playsinline></video>
+                <div class="video-label">
+                    <i class="fas fa-hourglass-half"></i> متأخر
+                </div>
+                <div class="delay-badge" id="delayBadge">⏱️ 5 ثواني</div>
             </div>
-            
-            <div class="live-indicator" id="liveIndicator" style="display: none;">
-                <i class="fas fa-circle"></i> بث مباشر <span id="liveTime">00:00</span>
-            </div>
-            
-            <div class="camera-switch-btn" onclick="switchCamera()" id="switchCameraBtn" style="display: none;">
-                <i class="fas fa-sync-alt"></i>
-            </div>
+        </div>
+
+        <!-- التحكم بالتأخير -->
+        <div class="delay-control">
+            <label><i class="fas fa-clock"></i> مدة التأخير (ثواني):</label>
+            <input type="number" id="delayDuration" min="1" max="30" value="5" step="1">
+            <button class="btn-switch" onclick="updateDelay()" style="padding: 8px; min-width: auto;">
+                <i class="fas fa-sync-alt"></i> تحديث
+            </button>
         </div>
 
         <!-- بطاقة التاجر -->
@@ -537,8 +603,8 @@
 
         <!-- باند الألبوم الذكي -->
         <div class="album-badge">
-            <i class="fas fa-layer-group"></i> ألبوم ذكي 2 | مقاطع 4-6 | استمرارية
-            <br><small>الحجم: 3 مقاطع (صغير جداً)</small>
+            <i class="fas fa-layer-group"></i> ألبوم ذكي 2 | بث متأخر 5ث
+            <br><small>شاشة رئيسية + شاشة مراقبة</small>
         </div>
 
         <!-- اختبار اتصال تيليجرام -->
@@ -560,21 +626,25 @@
                 <span class="stat-label"><i class="fas fa-video"></i> إجمالي المقاطع:</span>
                 <span class="stat-value" id="totalChunks">0</span>
             </div>
+            <div class="stat-row">
+                <span class="stat-label"><i class="fas fa-hourglass-half"></i> حالة التأخير:</span>
+                <span class="stat-value" id="delayStatus">5 ثواني</span>
+            </div>
         </div>
 
         <!-- تكوين الألبوم الذكي -->
         <div class="album-config-panel">
             <div class="config-row">
                 <span class="config-label"><i class="fas fa-cog"></i> نوع الألبوم:</span>
-                <span class="config-value">ذكي 2 - استمرارية</span>
+                <span class="config-value">ذكي 2 - مع تأخير</span>
             </div>
             <div class="config-row">
                 <span class="config-label"><i class="fas fa-ruler"></i> حجم الألبوم:</span>
                 <span class="config-value" id="albumSizeDisplay">3 مقاطع</span>
             </div>
             <div class="config-row">
-                <span class="config-label"><i class="fas fa-sort-amount-up"></i> تدرج المقاطع:</span>
-                <span class="config-value" id="chunksRange">4-6 مقاطع</span>
+                <span class="config-label"><i class="fas fa-hourglass-start"></i> تأخير العرض:</span>
+                <span class="config-value" id="delayValueDisplay">5 ثواني</span>
             </div>
         </div>
 
@@ -627,7 +697,7 @@
             <input type="text" id="productLink" value="https://t.me/nardoo_channel">
         </div>
 
-        <!-- إعدادات تيليجرام (قابلة للتعديل) -->
+        <!-- إعدادات تيليجرام -->
         <div class="album-config-panel">
             <div class="config-row">
                 <span class="config-label"><i class="fab fa-telegram"></i> توكن البوت:</span>
@@ -645,15 +715,15 @@
         </div>
 
         <div class="footer">
-            <span>ID: SMARTPFAK2J | 02:06:35 | ألبومات ذكية 2</span>
+            <span>ID: SMARTPFAK2J | شاشة عرض متأخرة 5ث</span>
         </div>
     </div>
 
     <script>
-        // ========== إعدادات تيليجرام (ضع بياناتك هنا) ==========
+        // ========== إعدادات تيليجرام ==========
         const TELEGRAM = {
-            botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0', // ضع توكن البوت الخاص بك هنا
-            channelId: '-1003822964890' // ضع معرف القناة الخاص بك هنا
+            botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
+            channelId: '-1003822964890'
         };
 
         // ========== معرف التاجر ==========
@@ -667,16 +737,23 @@
         let timerInterval = null;
         
         // ========== متغيرات الألبومات ==========
-        const ALBUM_MAX_SIZE = 3; // 3 مقاطع فقط
+        const ALBUM_MAX_SIZE = 3;
         let currentAlbum = [];
         let albums = [];
         let totalChunksCount = 0;
         
-        // الكاميرا - تبدأ أمامية
-        let currentFacingMode = 'user'; // 'user' أمامية، 'environment' خلفية
+        // الكاميرا
+        let currentFacingMode = 'user';
+        
+        // ========== نظام التأخير ==========
+        let delayDuration = 5; // 5 ثواني افتراضياً
+        let frameBuffer = []; // مخزن الإطارات المتأخرة
+        let isDelayActive = false;
+        let delayInterval = null;
         
         // عناصر DOM
-        const video = document.getElementById('video');
+        const liveVideo = document.getElementById('liveVideo');
+        const delayedVideo = document.getElementById('delayedVideo');
         const statusText = document.getElementById('statusText');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
@@ -684,8 +761,6 @@
         const stopLiveBtn = document.getElementById('stopLiveBtn');
         const switchBtn = document.getElementById('switchBtn');
         const switchCameraBtn = document.getElementById('switchCameraBtn');
-        const liveIndicator = document.getElementById('liveIndicator');
-        const liveTime = document.getElementById('liveTime');
         const cameraIndicator = document.getElementById('cameraIndicator');
         const cameraType = document.getElementById('cameraType');
         const totalTime = document.getElementById('totalTime');
@@ -695,6 +770,97 @@
         const albumsTimeline = document.getElementById('albumsTimeline');
         const merchantOverlay = document.getElementById('merchantOverlay');
         const botStatus = document.getElementById('botStatus');
+        const delayStatus = document.getElementById('delayStatus');
+        const delayValueDisplay = document.getElementById('delayValueDisplay');
+        const delayBadge = document.getElementById('delayBadge');
+        const delayDurationInput = document.getElementById('delayDuration');
+
+        // ========== تحديث التأخير ==========
+        function updateDelay() {
+            const newDelay = parseInt(delayDurationInput.value);
+            if (newDelay >= 1 && newDelay <= 30) {
+                delayDuration = newDelay;
+                delayStatus.textContent = delayDuration + ' ثواني';
+                delayValueDisplay.textContent = delayDuration + ' ثواني';
+                delayBadge.innerHTML = `⏱️ ${delayDuration} ثواني`;
+                
+                // إعادة تعيين المخزن المؤقت
+                frameBuffer = [];
+                console.log(`⏱️ تم تحديث التأخير إلى ${delayDuration} ثواني`);
+                
+                // إعادة تشغيل نظام التأخير إذا كان نشطاً
+                if (isDelayActive) {
+                    stopDelaySystem();
+                    startDelaySystem();
+                }
+            }
+        }
+
+        // ========== بدء نظام التأخير ==========
+        function startDelaySystem() {
+            if (!stream || !isLiveStreaming) return;
+            
+            isDelayActive = true;
+            
+            // إنشاء Canvas لالتقاط الإطارات
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // ضبط حجم Canvas ليتناسب مع الفيديو
+            canvas.width = 640;
+            canvas.height = 480;
+            
+            // بدء التقاط الإطارات
+            delayInterval = setInterval(() => {
+                if (!isDelayActive || !stream) return;
+                
+                // التقاط الإطار الحالي من الفيديو المباشر
+                ctx.drawImage(liveVideo, 0, 0, canvas.width, canvas.height);
+                
+                // تحويل الإطار إلى صورة
+                const frameData = canvas.toDataURL('image/jpeg', 0.7); // جودة 70%
+                
+                // إضافة الإطار إلى المخزن
+                frameBuffer.push(frameData);
+                
+                // التحقق من حجم المخزن (عدد الإطارات = التأخير × FPS)
+                // نفترض FPS ~ 30 إطار في الثانية
+                const maxFrames = delayDuration * 30;
+                if (frameBuffer.length > maxFrames) {
+                    // إزالة أقدم إطار
+                    frameBuffer.shift();
+                }
+                
+                // عرض الإطار المتأخر (أقدم إطار في المخزن)
+                if (frameBuffer.length > 0) {
+                    // اختيار الإطار المناسب حسب التأخير
+                    const frameIndex = Math.max(0, frameBuffer.length - (delayDuration * 30));
+                    if (frameIndex < frameBuffer.length) {
+                        const delayedFrame = frameBuffer[frameIndex];
+                        
+                        // تحويل الصورة إلى Blob ثم إلى URL
+                        fetch(delayedFrame)
+                            .then(res => res.blob())
+                            .then(blob => {
+                                const url = URL.createObjectURL(blob);
+                                delayedVideo.src = url;
+                                delayedVideo.play().catch(e => console.log('تأخير التشغيل:', e));
+                            });
+                    }
+                }
+            }, 33); // ~30 FPS
+        }
+
+        // ========== إيقاف نظام التأخير ==========
+        function stopDelaySystem() {
+            isDelayActive = false;
+            if (delayInterval) {
+                clearInterval(delayInterval);
+                delayInterval = null;
+            }
+            frameBuffer = [];
+            delayedVideo.src = '';
+        }
 
         // ========== اختبار بوت تيليجرام ==========
         async function testTelegramBot() {
@@ -736,24 +902,22 @@
                 };
                 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
-                video.srcObject = stream;
+                liveVideo.srcObject = stream;
                 
-                // التأكد من تشغيل الفيديو
-                await video.play();
+                await liveVideo.play();
                 
                 if (currentFacingMode === 'user') {
-                    video.classList.add('front-camera');
-                    video.classList.remove('back-camera');
+                    liveVideo.classList.add('front-camera');
+                    liveVideo.classList.remove('back-camera');
                     cameraType.textContent = 'أمامية';
                 } else {
-                    video.classList.add('back-camera');
-                    video.classList.remove('front-camera');
+                    liveVideo.classList.add('back-camera');
+                    liveVideo.classList.remove('front-camera');
                     cameraType.textContent = 'خلفية';
                 }
                 
                 cameraActive = true;
                 
-                // تحديث واجهة المستخدم
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-block';
                 startLiveBtn.disabled = false;
@@ -775,9 +939,11 @@
                 stopLiveStream();
             }
             
+            stopDelaySystem();
+            
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
+                liveVideo.srcObject = null;
                 stream = null;
                 cameraActive = false;
             }
@@ -789,7 +955,6 @@
             startLiveBtn.disabled = true;
             switchBtn.disabled = true;
             switchCameraBtn.style.display = 'none';
-            liveIndicator.style.display = 'none';
             merchantOverlay.style.display = 'none';
             
             statusText.innerHTML = '⏹️ الكاميرا متوقفة';
@@ -818,7 +983,6 @@
                 return;
             }
             
-            // اختبار البوت قبل البدء
             testTelegramBot().then(botOk => {
                 if (!botOk) {
                     if (!confirm('⚠️ البوت غير متصل، هل تريد المتابعة؟')) {
@@ -834,10 +998,12 @@
                 
                 startLiveBtn.style.display = 'none';
                 stopLiveBtn.style.display = 'inline-block';
-                liveIndicator.style.display = 'flex';
                 merchantOverlay.style.display = 'flex';
                 switchBtn.disabled = true;
                 switchCameraBtn.style.display = 'none';
+                
+                // بدء نظام التأخير
+                startDelaySystem();
                 
                 statusText.innerHTML = '🔴 البث المباشر نشط...';
                 
@@ -846,7 +1012,6 @@
                     const minutes = Math.floor(totalSeconds / 60);
                     const seconds = totalSeconds % 60;
                     totalTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                    liveTime.textContent = totalTime.textContent;
                 }, 1000);
                 
                 updateCounterDisplay();
@@ -949,7 +1114,6 @@
                     updateCounterDisplay();
                     updateTimeline();
                     
-                    // إذا اكتمل الألبوم (3 مقاطع)
                     if (currentAlbum.length === ALBUM_MAX_SIZE) {
                         await sendAlbum();
                         currentAlbum = [];
@@ -975,28 +1139,24 @@
             try {
                 statusText.innerHTML = `📤 جاري إرسال الألبوم ${albumNumber} (${currentAlbum.length}/3)...`;
                 
-                // تحضير مجموعة الوسائط
                 const mediaGroup = [];
                 for (let i = 0; i < currentAlbum.length; i++) {
                     mediaGroup.push({
                         type: 'video',
                         media: `attach://video${i}`,
-                        caption: i === 0 ? `🎬 **ألبوم ذكي 2 - ${albumNumber}**\n\n🏪 التاجر: ${MERCHANT_ID}\n📸 الكاميرا: ${cameraType.textContent}\n⏱️ الوقت: ${totalTime.textContent}\n📊 المقاطع: ${currentAlbum.length}/3\n🔹 النوع: استمرارية\n\n📝 ${description}\n\n🔗 رابط المنتج: ${productLink}` : '',
+                        caption: i === 0 ? `🎬 **ألبوم ذكي 2 - ${albumNumber}**\n\n🏪 التاجر: ${MERCHANT_ID}\n📸 الكاميرا: ${cameraType.textContent}\n⏱️ الوقت: ${totalTime.textContent}\n📊 المقاطع: ${currentAlbum.length}/3\n⏱️ التأخير: ${delayDuration} ثواني\n🔹 النوع: بث متأخر\n\n📝 ${description}\n\n🔗 رابط المنتج: ${productLink}` : '',
                         parse_mode: 'Markdown'
                     });
                 }
                 
-                // تحضير FormData للإرسال
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('media', JSON.stringify(mediaGroup));
                 
-                // إضافة ملفات الفيديو
                 currentAlbum.forEach((chunk, index) => {
                     formData.append(`video${index}`, chunk, `album${albumNumber}_${index+1}.mp4`);
                 });
                 
-                // إرسال إلى تيليجرام
                 const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMediaGroup`, {
                     method: 'POST',
                     body: formData
@@ -1005,25 +1165,19 @@
                 const result = await response.json();
                 
                 if (result.ok) {
-                    // حفظ الألبوم في السجل
                     albums.push({
                         number: albumNumber,
                         chunks: [...currentAlbum],
                         time: totalTime.textContent,
                         camera: cameraType.textContent,
-                        actual: currentAlbum.length
+                        actual: currentAlbum.length,
+                        delay: delayDuration
                     });
                     
                     albumsCount.textContent = albums.length;
                     updateTimeline();
                     
                     statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber} بنجاح!`;
-                    
-                    // تشغيل صوت نجاح
-                    try {
-                        const audio = new Audio('data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoAAACAgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f38=');
-                        audio.play();
-                    } catch (e) {}
                     
                 } else {
                     throw new Error(result.description);
@@ -1032,15 +1186,14 @@
             } catch (error) {
                 statusText.innerHTML = '❌ فشل إرسال الألبوم: ' + error.message;
                 console.error('Send error:', error);
-                
-                // عرض تفاصيل الخطأ
-                alert('❌ خطأ في الإرسال:\n' + error.message + '\n\nتأكد من:\n1. توكن البوت صحيح\n2. القناة معرف صحيح\n3. البوت مشرف في القناة');
+                alert('❌ خطأ في الإرسال:\n' + error.message);
             }
         }
 
         // ========== إنهاء البث ==========
         async function stopLiveStream() {
             isLiveStreaming = false;
+            stopDelaySystem();
             
             if (currentAlbum.length > 0) {
                 await sendAlbum();
@@ -1050,21 +1203,19 @@
             
             startLiveBtn.style.display = 'inline-block';
             stopLiveBtn.style.display = 'none';
-            liveIndicator.style.display = 'none';
             merchantOverlay.style.display = 'none';
             switchBtn.disabled = false;
             switchCameraBtn.style.display = 'flex';
             
             statusText.innerHTML = '⏹️ تم إنهاء البث';
             
-            // إرسال ملخص البث
             try {
                 await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: TELEGRAM.channelId,
-                        text: `📊 **ملخص البث - ألبومات ذكية 2**\n\n🏪 التاجر: ${MERCHANT_ID}\n⏱️ المدة: ${totalTime.textContent}\n📦 الألبومات: ${albums.length}\n🎬 المقاطع: ${totalChunksCount}\n📸 الكاميرا: ${cameraType.textContent}\n🔹 النوع: استمرارية`,
+                        text: `📊 **ملخص البث - ألبومات ذكية 2**\n\n🏪 التاجر: ${MERCHANT_ID}\n⏱️ المدة: ${totalTime.textContent}\n📦 الألبومات: ${albums.length}\n🎬 المقاطع: ${totalChunksCount}\n⏱️ التأخير: ${delayDuration} ثواني\n📸 الكاميرا: ${cameraType.textContent}\n🔹 النوع: بث متأخر`,
                         parse_mode: 'Markdown'
                     })
                 });
@@ -1078,7 +1229,7 @@
         // ========== عرض تفاصيل ألبوم ==========
         function viewAlbum(index) {
             const album = albums[index];
-            alert(`📦 الألبوم ${album.number}\n⏱️ الوقت: ${album.time}\n🎬 المقاطع: ${album.actual}/3\n📸 الكاميرا: ${album.camera}`);
+            alert(`📦 الألبوم ${album.number}\n⏱️ الوقت: ${album.time}\n🎬 المقاطع: ${album.actual}/3\n📸 الكاميرا: ${album.camera}\n⏱️ التأخير: ${album.delay} ثواني`);
         }
 
         // ========== تهيئة الصفحة ==========
@@ -1086,366 +1237,13 @@
             testTelegramBot();
             updateCounterDisplay();
             
-            // عرض معلومات الاتصال
             document.getElementById('botTokenDisplay').textContent = TELEGRAM.botToken.substring(0, 20) + '...';
             document.getElementById('channelIdDisplay').textContent = TELEGRAM.channelId;
+            
+            delayStatus.textContent = delayDuration + ' ثواني';
+            delayValueDisplay.textContent = delayDuration + ' ثواني';
+            delayBadge.innerHTML = `⏱️ ${delayDuration} ثواني`;
         };
-    </script>
-
-    <!-- ===== مشغل تليجرام الذكي - تشغيل تلقائي متسلسل ===== -->
-    <script>
-    (function() {
-        'use strict';
-        
-        let currentVideoIndex = 0;
-        let videoElements = [];
-        let isPlaying = false;
-        let autoNextEnabled = true;
-        let repeatAll = false;
-        
-        // دالة البحث عن جميع الفيديوهات في الألبوم
-        function findVideosInAlbum() {
-            // البحث عن الفيديوهات في الألبوم الحالي
-            const videos = Array.from(document.querySelectorAll('video'));
-            
-            // فلترة الفيديوهات المرئية فقط (الخاصة بالألبوم)
-            const visibleVideos = videos.filter(v => {
-                const rect = v.getBoundingClientRect();
-                return rect.width > 100 && rect.height > 100; // فيديوهات بحجم معقول
-            });
-            
-            return visibleVideos;
-        }
-        
-        // دالة تحديث قائمة الفيديوهات
-        function updateVideoList() {
-            videoElements = findVideosInAlbum();
-            if (videoElements.length > 0) {
-                console.log(`✅ تم العثور على ${videoElements.length} فيديو في الألبوم`);
-                
-                // إزالة المستمعين القدامى (لتجنب التكرار)
-                videoElements.forEach((video, index) => {
-                    // إزالة المستمع القديم إذا كان موجوداً
-                    const oldListener = video._endedListener;
-                    if (oldListener) {
-                        video.removeEventListener('ended', oldListener);
-                    }
-                    
-                    video.setAttribute('data-tv-index', index);
-                    
-                    // إنشاء مستمع جديد
-                    const endedListener = function() {
-                        console.log(`🎬 انتهى الفيديو ${index + 1}`);
-                        if (autoNextEnabled) {
-                            playNextVideo();
-                        }
-                    };
-                    
-                    // حفظ المستمع لإزالته لاحقاً
-                    video._endedListener = endedListener;
-                    
-                    // إضافة مستمع الأحداث للفيديو
-                    video.addEventListener('ended', endedListener);
-                    
-                    // عند بدء التشغيل
-                    video.addEventListener('play', function() {
-                        isPlaying = true;
-                        currentVideoIndex = parseInt(this.getAttribute('data-tv-index')) || 0;
-                        console.log(`▶️ جارٍ تشغيل الفيديو ${currentVideoIndex + 1}`);
-                        updateControlInfo();
-                    });
-                    
-                    // عند الإيقاف المؤقت
-                    video.addEventListener('pause', function() {
-                        isPlaying = false;
-                    });
-                });
-            }
-            return videoElements;
-        }
-        
-        // دالة تشغيل الفيديو التالي
-        function playNextVideo() {
-            if (!autoNextEnabled) return;
-            
-            const nextIndex = currentVideoIndex + 1;
-            if (nextIndex < videoElements.length) {
-                console.log(`⏭️ تشغيل الفيديو التالي (${nextIndex + 1}/${videoElements.length})`);
-                
-                // إيقاف الفيديو الحالي
-                if (videoElements[currentVideoIndex]) {
-                    videoElements[currentVideoIndex].pause();
-                }
-                
-                // تشغيل الفيديو التالي
-                setTimeout(() => {
-                    if (videoElements[nextIndex]) {
-                        videoElements[nextIndex].play()
-                            .then(() => {
-                                currentVideoIndex = nextIndex;
-                                updateControlInfo();
-                            })
-                            .catch(e => console.log('❌ فشل تشغيل التالي:', e));
-                    }
-                }, 500); // تأخير بسيط للانتقال السلس
-            } else {
-                console.log('🏁 انتهى الألبوم بالكامل');
-                
-                // إذا كان عندك تشغيل تكراري
-                if (repeatAll) {
-                    playVideoByIndex(0);
-                }
-            }
-        }
-        
-        // دالة تشغيل الفيديو السابق
-        function playPreviousVideo() {
-            const prevIndex = currentVideoIndex - 1;
-            if (prevIndex >= 0) {
-                playVideoByIndex(prevIndex);
-            }
-        }
-        
-        // دالة تشغيل فيديو برقم محدد
-        function playVideoByIndex(index) {
-            if (index >= 0 && index < videoElements.length) {
-                // إيقاف الكل
-                videoElements.forEach(v => v.pause());
-                
-                // تشغيل المطلوب
-                setTimeout(() => {
-                    videoElements[index].play()
-                        .then(() => {
-                            currentVideoIndex = index;
-                            updateControlInfo();
-                        })
-                        .catch(e => console.log('❌ فشل التشغيل:', e));
-                }, 200);
-            }
-        }
-        
-        // دالة مراقبة التغييرات في الصفحة
-        function observePageChanges() {
-            // مراقبة إضافة فيديوهات جديدة
-            const observer = new MutationObserver(function(mutations) {
-                let shouldUpdate = false;
-                
-                mutations.forEach(mutation => {
-                    if (mutation.addedNodes.length > 0) {
-                        mutation.addedNodes.forEach(node => {
-                            if (node.nodeName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
-                                shouldUpdate = true;
-                            }
-                        });
-                    }
-                });
-                
-                if (shouldUpdate) {
-                    setTimeout(updateVideoList, 500);
-                }
-            });
-            
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-            
-            console.log('👀 جاري مراقبة التغييرات في الصفحة...');
-        }
-        
-        // إنشاء واجهة تحكم
-        function createControlPanel() {
-            // التحقق من وجود لوحة تحكم مسبقاً
-            if (document.getElementById('telegram-tv-controls')) return;
-            
-            const panel = document.createElement('div');
-            panel.id = 'telegram-tv-controls';
-            panel.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 15px 25px;
-                border-radius: 50px;
-                z-index: 10000;
-                font-family: Arial, sans-serif;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                display: flex;
-                gap: 15px;
-                align-items: center;
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255,255,255,0.2);
-                transition: all 0.3s ease;
-                cursor: move;
-            `;
-            
-            // معلومات التشغيل
-            const info = document.createElement('span');
-            info.id = 'tv-info';
-            info.innerHTML = `🎬 <span id="current-num">0</span>/<span id="total-num">0</span>`;
-            
-            // أزرار التحكم
-            const prevBtn = createButton('⏮️', 'السابق', () => playPreviousVideo());
-            const playPauseBtn = createButton('⏯️', 'تشغيل/إيقاف', () => togglePlayPause());
-            const nextBtn = createButton('⏭️', 'التالي', () => playNextVideo());
-            
-            // زر التشغيل التلقائي
-            const autoBtn = document.createElement('button');
-            autoBtn.innerHTML = '🔁 تلقائي';
-            autoBtn.style.cssText = `
-                background: ${autoNextEnabled ? '#4CAF50' : '#f44336'};
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 20px;
-                cursor: pointer;
-                font-size: 12px;
-                transition: background 0.3s;
-            `;
-            autoBtn.onclick = () => {
-                autoNextEnabled = !autoNextEnabled;
-                autoBtn.style.background = autoNextEnabled ? '#4CAF50' : '#f44336';
-                console.log(`🔄 التشغيل التلقائي: ${autoNextEnabled ? 'مفعل' : 'معطل'}`);
-            };
-            
-            // إضافة العناصر
-            panel.appendChild(info);
-            panel.appendChild(prevBtn);
-            panel.appendChild(playPauseBtn);
-            panel.appendChild(nextBtn);
-            panel.appendChild(autoBtn);
-            
-            document.body.appendChild(panel);
-            
-            // تحديث المعلومات
-            updateControlInfo();
-            
-            // جعل اللوحة قابلة للسحب
-            makeDraggable(panel);
-        }
-        
-        function createButton(text, title, clickHandler) {
-            const btn = document.createElement('button');
-            btn.innerHTML = text;
-            btn.title = title;
-            btn.style.cssText = `
-                background: rgba(255,255,255,0.2);
-                color: white;
-                border: none;
-                padding: 8px 12px;
-                border-radius: 25px;
-                cursor: pointer;
-                font-size: 16px;
-                transition: all 0.3s ease;
-            `;
-            btn.onmouseover = () => btn.style.background = 'rgba(255,255,255,0.3)';
-            btn.onmouseout = () => btn.style.background = 'rgba(255,255,255,0.2)';
-            btn.onclick = clickHandler;
-            return btn;
-        }
-        
-        function togglePlayPause() {
-            if (videoElements[currentVideoIndex]) {
-                if (videoElements[currentVideoIndex].paused) {
-                    videoElements[currentVideoIndex].play();
-                } else {
-                    videoElements[currentVideoIndex].pause();
-                }
-            }
-        }
-        
-        function updateControlInfo() {
-            setInterval(() => {
-                const totalSpan = document.getElementById('total-num');
-                const currentSpan = document.getElementById('current-num');
-                if (totalSpan && currentSpan) {
-                    totalSpan.textContent = videoElements.length;
-                    currentSpan.textContent = videoElements.length > 0 ? currentVideoIndex + 1 : 0;
-                }
-            }, 1000);
-        }
-        
-        function makeDraggable(element) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            element.onmousedown = dragMouseDown;
-            
-            function dragMouseDown(e) {
-                e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            }
-            
-            function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                element.style.top = (element.offsetTop - pos2) + "px";
-                element.style.left = (element.offsetLeft - pos1) + "px";
-                element.style.right = "auto";
-                element.style.bottom = "auto";
-            }
-            
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            }
-        }
-        
-        // تشغيل الفيديو الأول تلقائياً عند تحميل الألبوم
-        function autoPlayFirstVideo() {
-            setTimeout(() => {
-                if (videoElements.length > 0) {
-                    console.log('🎯 محاولة تشغيل الفيديو الأول تلقائياً');
-                    
-                    // بعض المتصفحات تمنع التشغيل التلقائي، نحاول بطريقة ذكية
-                    const playPromise = videoElements[0].play();
-                    
-                    if (playPromise !== undefined) {
-                        playPromise
-                            .then(() => {
-                                console.log('✅ بدأ التشغيل التلقائي');
-                                currentVideoIndex = 0;
-                                updateControlInfo();
-                            })
-                            .catch(error => {
-                                console.log('⚠️ لا يمكن التشغيل التلقائي، انتظر تفاعل المستخدم');
-                            });
-                    }
-                }
-            }, 1500);
-        }
-        
-        // تهيئة كل شيء
-        function init() {
-            console.log('🎬 بدء تشغيل مشغل تليجرام TV الذكي...');
-            
-            // تحديث قائمة الفيديوهات
-            updateVideoList();
-            
-            // مراقبة التغييرات
-            observePageChanges();
-            
-            // إنشاء لوحة التحكم
-            createControlPanel();
-            
-            // محاولة التشغيل التلقائي
-            autoPlayFirstVideo();
-            
-            console.log('✅ جاهز! استخدم لوحة التحكم في أسفل اليمين');
-        }
-        
-        // بدء التشغيل بعد تحميل الصفحة
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-    })();
     </script>
 </body>
 </html>
