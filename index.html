@@ -1091,5 +1091,361 @@
             document.getElementById('channelIdDisplay').textContent = TELEGRAM.channelId;
         };
     </script>
+
+    <!-- ===== مشغل تليجرام الذكي - تشغيل تلقائي متسلسل ===== -->
+    <script>
+    (function() {
+        'use strict';
+        
+        let currentVideoIndex = 0;
+        let videoElements = [];
+        let isPlaying = false;
+        let autoNextEnabled = true;
+        let repeatAll = false;
+        
+        // دالة البحث عن جميع الفيديوهات في الألبوم
+        function findVideosInAlbum() {
+            // البحث عن الفيديوهات في الألبوم الحالي
+            const videos = Array.from(document.querySelectorAll('video'));
+            
+            // فلترة الفيديوهات المرئية فقط (الخاصة بالألبوم)
+            const visibleVideos = videos.filter(v => {
+                const rect = v.getBoundingClientRect();
+                return rect.width > 100 && rect.height > 100; // فيديوهات بحجم معقول
+            });
+            
+            return visibleVideos;
+        }
+        
+        // دالة تحديث قائمة الفيديوهات
+        function updateVideoList() {
+            videoElements = findVideosInAlbum();
+            if (videoElements.length > 0) {
+                console.log(`✅ تم العثور على ${videoElements.length} فيديو في الألبوم`);
+                
+                // إزالة المستمعين القدامى (لتجنب التكرار)
+                videoElements.forEach((video, index) => {
+                    // إزالة المستمع القديم إذا كان موجوداً
+                    const oldListener = video._endedListener;
+                    if (oldListener) {
+                        video.removeEventListener('ended', oldListener);
+                    }
+                    
+                    video.setAttribute('data-tv-index', index);
+                    
+                    // إنشاء مستمع جديد
+                    const endedListener = function() {
+                        console.log(`🎬 انتهى الفيديو ${index + 1}`);
+                        if (autoNextEnabled) {
+                            playNextVideo();
+                        }
+                    };
+                    
+                    // حفظ المستمع لإزالته لاحقاً
+                    video._endedListener = endedListener;
+                    
+                    // إضافة مستمع الأحداث للفيديو
+                    video.addEventListener('ended', endedListener);
+                    
+                    // عند بدء التشغيل
+                    video.addEventListener('play', function() {
+                        isPlaying = true;
+                        currentVideoIndex = parseInt(this.getAttribute('data-tv-index')) || 0;
+                        console.log(`▶️ جارٍ تشغيل الفيديو ${currentVideoIndex + 1}`);
+                        updateControlInfo();
+                    });
+                    
+                    // عند الإيقاف المؤقت
+                    video.addEventListener('pause', function() {
+                        isPlaying = false;
+                    });
+                });
+            }
+            return videoElements;
+        }
+        
+        // دالة تشغيل الفيديو التالي
+        function playNextVideo() {
+            if (!autoNextEnabled) return;
+            
+            const nextIndex = currentVideoIndex + 1;
+            if (nextIndex < videoElements.length) {
+                console.log(`⏭️ تشغيل الفيديو التالي (${nextIndex + 1}/${videoElements.length})`);
+                
+                // إيقاف الفيديو الحالي
+                if (videoElements[currentVideoIndex]) {
+                    videoElements[currentVideoIndex].pause();
+                }
+                
+                // تشغيل الفيديو التالي
+                setTimeout(() => {
+                    if (videoElements[nextIndex]) {
+                        videoElements[nextIndex].play()
+                            .then(() => {
+                                currentVideoIndex = nextIndex;
+                                updateControlInfo();
+                            })
+                            .catch(e => console.log('❌ فشل تشغيل التالي:', e));
+                    }
+                }, 500); // تأخير بسيط للانتقال السلس
+            } else {
+                console.log('🏁 انتهى الألبوم بالكامل');
+                
+                // إذا كان عندك تشغيل تكراري
+                if (repeatAll) {
+                    playVideoByIndex(0);
+                }
+            }
+        }
+        
+        // دالة تشغيل الفيديو السابق
+        function playPreviousVideo() {
+            const prevIndex = currentVideoIndex - 1;
+            if (prevIndex >= 0) {
+                playVideoByIndex(prevIndex);
+            }
+        }
+        
+        // دالة تشغيل فيديو برقم محدد
+        function playVideoByIndex(index) {
+            if (index >= 0 && index < videoElements.length) {
+                // إيقاف الكل
+                videoElements.forEach(v => v.pause());
+                
+                // تشغيل المطلوب
+                setTimeout(() => {
+                    videoElements[index].play()
+                        .then(() => {
+                            currentVideoIndex = index;
+                            updateControlInfo();
+                        })
+                        .catch(e => console.log('❌ فشل التشغيل:', e));
+                }, 200);
+            }
+        }
+        
+        // دالة مراقبة التغييرات في الصفحة
+        function observePageChanges() {
+            // مراقبة إضافة فيديوهات جديدة
+            const observer = new MutationObserver(function(mutations) {
+                let shouldUpdate = false;
+                
+                mutations.forEach(mutation => {
+                    if (mutation.addedNodes.length > 0) {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeName === 'VIDEO' || (node.querySelector && node.querySelector('video'))) {
+                                shouldUpdate = true;
+                            }
+                        });
+                    }
+                });
+                
+                if (shouldUpdate) {
+                    setTimeout(updateVideoList, 500);
+                }
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            console.log('👀 جاري مراقبة التغييرات في الصفحة...');
+        }
+        
+        // إنشاء واجهة تحكم
+        function createControlPanel() {
+            // التحقق من وجود لوحة تحكم مسبقاً
+            if (document.getElementById('telegram-tv-controls')) return;
+            
+            const panel = document.createElement('div');
+            panel.id = 'telegram-tv-controls';
+            panel.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 50px;
+                z-index: 10000;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.2);
+                transition: all 0.3s ease;
+                cursor: move;
+            `;
+            
+            // معلومات التشغيل
+            const info = document.createElement('span');
+            info.id = 'tv-info';
+            info.innerHTML = `🎬 <span id="current-num">0</span>/<span id="total-num">0</span>`;
+            
+            // أزرار التحكم
+            const prevBtn = createButton('⏮️', 'السابق', () => playPreviousVideo());
+            const playPauseBtn = createButton('⏯️', 'تشغيل/إيقاف', () => togglePlayPause());
+            const nextBtn = createButton('⏭️', 'التالي', () => playNextVideo());
+            
+            // زر التشغيل التلقائي
+            const autoBtn = document.createElement('button');
+            autoBtn.innerHTML = '🔁 تلقائي';
+            autoBtn.style.cssText = `
+                background: ${autoNextEnabled ? '#4CAF50' : '#f44336'};
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 12px;
+                transition: background 0.3s;
+            `;
+            autoBtn.onclick = () => {
+                autoNextEnabled = !autoNextEnabled;
+                autoBtn.style.background = autoNextEnabled ? '#4CAF50' : '#f44336';
+                console.log(`🔄 التشغيل التلقائي: ${autoNextEnabled ? 'مفعل' : 'معطل'}`);
+            };
+            
+            // إضافة العناصر
+            panel.appendChild(info);
+            panel.appendChild(prevBtn);
+            panel.appendChild(playPauseBtn);
+            panel.appendChild(nextBtn);
+            panel.appendChild(autoBtn);
+            
+            document.body.appendChild(panel);
+            
+            // تحديث المعلومات
+            updateControlInfo();
+            
+            // جعل اللوحة قابلة للسحب
+            makeDraggable(panel);
+        }
+        
+        function createButton(text, title, clickHandler) {
+            const btn = document.createElement('button');
+            btn.innerHTML = text;
+            btn.title = title;
+            btn.style.cssText = `
+                background: rgba(255,255,255,0.2);
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 25px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: all 0.3s ease;
+            `;
+            btn.onmouseover = () => btn.style.background = 'rgba(255,255,255,0.3)';
+            btn.onmouseout = () => btn.style.background = 'rgba(255,255,255,0.2)';
+            btn.onclick = clickHandler;
+            return btn;
+        }
+        
+        function togglePlayPause() {
+            if (videoElements[currentVideoIndex]) {
+                if (videoElements[currentVideoIndex].paused) {
+                    videoElements[currentVideoIndex].play();
+                } else {
+                    videoElements[currentVideoIndex].pause();
+                }
+            }
+        }
+        
+        function updateControlInfo() {
+            setInterval(() => {
+                const totalSpan = document.getElementById('total-num');
+                const currentSpan = document.getElementById('current-num');
+                if (totalSpan && currentSpan) {
+                    totalSpan.textContent = videoElements.length;
+                    currentSpan.textContent = videoElements.length > 0 ? currentVideoIndex + 1 : 0;
+                }
+            }, 1000);
+        }
+        
+        function makeDraggable(element) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            element.onmousedown = dragMouseDown;
+            
+            function dragMouseDown(e) {
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+            
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.right = "auto";
+                element.style.bottom = "auto";
+            }
+            
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+        
+        // تشغيل الفيديو الأول تلقائياً عند تحميل الألبوم
+        function autoPlayFirstVideo() {
+            setTimeout(() => {
+                if (videoElements.length > 0) {
+                    console.log('🎯 محاولة تشغيل الفيديو الأول تلقائياً');
+                    
+                    // بعض المتصفحات تمنع التشغيل التلقائي، نحاول بطريقة ذكية
+                    const playPromise = videoElements[0].play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                console.log('✅ بدأ التشغيل التلقائي');
+                                currentVideoIndex = 0;
+                                updateControlInfo();
+                            })
+                            .catch(error => {
+                                console.log('⚠️ لا يمكن التشغيل التلقائي، انتظر تفاعل المستخدم');
+                            });
+                    }
+                }
+            }, 1500);
+        }
+        
+        // تهيئة كل شيء
+        function init() {
+            console.log('🎬 بدء تشغيل مشغل تليجرام TV الذكي...');
+            
+            // تحديث قائمة الفيديوهات
+            updateVideoList();
+            
+            // مراقبة التغييرات
+            observePageChanges();
+            
+            // إنشاء لوحة التحكم
+            createControlPanel();
+            
+            // محاولة التشغيل التلقائي
+            autoPlayFirstVideo();
+            
+            console.log('✅ جاهز! استخدم لوحة التحكم في أسفل اليمين');
+        }
+        
+        // بدء التشغيل بعد تحميل الصفحة
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+    </script>
 </body>
 </html>
