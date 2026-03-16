@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 البث المباشر - تأخير 5 ثواني فقط</title>
+    <title>📹 البث المباشر - نظام متكامل</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -535,6 +535,7 @@
             border-radius: 8px;
             color: white;
             cursor: pointer;
+            transition: all 0.3s;
         }
         
         .reel-action:hover {
@@ -570,17 +571,30 @@
             font-size: 12px;
             border: 1px solid #ffd700;
         }
+        
+        /* رسائل الخطأ */
+        .error-message {
+            background: #da3633;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- الهيدر -->
         <div class="header">
-            <h1>📹 البث المباشر - تأخير 5 ثواني</h1>
+            <h1>📹 البث المباشر - نظام متكامل</h1>
             <div class="merchant-badge">
                 <i class="fas fa-store"></i> @nardoo_merchant
             </div>
         </div>
+
+        <!-- رسالة الخطأ -->
+        <div class="error-message" id="errorMessage"></div>
 
         <!-- منطقة البث المزدوجة -->
         <div class="stream-grid">
@@ -687,16 +701,15 @@
             <!-- الإعدادات -->
             <div class="settings-grid">
                 <div class="setting-item">
-                    <label>⏱️ مدة المقطع (تأخير البث)</label>
+                    <label>⏱️ مدة المقطع</label>
                     <select id="chunkDuration" onchange="updateLatency()">
-                        <option value="3">3 ثواني (فوري)</option>
-                        <option value="5" selected>5 ثواني (مثالي)</option>
+                        <option value="3">3 ثواني</option>
+                        <option value="5" selected>5 ثواني</option>
                         <option value="10">10 ثواني</option>
-                        <option value="15">15 ثانية</option>
                     </select>
                 </div>
                 <div class="setting-item">
-                    <label>📦 عدد المقاطع</label>
+                    <label>📦 حجم الألبوم</label>
                     <select id="albumSize">
                         <option value="1" selected>1 مقطع (فوري)</option>
                         <option value="2">2 مقاطع</option>
@@ -733,9 +746,9 @@
             <div class="timeline-header">
                 <h3><i class="fas fa-chart-line"></i> المخطط الزمني</h3>
                 <div class="timeline-controls">
-                    <button class="btn btn-switch" onclick="startRealTimeSimulation()" style="padding:8px 15px;">متزامن</button>
-                    <button class="btn btn-switch" onclick="startAcceleratedSimulation()" style="padding:8px 15px;">متسارع</button>
-                    <button class="btn btn-danger" onclick="stopSimulation()" style="padding:8px 15px;">إيقاف</button>
+                    <button class="btn btn-switch" onclick="startRealTimeSimulation()">متزامن</button>
+                    <button class="btn btn-switch" onclick="startAcceleratedSimulation()">متسارع</button>
+                    <button class="btn btn-danger" onclick="stopSimulation()">إيقاف</button>
                 </div>
             </div>
             <div class="timeline-grid" id="timelineGrid"></div>
@@ -759,7 +772,7 @@
             <span id="systemTime"></span>
         </div>
 
-        <div class="footer">@nardoo_merchant | تأخير 5 ثواني | جلب تلقائي كل 3 ثواني</div>
+        <div class="footer">@nardoo_merchant | نظام بث متكامل</div>
     </div>
 
     <script>
@@ -791,6 +804,7 @@
         const liveVideo = document.getElementById('liveVideo');
         const simulatedVideo = document.getElementById('simulatedVideo');
         const statusText = document.getElementById('statusText');
+        const errorMessage = document.getElementById('errorMessage');
         const liveIndicator = document.getElementById('liveIndicator');
         const simulateIndicator = document.getElementById('simulateIndicator');
         const cameraType = document.getElementById('cameraType');
@@ -812,6 +826,15 @@
         const videoList = document.getElementById('videoList');
         const timelineGrid = document.getElementById('timelineGrid');
         const systemTime = document.getElementById('systemTime');
+
+        // ========== عرض الخطأ ==========
+        function showError(msg) {
+            errorMessage.style.display = 'block';
+            errorMessage.textContent = '❌ ' + msg;
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
 
         // ========== تحديث وقت النظام ==========
         setInterval(() => {
@@ -843,8 +866,16 @@
             try {
                 statusText.innerHTML = '🔄 تشغيل الكاميرا...';
                 
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('المتصفح لا يدعم الكاميرا');
+                }
+                
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode },
+                    video: { 
+                        facingMode: currentFacingMode,
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
                     audio: true
                 });
                 
@@ -859,18 +890,22 @@
                 
                 statusText.innerHTML = '✅ الكاميرا جاهزة';
                 
-                // بدء الجلب التلقائي كل 3 ثواني
+                // بدء الجلب التلقائي
                 startAutoFetch();
                 
             } catch (err) {
-                statusText.innerHTML = '❌ خطأ: ' + err.message;
+                showError(err.message);
+                statusText.innerHTML = '❌ خطأ في تشغيل الكاميرا';
             }
         };
 
         // ========== إيقاف الكاميرا ==========
         window.stopCamera = function() {
             if (isLiveStreaming) stopLiveStream();
-            if (stream) stream.getTracks().forEach(t => t.stop());
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
             
             cameraActive = false;
             liveVideo.srcObject = null;
@@ -893,7 +928,10 @@
 
         // ========== بدء البث المباشر ==========
         window.startLiveStream = function() {
-            if (!cameraActive) return;
+            if (!cameraActive) {
+                showError('شغل الكاميرا أولاً');
+                return;
+            }
             
             isLiveStreaming = true;
             totalSeconds = 0;
@@ -939,7 +977,14 @@
             const albumSize = parseInt(document.getElementById('albumSize').value);
             
             recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
+            
+            try {
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9,opus'
+                });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
             
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) recordedChunks.push(e.data);
@@ -949,7 +994,6 @@
                 if (recordedChunks.length > 0 && isLiveStreaming) {
                     const blob = new Blob(recordedChunks, { type: 'video/webm' });
                     
-                    // إذا كان حجم الألبوم 1، نرسل فوراً
                     if (albumSize === 1) {
                         await sendSingleVideo(blob);
                     } else {
@@ -960,7 +1004,7 @@
                         }
                     }
                     
-                    setTimeout(startRecording, 500);
+                    setTimeout(startRecording, 100);
                 }
             };
             
@@ -972,18 +1016,18 @@
             }, duration);
         }
 
-        // ========== إرسال فيديو منفرد (أسرع) ==========
+        // ========== إرسال فيديو منفرد ==========
         async function sendSingleVideo(blob) {
             try {
                 const description = document.getElementById('videoDescription').value;
                 const productLink = document.getElementById('productLink').value;
                 const now = new Date();
-                const timeStr = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
                 
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', blob, `video_${Date.now()}.mp4`);
-                formData.append('caption', `🎥 بث فوري من ${MERCHANT_ID}\n⏱️ ${timeStr}\n📝 ${description}\n🔗 ${productLink}`);
+                formData.append('caption', `🎥 بث من ${MERCHANT_ID}\n⏱️ ${timeStr}\n📝 ${description}\n🔗 ${productLink}`);
                 
                 const res = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendVideo`, {
                     method: 'POST',
@@ -995,9 +1039,11 @@
                 if (result.ok) {
                     statusText.innerHTML = '✅ تم الإرسال';
                     addLocalVideo(blob, description, timeStr);
+                } else {
+                    throw new Error(result.description);
                 }
             } catch (error) {
-                console.error(error);
+                showError('فشل الإرسال: ' + error.message);
             }
         }
 
@@ -1007,7 +1053,7 @@
                 const description = document.getElementById('videoDescription').value;
                 const productLink = document.getElementById('productLink').value;
                 const now = new Date();
-                const timeStr = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
                 
                 const mediaArray = [{
                     type: 'video',
@@ -1043,7 +1089,7 @@
                     });
                 }
             } catch (error) {
-                console.error(error);
+                showError('فشل إرسال الألبوم');
             }
         }
 
@@ -1055,11 +1101,16 @@
                 url: url,
                 caption: caption,
                 timeStr: timeStr,
-                timeSeconds: timeToSeconds(timeStr),
-                isLocal: true
+                timeSeconds: timeToSeconds(timeStr)
             };
-            roundVideos.unshift(video);
+            roundVideos.push(video);
             renderAll();
+            
+            // تشغيل الفيديو الجديد فوراً
+            if (roundVideos.length === 1) {
+                playInSimulator(url);
+                startAutoSimulation();
+            }
         }
 
         // ========== تحويل الوقت لثواني ==========
@@ -1072,8 +1123,7 @@
         // ========== بدء الجلب التلقائي ==========
         function startAutoFetch() {
             if (fetchInterval) clearInterval(fetchInterval);
-            // جلب كل 3 ثواني للحصول على فيديوهات جديدة فوراً
-            fetchInterval = setInterval(() => fetchTelegramVideos(false), 3000);
+            fetchInterval = setInterval(() => fetchTelegramVideos(false), 5000);
             fetchTelegramVideos(true);
         }
 
@@ -1090,10 +1140,8 @@
                 const data = await res.json();
                 
                 if (data.ok && data.result.length > 0) {
-                    // تحديث آخر رسالة
                     lastMessageId = Math.max(...data.result.map(u => u.update_id)) + 1;
                     
-                    // فلترة الفيديوهات الجديدة فقط
                     const newVideos = data.result
                         .filter(u => u.channel_post?.video && u.channel_post?.caption?.includes(MERCHANT_ID))
                         .map(u => {
@@ -1108,18 +1156,11 @@
                             };
                         });
                     
-                    // إضافة الفيديوهات الجديدة فقط
-                    let addedCount = 0;
                     for (const v of newVideos) {
                         const exists = roundVideos.some(r => r.fileId === v.fileId);
                         if (!exists) {
                             await fetchVideoFile(v);
-                            addedCount++;
                         }
-                    }
-                    
-                    if (addedCount > 0 && showIndicator) {
-                        statusText.innerHTML = `✅ تم جلب ${addedCount} فيديو جديد`;
                     }
                 }
                 
@@ -1144,8 +1185,8 @@
                     roundVideos.push(video);
                     renderAll();
                     
-                    // تشغيل الفيديو الجديد فوراً في المحاكاة
-                    if (roundVideos.length === 1 || !simulationInterval) {
+                    // تشغيل الفيديو الجديد
+                    if (roundVideos.length === 1) {
                         playInSimulator(video.url);
                         startAutoSimulation();
                     }
@@ -1252,21 +1293,19 @@
 
         // ========== التشغيل في المحاكاة ==========
         window.playInSimulator = function(url) {
+            if (!url) return;
             simulatedVideo.src = url;
-            simulatedVideo.play();
-            statusText.innerHTML = `▶️ تشغيل: ${new Date().toLocaleTimeString()}`;
+            simulatedVideo.play().catch(e => console.log('توقف التشغيل'));
+            statusText.innerHTML = `▶️ تشغيل`;
         };
 
         // ========== بدء المحاكاة التلقائية ==========
         function startAutoSimulation() {
             if (roundVideos.length === 0) return;
             
-            // ترتيب الفيديوهات حسب الوقت
             roundVideos.sort((a, b) => (a.timeSeconds || 0) - (b.timeSeconds || 0));
             
             let index = 0;
-            
-            // أوجد الفيديو المناسب للوقت الحالي
             const now = new Date();
             const currentSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
             
@@ -1276,11 +1315,9 @@
                 }
             }
             
-            // شغل الفيديو الحالي
             playInSimulator(roundVideos[index].url);
             simulationTime.innerHTML = `<i class="fas fa-clock"></i> ${roundVideos[index].timeStr}`;
             
-            // راقب الوقت للانتقال للفيديو التالي
             if (simulationInterval) clearInterval(simulationInterval);
             simulationInterval = setInterval(() => {
                 const now = new Date();
@@ -1321,7 +1358,7 @@
             let simulatedSeconds = roundVideos[0].timeSeconds || 0;
             
             simulationInterval = setInterval(() => {
-                simulatedSeconds += 60; // كل ثانية = دقيقة في المحاكاة
+                simulatedSeconds += 60;
                 
                 for (let i = 0; i < roundVideos.length; i++) {
                     const t = roundVideos[i].timeSeconds || 0;
@@ -1353,9 +1390,12 @@
         // ========== تهيئة الصفحة ==========
         window.onload = function() {
             setInterval(renderTimeline, 1000);
-            setInterval(() => fetchTelegramVideos(false), 3000);
+            setInterval(() => fetchTelegramVideos(false), 5000);
             setTimeout(() => fetchTelegramVideos(true), 2000);
             updateLatency();
+            
+            // التحقق من دالة بدء الكاميرا
+            console.log('النظام جاهز');
         };
     </script>
 </body>
