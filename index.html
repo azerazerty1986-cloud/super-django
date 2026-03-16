@@ -469,21 +469,22 @@
             font-weight: bold;
         }
         
+        .telegram-test {
+            background: #0088cc20;
+            border: 2px solid #0088cc;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+        
         .success-text {
             color: #238636;
         }
         
         .danger-text {
             color: #da3633;
-        }
-        
-        .album-preview {
-            background: #0088cc20;
-            border: 2px dashed #0088cc;
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px 0;
-            text-align: center;
         }
     </style>
 </head>
@@ -493,32 +494,28 @@
             <h1><i class="fas fa-store"></i> ألبومات ذكية 2</h1>
             <p>@nardoo_merchant | استمرارية | مقاطع 4-6</p>
             <div class="telegram-badge">
-                <i class="fab fa-telegram"></i> ألبومات مجمعة في القناة
+                <i class="fab fa-telegram"></i> الألبومات مجمعة في القناة
             </div>
         </div>
 
-        <!-- فيديو الكاميرا - الجزء الأهم -->
+        <!-- فيديو الكاميرا -->
         <div class="video-container">
             <video id="video" autoplay playsinline></video>
             
-            <!-- تراكب التاجر -->
             <div id="merchantOverlay" class="merchant-overlay" style="display: none;">
                 <i class="fas fa-store"></i>
                 <span>@nardoo_merchant</span>
                 <span style="background: #ffd700; color: black; padding: 2px 8px; border-radius: 12px;">تاجر</span>
             </div>
             
-            <!-- مؤشر الكاميرا -->
             <div class="camera-indicator" id="cameraIndicator">
                 <i class="fas fa-camera"></i> <span id="cameraType">أمامية</span>
             </div>
             
-            <!-- مؤشر البث المباشر -->
             <div class="live-indicator" id="liveIndicator" style="display: none;">
                 <i class="fas fa-circle"></i> بث مباشر <span id="liveTime">00:00</span>
             </div>
             
-            <!-- زر تبديل الكاميرا (يظهر مباشرة) -->
             <div class="camera-switch-btn" onclick="switchCamera()" id="switchCameraBtn" style="display: none;">
                 <i class="fas fa-sync-alt"></i>
             </div>
@@ -542,6 +539,11 @@
         <div class="album-badge">
             <i class="fas fa-layer-group"></i> ألبوم ذكي 2 | مقاطع 4-6 | استمرارية
             <br><small>الحجم: 3 مقاطع (صغير جداً)</small>
+        </div>
+
+        <!-- اختبار اتصال تيليجرام -->
+        <div class="telegram-test" id="telegramTest">
+            <i class="fab fa-telegram"></i> <span id="botStatus">جاري اختبار اتصال البوت...</span>
         </div>
 
         <!-- إحصائيات البث -->
@@ -576,18 +578,13 @@
             </div>
         </div>
 
-        <!-- عداد المقاطع (3 مقاطع كحد أقصى) -->
+        <!-- عداد المقاطع (3 مقاطع) -->
         <div class="counter-custom" id="counterCustom"></div>
-
-        <!-- معاينة الألبوم في القناة -->
-        <div class="album-preview" id="albumPreview">
-            <i class="fas fa-telegram"></i> سيتم إرسال الألبوم كمجموعة في القناة
-        </div>
 
         <!-- الخط الزمني للألبومات -->
         <div class="albums-timeline" id="albumsTimeline"></div>
 
-        <!-- أزرار التحكم الأساسية -->
+        <!-- أزرار التحكم -->
         <div class="controls">
             <button class="btn-success" onclick="startCamera()" id="startBtn">
                 <i class="fas fa-play"></i> تشغيل الكاميرا
@@ -613,12 +610,10 @@
         <div class="input-group">
             <label><i class="fas fa-clock"></i> مدة المقطع (ثانية)</label>
             <select id="chunkDuration">
-                <option value="1">1 ثانية (سريع)</option>
                 <option value="2">2 ثانية</option>
                 <option value="3" selected>3 ثواني (مثالي)</option>
                 <option value="4">4 ثواني</option>
                 <option value="5">5 ثواني</option>
-                <option value="6">6 ثواني</option>
             </select>
         </div>
 
@@ -629,7 +624,19 @@
 
         <div class="input-group">
             <label><i class="fas fa-link"></i> رابط المنتج</label>
-            <input type="text" id="productLink" value="https://t.me/nardoo_channel/123">
+            <input type="text" id="productLink" value="https://t.me/nardoo_channel">
+        </div>
+
+        <!-- إعدادات تيليجرام (قابلة للتعديل) -->
+        <div class="album-config-panel">
+            <div class="config-row">
+                <span class="config-label"><i class="fab fa-telegram"></i> توكن البوت:</span>
+                <span class="config-value" style="font-size: 10px; background: #333;" id="botTokenDisplay">8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0</span>
+            </div>
+            <div class="config-row">
+                <span class="config-label"><i class="fas fa-hashtag"></i> معرف القناة:</span>
+                <span class="config-value" id="channelIdDisplay">-1003822964890</span>
+            </div>
         </div>
 
         <!-- حالة النظام -->
@@ -638,15 +645,15 @@
         </div>
 
         <div class="footer">
-            <span id="botStatus">⚪ جاري التحقق من البوت...</span> | ID: SMARTPFAK2J | 02:06:35
+            <span>ID: SMARTPFAK2J | 02:06:35 | ألبومات ذكية 2</span>
         </div>
     </div>
 
     <script>
-        // ========== إعدادات تلجرام ==========
+        // ========== إعدادات تيليجرام (ضع بياناتك هنا) ==========
         const TELEGRAM = {
-            botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
-            channelId: '-1003822964890' // معرف القناة
+            botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0', // ضع توكن البوت الخاص بك هنا
+            channelId: '-1003822964890' // ضع معرف القناة الخاص بك هنا
         };
 
         // ========== معرف التاجر ==========
@@ -659,8 +666,8 @@
         let totalSeconds = 0;
         let timerInterval = null;
         
-        // ========== متغيرات الألبومات الذكية ==========
-        const ALBUM_MAX_SIZE = 3; // 3 مقاطع فقط (صغير جداً)
+        // ========== متغيرات الألبومات ==========
+        const ALBUM_MAX_SIZE = 3; // 3 مقاطع فقط
         let currentAlbum = [];
         let albums = [];
         let totalChunksCount = 0;
@@ -689,32 +696,51 @@
         const merchantOverlay = document.getElementById('merchantOverlay');
         const botStatus = document.getElementById('botStatus');
 
-        // ========== وظائف الكاميرا (مأخوذة من الكود الأصلي) ==========
-        
-        // تشغيل الكاميرا
+        // ========== اختبار بوت تيليجرام ==========
+        async function testTelegramBot() {
+            try {
+                botStatus.innerHTML = '🔄 جاري اختبار الاتصال...';
+                botStatus.style.color = '#ffd700';
+                
+                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getMe`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    botStatus.innerHTML = '✅ البوت متصل وجاهز للإرسال';
+                    botStatus.style.color = '#4caf50';
+                    return true;
+                } else {
+                    botStatus.innerHTML = '❌ فشل الاتصال بالبوت - تأكد من التوكن';
+                    botStatus.style.color = '#da3633';
+                    return false;
+                }
+            } catch (error) {
+                botStatus.innerHTML = '❌ خطأ في الاتصال - تحقق من الإنترنت';
+                botStatus.style.color = '#da3633';
+                return false;
+            }
+        }
+
+        // ========== تشغيل الكاميرا ==========
         async function startCamera() {
             try {
                 statusText.innerHTML = '🔄 جاري تشغيل الكاميرا...';
                 
-                // طلب الوصول للكاميرا
                 const constraints = {
                     video: {
                         facingMode: currentFacingMode,
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     },
-                    audio: true // للبث المباشر
+                    audio: true
                 };
                 
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
                 
                 // التأكد من تشغيل الفيديو
-                video.onloadedmetadata = () => {
-                    video.play();
-                };
+                await video.play();
                 
-                // تطبيق عكس الصورة للكاميرا الأمامية فقط
                 if (currentFacingMode === 'user') {
                     video.classList.add('front-camera');
                     video.classList.remove('back-camera');
@@ -732,33 +758,30 @@
                 stopBtn.style.display = 'inline-block';
                 startLiveBtn.disabled = false;
                 switchBtn.disabled = false;
-                switchCameraBtn.style.display = 'flex'; // إظهار زر التبديل
+                switchCameraBtn.style.display = 'flex';
                 cameraIndicator.style.display = 'flex';
                 
                 statusText.innerHTML = '✅ الكاميرا جاهزة!';
                 
             } catch (err) {
                 statusText.innerHTML = '❌ خطأ في الكاميرا: ' + err.message;
-                console.error('Camera error:', err);
+                console.error(err);
             }
         }
 
-        // إيقاف الكاميرا
+        // ========== إيقاف الكاميرا ==========
         function stopCamera() {
             if (isLiveStreaming) {
                 stopLiveStream();
             }
             
             if (stream) {
-                stream.getTracks().forEach(track => {
-                    track.stop();
-                });
+                stream.getTracks().forEach(track => track.stop());
                 video.srcObject = null;
                 stream = null;
                 cameraActive = false;
             }
             
-            // تحديث واجهة المستخدم
             startBtn.style.display = 'inline-block';
             stopBtn.style.display = 'none';
             startLiveBtn.style.display = 'inline-block';
@@ -768,81 +791,78 @@
             switchCameraBtn.style.display = 'none';
             liveIndicator.style.display = 'none';
             merchantOverlay.style.display = 'none';
-            cameraIndicator.style.display = 'none';
             
             statusText.innerHTML = '⏹️ الكاميرا متوقفة';
         }
 
-        // تبديل الكاميرا (أمامية/خلفية)
+        // ========== تبديل الكاميرا ==========
         async function switchCamera() {
             if (!cameraActive) {
                 alert('❌ شغل الكاميرا أولاً');
                 return;
             }
             
-            // تبديل وضع الكاميرا
             currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
             
-            // إيقاف التدفق الحالي
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
             
-            // تشغيل الكاميرا بالوضع الجديد
             await startCamera();
         }
 
-        // ========== وظائف البث والألبومات ==========
-        
-        // بدء البث المباشر
+        // ========== بدء البث ==========
         function startLiveStream() {
             if (!cameraActive) {
                 alert('❌ شغل الكاميرا أولاً');
                 return;
             }
             
-            isLiveStreaming = true;
-            totalSeconds = 0;
-            currentAlbum = [];
-            albums = [];
-            totalChunksCount = 0;
-            
-            // تحديث واجهة المستخدم
-            startLiveBtn.style.display = 'none';
-            stopLiveBtn.style.display = 'inline-block';
-            liveIndicator.style.display = 'flex';
-            merchantOverlay.style.display = 'flex';
-            switchBtn.disabled = true;
-            switchCameraBtn.style.display = 'none'; // إخفاء زر التبديل أثناء البث
-            
-            statusText.innerHTML = '🔴 البث المباشر نشط...';
-            
-            // بدء عداد الوقت
-            timerInterval = setInterval(() => {
-                totalSeconds++;
-                const minutes = Math.floor(totalSeconds / 60);
-                const seconds = totalSeconds % 60;
-                const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                totalTime.textContent = timeString;
-                liveTime.textContent = timeString;
-            }, 1000);
-            
-            // تحديث العداد
-            updateCounterDisplay();
-            updateTimeline();
-            
-            // بدء تسجيل أول مقطع
-            recordChunk();
+            // اختبار البوت قبل البدء
+            testTelegramBot().then(botOk => {
+                if (!botOk) {
+                    if (!confirm('⚠️ البوت غير متصل، هل تريد المتابعة؟')) {
+                        return;
+                    }
+                }
+                
+                isLiveStreaming = true;
+                totalSeconds = 0;
+                currentAlbum = [];
+                albums = [];
+                totalChunksCount = 0;
+                
+                startLiveBtn.style.display = 'none';
+                stopLiveBtn.style.display = 'inline-block';
+                liveIndicator.style.display = 'flex';
+                merchantOverlay.style.display = 'flex';
+                switchBtn.disabled = true;
+                switchCameraBtn.style.display = 'none';
+                
+                statusText.innerHTML = '🔴 البث المباشر نشط...';
+                
+                timerInterval = setInterval(() => {
+                    totalSeconds++;
+                    const minutes = Math.floor(totalSeconds / 60);
+                    const seconds = totalSeconds % 60;
+                    totalTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    liveTime.textContent = totalTime.textContent;
+                }, 1000);
+                
+                updateCounterDisplay();
+                updateTimeline();
+                recordChunk();
+            });
         }
 
-        // تحديث عرض العداد (3 مقاطع)
+        // ========== تحديث العداد ==========
         function updateCounterDisplay() {
             let html = '';
             for (let i = 0; i < ALBUM_MAX_SIZE; i++) {
                 let filled = i < currentAlbum.length;
-                let isCurrent = i === currentAlbum.length;
+                let isCurrent = i === currentAlbum.length && isLiveStreaming;
                 html += `
-                    <div class="counter-block ${filled ? 'filled' : ''} ${isCurrent && isLiveStreaming ? 'current' : ''}">
+                    <div class="counter-block ${filled ? 'filled' : ''} ${isCurrent ? 'current' : ''}">
                         ${i + 1}
                     </div>
                 `;
@@ -850,7 +870,7 @@
             counterCustom.innerHTML = html;
         }
 
-        // تحديث الخط الزمني
+        // ========== تحديث الخط الزمني ==========
         function updateTimeline() {
             let html = '';
             
@@ -875,7 +895,7 @@
             albumsTimeline.innerHTML = html;
         }
 
-        // تسجيل مقطع فيديو
+        // ========== تسجيل مقطع ==========
         async function recordChunk() {
             if (!isLiveStreaming) return;
             
@@ -885,7 +905,6 @@
                 const chunk = await new Promise((resolve) => {
                     const chunks = [];
                     
-                    // التأكد من وجود stream
                     if (!stream) {
                         resolve(null);
                         return;
@@ -897,7 +916,6 @@
                             mimeType: 'video/webm;codecs=vp8,opus'
                         });
                     } catch (e) {
-                        // إذا لم يدعم المتصفح الكودك، استخدم الافتراضي
                         recorder = new MediaRecorder(stream);
                     }
                     
@@ -931,23 +949,22 @@
                     updateCounterDisplay();
                     updateTimeline();
                     
-                    // التحقق من اكتمال الألبوم (3 مقاطع)
+                    // إذا اكتمل الألبوم (3 مقاطع)
                     if (currentAlbum.length === ALBUM_MAX_SIZE) {
                         await sendAlbum();
-                        currentAlbum = []; // بدء ألبوم جديد
+                        currentAlbum = [];
                     }
                 }
                 
-                // استمرار التسجيل
                 setTimeout(recordChunk, 500);
                 
             } catch (error) {
-                console.error('خطأ في التسجيل:', error);
+                console.error('Recording error:', error);
                 setTimeout(recordChunk, 2000);
             }
         }
 
-        // إرسال الألبوم إلى تيليجرام
+        // ========== إرسال الألبوم إلى تيليجرام ==========
         async function sendAlbum() {
             if (currentAlbum.length === 0) return;
             
@@ -956,24 +973,25 @@
             const productLink = document.getElementById('productLink').value;
             
             try {
-                statusText.innerHTML = `🔄 جاري إرسال الألبوم ${albumNumber} (${currentAlbum.length}/3)...`;
+                statusText.innerHTML = `📤 جاري إرسال الألبوم ${albumNumber} (${currentAlbum.length}/3)...`;
                 
-                // تجهيز مجموعة الوسائط
+                // تحضير مجموعة الوسائط
                 const mediaGroup = [];
                 for (let i = 0; i < currentAlbum.length; i++) {
                     mediaGroup.push({
                         type: 'video',
                         media: `attach://video${i}`,
-                        caption: i === 0 ? `🎬 **ألبوم ذكي 2 - ${albumNumber}**\n\n🏪 التاجر: ${MERCHANT_ID}\n📸 الكاميرا: ${cameraType.textContent}\n⏱️ الوقت: ${totalTime.textContent}\n📊 المقاطع: ${currentAlbum.length}/3\n🔹 النوع: استمرارية\n\n📝 ${description}` : '',
+                        caption: i === 0 ? `🎬 **ألبوم ذكي 2 - ${albumNumber}**\n\n🏪 التاجر: ${MERCHANT_ID}\n📸 الكاميرا: ${cameraType.textContent}\n⏱️ الوقت: ${totalTime.textContent}\n📊 المقاطع: ${currentAlbum.length}/3\n🔹 النوع: استمرارية\n\n📝 ${description}\n\n🔗 رابط المنتج: ${productLink}` : '',
                         parse_mode: 'Markdown'
                     });
                 }
                 
-                // تجهيز FormData للإرسال
+                // تحضير FormData للإرسال
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('media', JSON.stringify(mediaGroup));
                 
+                // إضافة ملفات الفيديو
                 currentAlbum.forEach((chunk, index) => {
                     formData.append(`video${index}`, chunk, `album${albumNumber}_${index+1}.mp4`);
                 });
@@ -999,10 +1017,13 @@
                     albumsCount.textContent = albums.length;
                     updateTimeline();
                     
-                    statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber}`;
+                    statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber} بنجاح!`;
                     
-                    // إرسال رابط المنتج كتعليق
-                    await sendProductLink(albumNumber, productLink, result.result?.[0]?.message_id);
+                    // تشغيل صوت نجاح
+                    try {
+                        const audio = new Audio('data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoAAACAgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f38=');
+                        audio.play();
+                    } catch (e) {}
                     
                 } else {
                     throw new Error(result.description);
@@ -1011,39 +1032,22 @@
             } catch (error) {
                 statusText.innerHTML = '❌ فشل إرسال الألبوم: ' + error.message;
                 console.error('Send error:', error);
+                
+                // عرض تفاصيل الخطأ
+                alert('❌ خطأ في الإرسال:\n' + error.message + '\n\nتأكد من:\n1. توكن البوت صحيح\n2. القناة معرف صحيح\n3. البوت مشرف في القناة');
             }
         }
 
-        // إرسال رابط المنتج
-        async function sendProductLink(albumNumber, productLink, replyTo) {
-            try {
-                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: TELEGRAM.channelId,
-                        text: `🛍️ **رابط المنتج - الألبوم ${albumNumber}**\n\n${productLink}\n\n#منتج_${albumNumber} #ذكي2`,
-                        parse_mode: 'Markdown',
-                        reply_to_message_id: replyTo
-                    })
-                });
-            } catch (error) {
-                console.error('خطأ في إرسال الرابط:', error);
-            }
-        }
-
-        // إنهاء البث
+        // ========== إنهاء البث ==========
         async function stopLiveStream() {
             isLiveStreaming = false;
             
-            // إرسال الألبوم الأخير إذا كان فيه مقاطع
             if (currentAlbum.length > 0) {
                 await sendAlbum();
             }
             
             clearInterval(timerInterval);
             
-            // تحديث واجهة المستخدم
             startLiveBtn.style.display = 'inline-block';
             stopLiveBtn.style.display = 'none';
             liveIndicator.style.display = 'none';
@@ -1054,47 +1058,37 @@
             statusText.innerHTML = '⏹️ تم إنهاء البث';
             
             // إرسال ملخص البث
-            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM.channelId,
-                    text: `📊 **ملخص البث - ألبومات ذكية 2**\n\n🏪 التاجر: ${MERCHANT_ID}\n⏱️ المدة: ${totalTime.textContent}\n📦 الألبومات: ${albums.length}\n🎬 المقاطع: ${totalChunksCount}\n📸 الكاميرا: ${cameraType.textContent}\n🔹 النوع: استمرارية`,
-                    parse_mode: 'Markdown'
-                })
-            });
+            try {
+                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM.channelId,
+                        text: `📊 **ملخص البث - ألبومات ذكية 2**\n\n🏪 التاجر: ${MERCHANT_ID}\n⏱️ المدة: ${totalTime.textContent}\n📦 الألبومات: ${albums.length}\n🎬 المقاطع: ${totalChunksCount}\n📸 الكاميرا: ${cameraType.textContent}\n🔹 النوع: استمرارية`,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            } catch (error) {
+                console.error('Summary error:', error);
+            }
             
-            // تحديث العداد
             updateCounterDisplay();
         }
 
-        // عرض تفاصيل ألبوم
+        // ========== عرض تفاصيل ألبوم ==========
         function viewAlbum(index) {
             const album = albums[index];
             alert(`📦 الألبوم ${album.number}\n⏱️ الوقت: ${album.time}\n🎬 المقاطع: ${album.actual}/3\n📸 الكاميرا: ${album.camera}`);
         }
 
-        // اختبار اتصال البوت
-        async function testBot() {
-            try {
-                botStatus.innerHTML = '🔄 جاري الاتصال...';
-                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getMe`);
-                const data = await response.json();
-                
-                if (data.ok) {
-                    botStatus.innerHTML = '✅ البوت متصل';
-                } else {
-                    botStatus.innerHTML = '❌ البوت غير متصل';
-                }
-            } catch (error) {
-                botStatus.innerHTML = '❌ خطأ في الاتصال';
-            }
-        }
-
-        // التهيئة عند تحميل الصفحة
+        // ========== تهيئة الصفحة ==========
         window.onload = function() {
-            testBot();
+            testTelegramBot();
             updateCounterDisplay();
+            
+            // عرض معلومات الاتصال
+            document.getElementById('botTokenDisplay').textContent = TELEGRAM.botToken.substring(0, 20) + '...';
+            document.getElementById('channelIdDisplay').textContent = TELEGRAM.channelId;
         };
     </script>
 </body>
