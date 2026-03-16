@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 بث حي + دمج الريلز في شاشة واحدة</title>
+    <title>📹 بث حي + نافذة تيليجرام + محاكاة</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -21,7 +21,7 @@
         }
         
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             background: #161b22;
             border-radius: 20px;
@@ -45,172 +45,296 @@
             font-size: 14px;
         }
         
-        .live-badge-large {
-            background: linear-gradient(90deg, #ff0000, #ff4444);
-            color: white;
-            padding: 10px 25px;
-            border-radius: 50px;
-            font-size: 20px;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
+        /* ===== شاشات العرض الثلاثية ===== */
+        .triple-video-container {
+            display: flex;
             gap: 10px;
-            margin: 10px 0;
-            animation: pulse-live 1.5s infinite;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
-        }
-        
-        @keyframes pulse-live {
-            0%, 100% { opacity: 1; box-shadow: 0 0 30px rgba(255, 0, 0, 0.5); }
-            50% { opacity: 0.9; box-shadow: 0 0 50px rgba(255, 0, 0, 0.8); }
-        }
-        
-        /* شاشة البث الموحدة */
-        .unified-stream {
-            position: relative;
             margin: 15px 0;
-            border-radius: 15px;
-            overflow: hidden;
-            border: 4px solid #ff0000;
-            background: black;
-            min-height: 400px;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            flex-wrap: wrap;
         }
         
-        #unifiedVideo {
+        .video-wrapper {
+            flex: 1 1 calc(33.333% - 7px);
+            min-width: 180px;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #ffd700;
+            background: black;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+        
+        .video-wrapper video {
             width: 100%;
             height: auto;
             display: block;
             background: #1a1a1a;
-            min-height: 400px;
+            min-height: 150px;
+            max-height: 200px;
             object-fit: cover;
         }
         
-        .stream-overlay {
+        .video-label {
             position: absolute;
-            top: 15px;
-            left: 15px;
-            right: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 20;
-            pointer-events: none;
+            top: 3px;
+            left: 3px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffd700;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 9px;
+            z-index: 10;
+            border: 1px solid #ffd700;
         }
         
-        .live-indicator-large {
+        .live-badge-small {
+            position: absolute;
+            top: 3px;
+            right: 3px;
             background: #ff0000;
             color: white;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 18px;
-            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 8px;
+            z-index: 10;
+            animation: blink 1s infinite;
+        }
+        
+        .telegram-badge {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: #0088cc;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 8px;
+            z-index: 10;
+        }
+        
+        .simulate-badge {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: #9c27b0;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 8px;
+            z-index: 10;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .camera-switch-btn {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+            border: 1px solid #ffd700;
+            font-size: 12px;
+        }
+        
+        /* ===== نافذة القادم من تيليجرام ===== */
+        .telegram-incoming {
+            background: #1a1f2b;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 3px solid #0088cc;
+            box-shadow: 0 0 20px rgba(0, 136, 204, 0.3);
+        }
+        
+        .incoming-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .incoming-header h3 {
+            color: #0088cc;
             display: flex;
             align-items: center;
             gap: 8px;
-            border: 2px solid white;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
-            pointer-events: auto;
+            font-size: 18px;
         }
         
-        .merchant-info-overlay {
-            background: rgba(0, 0, 0, 0.8);
-            color: #ffd700;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 2px solid #ffd700;
-            backdrop-filter: blur(4px);
-            pointer-events: auto;
-        }
-        
-        .stream-stats {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            right: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 20;
-        }
-        
-        .viewers-count {
-            background: rgba(0, 0, 0, 0.7);
+        .live-counter {
+            background: #ff0000;
             color: white;
             padding: 5px 15px;
             border-radius: 20px;
             font-size: 14px;
-            border: 1px solid #ffd700;
+            animation: pulse 1.5s infinite;
         }
         
-        .stream-progress-container {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 25;
+        .incoming-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 5px;
         }
         
-        .stream-progress-bar {
-            height: 100%;
-            background: #ff0000;
-            width: 0%;
-            transition: width 0.3s;
-            box-shadow: 0 0 10px #ff0000;
-        }
-        
-        .video-counter {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #ffd700;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            border: 1px solid #ffd700;
-        }
-        
-        .playlist-panel {
-            background: #1a1f2b;
+        .incoming-item {
+            background: #2d333b;
             border-radius: 10px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .incoming-item:hover {
+            border-color: #0088cc;
+            transform: scale(1.05);
+        }
+        
+        .incoming-item.active {
+            border-color: #ff0000;
+            background: #ff000033;
+        }
+        
+        .incoming-time {
+            font-size: 10px;
+            color: #0088cc;
+            font-family: monospace;
+            margin-bottom: 3px;
+        }
+        
+        .incoming-icon {
+            font-size: 20px;
+            color: #0088cc;
+            margin: 5px 0;
+        }
+        
+        .incoming-title {
+            font-size: 10px;
+            text-align: center;
+            color: #8b949e;
+        }
+        
+        .new-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff0000;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 8px;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* ===== فلترة الوقت ===== */
+        .filter-panel {
+            background: #1a1f2b;
+            border-radius: 12px;
             padding: 15px;
             margin: 15px 0;
             border: 2px solid #ffd700;
         }
         
-        .playlist-header {
+        .filter-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         
-        .playlist-header h3 {
+        .filter-header span {
             color: #ffd700;
+            font-weight: bold;
+        }
+        
+        .instant-filter-badge {
+            background: #4caf50;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .time-inputs {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .time-inputs input {
+            flex: 1;
+            padding: 8px;
+            background: #21262d;
+            border: 1px solid #444;
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        .filter-range {
+            background: #2d333b;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+            font-family: monospace;
+            color: #ffd700;
+        }
+        
+        /* ===== محاكاة البث ===== */
+        .simulation-panel {
+            background: #1a1f2b;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px solid #9c27b0;
+        }
+        
+        .simulation-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .simulation-header h3 {
+            color: #9c27b0;
             display: flex;
             align-items: center;
             gap: 8px;
         }
         
-        .merge-toggle {
+        .simulation-status {
             background: #2d333b;
-            padding: 5px 15px;
+            padding: 5px 12px;
             border-radius: 20px;
-            cursor: pointer;
-            border: 1px solid #ffd700;
-        }
-        
-        .merge-toggle.active {
-            background: #4caf50;
-            border-color: #4caf50;
+            font-size: 13px;
+            color: #4caf50;
         }
         
         .playlist-items {
@@ -218,14 +342,14 @@
             gap: 10px;
             overflow-x: auto;
             padding: 10px 0;
-            max-height: 150px;
+            min-height: 100px;
         }
         
         .playlist-item {
-            min-width: 100px;
+            min-width: 90px;
             background: #2d333b;
             border-radius: 8px;
-            padding: 10px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -235,8 +359,7 @@
         }
         
         .playlist-item:hover {
-            border-color: #ffd700;
-            transform: scale(1.05);
+            border-color: #9c27b0;
         }
         
         .playlist-item.active {
@@ -244,26 +367,83 @@
             background: #ff000033;
         }
         
-        .playlist-item .time-badge {
-            font-size: 11px;
-            color: #ffd700;
+        .playlist-time {
+            font-size: 9px;
+            color: #9c27b0;
             font-family: monospace;
         }
         
+        /* ===== بطاقة التاجر ===== */
+        .fixed-merchant {
+            background: linear-gradient(135deg, #1a1f2b, #0d1117);
+            border: 2px solid #ffd700;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .merchant-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: black;
+        }
+        
+        .merchant-info {
+            flex: 1;
+        }
+        
+        .merchant-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .merchant-id {
+            font-size: 14px;
+            color: #8b949e;
+            direction: ltr;
+            text-align: left;
+            background: #2d333b;
+            padding: 5px 10px;
+            border-radius: 20px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        
+        .merchant-status {
+            background: #4caf50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-right: 8px;
+        }
+        
+        /* ===== أزرار التحكم ===== */
         .controls {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin: 15px 0;
             flex-wrap: wrap;
         }
         
         button {
             flex: 1;
-            min-width: 100px;
-            padding: 12px;
+            min-width: 90px;
+            padding: 10px;
             border: none;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -273,38 +453,87 @@
             transition: all 0.3s;
         }
         
-        .btn-success {
-            background: #238636;
-            color: white;
+        .btn-success { background: #238636; color: white; }
+        .btn-danger { background: #da3633; color: white; }
+        .btn-live { background: #0088cc; color: white; }
+        .btn-switch { background: #2d333b; color: white; border: 1px solid #ffd700; }
+        .btn-telegram { background: #0088cc; color: white; }
+        .btn-simulate { background: #9c27b0; color: white; }
+        .btn-filter { background: #ffd700; color: black; }
+        
+        /* ===== إحصائيات ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
         }
         
-        .btn-danger {
-            background: #da3633;
-            color: white;
-        }
-        
-        .btn-live {
-            background: #0088cc;
-            color: white;
-        }
-        
-        .btn-merge {
-            background: #9c27b0;
-            color: white;
-        }
-        
-        .stats-panel {
+        .stat-card {
             background: #1a1f2b;
             border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            border: 2px solid #0088cc;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #2d333b;
         }
         
-        .stat-row {
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        /* ===== إعدادات ===== */
+        .input-group {
+            margin: 12px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffd700;
+            font-size: 13px;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            background: #21262d;
+            border: 1px solid #2d333b;
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+        }
+        
+        .hashtag-container {
             display: flex;
-            justify-content: space-between;
-            margin: 8px 0;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        
+        .hashtag {
+            background: #2d333b;
+            color: #ffd700;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            border: 1px solid #ffd700;
+        }
+        
+        .status-box {
+            background: #1a1f2b;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 15px 0;
+            text-align: center;
+            border: 1px solid #2d333b;
+            font-size: 13px;
         }
         
         .footer {
@@ -318,71 +547,139 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1><i class="fas fa-broadcast-tower"></i> بث حي + دمج الريلز</h1>
-            <p>@nardoo_merchant | شاشة واحدة - بث متواصل</p>
-            <div class="live-badge-large">
-                <i class="fas fa-circle"></i> بث مباشر - 24/7
+            <h1><i class="fas fa-broadcast-tower"></i> بث حي + نافذة تيليجرام</h1>
+            <p>@nardoo_merchant | محاكاة + فلترة + كاميرا</p>
+        </div>
+
+        <!-- ===== شاشات العرض الثلاثية ===== -->
+        <div class="triple-video-container">
+            <!-- شاشة الكاميرا (البث المباشر) -->
+            <div class="video-wrapper">
+                <video id="cameraVideo" autoplay playsinline></video>
+                <div class="video-label"><i class="fas fa-camera"></i> الكاميرا</div>
+                <div class="live-badge-small" id="liveIndicator" style="display: none;">🔴 مباشر</div>
+                <div class="camera-switch-btn" onclick="switchCamera()" id="switchCameraBtn" style="display: none;">🔄</div>
+            </div>
+
+            <!-- شاشة المحاكاة (البث المتسلسل) -->
+            <div class="video-wrapper">
+                <video id="simulationVideo" autoplay playsinline></video>
+                <div class="video-label"><i class="fas fa-play-circle"></i> محاكاة</div>
+                <div class="simulate-badge" id="simulationBadge">⏸️ متوقفة</div>
+            </div>
+
+            <!-- شاشة تيليجرام (عرض الفيديوهات القادمة) -->
+            <div class="video-wrapper">
+                <video id="telegramVideo" autoplay playsinline></video>
+                <div class="video-label"><i class="fab fa-telegram"></i> تيليجرام</div>
+                <div class="telegram-badge" id="telegramBadge">📥 0 جديد</div>
             </div>
         </div>
 
-        <!-- شاشة البث الموحدة -->
-        <div class="unified-stream">
-            <video id="unifiedVideo" autoplay playsinline></video>
-            
-            <!-- التراكبات -->
-            <div class="stream-overlay">
-                <div class="live-indicator-large">
-                    <i class="fas fa-circle"></i> LIVE
-                </div>
-                <div class="merchant-info-overlay">
-                    <i class="fas fa-store"></i>
-                    <span>@nardoo_merchant</span>
-                    <span style="background: #4caf50; color: white; padding: 2px 8px; border-radius: 12px;">✅</span>
+        <!-- ===== نافذة القادم من تيليجرام ===== -->
+        <div class="telegram-incoming">
+            <div class="incoming-header">
+                <h3><i class="fab fa-telegram"></i> القادم من تيليجرام</h3>
+                <span class="live-counter" id="incomingCounter">0 فيديو</span>
+            </div>
+            <div class="incoming-grid" id="incomingGrid">
+                <div class="incoming-item" style="opacity:0.5; cursor:default">
+                    <i class="fas fa-hourglass incoming-icon"></i>
+                    <span class="incoming-title">جاري التحميل...</span>
                 </div>
             </div>
-            
-            <div class="video-counter" id="videoCounter">
-                <i class="fas fa-list"></i> <span id="currentVideoNum">1</span>/<span id="totalVideosNum">0</span>
-            </div>
-            
-            <div class="stream-stats">
-                <div class="viewers-count" id="viewersCount">
-                    <i class="fas fa-eye"></i> 1,247 مشاهد
-                </div>
-                <div class="viewers-count" id="streamTime">
-                    <i class="fas fa-clock"></i> 00:00:00
-                </div>
-            </div>
-            
-            <div class="stream-progress-container">
-                <div class="stream-progress-bar" id="streamProgress"></div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn-telegram" onclick="fetchTelegramVideos()" style="flex:2;">
+                    <i class="fas fa-sync-alt"></i> جلب الآن
+                </button>
+                <button class="btn-switch" onclick="clearIncoming()" style="flex:1;">
+                    <i class="fas fa-times"></i> مسح
+                </button>
             </div>
         </div>
 
-        <!-- لوحة التحكم بالدمج -->
-        <div class="playlist-panel">
-            <div class="playlist-header">
-                <h3><i class="fas fa-layer-group"></i> فيديوهات الريلز (بث حي متواصل)</h3>
-                <div class="merge-toggle active" id="mergeToggle" onclick="toggleMerge()">
-                    <i class="fas fa-link"></i> مدمج
-                </div>
+        <!-- ===== فلترة الوقت ===== -->
+        <div class="filter-panel">
+            <div class="filter-header">
+                <span><i class="fas fa-clock"></i> فلترة الوقت</span>
+                <span class="instant-filter-badge">فلترة فورية</span>
             </div>
-            
+            <div class="time-inputs">
+                <input type="text" id="startTime" value="00:00:00" placeholder="00:00:00" oninput="applyInstantFilter()">
+                <span>←</span>
+                <input type="text" id="endTime" value="23:59:59" placeholder="23:59:59" oninput="applyInstantFilter()">
+            </div>
+            <div class="filter-range" id="filterRange">النطاق: 00:00:00 - 23:59:59</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-filter" onclick="applyFilter()" style="flex:2;">
+                    <i class="fas fa-filter"></i> تطبيق
+                </button>
+                <button class="btn-switch" onclick="clearFilter()" style="flex:1;">
+                    <i class="fas fa-undo"></i> إلغاء
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== محاكاة البث ===== -->
+        <div class="simulation-panel">
+            <div class="simulation-header">
+                <h3><i class="fas fa-play-circle"></i> محاكاة البث</h3>
+                <span class="simulation-status" id="simulationStatus">⏸️ متوقفة</span>
+            </div>
             <div class="playlist-items" id="playlistItems">
-                <!-- الفيديوهات تظهر هنا -->
+                <div class="playlist-item" style="opacity:0.5; cursor:default">
+                    <i class="fas fa-hourglass"></i>
+                    <span>لا توجد فيديوهات</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="btn-simulate" onclick="startSimulation()" style="flex:1;">
+                    <i class="fas fa-play"></i> بدء
+                </button>
+                <button class="btn-danger" onclick="stopSimulation()" style="flex:1;">
+                    <i class="fas fa-stop"></i> إيقاف
+                </button>
+                <button class="btn-switch" onclick="refreshSimulation()" style="flex:1;">
+                    <i class="fas fa-sync-alt"></i> تحديث
+                </button>
             </div>
         </div>
 
-        <!-- أزرار التحكم -->
+        <!-- ===== بطاقة التاجر ===== -->
+        <div class="fixed-merchant">
+            <div class="merchant-avatar">ن</div>
+            <div class="merchant-info">
+                <div class="merchant-name">
+                    تاجر ناردو
+                    <span class="merchant-status">✅ معتمد</span>
+                </div>
+                <div class="merchant-id">@nardoo_merchant</div>
+            </div>
+        </div>
+
+        <!-- ===== إحصائيات سريعة ===== -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="statCamera">✗</div>
+                <div class="stat-label">الكاميرا</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statTelegram">0</div>
+                <div class="stat-label">تيليجرام</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statSimulation">0</div>
+                <div class="stat-label">محاكاة</div>
+            </div>
+        </div>
+
+        <!-- ===== أزرار التحكم الرئيسية ===== -->
         <div class="controls">
             <button class="btn-success" onclick="startCamera()" id="startBtn">
                 <i class="fas fa-play"></i> تشغيل الكاميرا
             </button>
             <button class="btn-danger" onclick="stopCamera()" id="stopBtn" style="display: none;">
                 <i class="fas fa-stop"></i> إيقاف
-            </button>
-            <button class="btn-merge" onclick="mergeAllVideos()">
-                <i class="fas fa-compress"></i> دمج الكل
             </button>
         </div>
 
@@ -393,30 +690,46 @@
             <button class="btn-danger" onclick="stopLiveStream()" id="stopLiveBtn" style="display: none;">
                 <i class="fas fa-square"></i> إنهاء
             </button>
-            <button class="btn-success" onclick="refreshPlaylist()">
-                <i class="fas fa-sync-alt"></i> تحديث
+            <button class="btn-switch" onclick="switchCamera()" id="switchBtn" disabled>
+                <i class="fas fa-sync-alt"></i> تبديل
             </button>
         </div>
 
-        <!-- إحصائيات البث -->
-        <div class="stats-panel">
-            <div class="stat-row">
-                <span>🎬 إجمالي الفيديوهات:</span>
-                <span id="totalVideosStat">0</span>
-            </div>
-            <div class="stat-row">
-                <span>⏱️ إجمالي المدة:</span>
-                <span id="totalDuration">00:00:00</span>
-            </div>
-            <div class="stat-row">
-                <span>🔄 وضع التشغيل:</span>
-                <span id="playbackMode">بث حي متواصل (مدمج)</span>
-            </div>
+        <!-- ===== إعدادات البث ===== -->
+        <div class="input-group">
+            <label><i class="fas fa-clock"></i> مدة المقطع (للبث المباشر)</label>
+            <select id="chunkDuration">
+                <option value="2">2 ثانية</option>
+                <option value="3" selected>3 ثواني</option>
+                <option value="4">4 ثواني</option>
+                <option value="5">5 ثواني</option>
+            </select>
         </div>
 
-        <!-- حالة النظام -->
+        <div class="input-group">
+            <label><i class="fas fa-align-left"></i> وصف الألبوم</label>
+            <textarea id="videoDescription" rows="2">🔴 ألبوم ذكي - منتجات حصرية</textarea>
+        </div>
+
+        <div class="input-group">
+            <label><i class="fas fa-link"></i> رابط المنتج</label>
+            <input type="text" id="productLink" value="https://t.me/nardoo_channel">
+        </div>
+
+        <!-- ===== الهاشتاقات ===== -->
+        <div class="hashtag-container">
+            <span class="hashtag"><i class="fas fa-hashtag"></i> ناردو_برو</span>
+            <span class="hashtag"><i class="fas fa-hashtag"></i> تاجر_معتمد</span>
+            <span class="hashtag"><i class="fas fa-hashtag"></i> nardoo_merchant</span>
+        </div>
+
+        <!-- ===== حالة النظام ===== -->
+        <div class="status-box">
+            <span id="statusText">✅ النظام جاهز - شغل الكاميرا</span>
+        </div>
+
         <div class="footer">
-            <span id="statusText">✅ البث الحي نشط - دمج جميع الريلز</span>
+            <span>ID: SMARTPFAK2J | @nardoo_merchant | نافذة تيليجرام + محاكاة + فلترة</span>
         </div>
     </div>
 
@@ -429,172 +742,145 @@
 
         const MERCHANT_ID = '@nardoo_merchant';
         
-        // ========== متغيرات النظام ==========
-        let unifiedVideo = document.getElementById('unifiedVideo');
+        // ========== متغيرات الكاميرا ==========
         let stream = null;
         let cameraActive = false;
         let isLiveStreaming = false;
+        let currentFacingMode = 'user';
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let currentAlbum = [];
+        let albums = [];
+        let totalChunksCount = 0;
+        let totalSeconds = 0;
+        let timerInterval = null;
+        const ALBUM_MAX_SIZE = 3;
         
-        // ========== قائمة الفيديوهات ==========
-        let videoQueue = [];
-        let currentVideoIndex = 0;
-        let isPlaying = false;
-        let totalDuration = 0;
-        let streamStartTime = Date.now();
+        // ========== متغيرات تيليجرام ==========
+        let telegramVideos = [];
+        let incomingVideos = [];
+        let lastMessageId = 0;
+        
+        // ========== متغيرات المحاكاة ==========
+        let simulationVideos = [];
+        let currentSimulationIndex = 0;
+        let isSimulating = false;
+        let simulationInterval = null;
+        
+        // ========== متغيرات الفلترة ==========
+        let startTimeSec = 0;
+        let endTimeSec = 86399;
+        let filterActive = false;
         
         // ========== عناصر DOM ==========
+        const cameraVideo = document.getElementById('cameraVideo');
+        const simulationVideo = document.getElementById('simulationVideo');
+        const telegramVideo = document.getElementById('telegramVideo');
+        const incomingGrid = document.getElementById('incomingGrid');
         const playlistItems = document.getElementById('playlistItems');
-        const currentVideoNum = document.getElementById('currentVideoNum');
-        const totalVideosNum = document.getElementById('totalVideosNum');
-        const totalVideosStat = document.getElementById('totalVideosStat');
-        const totalDurationEl = document.getElementById('totalDuration');
-        const streamProgress = document.getElementById('streamProgress');
-        const streamTime = document.getElementById('streamTime');
-        const viewersCount = document.getElementById('viewersCount');
         const statusText = document.getElementById('statusText');
+        const statCamera = document.getElementById('statCamera');
+        const statTelegram = document.getElementById('statTelegram');
+        const statSimulation = document.getElementById('statSimulation');
+        const incomingCounter = document.getElementById('incomingCounter');
+        const simulationStatus = document.getElementById('simulationStatus');
+        const simulationBadge = document.getElementById('simulationBadge');
+        const telegramBadge = document.getElementById('telegramBadge');
+        const liveIndicator = document.getElementById('liveIndicator');
+        const filterRange = document.getElementById('filterRange');
+        
+        // عناصر الكاميرا
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const startLiveBtn = document.getElementById('startLiveBtn');
+        const stopLiveBtn = document.getElementById('stopLiveBtn');
+        const switchBtn = document.getElementById('switchBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
 
-        // ========== دمج جميع الفيديوهات في بث واحد ==========
-        function mergeAllVideos() {
-            if (videoQueue.length === 0) {
-                alert('❌ لا توجد فيديوهات للدمج');
-                return;
+        // ========== دوال الوقت ==========
+        function timeToSeconds(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':');
+            if (parts.length === 3) {
+                return (parseInt(parts[0]) || 0) * 3600 + 
+                       (parseInt(parts[1]) || 0) * 60 + 
+                       (parseInt(parts[2]) || 0);
             }
-            
-            // حساب إجمالي المدة
-            totalDuration = videoQueue.reduce((acc, video) => acc + (video.duration || 10), 0);
-            totalDurationEl.textContent = formatTime(totalDuration);
-            
-            // بدء التشغيل المتسلسل
-            currentVideoIndex = 0;
-            playNextVideo();
-            
-            statusText.innerHTML = `✅ تم دمج ${videoQueue.length} فيديو - بث حي متواصل`;
+            return 0;
         }
 
-        // ========== تشغيل الفيديو التالي ==========
-        function playNextVideo() {
-            if (currentVideoIndex >= videoQueue.length) {
-                // إعادة التشغيل من الأول (تكرار تلقائي)
-                currentVideoIndex = 0;
-            }
-            
-            const video = videoQueue[currentVideoIndex];
-            if (!video) return;
-            
-            // تحديث العداد
-            currentVideoNum.textContent = currentVideoIndex + 1;
-            totalVideosNum.textContent = videoQueue.length;
-            
-            // تشغيل الفيديو
-            if (video.blob) {
-                // فيديو محلي
-                const url = URL.createObjectURL(video.blob);
-                unifiedVideo.src = url;
-            } else if (video.url) {
-                // فيديو من رابط
-                unifiedVideo.src = video.url;
-            }
-            
-            unifiedVideo.play()
-                .then(() => {
-                    isPlaying = true;
-                    
-                    // عند انتهاء الفيديو
-                    unifiedVideo.onended = () => {
-                        currentVideoIndex++;
-                        playNextVideo();
-                    };
-                    
-                    // تحديث شريط التقدم
-                    unifiedVideo.ontimeupdate = () => {
-                        if (unifiedVideo.duration) {
-                            const progress = (unifiedVideo.currentTime / unifiedVideo.duration) * 100;
-                            streamProgress.style.width = progress + '%';
-                        }
-                    };
-                })
-                .catch(e => console.log('تشغيل:', e));
-            
-            // تحديث قائمة التشغيل
-            updatePlaylistUI();
-        }
-
-        // ========== إضافة فيديو إلى القائمة ==========
-        function addVideoToQueue(videoData) {
-            videoQueue.push(videoData);
-            totalVideosStat.textContent = videoQueue.length;
-            totalVideosNum.textContent = videoQueue.length;
-            
-            // إعادة حساب المدة الإجمالية
-            totalDuration = videoQueue.reduce((acc, v) => acc + (v.duration || 10), 0);
-            totalDurationEl.textContent = formatTime(totalDuration);
-            
-            updatePlaylistUI();
-            
-            // بدء التشغيل إذا كان هذا أول فيديو
-            if (videoQueue.length === 1) {
-                mergeAllVideos();
-            }
-        }
-
-        // ========== تحديث واجهة قائمة التشغيل ==========
-        function updatePlaylistUI() {
-            let html = '';
-            
-            videoQueue.forEach((video, index) => {
-                const isActive = index === currentVideoIndex;
-                const timeStr = video.timeStr || '--:--:--';
-                
-                html += `
-                    <div class="playlist-item ${isActive ? 'active' : ''}" onclick="jumpToVideo(${index})">
-                        <div class="time-badge">${timeStr}</div>
-                        <i class="fas fa-video"></i>
-                        <span>مقطع ${index + 1}</span>
-                    </div>
-                `;
-            });
-            
-            if (videoQueue.length === 0) {
-                html = `
-                    <div class="playlist-item" style="opacity:0.5; cursor:default">
-                        <i class="fas fa-hourglass"></i>
-                        <span>لا توجد فيديوهات</span>
-                    </div>
-                `;
-            }
-            
-            playlistItems.innerHTML = html;
-        }
-
-        // ========== القفز إلى فيديو معين ==========
-        function jumpToVideo(index) {
-            if (index >= 0 && index < videoQueue.length) {
-                currentVideoIndex = index;
-                playNextVideo();
-            }
-        }
-
-        // ========== تحديث وقت البث ==========
-        setInterval(() => {
-            const elapsed = Math.floor((Date.now() - streamStartTime) / 1000);
-            streamTime.innerHTML = `<i class="fas fa-clock"></i> ${formatTime(elapsed)}`;
-            
-            // تغير عدد المشاهدين عشوائي (للواقعية)
-            const viewers = 1000 + Math.floor(Math.random() * 500);
-            viewersCount.innerHTML = `<i class="fas fa-eye"></i> ${viewers.toLocaleString()} مشاهد`;
-        }, 1000);
-
-        // ========== تنسيق الوقت ==========
-        function formatTime(seconds) {
+        function secondsToTime(seconds) {
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             const s = seconds % 60;
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
+        function extractTimeFromCaption(caption) {
+            if (!caption) return null;
+            const match = caption.match(/(\d{2}:\d{2}:\d{2})/);
+            return match ? match[1] : null;
+        }
+
+        // ========== فلترة فورية ==========
+        function applyInstantFilter() {
+            const startStr = document.getElementById('startTime').value;
+            const endStr = document.getElementById('endTime').value;
+            
+            startTimeSec = timeToSeconds(startStr);
+            endTimeSec = timeToSeconds(endStr);
+            
+            filterRange.innerHTML = `النطاق: ${secondsToTime(startTimeSec)} - ${secondsToTime(endTimeSec)}`;
+            filterActive = true;
+            
+            filterVideos();
+        }
+
+        function applyFilter() {
+            applyInstantFilter();
+            updateIncomingGrid();
+            statusText.innerHTML = `⏱️ تم تطبيق الفلترة`;
+        }
+
+        function clearFilter() {
+            document.getElementById('startTime').value = '00:00:00';
+            document.getElementById('endTime').value = '23:59:59';
+            startTimeSec = 0;
+            endTimeSec = 86399;
+            filterActive = false;
+            filterRange.innerHTML = 'النطاق: 00:00:00 - 23:59:59';
+            
+            filterVideos();
+            updateIncomingGrid();
+            statusText.innerHTML = '🔄 تم إلغاء الفلترة';
+        }
+
+        function filterVideos() {
+            if (!filterActive) {
+                incomingVideos = [...telegramVideos];
+            } else {
+                incomingVideos = telegramVideos.filter(video => {
+                    if (!video.timeSeconds) return false;
+                    
+                    if (endTimeSec >= startTimeSec) {
+                        return video.timeSeconds >= startTimeSec && video.timeSeconds <= endTimeSec;
+                    } else {
+                        return video.timeSeconds >= startTimeSec || video.timeSeconds <= endTimeSec;
+                    }
+                });
+            }
+            
+            statTelegram.textContent = incomingVideos.length;
+            telegramBadge.innerHTML = `📥 ${incomingVideos.length} جديد`;
+            incomingCounter.textContent = incomingVideos.length + ' فيديو';
+        }
+
         // ========== جلب فيديوهات من تيليجرام ==========
         async function fetchTelegramVideos() {
             try {
+                statusText.innerHTML = '🔄 جلب من تيليجرام...';
+                telegramBadge.innerHTML = '🔄 جلب...';
+                
                 const response = await fetch(
                     `https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?timeout=30&limit=50`
                 );
@@ -605,33 +891,55 @@
                         .filter(update => update.channel_post && update.channel_post.video)
                         .map(update => {
                             const caption = update.channel_post.caption || '';
-                            const timeMatch = caption.match(/(\d{2}:\d{2}:\d{2})/);
+                            const timeStr = extractTimeFromCaption(caption) || '--:--:--';
                             
                             return {
                                 fileId: update.channel_post.video.file_id,
                                 caption: caption,
-                                timeStr: timeMatch ? timeMatch[1] : '--:--:--',
+                                timeStr: timeStr,
+                                timeSeconds: timeToSeconds(timeStr),
                                 duration: update.channel_post.video.duration || 10,
-                                hasMerchant: caption.includes(MERCHANT_ID)
+                                hasMerchant: caption.includes(MERCHANT_ID),
+                                messageId: update.channel_post.message_id,
+                                isNew: true
                             };
                         })
                         .filter(v => v.hasMerchant);
                     
-                    // إضافة الفيديوهات للقائمة
-                    for (const video of videos) {
-                        await loadVideoFromTelegram(video);
+                    // إضافة الفيديوهات الجديدة
+                    const newVideos = videos.filter(v => 
+                        !telegramVideos.some(old => old.fileId === v.fileId)
+                    );
+                    
+                    telegramVideos = [...telegramVideos, ...newVideos];
+                    
+                    // تطبيق الفلترة
+                    filterVideos();
+                    
+                    // تحديث الواجهة
+                    updateIncomingGrid();
+                    
+                    statusText.innerHTML = `✅ تم جلب ${newVideos.length} فيديو جديد`;
+                    
+                    if (newVideos.length > 0) {
+                        // تحميل أول فيديو جديد للتشغيل في شاشة تيليجرام
+                        loadTelegramVideo(newVideos[0]);
                     }
+                    
+                } else {
+                    throw new Error(data.description);
                 }
             } catch (error) {
-                console.error('Fetch error:', error);
+                statusText.innerHTML = '❌ فشل الجلب';
+                telegramBadge.innerHTML = '⚠️ خطأ';
             }
         }
 
         // ========== تحميل فيديو من تيليجرام ==========
-        async function loadVideoFromTelegram(videoInfo) {
+        async function loadTelegramVideo(video) {
             try {
                 const response = await fetch(
-                    `https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${videoInfo.fileId}`
+                    `https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${video.fileId}`
                 );
                 const data = await response.json();
                 
@@ -639,44 +947,190 @@
                     const filePath = data.result.file_path;
                     const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${filePath}`;
                     
-                    // إضافة للقائمة
-                    addVideoToQueue({
-                        url: videoUrl,
-                        timeStr: videoInfo.timeStr,
-                        duration: videoInfo.duration,
-                        fileId: videoInfo.fileId
-                    });
+                    telegramVideo.src = videoUrl;
+                    telegramVideo.play().catch(e => console.log('تشغيل تيليجرام:', e));
+                    
+                    // إضافة للمحاكاة
+                    addToSimulation(videoUrl, video.timeStr, video.duration);
                 }
             } catch (error) {
                 console.error('Load error:', error);
             }
         }
 
-        // ========== إضافة فيديو مرسل حديثاً ==========
-        function addSentVideo(videoBlob, description) {
-            const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        // ========== تحديث شبكة القادم ==========
+        function updateIncomingGrid() {
+            if (incomingVideos.length === 0) {
+                incomingGrid.innerHTML = `
+                    <div class="incoming-item" style="opacity:0.5; cursor:default">
+                        <i class="fas fa-inbox incoming-icon"></i>
+                        <span class="incoming-title">لا توجد فيديوهات</span>
+                    </div>
+                `;
+                return;
+            }
             
-            addVideoToQueue({
-                blob: videoBlob,
-                timeStr: timeStr,
-                duration: 10,
-                description: description
+            let html = '';
+            
+            incomingVideos.slice(0, 12).forEach((video, index) => {
+                const isNew = video.isNew ? '<span class="new-badge">جديد</span>' : '';
+                
+                html += `
+                    <div class="incoming-item" onclick="loadTelegramVideoFromGrid(${index})">
+                        ${isNew}
+                        <div class="incoming-time">${video.timeStr}</div>
+                        <i class="fas fa-video incoming-icon"></i>
+                        <div class="incoming-title">مقطع ${index + 1}</div>
+                    </div>
+                `;
             });
+            
+            incomingGrid.innerHTML = html;
+        }
+
+        function loadTelegramVideoFromGrid(index) {
+            if (index >= 0 && index < incomingVideos.length) {
+                loadTelegramVideo(incomingVideos[index]);
+                statusText.innerHTML = `▶️ تشغيل فيديو ${index + 1} في شاشة تيليجرام`;
+            }
+        }
+
+        function clearIncoming() {
+            incomingVideos = [];
+            updateIncomingGrid();
+            statTelegram.textContent = '0';
+            telegramBadge.innerHTML = '📥 0 جديد';
+            incomingCounter.textContent = '0 فيديو';
+            telegramVideo.pause();
+            telegramVideo.src = '';
+        }
+
+        // ========== إضافة للمحاكاة ==========
+        function addToSimulation(videoUrl, timeStr, duration) {
+            simulationVideos.push({
+                url: videoUrl,
+                timeStr: timeStr,
+                duration: duration || 10
+            });
+            
+            statSimulation.textContent = simulationVideos.length;
+            updatePlaylistUI();
+        }
+
+        function updatePlaylistUI() {
+            if (simulationVideos.length === 0) {
+                playlistItems.innerHTML = `
+                    <div class="playlist-item" style="opacity:0.5; cursor:default">
+                        <i class="fas fa-hourglass"></i>
+                        <span>لا توجد فيديوهات</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            simulationVideos.forEach((video, index) => {
+                const isActive = index === currentSimulationIndex;
+                
+                html += `
+                    <div class="playlist-item ${isActive ? 'active' : ''}" onclick="jumpInSimulation(${index})">
+                        <div class="playlist-time">${video.timeStr}</div>
+                        <i class="fas fa-video"></i>
+                        <span>مقطع ${index + 1}</span>
+                    </div>
+                `;
+            });
+            
+            playlistItems.innerHTML = html;
+        }
+
+        // ========== بدء المحاكاة ==========
+        function startSimulation() {
+            if (simulationVideos.length === 0) {
+                alert('❌ لا توجد فيديوهات للمحاكاة');
+                return;
+            }
+            
+            isSimulating = true;
+            currentSimulationIndex = 0;
+            simulationStatus.innerHTML = '▶️ نشطة';
+            simulationBadge.innerHTML = '▶️ تشغيل';
+            playSimulationVideo(0);
+        }
+
+        function playSimulationVideo(index) {
+            if (!isSimulating || index >= simulationVideos.length) {
+                if (index >= simulationVideos.length && simulationVideos.length > 0) {
+                    currentSimulationIndex = 0;
+                    playSimulationVideo(0);
+                }
+                return;
+            }
+            
+            const video = simulationVideos[index];
+            currentSimulationIndex = index;
+            
+            simulationVideo.src = video.url;
+            simulationVideo.play()
+                .then(() => {
+                    updatePlaylistUI();
+                    
+                    simulationVideo.onended = () => {
+                        if (isSimulating) {
+                            playSimulationVideo(index + 1);
+                        }
+                    };
+                })
+                .catch(e => console.log('تشغيل محاكاة:', e));
+        }
+
+        function stopSimulation() {
+            isSimulating = false;
+            simulationVideo.pause();
+            simulationStatus.innerHTML = '⏸️ متوقفة';
+            simulationBadge.innerHTML = '⏸️ متوقفة';
+        }
+
+        function jumpInSimulation(index) {
+            if (index >= 0 && index < simulationVideos.length) {
+                currentSimulationIndex = index;
+                if (isSimulating) {
+                    playSimulationVideo(index);
+                } else {
+                    simulationVideo.src = simulationVideos[index].url;
+                    simulationVideo.play();
+                }
+            }
+        }
+
+        function refreshSimulation() {
+            updatePlaylistUI();
+            statusText.innerHTML = '🔄 تم تحديث قائمة المحاكاة';
         }
 
         // ========== دوال الكاميرا ==========
         async function startCamera() {
             try {
+                statusText.innerHTML = '🔄 تشغيل الكاميرا...';
+                
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user' },
+                    video: { facingMode: currentFacingMode },
                     audio: true
                 });
                 
+                cameraVideo.srcObject = stream;
+                await cameraVideo.play();
+                
                 cameraActive = true;
+                statCamera.innerHTML = '✓';
+                statCamera.style.color = '#4caf50';
+                
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-block';
                 startLiveBtn.disabled = false;
+                switchBtn.disabled = false;
+                switchCameraBtn.style.display = 'flex';
                 
                 statusText.innerHTML = '✅ الكاميرا جاهزة';
                 
@@ -689,49 +1143,181 @@
         }
 
         function stopCamera() {
+            if (isLiveStreaming) stopLiveStream();
+            
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
+                cameraVideo.srcObject = null;
             }
+            
             cameraActive = false;
+            statCamera.innerHTML = '✗';
+            statCamera.style.color = '#da3633';
+            
             startBtn.style.display = 'inline-block';
             stopBtn.style.display = 'none';
             startLiveBtn.disabled = true;
+            switchBtn.disabled = true;
+            switchCameraBtn.style.display = 'none';
+            liveIndicator.style.display = 'none';
+            
+            statusText.innerHTML = '⏹️ الكاميرا متوقفة';
+        }
+
+        function switchCamera() {
+            if (!cameraActive) {
+                alert('❌ شغل الكاميرا أولاً');
+                return;
+            }
+            
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            stopCamera();
+            setTimeout(startCamera, 500);
         }
 
         function startLiveStream() {
+            if (!cameraActive) {
+                alert('❌ شغل الكاميرا أولاً');
+                return;
+            }
+            
             isLiveStreaming = true;
+            totalSeconds = 0;
+            currentAlbum = [];
+            recordedChunks = [];
+            
             startLiveBtn.style.display = 'none';
             stopLiveBtn.style.display = 'inline-block';
+            liveIndicator.style.display = 'flex';
+            
             statusText.innerHTML = '🔴 البث المباشر نشط';
+            
+            setupMediaRecorder();
+            
+            timerInterval = setInterval(() => {
+                totalSeconds++;
+            }, 1000);
+        }
+
+        function setupMediaRecorder() {
+            try {
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp8,opus'
+                });
+            } catch (e) {
+                mediaRecorder = new MediaRecorder(stream);
+            }
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                currentAlbum.push(videoBlob);
+                totalChunksCount++;
+                
+                if (currentAlbum.length === ALBUM_MAX_SIZE) {
+                    sendAlbum();
+                }
+            };
+            
+            const duration = parseInt(document.getElementById('chunkDuration').value) * 1000;
+            mediaRecorder.start();
+            
+            setTimeout(() => {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                    
+                    if (isLiveStreaming) {
+                        setTimeout(setupMediaRecorder, 500);
+                    }
+                }
+            }, duration);
         }
 
         function stopLiveStream() {
             isLiveStreaming = false;
+            clearInterval(timerInterval);
+            
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            
+            if (currentAlbum.length > 0) {
+                sendAlbum();
+            }
+            
             startLiveBtn.style.display = 'inline-block';
             stopLiveBtn.style.display = 'none';
+            liveIndicator.style.display = 'none';
+            
+            statusText.innerHTML = '⏹️ تم إنهاء البث';
         }
 
-        function refreshPlaylist() {
-            fetchTelegramVideos();
-        }
-
-        function toggleMerge() {
-            // الوضع مدمج دائماً
+        async function sendAlbum() {
+            if (currentAlbum.length === 0) return;
+            
+            const albumNumber = albums.length + 1;
+            const description = document.getElementById('videoDescription').value;
+            
+            const now = new Date();
+            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            try {
+                statusText.innerHTML = `📤 إرسال الألبوم ${albumNumber}...`;
+                
+                const mediaGroup = currentAlbum.map((_, i) => ({
+                    type: 'video',
+                    media: `attach://video${i}`,
+                    caption: i === 0 ? 
+                        `🎬 ألبوم ذكي ${albumNumber}\n🏪 ${MERCHANT_ID}\n⏱️ ${currentTime}\n📝 ${description}` : ''
+                }));
+                
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM.channelId);
+                formData.append('media', JSON.stringify(mediaGroup));
+                
+                currentAlbum.forEach((chunk, i) => {
+                    formData.append(`video${i}`, chunk, `album${albumNumber}_${i+1}.mp4`);
+                });
+                
+                const response = await fetch(
+                    `https://api.telegram.org/bot${TELEGRAM.botToken}/sendMediaGroup`,
+                    { method: 'POST', body: formData }
+                );
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    albums.push({ number: albumNumber, time: currentTime });
+                    statusText.innerHTML = `✅ تم إرسال الألبوم ${albumNumber}`;
+                    currentAlbum = [];
+                    
+                    // إضافة للمحاكاة (اختياري)
+                    const videoUrl = URL.createObjectURL(currentAlbum[0]);
+                    addToSimulation(videoUrl, currentTime, 10);
+                    
+                } else {
+                    throw new Error(result.description);
+                }
+                
+            } catch (error) {
+                statusText.innerHTML = '❌ فشل الإرسال';
+            }
         }
 
         // ========== تهيئة الصفحة ==========
         window.onload = function() {
-            // إضافة فيديوهات تجريبية
-            setTimeout(() => {
-                // محاكاة فيديوهات وهمية
-                for (let i = 1; i <= 5; i++) {
-                    addVideoToQueue({
-                        url: 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
-                        timeStr: `${i}:00:00`,
-                        duration: 10
-                    });
-                }
-            }, 1000);
+            statusText.innerHTML = '✅ النظام جاهز - شغل الكاميرا';
+            filterRange.innerHTML = 'النطاق: 00:00:00 - 23:59:59';
+            
+            // جلب الفيديوهات كل 30 ثانية
+            setInterval(fetchTelegramVideos, 30000);
+            
+            console.log('✅ نظام متكامل: كاميرا + تيليجرام + محاكاة + فلترة');
         };
     </script>
 </body>
