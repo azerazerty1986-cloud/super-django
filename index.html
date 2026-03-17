@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📹 HYBRID v2.0 - إيقاف تام + ZIP</title>
+    <title>📹 HYBRID v2.0 - نظام متكامل</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -160,7 +160,7 @@
             bottom: 20px;
             right: 20px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             z-index: 20;
         }
         
@@ -168,13 +168,13 @@
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(5px);
             color: white;
-            width: 55px;
-            height: 55px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 28px;
             cursor: pointer;
             border: 2px solid #ffd700;
             transition: all 0.3s;
@@ -187,60 +187,68 @@
             transform: scale(1.1);
         }
         
-        .watermark-btn.stop {
+        .watermark-btn.stop-btn {
             border-color: #ff4444;
         }
         
-        .watermark-btn.stop:hover {
+        .watermark-btn.stop-btn:hover {
             background: #ff4444;
             color: white;
         }
         
-        .watermark-btn.zip {
+        .watermark-btn.zip-btn {
             border-color: #4caf50;
         }
         
-        .watermark-btn.zip:hover {
+        .watermark-btn.zip-btn:hover {
             background: #4caf50;
             color: white;
         }
         
-        /* مؤشرات على الشاشة */
-        .screen-indicator {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            padding: 8px 15px;
-            border-radius: 30px;
-            font-size: 14px;
-            border: 2px solid;
-            z-index: 20;
+        /* 3 أزرار كبيرة أسفل */
+        .action-buttons {
+            display: flex;
+            gap: 20px;
+            margin: 30px 0;
+            justify-content: center;
         }
         
-        .live-indicator {
-            border-color: #ff4444;
-            color: #ff4444;
+        .action-btn {
+            flex: 1;
+            max-width: 220px;
+            padding: 18px 0;
+            border: none;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
         }
         
-        .preview-indicator {
-            border-color: #ffd700;
-            color: #ffd700;
+        .action-btn.start {
+            background: #4caf50;
+            color: white;
         }
         
-        .stats-indicator {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            padding: 8px 15px;
-            border-radius: 30px;
-            font-size: 14px;
-            border: 2px solid #ffd700;
-            color: #ffd700;
-            z-index: 20;
+        .action-btn.stop {
+            background: #f44336;
+            color: white;
+        }
+        
+        .action-btn.zip {
+            background: #ffd700;
+            color: black;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-5px);
+            filter: brightness(1.2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
         
         /* أزرار الكاميرا */
@@ -318,7 +326,7 @@
             </div>
         </div>
 
-        <!-- شاشتين -->
+        <!-- شاشتين كبيرتين -->
         <div class="dual-screen">
             <!-- الشاشة الأولى: البث المباشر -->
             <div class="screen live-screen">
@@ -332,24 +340,13 @@
                 <div class="video-container">
                     <video id="liveVideo" autoplay playsinline muted></video>
                     
-                    <!-- مؤشرات البروتوكول -->
-                    <div class="screen-indicator live-indicator">
-                        <i class="fas fa-video"></i> 30fps
-                    </div>
-                    <div class="stats-indicator" id="liveStats">
-                        📸 0 | 🎥 0
-                    </div>
-                    
-                    <!-- الأزرار المائية -->
+                    <!-- الأزرار المائية على الشاشة الأولى -->
                     <div class="watermark-buttons">
-                        <div class="watermark-btn" onclick="startBroadcast()" id="startBtn" title="بدء البث">
-                            <i class="fas fa-play"></i>
+                        <div class="watermark-btn" onclick="selectCamera('user')" id="camFrontBtn" title="كاميرا أمامية">
+                            <i class="fas fa-camera-retro"></i>
                         </div>
-                        <div class="watermark-btn stop" onclick="stopEverything()" id="stopBtn" title="إيقاف تام">
-                            <i class="fas fa-power-off"></i>
-                        </div>
-                        <div class="watermark-btn zip" onclick="saveZip()" id="zipBtn" title="حفظ ZIP">
-                            <i class="fas fa-file-archive"></i>
+                        <div class="watermark-btn" onclick="selectCamera('environment')" id="camBackBtn" title="كاميرا خلفية">
+                            <i class="fas fa-camera"></i>
                         </div>
                     </div>
                 </div>
@@ -367,25 +364,30 @@
                 <div class="video-container">
                     <canvas id="previewCanvas" width="1280" height="720"></canvas>
                     
-                    <!-- مؤشرات -->
-                    <div class="screen-indicator preview-indicator">
-                        <i class="fas fa-clock"></i> <span id="lastPhotoTime">--:--:--</span>
-                    </div>
-                    <div class="stats-indicator">
-                        <i class="fas fa-fingerprint"></i> <span id="sessionDisplay">---</span>
-                    </div>
-                    
-                    <!-- أزرار الكاميرا المائية -->
+                    <!-- الأزرار المائية على الشاشة الثانية -->
                     <div class="watermark-buttons">
-                        <div class="watermark-btn" onclick="selectCamera('user')" id="camFrontBtn" title="أمامية">
-                            <i class="fas fa-camera-retro"></i>
+                        <div class="watermark-btn stop-btn" onclick="stopEverything()" id="stopBtn" title="إيقاف تام">
+                            <i class="fas fa-power-off"></i>
                         </div>
-                        <div class="watermark-btn" onclick="selectCamera('environment')" id="camBackBtn" title="خلفية">
-                            <i class="fas fa-camera"></i>
+                        <div class="watermark-btn zip-btn" onclick="saveZip()" id="zipBtn" title="حفظ ZIP">
+                            <i class="fas fa-file-archive"></i>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- 3 أزرار كبيرة أسفل -->
+        <div class="action-buttons">
+            <button class="action-btn start" onclick="startBroadcast()" id="startBtn">
+                <i class="fas fa-play"></i> بدء البث
+            </button>
+            <button class="action-btn stop" onclick="stopEverything()" id="stopBigBtn">
+                <i class="fas fa-stop"></i> إيقاف تام
+            </button>
+            <button class="action-btn zip" onclick="saveZip()" id="zipBigBtn">
+                <i class="fas fa-file-archive"></i> حفظ ZIP
+            </button>
         </div>
 
         <!-- أزرار الكاميرا السفلية -->
@@ -398,7 +400,7 @@
             </div>
         </div>
 
-        <!-- شريط الحالة مع معلومات البروتوكول -->
+        <!-- شريط الحالة -->
         <div class="status-bar">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span class="status-dot" id="statusDot"></span>
@@ -407,7 +409,7 @@
             <div style="display: flex; gap: 25px; color: #ffd700;">
                 <span><i class="fas fa-image"></i> <span id="photoCount">0</span></span>
                 <span><i class="fas fa-video"></i> <span id="videoCount">0</span></span>
-                <span><i class="fas fa-tachometer-alt"></i> 30fps | 90%</span>
+                <span><i class="fas fa-fingerprint"></i> <span id="sessionDisplay">---</span></span>
             </div>
         </div>
 
@@ -498,17 +500,12 @@
         
         const liveIndicator = document.getElementById('liveIndicator');
         const countdownDisplay = document.getElementById('countdownDisplay');
-        const lastPhotoTime = document.getElementById('lastPhotoTime');
-        const liveStats = document.getElementById('liveStats');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const photoCount = document.getElementById('photoCount');
         const videoCount = document.getElementById('videoCount');
         const sessionDisplay = document.getElementById('sessionDisplay');
         
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const zipBtn = document.getElementById('zipBtn');
         const camFront = document.getElementById('camFront');
         const camBack = document.getElementById('camBack');
         const camFrontBtn = document.getElementById('camFrontBtn');
@@ -628,6 +625,7 @@
             statusDot.className = 'status-dot';
             statusText.innerHTML = 'تم الإيقاف التام';
             countdownDisplay.style.display = 'none';
+            liveIndicator.style.display = 'none';
             
             // 5. تنظيف العد التنازلي
             if (countdownInterval) {
@@ -705,10 +703,6 @@
                     time: Date.now()
                 });
                 photoCounter++;
-                
-                // تحديث الوقت
-                const now = new Date();
-                lastPhotoTime.textContent = now.toLocaleTimeString('ar-EG');
                 
                 // تحديث الإحصائيات
                 updateStats();
@@ -815,7 +809,6 @@
         function updateStats() {
             photoCount.textContent = currentPhotos.length;
             videoCount.textContent = currentVideos.length;
-            liveStats.innerHTML = `📸 ${currentPhotos.length} | 🎥 ${currentVideos.length}`;
         }
 
         // ========== بدء التشغيل ==========
