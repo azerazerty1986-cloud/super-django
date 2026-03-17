@@ -3,42 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🔥 HYBRID SnapTik v35.0 - نظام الألبومات الكامل</title>
+    <title>📹 HYBRID v6.0 - الجولة المعدل النهائي</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Cairo', sans-serif;
         }
 
         body {
-            background: #000;
+            background: #0a0c10;
+            color: white;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
+            padding: 5px;
         }
 
-        .hybrid-container {
-            width: 100%;
+        .container {
             max-width: 450px;
-            height: 900px;
-            background: #0a0c10;
-            position: relative;
-            overflow: hidden;
-            border-radius: 40px;
-            box-shadow: 0 30px 60px rgba(255,215,0,0.2);
-            border: 2px solid #ffd700;
+            margin: 0 auto;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            gap: 5px;
         }
 
         /* شاشة الموافقة */
         .approval-screen {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -51,19 +45,16 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
-            transition: all 0.5s ease;
         }
 
         .approval-screen.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
+            display: none;
         }
 
         .approval-logo {
             font-size: 60px;
             color: #ffd700;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             animation: pulse 2s infinite;
         }
 
@@ -71,14 +62,14 @@
             color: #ffd700;
             font-size: 24px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
 
         .approval-subtitle {
             color: #888;
-            font-size: 12px;
+            font-size: 14px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
 
         .user-registration {
@@ -87,13 +78,11 @@
             border-radius: 20px;
             padding: 20px;
             border: 2px solid #ffd700;
-            margin-bottom: 15px;
-            max-height: 60vh;
-            overflow-y: auto;
+            margin-bottom: 20px;
         }
 
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .input-label {
@@ -116,82 +105,24 @@
             direction: ltr;
         }
 
-        .input-field:focus {
-            outline: none;
-            border-color: #4caf50;
-        }
-
-        .image-upload {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 15px;
-        }
-
-        .upload-preview {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            border: 3px solid #ffd700;
-            background: #0a0c10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.3s;
-        }
-
-        .upload-preview:hover {
-            transform: scale(1.05);
-            border-color: #4caf50;
-        }
-
-        .upload-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .upload-preview i {
-            font-size: 30px;
-            color: #ffd700;
-        }
-
-        .upload-hint {
-            color: #888;
-            font-size: 10px;
-            text-align: center;
-        }
-
-        .upload-input {
-            display: none;
-        }
-
         .fingerprint-display {
             background: #0a0c10;
-            padding: 12px;
+            padding: 15px;
             border-radius: 15px;
             border: 1px solid #4caf50;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .fingerprint-label {
             color: #4caf50;
-            font-size: 10px;
-            margin-bottom: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
+            font-size: 11px;
+            margin-bottom: 5px;
         }
 
         .fingerprint-value {
             color: white;
-            font-size: 18px;
+            font-size: 20px;
             font-family: monospace;
             letter-spacing: 2px;
         }
@@ -205,24 +136,13 @@
             color: white;
             font-size: 16px;
             font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .approval-btn:disabled {
-            background: #888;
-            cursor: not-allowed;
-            opacity: 0.5;
         }
 
         .waiting-message {
             color: #ffd700;
-            font-size: 13px;
-            margin-top: 15px;
+            font-size: 14px;
+            margin-top: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -238,9 +158,444 @@
             animation: spin 1s linear infinite;
         }
 
+        /* الهيدر */
+        .header {
+            background: linear-gradient(135deg, #161b22, #1f2630);
+            border-radius: 15px;
+            padding: 10px 15px;
+            border: 2px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            color: #ffd700;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fingerprint {
+            background: #0a0c10;
+            color: #4caf50;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-family: monospace;
+            border: 1px solid #ffd700;
+        }
+
+        .points {
+            background: #ffd700;
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* شريط الحالة */
+        .status-bar {
+            background: #1f2630;
+            border-radius: 12px;
+            padding: 8px 12px;
+            border: 1px solid #ffd700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .status-led {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-led.red { background: #ff4444; box-shadow: 0 0 5px #ff4444; }
+        .status-led.green { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
+        .status-led.yellow { background: #ffd700; box-shadow: 0 0 5px #ffd700; }
+
+        .status-info {
+            display: flex;
+            gap: 10px;
+            color: #ffd700;
+        }
+
+        /* عداد الناشطين */
+        .active-counter {
+            background: linear-gradient(90deg, #4caf50, #ffd700);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 2px solid #ffd700;
+        }
+
+        .counter-label {
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .counter-value {
+            background: #000;
+            color: #ffd700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 2px solid #ffd700;
+        }
+
+        /* شريط المشاركين */
+        .participants-bar {
+            background: #1f2630;
+            border-radius: 12px;
+            padding: 10px;
+            border: 2px solid #ffd700;
+        }
+
+        .section-title {
+            color: #ffd700;
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .participants-grid {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+            min-height: 100px;
+        }
+
+        .participant-card {
+            min-width: 90px;
+            background: #0a0c10;
+            border: 1px solid #ffd700;
+            border-radius: 12px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .participant-card.selected {
+            background: #ffd700;
+            transform: scale(1.05);
+        }
+
+        .participant-card.selected .participant-name,
+        .participant-card.selected .participant-points {
+            color: #000;
+        }
+
+        .participant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ffd700, #ff8a00);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+        }
+
+        .online-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 10px;
+            height: 10px;
+            background: #4caf50;
+            border-radius: 50%;
+            border: 2px solid #000;
+        }
+
+        .participant-name {
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .participant-fingerprint {
+            background: #4caf50;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 8px;
+            font-size: 7px;
+            font-family: monospace;
+        }
+
+        .participant-points {
+            color: #ffd700;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        /* شاشتين عامودي */
+        .dual-screen {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .screen {
+            background: #161b22;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .my-screen { border-color: #4caf50; }
+        .peer-screen { border-color: #ffd700; }
+
+        .screen-header {
+            padding: 5px 8px;
+            background: #1f2630;
+            border-bottom: 1px solid;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .my-header { color: #4caf50; border-bottom-color: #4caf50; }
+        .peer-header { color: #ffd700; border-bottom-color: #ffd700; }
+
+        .screen-title {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: bold;
+        }
+
+        .screen-badge {
+            background: currentColor;
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .video-container {
+            position: relative;
+            flex: 1;
+            background: black;
+            min-height: 0;
+        }
+
+        video, canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .player-info {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.7);
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid #ffd700;
+            color: #ffd700;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .player-points {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.7);
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid #4caf50;
+            color: #4caf50;
+            font-size: 9px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            z-index: 10;
+        }
+
+        /* مؤقت الجولة */
+        .round-timer {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,68,68,0.9);
+            padding: 6px 20px;
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: monospace;
+            border: 2px solid #ffd700;
+            z-index: 20;
+        }
+
+        /* شريط التقدم */
+        .progress-container {
+            position: absolute;
+            bottom: 15px;
+            left: 10px;
+            right: 10px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #ffd700;
+            z-index: 15;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4caf50, #ffd700);
+            transition: width 0.3s ease;
+        }
+
+        /* أزرار التحكم */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            margin: 5px 0;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px 0;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-btn.start { background: #4caf50; color: white; }
+        .action-btn.stop { background: #ff4444; color: white; }
+        .action-btn.call { background: #007bff; color: white; }
+        .action-btn.zip { background: #ffd700; color: black; }
+
+        /* شريط الإحصائيات */
+        .stats-bar {
+            background: #1f2630;
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ffd700;
+            font-size: 11px;
+        }
+
+        .stats-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ffd700;
+        }
+
+        .stats-value {
+            background: #0a0c10;
+            padding: 2px 8px;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* حالة الألبوم */
+        .album-status {
+            background: #1f2630;
+            border-radius: 12px;
+            padding: 5px 10px;
+            border: 1px solid #ffd700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #ffd700;
+        }
+
+        .album-name {
+            font-family: monospace;
+            background: #0a0c10;
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+
+        .file-status {
+            display: flex;
+            gap: 8px;
+            margin-top: 2px;
+        }
+
+        .file-badge {
+            background: #0a0c10;
+            color: #ffd700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 8px;
+            border: 1px solid #ffd700;
+        }
+
+        .file-badge.received {
+            background: #4caf50;
+            color: white;
+            border-color: #4caf50;
+        }
+
         /* نافذة موافقة الجولة */
         .round-approval-popup {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -259,7 +614,7 @@
 
         .round-approval-title {
             color: #ffd700;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             text-align: center;
         }
@@ -284,478 +639,24 @@
 
         .round-approval-btn {
             flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .round-approval-btn.accept {
-            background: #4caf50;
-            color: white;
-        }
-
-        .round-approval-btn.reject {
-            background: #ff4444;
-            color: white;
-        }
-
-        /* شريط حالة الألبوم */
-        .album-status {
-            background: #1f2630;
-            padding: 5px 10px;
-            margin: 5px;
-            border-radius: 15px;
-            border: 1px solid #ffd700;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 10px;
-            color: #ffd700;
-        }
-
-        .album-name {
-            font-family: monospace;
-            background: #0a0c10;
-            padding: 2px 5px;
-            border-radius: 10px;
-        }
-
-        .file-status {
-            display: flex;
-            gap: 10px;
-            margin-top: 5px;
-        }
-
-        .file-badge {
-            background: #0a0c10;
-            color: #ffd700;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 9px;
-            border: 1px solid #ffd700;
-        }
-
-        .file-badge.received {
-            background: #4caf50;
-            color: white;
-            border-color: #4caf50;
-        }
-
-        /* التصميم الأساسي */
-        .app-header {
-            background: linear-gradient(135deg, #161b22, #1f2630);
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #ffd700;
-        }
-
-        .logo {
-            color: #ffd700;
-            font-size: 18px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .user-avatar-small {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            border: 2px solid #ffd700;
-            object-fit: cover;
-        }
-
-        .user-badge {
-            background: #4caf50;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 25px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .user-points {
-            background: #ffd700;
-            color: #000;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-
-        .status-bar {
-            background: #1f2630;
-            padding: 8px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ffd700;
-        }
-
-        .user-fingerprint {
-            background: #0a0c10;
-            color: #4caf50;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-family: monospace;
-            border: 1px solid #ffd700;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .connection-status {
-            background: #1f2630;
-            padding: 8px 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #ffd700;
-            font-size: 11px;
-        }
-
-        .status-led {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
-        }
-
-        .status-led.red { background: #ff4444; box-shadow: 0 0 5px #ff4444; }
-        .status-led.green { background: #4caf50; box-shadow: 0 0 5px #4caf50; }
-        .status-led.yellow { background: #ffd700; box-shadow: 0 0 5px #ffd700; }
-
-        .active-counter {
-            background: linear-gradient(90deg, #4caf50, #ffd700);
-            padding: 8px 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 2px solid #ffd700;
-        }
-
-        .counter-label {
-            color: #000;
-            font-size: 12px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .counter-value {
-            background: #000;
-            color: #ffd700;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            border: 2px solid #ffd700;
-        }
-
-        .participants-bar {
-            background: #1f2630;
-            padding: 10px;
-            border-bottom: 2px solid #ffd700;
-        }
-
-        .section-title {
-            color: #ffd700;
-            font-size: 12px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .participants-grid {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-            min-height: 120px;
-        }
-
-        .participant-card {
-            min-width: 100px;
-            background: #0a0c10;
-            border: 1px solid #ffd700;
-            border-radius: 15px;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .participant-card.selected {
-            background: #ffd700;
-            transform: scale(1.05);
-        }
-
-        .participant-card.selected .participant-name,
-        .participant-card.selected .participant-points {
-            color: #000;
-        }
-
-        .participant-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, #ffd700, #ff8a00);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .online-indicator {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 12px;
-            height: 12px;
-            background: #4caf50;
-            border-radius: 50%;
-            border: 2px solid #000;
-            box-shadow: 0 0 5px #4caf50;
-            animation: blink 2s infinite;
-        }
-
-        .participant-name {
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .participant-fingerprint {
-            background: #4caf50;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 8px;
-            font-family: monospace;
-        }
-
-        .participant-points {
-            color: #ffd700;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-
-        .dual-screen {
-            display: flex;
-            flex: 1;
-            min-height: 0;
-            gap: 2px;
-            padding: 2px;
-        }
-
-        .screen {
-            flex: 1;
-            background: #161b22;
-            border: 2px solid;
-            border-radius: 15px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .my-screen { border-color: #4caf50; }
-        .peer-screen { border-color: #ffd700; }
-
-        .screen-header {
-            padding: 5px;
-            background: #1f2630;
-            border-bottom: 1px solid;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 10px;
-        }
-
-        .my-header { color: #4caf50; }
-        .peer-header { color: #ffd700; }
-
-        .screen-badge {
-            background: currentColor;
-            color: #000;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 8px;
-            font-weight: bold;
-        }
-
-        .video-container {
-            flex: 1;
-            background: #000;
-            position: relative;
-            min-height: 0;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            background: #1a1a1a;
-        }
-
-        .player-info {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            background: rgba(0,0,0,0.8);
-            padding: 4px 8px;
-            border-radius: 15px;
-            border: 1px solid #ffd700;
-            color: #ffd700;
-            font-size: 9px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            z-index: 10;
-        }
-
-        .player-points {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(0,0,0,0.8);
-            padding: 4px 8px;
-            border-radius: 15px;
-            border: 1px solid #4caf50;
-            color: #4caf50;
-            font-size: 10px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            z-index: 10;
-        }
-
-        .timer-bar {
-            background: #1f2630;
-            padding: 8px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid #ffd700;
-            border-bottom: 2px solid #ffd700;
-        }
-
-        .timer-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            color: #ffd700;
-            font-size: 12px;
-        }
-
-        .timer-value {
-            background: #0a0c10;
-            padding: 2px 8px;
-            border-radius: 15px;
-            color: white;
-            font-weight: bold;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 5px;
-            padding: 5px;
-            background: #1f2630;
-        }
-
-        .action-btn {
-            flex: 1;
             padding: 12px;
             border: none;
             border-radius: 25px;
             font-size: 14px;
             font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
             cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .action-btn.start { background: #4caf50; color: white; }
-        .action-btn.stop { background: #ff4444; color: white; }
-        .action-btn.call { background: #007bff; color: white; }
-
-        .stats-bar {
-            background: #1f2630;
-            padding: 8px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 2px solid #ffd700;
-        }
-
-        .stats-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            color: #ffd700;
-            font-size: 12px;
-        }
-
-        .stats-value {
-            background: #0a0c10;
-            padding: 2px 8px;
-            border-radius: 15px;
-            color: white;
-            font-weight: bold;
-        }
-
-        .hint-text {
-            color: #ffd700;
-            font-size: 10px;
-            text-align: center;
-            padding: 5px;
-            background: #1f2630;
-            border-top: 1px solid #ffd700;
-        }
+        .round-approval-btn.accept { background: #4caf50; color: white; }
+        .round-approval-btn.reject { background: #ff4444; color: white; }
 
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideDown { from { transform: translate(-50%, -100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
         .notification {
-            position: absolute;
-            top: 100px;
+            position: fixed;
+            top: 80px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0,0,0,0.9);
@@ -769,49 +670,86 @@
             gap: 10px;
             animation: slideDown 0.3s ease;
         }
+
+        .footer {
+            text-align: center;
+            color: #6e7681;
+            font-size: 10px;
+        }
     </style>
 </head>
 <body>
-    <div class="hybrid-container">
-        <!-- شاشة الموافقة -->
-        <div class="approval-screen" id="approvalScreen">
-            <div class="approval-logo"><i class="fas fa-microchip"></i></div>
-            <div class="approval-title">مرحباً بك في HYBRID</div>
-            <div class="approval-subtitle">يرجى تسجيل الدخول للموافقة من القناة</div>
-            
-            <div class="user-registration">
-                <div class="input-group">
-                    <div class="input-label"><i class="fas fa-user"></i> معرف تيليجرام</div>
-                    <input type="text" class="input-field" id="usernameInput" placeholder="@username" value="@test">
-                </div>
-                
-                <div class="fingerprint-display">
-                    <div class="fingerprint-label"><i class="fas fa-fingerprint"></i> بصمتك الرقمية</div>
-                    <div class="fingerprint-value" id="fingerprintDisplay">----</div>
-                </div>
-                
-                <button class="approval-btn" id="requestApprovalBtn" onclick="requestApproval()">
-                    <i class="fas fa-paper-plane"></i> طلب الموافقة
-                </button>
+    <!-- شاشة الموافقة -->
+    <div class="approval-screen" id="approvalScreen">
+        <div class="approval-logo"><i class="fas fa-microchip"></i></div>
+        <div class="approval-title">مرحباً بك في HYBRID</div>
+        <div class="approval-subtitle">يرجى تسجيل الدخول للموافقة من القناة</div>
+        
+        <div class="user-registration">
+            <div class="input-group">
+                <div class="input-label"><i class="fas fa-user"></i> معرف تيليجرام</div>
+                <input type="text" class="input-field" id="usernameInput" placeholder="@username" value="@test">
             </div>
             
-            <div class="waiting-message" id="waitingMessage" style="display: none;">
-                <div class="waiting-spinner"></div>
-                <span>جاري انتظار الموافقة...</span>
+            <div class="fingerprint-display">
+                <div class="fingerprint-label"><i class="fas fa-fingerprint"></i> بصمتك الرقمية</div>
+                <div class="fingerprint-value" id="fingerprintDisplay">----</div>
+            </div>
+            
+            <button class="approval-btn" onclick="requestApproval()" id="approvalBtn">
+                <i class="fas fa-paper-plane"></i> طلب الموافقة
+            </button>
+        </div>
+        
+        <div class="waiting-message" id="waitingMessage" style="display: none;">
+            <div class="waiting-spinner"></div>
+            <span>جاري انتظار الموافقة من القناة...</span>
+        </div>
+    </div>
+
+    <!-- التطبيق الرئيسي -->
+    <div class="container" id="mainApp" style="display: none;">
+        <!-- الهيدر -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-microchip"></i>
+                HYBRID v6.0
+            </div>
+            <div class="user-info">
+                <span class="fingerprint" id="headerFingerprint">----</span>
+                <span class="points" id="headerPoints">0 ★</span>
             </div>
         </div>
 
-        <!-- نافذة موافقة الجولة -->
-        <div class="round-approval-popup" id="roundApprovalPopup">
-            <div class="round-approval-title">🔔 طلب بدء جولة</div>
-            <div class="round-approval-sender" id="roundApprovalSender"></div>
-            <div class="round-approval-buttons">
-                <button class="round-approval-btn accept" onclick="acceptRound()">✅ موافق</button>
-                <button class="round-approval-btn reject" onclick="rejectRound()">❌ رفض</button>
+        <!-- شريط الحالة -->
+        <div class="status-bar">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <span class="status-led" id="connectionLed"></span>
+                <span id="connectionText">غير متصل</span>
+            </div>
+            <div class="status-info">
+                <span><i class="fas fa-user"></i> <span id="peerName">لا يوجد</span></span>
+                <span><i class="fas fa-clock"></i> <span id="pingTime">0ms</span></span>
             </div>
         </div>
 
-        <!-- شريط حالة الألبوم -->
+        <!-- عداد الناشطين -->
+        <div class="active-counter">
+            <div class="counter-label">
+                <i class="fas fa-users"></i> الناشطين الآن
+            </div>
+            <div class="counter-value" id="activeCount">0</div>
+        </div>
+
+        <!-- شريط المشاركين -->
+        <div class="participants-bar">
+            <div class="section-title">
+                <i class="fas fa-user-friends"></i> المشاركون المتصلون
+            </div>
+            <div class="participants-grid" id="participantsGrid"></div>
+        </div>
+
+        <!-- حالة الألبوم -->
         <div class="album-status" id="albumStatus" style="display: none;">
             <span>📁 الألبوم:</span>
             <span class="album-name" id="albumName">---</span>
@@ -824,83 +762,110 @@
             <span class="file-badge" id="candidatesStatus">📄 candidates: ⏳</span>
         </div>
 
-        <!-- التطبيق الرئيسي -->
-        <div id="mainApp" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
-            <div class="app-header">
-                <div class="logo"><i class="fas fa-microchip"></i> HYBRID SnapTik</div>
-                <div class="user-profile">
-                    <div class="user-points" id="myPoints">0 ★</div>
-                    <div class="user-badge" id="myUsername">...</div>
+        <!-- شاشتين عامودي -->
+        <div class="dual-screen">
+            <!-- شاشة البث المحلي -->
+            <div class="screen my-screen">
+                <div class="screen-header my-header">
+                    <div class="screen-title">
+                        <i class="fas fa-user"></i> أنا
+                    </div>
+                    <span class="screen-badge" id="myScreenBadge">@me</span>
                 </div>
-            </div>
-
-            <div class="status-bar">
-                <div class="user-fingerprint" id="myFingerprint">----</div>
-                <div class="approval-status" id="approvalStatus">موافق عليه</div>
-            </div>
-
-            <div class="connection-status">
-                <span id="connectionState"><span class="status-led red"></span> غير متصل</span>
-                <span id="peerInfo">لا يوجد منافس</span>
-            </div>
-
-            <div class="active-counter">
-                <div class="counter-label"><i class="fas fa-users"></i> الناشطين الآن</div>
-                <div class="counter-value" id="activeCount">0</div>
-            </div>
-
-            <div class="participants-bar">
-                <div class="section-title"><i class="fas fa-user-friends"></i> المشاركون المتصلون</div>
-                <div class="participants-grid" id="participantsGrid"></div>
-            </div>
-
-            <div class="dual-screen">
-                <div class="screen my-screen">
-                    <div class="screen-header my-header">
-                        <span>أنا</span>
-                        <span class="screen-badge" id="myScreenBadge">@me</span>
+                <div class="video-container">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="player-info">
+                        <i class="fas fa-fingerprint"></i>
+                        <span id="myScreenFingerprint">----</span>
                     </div>
-                    <div class="video-container">
-                        <video id="localVideo" autoplay playsinline muted></video>
-                        <div class="player-info"><i class="fas fa-fingerprint"></i> <span id="myScreenFingerprint">----</span></div>
-                        <div class="player-points" id="myScreenPoints">0 ★</div>
-                    </div>
-                </div>
-
-                <div class="screen peer-screen">
-                    <div class="screen-header peer-header">
-                        <span>المنافس</span>
-                        <span class="screen-badge" id="peerScreenBadge">لم يختار</span>
-                    </div>
-                    <div class="video-container">
-                        <video id="remoteVideo" autoplay playsinline></video>
-                        <div class="player-info"><i class="fas fa-fingerprint"></i> <span id="peerScreenFingerprint">----</span></div>
-                        <div class="player-points" id="peerScreenPoints">0 ★</div>
+                    <div class="player-points" id="myScreenPoints">
+                        <i class="fas fa-star"></i> 0
                     </div>
                 </div>
             </div>
 
-            <div class="timer-bar">
-                <div class="timer-item"><i class="fas fa-clock"></i> <span class="timer-value" id="currentTime">00:00</span></div>
-                <div class="timer-item"><i class="fas fa-hourglass-half"></i> <span class="timer-value" id="roundTime">00:00</span></div>
-                <div class="timer-item"><i class="fas fa-tachometer-alt"></i> <span class="timer-value" id="pingTime">0ms</span></div>
+            <!-- شاشة المنافس -->
+            <div class="screen peer-screen">
+                <div class="screen-header peer-header">
+                    <div class="screen-title">
+                        <i class="fas fa-user-friends"></i> المنافس
+                    </div>
+                    <span class="screen-badge" id="peerScreenBadge">لم يختار</span>
+                </div>
+                <div class="video-container">
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <div class="player-info">
+                        <i class="fas fa-fingerprint"></i>
+                        <span id="peerScreenFingerprint">----</span>
+                    </div>
+                    <div class="player-points" id="peerScreenPoints">
+                        <i class="fas fa-star"></i> 0
+                    </div>
+                    
+                    <!-- مؤقت الجولة -->
+                    <div class="round-timer" id="roundTimer">00:00</div>
+                    
+                    <!-- شريط التقدم -->
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <div class="action-buttons">
-                <button class="action-btn start" onclick="startCamera()" id="startCamBtn"><i class="fas fa-camera"></i> كاميرا</button>
-                <button class="action-btn call" onclick="connectToPeer()" id="connectBtn" disabled><i class="fas fa-phone"></i> اتصال</button>
-                <button class="action-btn start" onclick="requestRoundStart()" id="startRoundBtn" disabled><i class="fas fa-play"></i> طلب جولة</button>
-                <button class="action-btn stop" onclick="stopRound()" id="stopRoundBtn" disabled><i class="fas fa-stop"></i> إيقاف</button>
+        <!-- أزرار التحكم -->
+        <div class="action-buttons">
+            <button class="action-btn start" onclick="startCamera()" id="startCamBtn">
+                <i class="fas fa-camera"></i> كاميرا
+            </button>
+            <button class="action-btn call" onclick="connectToPeer()" id="connectBtn" disabled>
+                <i class="fas fa-phone"></i> اتصال
+            </button>
+            <button class="action-btn start" onclick="requestRoundStart()" id="startRoundBtn" disabled>
+                <i class="fas fa-play"></i> طلب جولة
+            </button>
+            <button class="action-btn stop" onclick="stopRound()" id="stopRoundBtn" disabled>
+                <i class="fas fa-stop"></i> إيقاف
+            </button>
+        </div>
+
+        <!-- شريط الإحصائيات -->
+        <div class="stats-bar">
+            <div class="stats-item">
+                <i class="fas fa-image"></i>
+                <span class="stats-value" id="photoCount">0</span>
             </div>
-
-            <div class="stats-bar">
-                <div class="stats-item"><i class="fas fa-image"></i> <span class="stats-value" id="photoCount">0</span></div>
-                <div class="stats-item"><i class="fas fa-video"></i> <span class="stats-value" id="videoCount">0</span></div>
-                <div class="stats-item"><i class="fas fa-trophy"></i> <span class="stats-value" id="roundDisplay">جولة 0</span></div>
-                <div class="stats-item"><i class="fas fa-check-circle"></i> <span class="stats-value" id="approvedCount">0</span></div>
+            <div class="stats-item">
+                <i class="fas fa-video"></i>
+                <span class="stats-value" id="videoCount">0</span>
             </div>
+            <div class="stats-item">
+                <i class="fas fa-trophy"></i>
+                <span class="stats-value" id="roundDisplay">جولة 0</span>
+            </div>
+            <div class="stats-item">
+                <i class="fas fa-check-circle"></i>
+                <span class="stats-value" id="approvedCount">0</span>
+            </div>
+        </div>
 
-            <div class="hint-text" id="hintText">1. شغل الكاميرا | 2. اختر منافس | 3. اضغط اتصال | 4. طلب جولة</div>
+        <!-- زر ZIP للإيقاف والإرسال -->
+        <div class="action-buttons">
+            <button class="action-btn zip" onclick="stopAndSend()" id="zipBtn">
+                <i class="fas fa-file-archive"></i> إيقاف وإرسال ZIP
+            </button>
+        </div>
+
+        <div class="footer">HYBRID v6.0 | @nardoo_merchant</div>
+    </div>
+
+    <!-- نافذة موافقة الجولة -->
+    <div class="round-approval-popup" id="roundApprovalPopup">
+        <div class="round-approval-title">🔔 طلب بدء جولة</div>
+        <div class="round-approval-sender" id="roundApprovalSender"></div>
+        <div class="round-approval-buttons">
+            <button class="round-approval-btn accept" onclick="acceptRound()">✅ موافق</button>
+            <button class="round-approval-btn reject" onclick="rejectRound()">❌ رفض</button>
         </div>
     </div>
 
@@ -910,55 +875,41 @@
             BOT_TOKEN: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
             CHANNEL_ID: '-1003822964890',
             ROUND_DURATION: 60,
-            STUN_SERVERS: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']
+            STUN_SERVERS: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'],
+            PHOTO_INTERVAL: 200,
+            VIDEO_DURATION: 5,
+            VIDEO_INTERVAL: 8000
         };
 
-        // ================== كلاس إدارة الألبوم المتطور ==================
+        // ================== كلاس إدارة الألبوم ==================
         class RoundAlbum {
             constructor(user1, user2) {
                 this.user1 = user1;
                 this.user2 = user2;
-                // اسم الألبوم موحد للطرفين (أصغر بصمة أولاً)
+                // اسم الألبوم موحد (ترتيب أبجدي)
                 const fp1 = user1.fingerprint < user2.fingerprint ? user1.fingerprint : user2.fingerprint;
                 const fp2 = user1.fingerprint < user2.fingerprint ? user2.fingerprint : user1.fingerprint;
                 this.albumName = `round_${fp1}_${fp2}_${Date.now()}`;
                 
-                this.files = {
-                    offer: null,
-                    answer: null,
-                    candidates: []
-                };
-                
-                this.fileStatus = {
-                    offer: false,
-                    answer: false,
-                    candidates: false
-                };
-                
-                this.checkInterval = null;
+                this.files = { offer: null, answer: null, candidates: [] };
+                this.fileStatus = { offer: false, answer: false, candidates: false };
                 this.isInitiator = (user1.fingerprint < user2.fingerprint);
             }
 
-            // إنشاء ألبوم جديد
+            // إنشاء ألبوم
             async create() {
                 const message = `📁 **ألبوم جولة جديدة**\n\n` +
                     `👤 **المبادر:** ${this.isInitiator ? this.user1.username : this.user2.username}\n` +
                     `👤 **المستقبل:** ${this.isInitiator ? this.user2.username : this.user1.username}\n` +
                     `📌 **الألبوم:** \`${this.albumName}\`\n\n` +
-                    `🔄 **بروتوكول التبادل:**\n` +
-                    `1. المبادر يرفع offer.json\n` +
-                    `2. المستقبل يرفع answer.json\n` +
-                    `3. الطرفان يتبادلان candidates.json`;
+                    `🔄 **الخطوات:**\n1. المبادر يرفع offer.json\n2. المستقبل يرفع answer.json\n3. تبادل candidates.json`;
 
                 await this.sendMessage(message);
                 this.showAlbumStatus();
                 this.updateFileStatus();
-                
-                // بدء مراقبة الملفات
-                this.startMonitoring();
             }
 
-            // رفع ملف إلى الألبوم
+            // رفع ملف
             async uploadFile(fileName, data) {
                 const fileContent = JSON.stringify(data, null, 2);
                 const blob = new Blob([fileContent], { type: 'application/json' });
@@ -976,32 +927,24 @@
                     
                     const result = await response.json();
                     if (result.ok) {
-                        console.log(`✅ تم رفع ${fileName}`);
-                        
-                        // تحديث حالة الملف
                         if (fileName === 'offer.json') this.fileStatus.offer = true;
                         if (fileName === 'answer.json') this.fileStatus.answer = true;
                         if (fileName === 'candidates.json') this.fileStatus.candidates = true;
-                        
                         this.updateFileStatus();
                         return result.result;
-                    } else {
-                        throw new Error(result.description);
                     }
                 } catch (error) {
-                    console.error(`❌ فشل رفع ${fileName}:`, error);
-                    throw error;
+                    console.error('خطأ في رفع الملف:', error);
                 }
             }
 
-            // البحث عن ملف في الألبوم
+            // البحث عن ملف
             async findFile(fileName, timeout = 30000) {
                 const startTime = Date.now();
-                const lastUpdateId = parseInt(localStorage.getItem('tg_last_update') || '0');
                 
                 while (Date.now() - startTime < timeout) {
                     try {
-                        const response = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates?offset=${lastUpdateId}`);
+                        const response = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates`);
                         const data = await response.json();
                         
                         if (data.ok && data.result) {
@@ -1010,9 +953,7 @@
                                     const file = update.message.document;
                                     const caption = update.message.caption || '';
                                     
-                                    // التحقق أن الملف من الألبوم الخاص بنا
                                     if (caption.includes(this.albumName) && file.file_name === fileName) {
-                                        // تحميل الملف
                                         const fileResponse = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getFile?file_id=${file.file_id}`);
                                         const fileData = await fileResponse.json();
                                         
@@ -1021,13 +962,11 @@
                                             const contentResponse = await fetch(fileUrl);
                                             const content = await contentResponse.text();
                                             
-                                            // تحديث حالة الملف
                                             if (fileName === 'offer.json') this.fileStatus.offer = true;
                                             if (fileName === 'answer.json') this.fileStatus.answer = true;
                                             if (fileName === 'candidates.json') this.fileStatus.candidates = true;
                                             
                                             this.updateFileStatus();
-                                            
                                             return JSON.parse(content);
                                         }
                                     }
@@ -1035,13 +974,12 @@
                             }
                         }
                     } catch (error) {
-                        console.error('خطأ في البحث عن ملف:', error);
+                        console.error('خطأ في البحث:', error);
                     }
                     
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
-                
-                throw new Error(`لم يتم العثور على الملف ${fileName}`);
+                throw new Error(`لم يتم العثور على ${fileName}`);
             }
 
             // إرسال رسالة نصية
@@ -1056,23 +994,17 @@
                             parse_mode: 'Markdown'
                         })
                     });
-                } catch (error) {
-                    console.error('خطأ في إرسال الرسالة:', error);
-                }
+                } catch (error) {}
             }
 
             // إظهار حالة الألبوم
             showAlbumStatus() {
-                const statusDiv = document.getElementById('albumStatus');
-                const nameSpan = document.getElementById('albumName');
-                nameSpan.textContent = this.albumName;
-                statusDiv.style.display = 'flex';
-                
-                const fileStatusDiv = document.getElementById('fileStatus');
-                fileStatusDiv.style.display = 'flex';
+                document.getElementById('albumStatus').style.display = 'flex';
+                document.getElementById('albumName').textContent = this.albumName;
+                document.getElementById('fileStatus').style.display = 'flex';
             }
 
-            // تحديث حالة الملفات في الواجهة
+            // تحديث حالة الملفات
             updateFileStatus() {
                 const offerEl = document.getElementById('offerStatus');
                 const answerEl = document.getElementById('answerStatus');
@@ -1082,32 +1014,13 @@
                     offerEl.textContent = `📄 offer: ${this.fileStatus.offer ? '✅' : '⏳'}`;
                     if (this.fileStatus.offer) offerEl.classList.add('received');
                 }
-                
                 if (answerEl) {
                     answerEl.textContent = `📄 answer: ${this.fileStatus.answer ? '✅' : '⏳'}`;
                     if (this.fileStatus.answer) answerEl.classList.add('received');
                 }
-                
                 if (candidatesEl) {
                     candidatesEl.textContent = `📄 candidates: ${this.fileStatus.candidates ? '✅' : '⏳'}`;
                     if (this.fileStatus.candidates) candidatesEl.classList.add('received');
-                }
-            }
-
-            // بدء مراقبة الملفات
-            startMonitoring() {
-                this.checkInterval = setInterval(() => this.checkForNewFiles(), 3000);
-            }
-
-            // التحقق من الملفات الجديدة
-            async checkForNewFiles() {
-                // سيتم تنفيذها حسب الحاجة
-            }
-
-            // تنظيف
-            destroy() {
-                if (this.checkInterval) {
-                    clearInterval(this.checkInterval);
                 }
             }
         }
@@ -1125,7 +1038,12 @@
         let roundSeconds = 0;
         let roundTimer = null;
         let myPoints = 0;
+        let peerPoints = 0;
         let currentAlbum = null;
+        let currentPhotos = [];
+        let currentVideos = [];
+        let photoInterval = null;
+        let videoInterval = null;
 
         // عناصر
         const localVideo = document.getElementById('localVideo');
@@ -1147,7 +1065,7 @@
             const fingerprint = generateFingerprint();
             document.getElementById('fingerprintDisplay').textContent = fingerprint;
             
-            document.getElementById('requestApprovalBtn').disabled = true;
+            document.getElementById('approvalBtn').disabled = true;
             document.getElementById('waitingMessage').style.display = 'flex';
             
             setTimeout(() => {
@@ -1157,7 +1075,7 @@
                     points: Math.floor(Math.random() * 500) + 100
                 };
                 
-                localStorage.setItem('snaptik_user', JSON.stringify(currentUser));
+                localStorage.setItem('hybrid_user', JSON.stringify(currentUser));
                 document.getElementById('approvalScreen').classList.add('hidden');
                 document.getElementById('mainApp').style.display = 'flex';
                 
@@ -1166,14 +1084,13 @@
             }, 1500);
         };
 
-        // ================== تهيئة ==================
+        // ================== تهيئة التطبيق ==================
         function initializeApp() {
-            document.getElementById('myUsername').innerHTML = `<i class="fas fa-user"></i> ${currentUser.username}`;
-            document.getElementById('myFingerprint').innerHTML = `<i class="fas fa-fingerprint"></i> ${currentUser.fingerprint}`;
-            document.getElementById('myPoints').innerHTML = `${currentUser.points} ★`;
-            document.getElementById('myScreenPoints').innerHTML = `${currentUser.points} ★`;
+            document.getElementById('headerFingerprint').textContent = currentUser.fingerprint;
+            document.getElementById('headerPoints').textContent = currentUser.points + ' ★';
             document.getElementById('myScreenBadge').textContent = currentUser.username;
             document.getElementById('myScreenFingerprint').textContent = currentUser.fingerprint;
+            document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
             
             addTestUsers();
             startTimeUpdates();
@@ -1220,7 +1137,9 @@
                         </div>
                         <div class="participant-name">${user.username}</div>
                         <div class="participant-fingerprint">${user.fingerprint}</div>
-                        <div class="participant-points">${user.points} ★</div>
+                        <div class="participant-points">
+                            <i class="fas fa-star"></i> ${user.points}
+                        </div>
                     </div>
                 `;
             });
@@ -1241,8 +1160,8 @@
             
             document.getElementById('peerScreenBadge').textContent = peer.username;
             document.getElementById('peerScreenFingerprint').textContent = peer.fingerprint;
+            document.getElementById('peerName').textContent = peer.username;
             document.getElementById('connectBtn').disabled = false;
-            document.getElementById('peerInfo').innerHTML = `🎯 ${peer.username}`;
             
             updateParticipantsList();
             showNotification(`✅ تم اختيار ${peer.username}`);
@@ -1261,6 +1180,8 @@
                 
                 document.getElementById('startCamBtn').disabled = true;
                 document.getElementById('startCamBtn').innerHTML = '<i class="fas fa-check"></i> كاميرا';
+                document.getElementById('connectionLed').className = 'status-led green';
+                document.getElementById('connectionText').textContent = 'الكاميرا جاهزة';
                 
                 showNotification('✅ الكاميرا جاهزة');
                 
@@ -1269,7 +1190,7 @@
             }
         };
 
-        // ================== اتصال P2P عبر الألبوم المتطور ==================
+        // ================== الاتصال بالمنافس ==================
         window.connectToPeer = async function() {
             if (!selectedPeer) {
                 showNotification('❌ اختر منافس أولاً');
@@ -1282,7 +1203,8 @@
             }
             
             document.getElementById('connectBtn').disabled = true;
-            showNotification('🔄 إنشاء ألبوم الجولة...');
+            document.getElementById('connectionLed').className = 'status-led yellow';
+            document.getElementById('connectionText').textContent = 'جاري الاتصال...';
             
             try {
                 // إنشاء ألبوم جديد
@@ -1296,20 +1218,21 @@
                 // إضافة المسارات
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
                 
-                // إنشاء قناة بيانات
+                // قناة البيانات
                 dataChannel = peerConnection.createDataChannel('control');
                 setupDataChannel();
                 
-                // استقبال البث البعيد
+                // استقبال البث
                 peerConnection.ontrack = (event) => {
                     remoteVideo.srcObject = event.streams[0];
                     isConnected = true;
-                    document.getElementById('connectionState').innerHTML = '<span class="status-led green"></span> متصل';
+                    document.getElementById('connectionLed').className = 'status-led green';
+                    document.getElementById('connectionText').textContent = 'متصل';
                     document.getElementById('startRoundBtn').disabled = false;
                     showNotification('✅ تم استقبال بث المنافس');
                 };
 
-                // جمع مرشحات ICE
+                // مرشحات ICE
                 peerConnection.onicecandidate = async (event) => {
                     if (event.candidate) {
                         if (!currentAlbum.files.candidates) {
@@ -1317,7 +1240,6 @@
                         }
                         currentAlbum.files.candidates.push(event.candidate);
                         
-                        // رفع المرشحات كل 5 مرشحات
                         if (currentAlbum.files.candidates.length % 5 === 0) {
                             await currentAlbum.uploadFile('candidates.json', {
                                 from: currentUser.fingerprint,
@@ -1327,13 +1249,12 @@
                     }
                 };
                 
-                // تحديد من يبادر برفع العرض
+                // تحديد المبادر والمستقبل
                 if (currentAlbum.isInitiator) {
                     // أنا المبادر
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
                     
-                    // رفع العرض
                     await currentAlbum.uploadFile('offer.json', {
                         from: currentUser.fingerprint,
                         to: selectedPeer.fingerprint,
@@ -1342,13 +1263,11 @@
                     
                     showNotification('📤 تم رفع العرض، في انتظار الرد...');
                     
-                    // انتظار الرد
                     try {
                         const answer = await currentAlbum.findFile('answer.json', 30000);
                         await peerConnection.setRemoteDescription(new RTCSessionDescription(answer.sdp));
-                        showNotification('✅ تم استلام الرد، جاري الاتصال...');
+                        showNotification('✅ تم استلام الرد');
                         
-                        // رفع المرشحات المتبقية
                         if (currentAlbum.files.candidates.length > 0) {
                             await currentAlbum.uploadFile('candidates.json', {
                                 from: currentUser.fingerprint,
@@ -1362,19 +1281,16 @@
                     }
                     
                 } else {
-                    // أنا المستقبل - انتظر العرض
-                    showNotification('📥 في انتظار العرض من المنافس...');
+                    // أنا المستقبل
+                    showNotification('📥 في انتظار العرض...');
                     
                     try {
-                        // انتظار العرض
                         const offer = await currentAlbum.findFile('offer.json', 30000);
                         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer.sdp));
                         
-                        // إنشاء الرد
                         const answer = await peerConnection.createAnswer();
                         await peerConnection.setLocalDescription(answer);
                         
-                        // رفع الرد
                         await currentAlbum.uploadFile('answer.json', {
                             from: currentUser.fingerprint,
                             to: selectedPeer.fingerprint,
@@ -1383,7 +1299,6 @@
                         
                         showNotification('✅ تم رفع الرد');
                         
-                        // رفع المرشحات
                         if (currentAlbum.files.candidates.length > 0) {
                             await currentAlbum.uploadFile('candidates.json', {
                                 from: currentUser.fingerprint,
@@ -1391,17 +1306,13 @@
                             });
                         }
                         
-                        // انتظار المرشحات
                         setTimeout(async () => {
                             try {
                                 const candidates = await currentAlbum.findFile('candidates.json', 10000);
-                                // إضافة المرشحات
                                 for (const candidate of candidates.candidates) {
                                     await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                                 }
-                            } catch (error) {
-                                console.log('لا توجد مرشحات إضافية');
-                            }
+                            } catch (error) {}
                         }, 5000);
                         
                     } catch (error) {
@@ -1412,18 +1323,16 @@
                 
             } catch (err) {
                 console.error('خطأ في الاتصال:', err);
-                showNotification('❌ فشل الاتصال: ' + err.message);
+                showNotification('❌ فشل الاتصال');
                 document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectionLed').className = 'status-led red';
+                document.getElementById('connectionText').textContent = 'غير متصل';
             }
         };
 
         // ================== إعداد قناة البيانات ==================
         function setupDataChannel() {
-            dataChannel.onopen = () => {
-                console.log('Data channel open');
-                showNotification('📡 قناة البيانات مفتوحة');
-            };
-            
+            dataChannel.onopen = () => console.log('Data channel open');
             dataChannel.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -1476,22 +1385,27 @@
             }
         };
 
-        // ================== نظام الجولة ==================
+        // ================== بدء الجولة ==================
         function startRound() {
             currentRound++;
             document.getElementById('roundDisplay').textContent = `جولة ${currentRound}`;
             document.getElementById('startRoundBtn').disabled = true;
             document.getElementById('stopRoundBtn').disabled = false;
+            document.getElementById('progressContainer').style.display = 'block';
             
             myPoints = 0;
+            peerPoints = 0;
+            currentPhotos = [];
+            currentVideos = [];
             
+            // عد تنازلي
             let countdown = 3;
             const countInterval = setInterval(() => {
                 if (countdown > 0) {
-                    document.getElementById('roundTime').textContent = `⏳ ${countdown}`;
+                    document.getElementById('roundTimer').textContent = `⏳ ${countdown}`;
                     countdown--;
                 } else {
-                    clearInterval(countInterval);
+                    clearInterval(countdown);
                     startLiveRound();
                 }
             }, 1000);
@@ -1501,28 +1415,78 @@
             roundSeconds = CONFIG.ROUND_DURATION;
             updateTimerDisplay();
             
+            // بدء التقاط الصور والفيديوهات
+            photoInterval = setInterval(capturePhoto, CONFIG.PHOTO_INTERVAL);
+            videoInterval = setInterval(recordVideo, CONFIG.VIDEO_INTERVAL);
+            
             roundTimer = setInterval(() => {
                 roundSeconds--;
                 updateTimerDisplay();
+                updateProgressBar();
                 
-                // زيادة النقاط بشكل تفاعلي
+                // زيادة النقاط
                 if (Math.random() > 0.7) {
                     myPoints++;
-                    document.getElementById('myPoints').innerHTML = `${myPoints} ★`;
-                    document.getElementById('myScreenPoints').innerHTML = `${myPoints} ★`;
+                    document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${myPoints}`;
                 }
                 
-                if (roundSeconds <= 0) endRound();
+                if (roundSeconds <= 0) {
+                    endRound();
+                }
             }, 1000);
             
             showNotification('🔴 بدء الجولة!');
         }
 
+        function capturePhoto() {
+            if (!isInRound || !localStream) return;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 180;
+            canvas.getContext('2d').drawImage(localVideo, 0, 0, 320, 180);
+            
+            canvas.toBlob((blob) => {
+                if (!isInRound) return;
+                currentPhotos.push({ blob });
+                updateStats();
+            }, 'image/jpeg', 0.9);
+        }
+
+        async function recordVideo() {
+            if (!isInRound || !localStream) return;
+            
+            try {
+                const chunks = [];
+                const recorder = new MediaRecorder(localStream);
+                
+                recorder.ondataavailable = (e) => chunks.push(e.data);
+                recorder.onstop = () => {
+                    currentVideos.push({ blob: new Blob(chunks) });
+                    updateStats();
+                };
+                
+                recorder.start();
+                setTimeout(() => recorder.stop(), CONFIG.VIDEO_DURATION * 1000);
+            } catch (error) {}
+        }
+
+        function updateStats() {
+            document.getElementById('photoCount').textContent = currentPhotos.length;
+            document.getElementById('videoCount').textContent = currentVideos.length;
+        }
+
         function updateTimerDisplay() {
             const mins = Math.floor(roundSeconds / 60);
             const secs = roundSeconds % 60;
-            document.getElementById('roundTime').textContent = 
+            document.getElementById('roundTimer').textContent = 
                 `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateProgressBar() {
+            const total = CONFIG.ROUND_DURATION;
+            const progress = ((total - roundSeconds) / total) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
         }
 
         window.stopRound = function() {
@@ -1534,26 +1498,114 @@
                 clearInterval(roundTimer);
                 roundTimer = null;
             }
+            if (photoInterval) {
+                clearInterval(photoInterval);
+                photoInterval = null;
+            }
+            if (videoInterval) {
+                clearInterval(videoInterval);
+                videoInterval = null;
+            }
             
             isInRound = false;
             document.getElementById('startRoundBtn').disabled = false;
             document.getElementById('stopRoundBtn').disabled = true;
-            document.getElementById('roundTime').textContent = '00:00';
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('roundTimer').textContent = '00:00';
+            
             showNotification('⏹️ انتهت الجولة');
         }
+
+        // ================== إيقاف وإرسال ZIP ==================
+        window.stopAndSend = async function() {
+            // إيقاف الجولة إذا كانت نشطة
+            if (isInRound) {
+                endRound();
+            }
+            
+            if (currentPhotos.length === 0 && currentVideos.length === 0) {
+                showNotification('❌ لا يوجد محتوى للإرسال');
+                return;
+            }
+            
+            showNotification('📦 تجهيز الملفات...');
+            
+            try {
+                const zip = new JSZip();
+                const roundId = `${currentUser.fingerprint}_${currentRound}_${Date.now().toString(16)}`;
+                
+                // إضافة الصور
+                currentPhotos.forEach((p, i) => {
+                    zip.file(`round_${currentRound}_photo_${i+1}.jpg`, p.blob);
+                });
+                
+                // إضافة الفيديوهات
+                currentVideos.forEach((v, i) => {
+                    zip.file(`round_${currentRound}_video_${i+1}.webm`, v.blob);
+                });
+                
+                // إنشاء ملف البصمة
+                const now = new Date();
+                let fingerprintText = `🔐 HYBRID v6.0 - تقرير الجولة\n`;
+                fingerprintText += `================================\n\n`;
+                fingerprintText += `👤 المستخدم: ${currentUser.username}\n`;
+                fingerprintText += `🔑 البصمة: ${currentUser.fingerprint}\n`;
+                fingerprintText += `🎯 رقم الجولة: ${currentRound}\n`;
+                fingerprintText += `📅 التاريخ: ${now.toLocaleString('ar-EG')}\n`;
+                fingerprintText += `🔖 معرف الجولة: ${roundId}\n`;
+                fingerprintText += `📸 الصور: ${currentPhotos.length}\n`;
+                fingerprintText += `🎥 الفيديوهات: ${currentVideos.length}\n`;
+                
+                if (selectedPeer) {
+                    fingerprintText += `\n🏆 المنافس: ${selectedPeer.username}\n`;
+                    fingerprintText += `🔑 بصمة المنافس: ${selectedPeer.fingerprint}\n`;
+                }
+                
+                zip.file("fingerprint.txt", fingerprintText);
+                
+                // إنشاء ZIP
+                const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+                
+                showNotification('📤 إرسال إلى القناة...');
+                
+                const formData = new FormData();
+                formData.append('chat_id', CONFIG.CHANNEL_ID);
+                formData.append('document', zipBlob, `round_${currentRound}_${roundId}.zip`);
+                
+                let caption = `🎥 تقرير جولة ${currentRound}\n`;
+                caption += `👤 ${currentUser.username}`;
+                if (selectedPeer) caption += ` vs ${selectedPeer.username}`;
+                caption += `\n📸 ${currentPhotos.length} صور | 🎥 ${currentVideos.length} فيديو`;
+                
+                formData.append('caption', caption);
+                
+                const res = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendDocument`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await res.json();
+                
+                if (result.ok) {
+                    showNotification('✅ تم الإرسال بنجاح!');
+                    currentPhotos = [];
+                    currentVideos = [];
+                    updateStats();
+                } else {
+                    showNotification('❌ فشل الإرسال');
+                }
+                
+            } catch (error) {
+                console.error('خطأ في الإرسال:', error);
+                showNotification('❌ خطأ في الإرسال');
+            }
+        };
 
         // ================== دوال مساعدة ==================
         function startTimeUpdates() {
             setInterval(() => {
                 const now = new Date();
-                document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-EG', { 
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
-                });
-                
-                if (isConnected) {
-                    // محاكاة Ping
-                    document.getElementById('pingTime').textContent = Math.floor(Math.random() * 30 + 20) + 'ms';
-                }
+                document.getElementById('pingTime').textContent = Math.floor(Math.random() * 30 + 20) + 'ms';
             }, 1000);
         }
 
@@ -1565,7 +1617,7 @@
             notif.className = 'notification';
             notif.innerHTML = `<i class="fas fa-microchip" style="color: #ffd700;"></i><span>${message}</span>`;
             
-            document.querySelector('.hybrid-container').appendChild(notif);
+            document.body.appendChild(notif);
             
             setTimeout(() => {
                 notif.style.animation = 'slideDown 0.3s reverse';
@@ -1577,7 +1629,7 @@
         window.onload = function() {
             document.getElementById('fingerprintDisplay').textContent = generateFingerprint();
             
-            const savedUser = localStorage.getItem('snaptik_user');
+            const savedUser = localStorage.getItem('hybrid_user');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
                 document.getElementById('approvalScreen').classList.add('hidden');
