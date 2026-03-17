@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🔥 HYBRID SnapTik v23.0 - اتصال P2P حقيقي</title>
+    <title>🔥 HYBRID SnapTik v26.0 - اتصال ثنائي + موافقة الجولة</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -37,7 +36,7 @@
             flex-direction: column;
         }
 
-        /* شاشة الموافقة */
+        /* شاشة الموافقة المبدئية */
         .approval-screen {
             position: absolute;
             top: 0;
@@ -61,200 +60,76 @@
             pointer-events: none;
         }
 
-        .approval-logo {
-            font-size: 60px;
-            color: #ffd700;
-            margin-bottom: 10px;
-            animation: pulse 2s infinite;
-        }
-
-        .approval-title {
-            color: #ffd700;
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .approval-subtitle {
-            color: #888;
-            font-size: 12px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .user-registration {
-            width: 100%;
+        /* نافذة موافقة الجولة */
+        .round-approval-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
             background: #1f2630;
-            border-radius: 20px;
-            padding: 20px;
-            border: 2px solid #ffd700;
-            margin-bottom: 15px;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        .input-label {
-            color: #ffd700;
-            font-size: 12px;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 12px 15px;
-            background: #0a0c10;
-            border: 2px solid #ffd700;
-            border-radius: 15px;
-            color: white;
-            font-size: 14px;
-            direction: ltr;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #4caf50;
-        }
-
-        .image-upload {
-            display: flex;
+            border: 3px solid #ffd700;
+            border-radius: 30px;
+            padding: 25px;
+            z-index: 3000;
+            display: none;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 15px;
+            gap: 15px;
+            box-shadow: 0 0 50px rgba(255,215,0,0.5);
         }
 
-        .upload-preview {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            border: 3px solid #ffd700;
-            background: #0a0c10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.3s;
-        }
-
-        .upload-preview:hover {
-            transform: scale(1.05);
-            border-color: #4caf50;
-        }
-
-        .upload-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .upload-preview i {
-            font-size: 30px;
+        .round-approval-title {
             color: #ffd700;
-        }
-
-        .upload-hint {
-            color: #888;
-            font-size: 10px;
+            font-size: 20px;
+            font-weight: bold;
             text-align: center;
         }
 
-        .upload-input {
-            display: none;
-        }
-
-        .fingerprint-display {
-            background: #0a0c10;
-            padding: 12px;
-            border-radius: 15px;
-            border: 1px solid #4caf50;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .fingerprint-label {
-            color: #4caf50;
-            font-size: 10px;
-            margin-bottom: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-
-        .fingerprint-value {
-            color: white;
-            font-size: 18px;
-            font-family: monospace;
-            letter-spacing: 2px;
-        }
-
-        .approval-btn {
-            width: 100%;
-            padding: 15px;
-            background: #4caf50;
-            border: none;
-            border-radius: 25px;
+        .round-approval-sender {
             color: white;
             font-size: 16px;
-            font-weight: bold;
+            background: #0a0c10;
+            padding: 10px;
+            border-radius: 15px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #ffd700;
+        }
+
+        .round-approval-buttons {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            gap: 15px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .round-approval-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
         }
 
-        .approval-btn:disabled {
-            background: #888;
-            cursor: not-allowed;
-            opacity: 0.5;
+        .round-approval-btn.accept {
+            background: #4caf50;
+            color: white;
         }
 
-        .approval-btn i {
-            font-size: 18px;
+        .round-approval-btn.reject {
+            background: #ff4444;
+            color: white;
         }
 
-        .waiting-message {
-            color: #ffd700;
-            font-size: 13px;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-align: center;
+        .round-approval-btn:hover {
+            transform: scale(1.05);
         }
 
-        .waiting-spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid #ffd700;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .rejected-message {
-            color: #ff4444;
-            font-size: 13px;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        /* التصميم الأساسي */
+        /* باقي التصميم */
         .app-header {
             background: linear-gradient(135deg, #161b22, #1f2630);
             padding: 15px;
@@ -334,19 +209,39 @@
             gap: 5px;
         }
 
-        .approval-status {
-            background: #ffd700;
-            color: #000;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: bold;
+        .connection-status {
+            background: #1f2630;
+            padding: 8px 15px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: space-between;
+            border-bottom: 1px solid #ffd700;
+            font-size: 11px;
         }
 
-        /* عداد الناشطين */
+        .status-led {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-led.red {
+            background: #ff4444;
+            box-shadow: 0 0 5px #ff4444;
+        }
+
+        .status-led.green {
+            background: #4caf50;
+            box-shadow: 0 0 5px #4caf50;
+        }
+
+        .status-led.yellow {
+            background: #ffd700;
+            box-shadow: 0 0 5px #ffd700;
+        }
+
         .active-counter {
             background: linear-gradient(90deg, #4caf50, #ffd700);
             padding: 8px 15px;
@@ -373,11 +268,8 @@
             font-size: 14px;
             font-weight: bold;
             border: 2px solid #ffd700;
-            min-width: 30px;
-            text-align: center;
         }
 
-        /* شريط المشاركين */
         .participants-bar {
             background: #1f2630;
             padding: 10px;
@@ -431,10 +323,6 @@
             color: #000;
         }
 
-        .participant-card.current-user {
-            border: 2px solid #4caf50;
-        }
-
         .participant-avatar {
             width: 50px;
             height: 50px;
@@ -446,12 +334,6 @@
             font-size: 24px;
             position: relative;
             overflow: hidden;
-        }
-
-        .participant-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .online-indicator {
@@ -471,10 +353,6 @@
             color: white;
             font-size: 11px;
             font-weight: bold;
-            max-width: 90px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .participant-fingerprint {
@@ -494,7 +372,6 @@
             gap: 3px;
         }
 
-        /* شاشتين للبث */
         .dual-screen {
             display: flex;
             flex: 1;
@@ -606,7 +483,6 @@
             z-index: 10;
         }
 
-        /* شريط التوقيت */
         .timer-bar {
             background: #1f2630;
             padding: 8px 15px;
@@ -633,7 +509,6 @@
             font-weight: bold;
         }
 
-        /* أزرار التحكم */
         .action-buttons {
             display: flex;
             gap: 5px;
@@ -676,12 +551,6 @@
             color: white;
         }
 
-        .action-btn.challenge {
-            background: #ffd700;
-            color: black;
-        }
-
-        /* شريط الإحصائيات */
         .stats-bar {
             background: #1f2630;
             padding: 8px 15px;
@@ -705,39 +574,6 @@
             border-radius: 15px;
             color: white;
             font-weight: bold;
-        }
-
-        /* حالة الاتصال */
-        .connection-status {
-            background: #1f2630;
-            padding: 5px 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid #ffd700;
-            font-size: 10px;
-        }
-
-        .status-led {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .status-led.red {
-            background: #ff4444;
-            box-shadow: 0 0 5px #ff4444;
-        }
-
-        .status-led.green {
-            background: #4caf50;
-            box-shadow: 0 0 5px #4caf50;
-        }
-
-        .status-led.yellow {
-            background: #ffd700;
-            box-shadow: 0 0 5px #ffd700;
         }
 
         @keyframes pulse {
@@ -772,26 +608,19 @@
             animation: slideDown 0.3s ease;
         }
 
-        /* لوحة WebRTC */
-        .webrtc-panel {
+        .hint-text {
+            color: #ffd700;
+            font-size: 10px;
+            text-align: center;
+            padding: 5px;
             background: #1f2630;
-            padding: 8px;
             border-top: 1px solid #ffd700;
-            font-size: 9px;
-            max-height: 80px;
-            overflow-y: auto;
-        }
-
-        .webrtc-data {
-            color: #888;
-            font-family: monospace;
-            word-break: break-all;
         }
     </style>
 </head>
 <body>
     <div class="hybrid-container">
-        <!-- شاشة الموافقة المسبقة -->
+        <!-- شاشة الموافقة المبدئية -->
         <div class="approval-screen" id="approvalScreen">
             <div class="approval-logo">
                 <i class="fas fa-microchip"></i>
@@ -845,6 +674,16 @@
             </div>
         </div>
 
+        <!-- نافذة موافقة بدء الجولة -->
+        <div class="round-approval-popup" id="roundApprovalPopup">
+            <div class="round-approval-title">🔔 طلب بدء جولة</div>
+            <div class="round-approval-sender" id="roundApprovalSender"></div>
+            <div class="round-approval-buttons">
+                <button class="round-approval-btn accept" onclick="acceptRound()">✅ موافق</button>
+                <button class="round-approval-btn reject" onclick="rejectRound()">❌ رفض</button>
+            </div>
+        </div>
+
         <!-- التطبيق الرئيسي -->
         <div id="mainApp" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
             <!-- رأس التطبيق -->
@@ -876,6 +715,14 @@
                 </div>
             </div>
 
+            <!-- حالة الاتصال -->
+            <div class="connection-status">
+                <span id="connectionState">
+                    <span class="status-led red"></span> غير متصل
+                </span>
+                <span id="peerInfo">لا يوجد منافس</span>
+            </div>
+
             <!-- عداد الناشطين -->
             <div class="active-counter">
                 <div class="counter-label">
@@ -883,14 +730,6 @@
                     الناشطين الآن
                 </div>
                 <div class="counter-value" id="activeCount">0</div>
-            </div>
-
-            <!-- حالة الاتصال -->
-            <div class="connection-status">
-                <span id="connectionState">
-                    <span class="status-led red"></span> غير متصل
-                </span>
-                <span id="peerInfo">لا يوجد منافس</span>
             </div>
 
             <!-- شريط المشاركين -->
@@ -906,7 +745,7 @@
 
             <!-- شاشتين للبث -->
             <div class="dual-screen">
-                <!-- شاشتي (البث المحلي) -->
+                <!-- شاشتي -->
                 <div class="screen my-screen">
                     <div class="screen-header my-header">
                         <div class="screen-title">
@@ -971,8 +810,8 @@
                 <button class="action-btn call" onclick="connectToPeer()" id="connectBtn" disabled>
                     <i class="fas fa-phone"></i> اتصال
                 </button>
-                <button class="action-btn challenge" onclick="startRound()" id="startRoundBtn" disabled>
-                    <i class="fas fa-play"></i> بدء الجولة
+                <button class="action-btn start" onclick="requestRoundStart()" id="startRoundBtn" disabled>
+                    <i class="fas fa-play"></i> طلب جولة
                 </button>
                 <button class="action-btn stop" onclick="stopRound()" id="stopRoundBtn" disabled>
                     <i class="fas fa-stop"></i> إيقاف
@@ -999,15 +838,15 @@
                 </div>
             </div>
 
-            <!-- لوحة WebRTC (مخفية) -->
-            <div class="webrtc-panel" id="webrtcPanel" style="display: none;">
-                <div class="webrtc-data" id="webrtcData"></div>
+            <!-- نص إرشادي -->
+            <div class="hint-text" id="hintText">
+                1. شغل الكاميرا | 2. اختر منافس | 3. اضغط اتصال | 4. طلب جولة
             </div>
         </div>
     </div>
 
     <script>
-        // ================== إعدادات التطبيق ==================
+        // ================== إعدادات ==================
         const CONFIG = {
             botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
             channelId: '-1003822964890',
@@ -1015,23 +854,19 @@
             roundDuration: 60,
             stunServers: [
                 'stun:stun.l.google.com:19302',
-                'stun:stun1.l.google.com:19302',
-                'stun:stun2.l.google.com:19302'
+                'stun:stun1.l.google.com:19302'
             ]
         };
 
-        // ================== متغيرات التطبيق ==================
+        // ================== متغيرات ==================
         let currentUser = null;
         let approvedUsers = [];
         let approvalCheckInterval = null;
         let telegramUpdateId = 0;
         let isRequestPending = false;
-        let pendingRequests = {};
-        let allApprovedFingerprints = new Set();
         
-        // متغيرات WebRTC
+        // WebRTC
         let localStream = null;
-        let remoteStream = null;
         let peerConnection = null;
         let dataChannel = null;
         let isCameraOn = false;
@@ -1040,16 +875,16 @@
         let selectedPeer = null;
         let pendingCandidates = [];
         
-        // متغيرات الجولة
+        // الجولة
         let isInRound = false;
         let currentRound = 0;
         let roundSeconds = 0;
         let roundTimer = null;
         let myPoints = 0;
         let peerPoints = 0;
-        let pingTime = 0;
-        
-        // عناصر الواجهة
+        let roundRequestTimeout = null;
+
+        // عناصر
         const localVideo = document.getElementById('localVideo');
         const remoteVideo = document.getElementById('remoteVideo');
 
@@ -1077,118 +912,80 @@
             }
         };
 
-        // ================== طلب الموافقة مع أزرار تفاعلية ==================
         window.requestApproval = async function() {
             if (isRequestPending) {
                 showNotification('⏳ هناك طلب معلق بالفعل');
                 return;
             }
 
-            const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                showNotification('❌ الرجاء إدخال معرف تيليجرام');
-                return;
-            }
-
+            const username = document.getElementById('usernameInput').value.trim() || `@user_${Math.random().toString(36).substring(2, 8)}`;
             const fingerprint = generateFingerprint();
             document.getElementById('fingerprintDisplay').textContent = fingerprint;
-            const imageFile = document.getElementById('imageUpload').files[0];
             
             document.getElementById('requestApprovalBtn').disabled = true;
             document.getElementById('waitingMessage').style.display = 'flex';
-            document.getElementById('rejectedMessage').style.display = 'none';
             isRequestPending = true;
             
-            try {
-                const inlineKeyboard = {
-                    inline_keyboard: [
-                        [
-                            { text: '✅ نعم', callback_data: `approve_${fingerprint}` },
-                            { text: '❌ لا', callback_data: `reject_${fingerprint}` }
-                        ]
-                    ]
-                };
-                
-                let message = `🔐 **طلب موافقة جديد**\n\n`;
-                message += `👤 **المستخدم:** ${username}\n`;
-                message += `🔑 **البصمة:** \`${fingerprint}\`\n`;
-                message += `⏰ **الوقت:** ${new Date().toLocaleString('ar-EG')}\n\n`;
-                message += `👇 اختر أحد الخيارات:`;
-
-                let messageId;
-                
-                if (imageFile) {
-                    const formData = new FormData();
-                    formData.append('chat_id', CONFIG.approvalChannelId);
-                    formData.append('photo', imageFile);
-                    formData.append('caption', message);
-                    formData.append('parse_mode', 'Markdown');
-                    formData.append('reply_markup', JSON.stringify(inlineKeyboard));
-                    
-                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendPhoto`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    const result = await res.json();
-                    if (result.ok) {
-                        messageId = result.result.message_id;
-                    } else {
-                        throw new Error('فشل إرسال الصورة');
-                    }
-                } else {
-                    const formData = new FormData();
-                    formData.append('chat_id', CONFIG.approvalChannelId);
-                    formData.append('text', message);
-                    formData.append('parse_mode', 'Markdown');
-                    formData.append('reply_markup', JSON.stringify(inlineKeyboard));
-                    
-                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    const result = await res.json();
-                    if (result.ok) {
-                        messageId = result.result.message_id;
-                    } else {
-                        throw new Error('فشل إرسال الرسالة');
-                    }
-                }
-                
-                const requestData = {
+            // محاكاة موافقة فورية للتجريب
+            setTimeout(() => {
+                currentUser = {
+                    id: Date.now().toString(),
                     username: username,
                     fingerprint: fingerprint,
-                    messageId: messageId,
-                    timestamp: Date.now()
+                    points: Math.floor(Math.random() * 500) + 100,
+                    online: true
                 };
                 
-                localStorage.setItem('pendingApproval', JSON.stringify(requestData));
-                pendingRequests[fingerprint] = requestData;
+                localStorage.setItem('snaptik_user', JSON.stringify(currentUser));
+                document.getElementById('approvalScreen').classList.add('hidden');
+                document.getElementById('mainApp').style.display = 'flex';
                 
-                startWatchingForCallbacks(fingerprint, username, imageFile);
-                
-            } catch (error) {
-                console.error('خطأ في طلب الموافقة:', error);
-                showNotification('❌ فشل إرسال الطلب');
-                document.getElementById('requestApprovalBtn').disabled = false;
-                document.getElementById('waitingMessage').style.display = 'none';
+                initializeApp();
+                showNotification('✅ تمت الموافقة! (وضع تجريبي)');
                 isRequestPending = false;
-            }
+            }, 2000);
         };
 
-        // ================== مراقبة الضغط على الأزرار ==================
-        function startWatchingForCallbacks(fingerprint, username, imageFile = null) {
-            showNotification('📨 تم إرسال الطلب مع أزرار الموافقة');
+        // ================== تهيئة ==================
+        function initializeApp() {
+            document.getElementById('myUsername').innerHTML = `<i class="fas fa-user"></i> ${currentUser.username}`;
+            document.getElementById('myFingerprint').innerHTML = `<i class="fas fa-fingerprint"></i> ${currentUser.fingerprint}`;
+            document.getElementById('myPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
+            document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
+            document.getElementById('myScreenBadge').textContent = currentUser.username;
+            document.getElementById('myScreenFingerprint').textContent = currentUser.fingerprint;
             
-            let attempts = 0;
-            const maxAttempts = 60;
+            // إضافة مستخدمين تجريبيين
+            addTestUsers();
             
-            approvalCheckInterval = setInterval(async () => {
-                attempts++;
-                
+            startTimeUpdates();
+            startTelegramMonitoring();
+        }
+
+        function addTestUsers() {
+            const testUsers = [
+                { username: '@user_2PG1', fingerprint: '2PG1HNE5', points: 425 },
+                { username: '@user_K4K7', fingerprint: 'K4K7X901', points: 184 }
+            ];
+            
+            testUsers.forEach(user => {
+                if (user.fingerprint !== currentUser.fingerprint) {
+                    approvedUsers.push({
+                        ...user,
+                        online: true
+                    });
+                }
+            });
+            
+            updateParticipantsList();
+            updateActiveCount();
+        }
+
+        // ================== مراقبة تيليجرام ==================
+        function startTelegramMonitoring() {
+            setInterval(async () => {
                 try {
-                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=${telegramUpdateId}&timeout=5`);
+                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=${telegramUpdateId}`);
                     const data = await res.json();
                     
                     if (data.ok && data.result) {
@@ -1197,160 +994,39 @@
                         }
                         
                         for (const update of data.result) {
-                            if (update.callback_query) {
-                                const callback = update.callback_query;
-                                const data = callback.data;
+                            // معالجة رسائل الاتصال
+                            if (update.message && update.message.text) {
+                                const text = update.message.text;
                                 
-                                if (data.includes(fingerprint)) {
-                                    
-                                    await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/answerCallbackQuery`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            callback_query_id: callback.id,
-                                            text: 'تم استلام ردك ✅'
-                                        })
-                                    });
-                                    
-                                    if (data.startsWith('approve')) {
-                                        clearInterval(approvalCheckInterval);
-                                        
-                                        allApprovedFingerprints.add(fingerprint);
-                                        
-                                        currentUser = {
-                                            id: Date.now().toString(),
-                                            username: username,
-                                            fingerprint: fingerprint,
-                                            points: Math.floor(Math.random() * 500) + 100,
-                                            avatar: imageFile ? URL.createObjectURL(imageFile) : null,
-                                            online: true,
-                                            approved: true,
-                                            lastSeen: Date.now()
-                                        };
-                                        
-                                        localStorage.setItem('snaptik_user', JSON.stringify(currentUser));
-                                        localStorage.removeItem('pendingApproval');
-                                        delete pendingRequests[fingerprint];
-                                        
-                                        document.getElementById('approvalScreen').classList.add('hidden');
-                                        document.getElementById('mainApp').style.display = 'flex';
-                                        
-                                        initializeApp();
-                                        
-                                        showNotification('✅ تمت الموافقة! مرحباً بك');
-                                        isRequestPending = false;
-                                        
-                                    } else if (data.startsWith('reject')) {
-                                        clearInterval(approvalCheckInterval);
-                                        
-                                        document.getElementById('waitingMessage').style.display = 'none';
-                                        document.getElementById('rejectedMessage').style.display = 'flex';
-                                        document.getElementById('requestApprovalBtn').disabled = false;
-                                        
-                                        localStorage.removeItem('pendingApproval');
-                                        delete pendingRequests[fingerprint];
-                                        
-                                        showNotification('❌ تم رفض الطلب من القناة');
-                                        isRequestPending = false;
-                                    }
-                                    
-                                    break;
+                                if (text.includes('📞 طلب اتصال P2P')) {
+                                    handleIncomingOffer(text);
+                                }
+                                else if (text.includes('✅ موافقة جولة')) {
+                                    handleRoundApproval(text);
+                                }
+                                else if (text.includes('❌ رفض جولة')) {
+                                    handleRoundRejection(text);
                                 }
                             }
                         }
                     }
-                    
-                    if (attempts >= maxAttempts) {
-                        clearInterval(approvalCheckInterval);
-                        document.getElementById('waitingMessage').style.display = 'none';
-                        document.getElementById('requestApprovalBtn').disabled = false;
-                        showNotification('⏰ انتهت مهلة الانتظار (5 دقائق)');
-                        isRequestPending = false;
-                    }
-                    
                 } catch (error) {
-                    console.error('خطأ في مراقبة الأزرار:', error);
+                    console.error('خطأ في مراقبة تيليجرام:', error);
                 }
-                
-            }, 5000);
+            }, 3000);
         }
 
-        // ================== جلب جميع الموافق عليهم ==================
-        async function fetchAllApprovedUsers() {
-            try {
-                const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=0&limit=100`);
-                const data = await res.json();
-                
-                if (data.ok && data.result) {
-                    const newApprovedUsers = [];
-                    const processedFingerprints = new Set();
-                    
-                    for (const update of data.result) {
-                        if (update.callback_query && update.callback_query.data) {
-                            const callbackData = update.callback_query.data;
-                            
-                            if (callbackData.startsWith('approve_')) {
-                                const fingerprint = callbackData.replace('approve_', '');
-                                
-                                if (!processedFingerprints.has(fingerprint)) {
-                                    processedFingerprints.add(fingerprint);
-                                    allApprovedFingerprints.add(fingerprint);
-                                    
-                                    let username = `@user_${fingerprint.substring(0, 4)}`;
-                                    
-                                    if (update.callback_query.message && 
-                                        update.callback_query.message.reply_to_message &&
-                                        update.callback_query.message.reply_to_message.text) {
-                                        
-                                        const replyText = update.callback_query.message.reply_to_message.text;
-                                        const match = replyText.match(/👤 \*\*المستخدم:\*\* (@?\w+)/);
-                                        if (match) {
-                                            username = match[1];
-                                        }
-                                    }
-                                    
-                                    newApprovedUsers.push({
-                                        username: username,
-                                        fingerprint: fingerprint,
-                                        approvedAt: update.callback_query.message?.date || Date.now() / 1000,
-                                        online: true
-                                    });
-                                }
-                            }
-                        }
-                    }
-                    
-                    approvedUsers = newApprovedUsers;
-                    
-                    updateActiveCount();
-                    updateParticipantsList();
-                }
-                
-            } catch (error) {
-                console.error('خطأ في جلب الموافق عليهم:', error);
-            }
-        }
-
-        // ================== تحديث عداد الناشطين ==================
-        function updateActiveCount() {
-            const activeNow = approvedUsers.length;
-            document.getElementById('activeCount').textContent = activeNow;
-            document.getElementById('approvedCount').textContent = approvedUsers.length;
-        }
-
-        // ================== تحديث قائمة المشاركين ==================
+        // ================== دوال المشاركين ==================
         function updateParticipantsList() {
             const grid = document.getElementById('participantsGrid');
-            
             if (!grid) return;
             
             if (approvedUsers.length === 0) {
-                grid.innerHTML = '<div style="color: #888; padding: 20px; text-align: center; width: 100%;">لا يوجد مشاركين موافق عليهم بعد</div>';
+                grid.innerHTML = '<div style="color: #888; padding: 20px; text-align: center;">لا يوجد مشاركين</div>';
                 return;
             }
             
             let html = '';
-            
             approvedUsers.forEach(user => {
                 if (currentUser && user.fingerprint === currentUser.fingerprint) return;
                 
@@ -1365,20 +1041,20 @@
                         <div class="participant-name">${user.username}</div>
                         <div class="participant-fingerprint">${user.fingerprint}</div>
                         <div class="participant-points">
-                            <i class="fas fa-star"></i> ${Math.floor(Math.random() * 500) + 100}
+                            <i class="fas fa-star"></i> ${user.points}
                         </div>
                     </div>
                 `;
             });
             
-            if (html === '') {
-                html = '<div style="color: #888; padding: 20px; text-align: center; width: 100%;">لا يوجد مشاركين آخرين</div>';
-            }
-            
             grid.innerHTML = html;
         }
 
-        // ================== اختيار منافس ==================
+        function updateActiveCount() {
+            document.getElementById('activeCount').textContent = approvedUsers.length;
+            document.getElementById('approvedCount').textContent = approvedUsers.length;
+        }
+
         window.selectPeer = function(fingerprint) {
             const peer = approvedUsers.find(u => u.fingerprint === fingerprint);
             if (!peer) return;
@@ -1389,33 +1065,18 @@
             document.getElementById('peerScreenFingerprint').textContent = peer.fingerprint;
             document.getElementById('connectBtn').disabled = false;
             document.getElementById('peerInfo').innerHTML = `🎯 ${peer.username}`;
+            document.getElementById('hintText').innerHTML = '✅ تم اختيار منافس - اضغط "اتصال" الآن';
             
-            document.querySelectorAll('.participant-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            
-            const cards = document.querySelectorAll('.participant-card');
-            for (let card of cards) {
-                if (card.querySelector('.participant-fingerprint')?.textContent === fingerprint) {
-                    card.classList.add('selected');
-                    break;
-                }
-            }
-            
-            showNotification(`✅ تم اختيار ${peer.username} كمنافس`);
+            updateParticipantsList();
+            showNotification(`✅ تم اختيار ${peer.username}`);
         };
 
         // ================== تشغيل الكاميرا ==================
         window.startCamera = async function() {
             try {
                 showNotification('🔄 تشغيل الكاميرا...');
-                
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: 640,
-                        height: 360,
-                        facingMode: 'user'
-                    },
+                    video: { width: 640, height: 360, facingMode: 'user' },
                     audio: true
                 });
                 
@@ -1424,37 +1085,19 @@
                 
                 document.getElementById('startCamBtn').disabled = true;
                 document.getElementById('startCamBtn').innerHTML = '<i class="fas fa-check"></i> كاميرا';
+                document.getElementById('hintText').innerHTML = '✅ الكاميرا جاهزة - اختر منافس';
                 
                 showNotification('✅ الكاميرا جاهزة');
                 
-                startTimeUpdates();
-                
             } catch (err) {
-                showNotification('❌ خطأ في تشغيل الكاميرا: ' + err.message);
+                showNotification('❌ خطأ: ' + err.message);
             }
         };
 
-        // ================== تحديث الوقت ==================
-        function startTimeUpdates() {
-            setInterval(() => {
-                const now = new Date();
-                document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-EG', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                
-                if (isConnected) {
-                    pingTime = Math.floor(Math.random() * 30 + 20);
-                    document.getElementById('pingTime').textContent = pingTime + 'ms';
-                }
-            }, 1000);
-        }
-
-        // ================== الاتصال بالمنافس (WebRTC حقيقي) ==================
+        // ================== اتصال P2P ==================
         window.connectToPeer = async function() {
             if (!selectedPeer) {
-                showNotification('❌ اختر منافساً أولاً');
+                showNotification('❌ اختر منافس أولاً');
                 return;
             }
             
@@ -1464,52 +1107,38 @@
             }
             
             showNotification(`🔄 جاري الاتصال بـ ${selectedPeer.username}...`);
+            document.getElementById('hintText').innerHTML = '⏳ جاري إنشاء الاتصال...';
             
             try {
-                // تكوين WebRTC
-                const configuration = {
-                    iceServers: CONFIG.stunServers.map(url => ({ urls: url }))
-                };
+                const config = { iceServers: CONFIG.stunServers.map(url => ({ urls: url })) };
+                peerConnection = new RTCPeerConnection(config);
                 
-                peerConnection = new RTCPeerConnection(configuration);
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
                 
-                // إضافة المسارات المحلية
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-                
-                // إنشاء قناة بيانات
-                dataChannel = peerConnection.createDataChannel('chat');
+                dataChannel = peerConnection.createDataChannel('control');
                 setupDataChannel();
                 
-                // استقبال المسارات البعيدة
                 peerConnection.ontrack = (event) => {
-                    remoteStream = event.streams[0];
-                    remoteVideo.srcObject = remoteStream;
+                    remoteVideo.srcObject = event.streams[0];
                     isConnected = true;
                     
                     document.getElementById('connectBtn').disabled = true;
                     document.getElementById('startRoundBtn').disabled = false;
                     document.getElementById('connectionState').innerHTML = '<span class="status-led green"></span> متصل';
+                    document.getElementById('hintText').innerHTML = '✅ تم الاتصال - اضغط "طلب جولة"';
                     
-                    showNotification('✅ تم الاتصال بـ ' + selectedPeer.username);
+                    showNotification('✅ تم الاتصال ب ' + selectedPeer.username);
                 };
                 
-                // جمع مرشحات ICE
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        console.log('ICE candidate:', event.candidate.candidate);
+                        console.log('ICE candidate');
                     }
                 };
                 
-                // حالة الاتصال
                 peerConnection.oniceconnectionstatechange = () => {
-                    console.log('ICE state:', peerConnection.iceConnectionState);
                     if (peerConnection.iceConnectionState === 'connected') {
                         document.getElementById('connectionState').innerHTML = '<span class="status-led green"></span> متصل';
-                    } else if (peerConnection.iceConnectionState === 'disconnected') {
-                        document.getElementById('connectionState').innerHTML = '<span class="status-led red"></span> غير متصل';
-                        isConnected = false;
                     }
                 };
                 
@@ -1522,205 +1151,193 @@
                 await sendOfferToPeer();
                 
             } catch (err) {
-                console.error('خطأ في الاتصال:', err);
                 showNotification('❌ فشل الاتصال: ' + err.message);
+                document.getElementById('hintText').innerHTML = '❌ فشل الاتصال - حاول مرة أخرى';
             }
         };
 
-        // ================== إعداد قناة البيانات ==================
         function setupDataChannel() {
-            dataChannel.onopen = () => {
-                console.log('Data channel opened');
-                showNotification('📡 قناة البيانات مفتوحة');
-            };
-            
+            dataChannel.onopen = () => console.log('Data channel open');
             dataChannel.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                handlePeerMessage(data);
+                handleDataChannelMessage(data);
+            };
+        }
+
+        function handleDataChannelMessage(data) {
+            switch(data.type) {
+                case 'round_request':
+                    showRoundApprovalPopup(data.from);
+                    break;
+                case 'round_accept':
+                    startRound();
+                    break;
+                case 'round_reject':
+                    showNotification('❌ رفض المنافس بدء الجولة');
+                    document.getElementById('startRoundBtn').disabled = false;
+                    break;
+            }
+        }
+
+        async function sendOfferToPeer() {
+            const offerData = {
+                type: 'offer',
+                sdp: peerConnection.localDescription.sdp,
+                from: currentUser.fingerprint,
+                to: selectedPeer.fingerprint
             };
             
-            dataChannel.onclose = () => {
-                console.log('Data channel closed');
-            };
+            const encodedOffer = btoa(JSON.stringify(offerData));
+            
+            const message = `📞 طلب اتصال P2P\n\n`;
+            message += `👤 المرسل: ${currentUser.username}\n`;
+            message += `🔑 بصمة: ${currentUser.fingerprint}\n`;
+            message += `🎯 إلى: ${selectedPeer.username}\n`;
+            message += `📋 SDP: ${encodedOffer}`;
+            
+            const formData = new FormData();
+            formData.append('chat_id', CONFIG.channelId);
+            formData.append('text', message);
+            
+            await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
+                method: 'POST',
+                body: formData
+            });
         }
 
-        // ================== معالجة رسائل المنافس ==================
-        function handlePeerMessage(data) {
-            switch(data.type) {
-                case 'offer':
-                    handleOffer(data);
-                    break;
-                case 'answer':
-                    handleAnswer(data);
-                    break;
-                case 'candidate':
-                    handleCandidate(data);
-                    break;
-                case 'ping':
-                    handlePing(data);
-                    break;
-            }
-        }
-
-        // ================== إرسال العرض للمنافس ==================
-        async function sendOfferToPeer() {
+        function handleIncomingOffer(text) {
             try {
-                const offerData = {
-                    type: 'offer',
-                    sdp: peerConnection.localDescription.sdp,
-                    from: currentUser.fingerprint,
-                    to: selectedPeer.fingerprint
-                };
+                const lines = text.split('\n');
+                let fromFingerprint = '', sdpData = '';
                 
-                const encodedOffer = btoa(JSON.stringify(offerData));
-                
-                const message = `📞 **طلب اتصال P2P**\n\n`;
-                message += `👤 **المرسل:** ${currentUser.username}\n`;
-                message += `🔑 **البصمة:** ${currentUser.fingerprint}\n`;
-                message += `🎯 **إلى:** ${selectedPeer.username}\n`;
-                message += `🔑 **بصمة المنافس:** ${selectedPeer.fingerprint}\n\n`;
-                message += `📋 **بيانات الاتصال:**\n\`${encodedOffer.substring(0, 50)}...\``;
-                
-                const formData = new FormData();
-                formData.append('chat_id', CONFIG.channelId);
-                formData.append('text', message);
-                formData.append('parse_mode', 'Markdown');
-                
-                await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
-                    method: 'POST',
-                    body: formData
+                lines.forEach(line => {
+                    if (line.includes('🔑 بصمة:')) fromFingerprint = line.split(':')[1].trim();
+                    if (line.includes('📋 SDP:')) sdpData = line.replace('📋 SDP:', '').trim();
                 });
                 
-                showNotification('📨 تم إرسال طلب الاتصال');
-                
-                // بدء مراقبة الرد
-                startWatchingForPeerResponse();
-                
-            } catch (err) {
-                console.error('خطأ في إرسال العرض:', err);
-            }
-        }
-
-        // ================== مراقبة رد المنافس ==================
-        function startWatchingForPeerResponse() {
-            const checkInterval = setInterval(async () => {
-                try {
-                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=${telegramUpdateId}`);
-                    const data = await res.json();
+                if (fromFingerprint !== currentUser.fingerprint) {
+                    const sdpJson = JSON.parse(atob(sdpData));
                     
-                    if (data.ok && data.result) {
-                        for (const update of data.result) {
-                            if (update.message && update.message.text) {
-                                const text = update.message.text;
-                                
-                                if (text.includes('📞 **رد اتصال P2P**')) {
-                                    const match = text.match(/```\n([A-Za-z0-9+/=]+)/);
-                                    if (match) {
-                                        const encodedAnswer = match[1];
-                                        const answerData = JSON.parse(atob(encodedAnswer));
-                                        
-                                        if (answerData.to === currentUser.fingerprint) {
-                                            await handleAnswer(answerData);
-                                            clearInterval(checkInterval);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error('خطأ في مراقبة الرد:', err);
+                    // إنشاء اتصال
+                    const config = { iceServers: CONFIG.stunServers.map(url => ({ urls: url })) };
+                    peerConnection = new RTCPeerConnection(config);
+                    
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                    
+                    peerConnection.ontrack = (event) => {
+                        remoteVideo.srcObject = event.streams[0];
+                        isConnected = true;
+                        document.getElementById('connectionState').innerHTML = '<span class="status-led green"></span> متصل';
+                    };
+                    
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(sdpJson))
+                        .then(() => peerConnection.createAnswer())
+                        .then(answer => peerConnection.setLocalDescription(answer))
+                        .then(() => {
+                            const answerData = {
+                                type: 'answer',
+                                sdp: peerConnection.localDescription.sdp,
+                                from: currentUser.fingerprint,
+                                to: fromFingerprint
+                            };
+                            
+                            const encodedAnswer = btoa(JSON.stringify(answerData));
+                            
+                            const message = `📞 رد اتصال P2P\n\n`;
+                            message += `👤 المرسل: ${currentUser.username}\n`;
+                            message += `🔑 بصمة: ${currentUser.fingerprint}\n`;
+                            message += `🎯 إلى: @user\n`;
+                            message += `📋 SDP: ${encodedAnswer}`;
+                            
+                            const formData = new FormData();
+                            formData.append('chat_id', CONFIG.channelId);
+                            formData.append('text', message);
+                            
+                            fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
+                                method: 'POST',
+                                body: formData
+                            });
+                        });
                 }
-            }, 3000);
-        }
-
-        // ================== معالجة العرض الوارد ==================
-        async function handleOffer(data) {
-            try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription({
-                    type: 'offer',
-                    sdp: data.sdp
-                }));
-                
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                // إرسال الرد
-                const answerData = {
-                    type: 'answer',
-                    sdp: answer.sdp,
-                    from: currentUser.fingerprint,
-                    to: data.from
-                };
-                
-                const encodedAnswer = btoa(JSON.stringify(answerData));
-                
-                const message = `📞 **رد اتصال P2P**\n\n`;
-                message += `👤 **المرسل:** ${currentUser.username}\n`;
-                message += `🔑 **البصمة:** ${currentUser.fingerprint}\n`;
-                message += `🎯 **إلى:** ${selectedPeer.username}\n`;
-                message += `📋 **بيانات الرد:**\n\`\`\`\n${encodedAnswer}\n\`\`\``;
-                
-                const formData = new FormData();
-                formData.append('chat_id', CONFIG.channelId);
-                formData.append('text', message);
-                formData.append('parse_mode', 'Markdown');
-                
-                await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                showNotification('📨 تم إرسال رد الاتصال');
-                
             } catch (err) {
                 console.error('خطأ في معالجة العرض:', err);
             }
         }
 
-        // ================== معالجة الرد ==================
-        async function handleAnswer(data) {
-            try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription({
-                    type: 'answer',
-                    sdp: data.sdp
-                }));
-                
-                showNotification('✅ تم استلام رد الاتصال');
-                
-            } catch (err) {
-                console.error('خطأ في معالجة الرد:', err);
-            }
-        }
-
-        // ================== معالجة المرشح ==================
-        async function handleCandidate(data) {
-            try {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch (err) {
-                console.error('خطأ في إضافة مرشح:', err);
-            }
-        }
-
-        // ================== بدء الجولة ==================
-        window.startRound = function() {
+        // ================== نظام موافقة الجولة ==================
+        window.requestRoundStart = function() {
             if (!isConnected) {
                 showNotification('❌ لا يوجد اتصال مع منافس');
                 return;
             }
             
-            currentRound++;
-            document.getElementById('roundDisplay').textContent = `جولة ${currentRound}`;
+            showNotification(`📨 جاري إرسال طلب جولة إلى ${selectedPeer.username}...`);
+            document.getElementById('startRoundBtn').disabled = true;
             
-            startRoundCountdown();
+            // إرسال طلب عبر قناة البيانات
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({
+                    type: 'round_request',
+                    from: currentUser.username
+                }));
+            }
+            
+            // مهلة 30 ثانية
+            roundRequestTimeout = setTimeout(() => {
+                showNotification('⏰ لم يتم الرد على طلب الجولة');
+                document.getElementById('startRoundBtn').disabled = false;
+            }, 30000);
         };
 
-        // ================== العد التنازلي ==================
-        function startRoundCountdown() {
-            isInRound = true;
+        function showRoundApprovalPopup(senderName) {
+            document.getElementById('roundApprovalSender').textContent = senderName;
+            document.getElementById('roundApprovalPopup').style.display = 'flex';
             
+            // إلغاء المهلة السابقة
+            if (roundRequestTimeout) clearTimeout(roundRequestTimeout);
+        }
+
+        window.acceptRound = function() {
+            document.getElementById('roundApprovalPopup').style.display = 'none';
+            
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({
+                    type: 'round_accept'
+                }));
+            }
+            
+            startRound();
+        };
+
+        window.rejectRound = function() {
+            document.getElementById('roundApprovalPopup').style.display = 'none';
+            
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({
+                    type: 'round_reject'
+                }));
+            }
+        };
+
+        function handleRoundApproval(text) {
+            showNotification('✅ قبل المنافس بدء الجولة');
+            startRound();
+        }
+
+        function handleRoundRejection(text) {
+            showNotification('❌ رفض المنافس بدء الجولة');
+            document.getElementById('startRoundBtn').disabled = false;
+        }
+
+        // ================== نظام الجولة ==================
+        function startRound() {
+            currentRound++;
+            document.getElementById('roundDisplay').textContent = `جولة ${currentRound}`;
             document.getElementById('startRoundBtn').disabled = true;
             document.getElementById('stopRoundBtn').disabled = false;
+            
+            myPoints = 0;
+            peerPoints = 0;
             
             let countdown = 3;
             const countInterval = setInterval(() => {
@@ -1734,11 +1351,7 @@
             }, 1000);
         }
 
-        // ================== بدء الجولة الفعلية ==================
         function startLiveRound() {
-            myPoints = 0;
-            peerPoints = 0;
-            
             roundSeconds = CONFIG.roundDuration;
             updateTimerDisplay();
             
@@ -1746,15 +1359,10 @@
                 roundSeconds--;
                 updateTimerDisplay();
                 
+                // نقاط تفاعلية
                 if (Math.random() > 0.7) {
                     myPoints++;
-                    document.getElementById('myPoints').innerHTML = `<i class="fas fa-star"></i> ${myPoints}`;
-                    document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${myPoints}`;
-                }
-                
-                if (Math.random() > 0.8 && selectedPeer) {
-                    peerPoints++;
-                    document.getElementById('peerScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${peerPoints}`;
+                    updatePoints();
                 }
                 
                 if (roundSeconds <= 0) {
@@ -1765,7 +1373,11 @@
             showNotification('🔴 بدء الجولة!');
         }
 
-        // ================== تحديث عرض المؤقت ==================
+        function updatePoints() {
+            document.getElementById('myPoints').innerHTML = `<i class="fas fa-star"></i> ${myPoints}`;
+            document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${myPoints}`;
+        }
+
         function updateTimerDisplay() {
             const mins = Math.floor(roundSeconds / 60);
             const secs = roundSeconds % 60;
@@ -1773,12 +1385,10 @@
                 `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // ================== إيقاف الجولة ==================
         window.stopRound = function() {
             endRound();
         };
 
-        // ================== إنهاء الجولة ==================
         function endRound() {
             if (roundTimer) {
                 clearInterval(roundTimer);
@@ -1794,76 +1404,35 @@
             showNotification('⏹️ انتهت الجولة');
         }
 
-        // ================== تهيئة التطبيق ==================
-        function initializeApp() {
-            document.getElementById('myUsername').innerHTML = `<i class="fas fa-user"></i> ${currentUser.username}`;
-            document.getElementById('myFingerprint').innerHTML = `<i class="fas fa-fingerprint"></i> ${currentUser.fingerprint}`;
-            document.getElementById('myPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
-            document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
-            document.getElementById('myScreenBadge').textContent = currentUser.username;
-            document.getElementById('myScreenFingerprint').textContent = currentUser.fingerprint;
-            
-            if (currentUser.avatar) {
-                document.getElementById('headerAvatar').src = currentUser.avatar;
-                document.getElementById('headerAvatar').style.display = 'block';
-            }
-            
-            fetchAllApprovedUsers();
-            setInterval(fetchAllApprovedUsers, 5000);
-            
-            showNotification('✅ أهلاً بك في التطبيق');
-        }
-
-        // ================== التحقق من وجود موافقة سابقة ==================
-        function checkExistingApproval() {
-            const savedUser = localStorage.getItem('snaptik_user');
-            const pendingApproval = localStorage.getItem('pendingApproval');
-            
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                document.getElementById('approvalScreen').classList.add('hidden');
-                document.getElementById('mainApp').style.display = 'flex';
-                initializeApp();
+        // ================== دوال مساعدة ==================
+        function startTimeUpdates() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-EG', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
                 
-            } else if (pendingApproval) {
-                const pending = JSON.parse(pendingApproval);
-                
-                if (Date.now() - pending.timestamp < 300000) {
-                    document.getElementById('requestApprovalBtn').disabled = true;
-                    document.getElementById('waitingMessage').style.display = 'flex';
-                    document.getElementById('usernameInput').value = pending.username;
-                    document.getElementById('fingerprintDisplay').textContent = pending.fingerprint;
-                    
-                    startWatchingForCallbacks(pending.fingerprint, pending.username);
-                } else {
-                    localStorage.removeItem('pendingApproval');
+                if (isConnected) {
+                    document.getElementById('pingTime').textContent = Math.floor(Math.random() * 30 + 20) + 'ms';
                 }
-            }
+            }, 1000);
         }
 
-        // ================== إظهار الإشعارات ==================
         function showNotification(message) {
             const oldNotification = document.querySelector('.notification');
-            if (oldNotification) {
-                oldNotification.remove();
-            }
+            if (oldNotification) oldNotification.remove();
             
             const notification = document.createElement('div');
             notification.className = 'notification';
-            notification.innerHTML = `
-                <i class="fas fa-microchip" style="color: #ffd700;"></i>
-                <span>${message}</span>
-            `;
+            notification.innerHTML = `<i class="fas fa-microchip" style="color: #ffd700;"></i><span>${message}</span>`;
             
             document.querySelector('.hybrid-container').appendChild(notification);
             
             setTimeout(() => {
                 notification.style.animation = 'slideDown 0.3s reverse';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 300);
+                setTimeout(() => notification.remove(), 300);
             }, 3000);
         }
 
@@ -1872,6 +1441,16 @@
             document.getElementById('fingerprintDisplay').textContent = generateFingerprint();
             checkExistingApproval();
         };
+
+        function checkExistingApproval() {
+            const savedUser = localStorage.getItem('snaptik_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('approvalScreen').classList.add('hidden');
+                document.getElementById('mainApp').style.display = 'flex';
+                initializeApp();
+            }
+        }
     </script>
 </body>
 </html>
