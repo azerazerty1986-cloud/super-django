@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🔥 HYBRID SnapTik v9.0 - اتصال تلقائي P2P</title>
+    <title>🔥 HYBRID SnapTik v11.0 - نظام الموافقة بزر نعم + عداد الناشطين</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -334,6 +334,35 @@
             display: flex;
             align-items: center;
             gap: 5px;
+        }
+
+        /* عداد الناشطين */
+        .active-counter {
+            background: linear-gradient(90deg, #4caf50, #ffd700);
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #ffd700;
+        }
+
+        .counter-label {
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .counter-value {
+            background: #000;
+            color: #ffd700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 2px solid #ffd700;
         }
 
         /* شريط المشاركين */
@@ -759,6 +788,56 @@
             gap: 10px;
             animation: slideDown 0.3s ease;
         }
+
+        /* إشعار الموافقة */
+        .approval-notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1f2630;
+            border: 3px solid #ffd700;
+            border-radius: 30px;
+            padding: 25px;
+            z-index: 2500;
+            width: 80%;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255,215,0,0.5);
+        }
+
+        .approval-question {
+            color: #ffd700;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .approval-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .yes-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .no-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -812,6 +891,15 @@
             </div>
         </div>
 
+        <!-- إشعار الموافقة (يظهر عند وصول طلب) -->
+        <div id="approvalNotification" class="approval-notification" style="display: none;">
+            <div class="approval-question" id="approvalQuestion">طلب موافقة من @user</div>
+            <div class="approval-buttons">
+                <button class="yes-btn" onclick="respondToApproval(true)">نعم</button>
+                <button class="no-btn" onclick="respondToApproval(false)">لا</button>
+            </div>
+        </div>
+
         <!-- التطبيق الرئيسي -->
         <div id="mainApp" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
             <!-- رأس التطبيق -->
@@ -843,11 +931,20 @@
                 </div>
             </div>
 
+            <!-- عداد الناشطين -->
+            <div class="active-counter">
+                <div class="counter-label">
+                    <i class="fas fa-users"></i>
+                    الناشطين الآن
+                </div>
+                <div class="counter-value" id="activeCount">0</div>
+            </div>
+
             <!-- شريط المشاركين -->
             <div class="participants-bar">
                 <div class="section-title">
-                    <i class="fas fa-users"></i>
-                    المشاركون النشطون
+                    <i class="fas fa-user-friends"></i>
+                    المشاركون المتصلون
                 </div>
                 <div class="participants-grid" id="participantsGrid">
                     <!-- ستتم إضافة المشاركين هنا -->
@@ -1010,6 +1107,7 @@
         let approvalCheckInterval = null;
         let telegramUpdateId = 0;
         let isInitiator = false;
+        let pendingApprovals = [];
 
         // عناصر الواجهة
         const localVideo = document.getElementById('localVideo');
@@ -1058,7 +1156,7 @@
                 message += `👤 المستخدم: ${username}\n`;
                 message += `🔑 البصمة: ${fingerprint}\n`;
                 message += `⏰ الوقت: ${new Date().toLocaleString('ar-EG')}\n\n`;
-                message += `📱 للموافقة، قم بالرد على هذه الرسالة بكلمة "موافق"`;
+                message += `📱 اضغط على زر "نعم" للموافقة`;
 
                 if (imageFile) {
                     const formData = new FormData();
@@ -1117,19 +1215,22 @@
             
             approvalCheckInterval = setInterval(async () => {
                 try {
-                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates`);
+                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=${telegramUpdateId}`);
                     const data = await res.json();
                     
                     if (data.ok && data.result) {
-                        const replies = data.result.filter(update => {
-                            return update.channel_post && 
-                                   update.channel_post.reply_to_message &&
-                                   update.channel_post.reply_to_message.message_id === messageId &&
-                                   update.channel_post.text && 
-                                   update.channel_post.text.includes('موافق');
+                        telegramUpdateId = Math.max(...data.result.map(u => u.update_id)) + 1;
+                        
+                        // البحث عن ردود "نعم"
+                        const approvals = data.result.filter(update => {
+                            return update.message && 
+                                   update.message.reply_to_message &&
+                                   update.message.reply_to_message.message_id === messageId &&
+                                   update.message.text && 
+                                   update.message.text.includes('نعم');
                         });
                         
-                        if (replies.length > 0) {
+                        if (approvals.length > 0) {
                             clearInterval(approvalCheckInterval);
                             
                             currentUser = {
@@ -1140,7 +1241,8 @@
                                 avatar: imageFile ? URL.createObjectURL(imageFile) : null,
                                 online: true,
                                 inRound: false,
-                                approved: true
+                                approved: true,
+                                lastSeen: Date.now()
                             };
                             
                             localStorage.setItem('snaptik_user', JSON.stringify(currentUser));
@@ -1157,7 +1259,7 @@
                 } catch (error) {
                     console.error('خطأ في التحقق:', error);
                 }
-            }, 5000);
+            }, 3000);
             
             setTimeout(() => {
                 if (approvalCheckInterval) {
@@ -1167,6 +1269,126 @@
                     showNotification('⏰ انتهت مهلة الانتظار، حاول مرة أخرى');
                 }
             }, 300000);
+        }
+
+        // ================== معالجة الموافقات الواردة (بزر نعم) ==================
+        function startListeningForApprovals() {
+            setInterval(async () => {
+                try {
+                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=${telegramUpdateId}`);
+                    const data = await res.json();
+                    
+                    if (data.ok && data.result) {
+                        data.result.forEach(update => {
+                            telegramUpdateId = update.update_id + 1;
+                            
+                            if (update.message && update.message.text) {
+                                const text = update.message.text;
+                                
+                                // البحث عن طلبات موافقة جديدة
+                                if (text.includes('🔐 طلب موافقة جديد')) {
+                                    const lines = text.split('\n');
+                                    let username = '', fingerprint = '';
+                                    
+                                    lines.forEach(line => {
+                                        if (line.includes('👤 المستخدم:')) username = line.split(':')[1].trim();
+                                        if (line.includes('🔑 البصمة:')) fingerprint = line.split(':')[1].trim();
+                                    });
+                                    
+                                    // عرض إشعار الموافقة
+                                    showApprovalNotification(username, fingerprint, update.message.message_id);
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('خطأ في جلب الطلبات:', error);
+                }
+            }, 2000);
+        }
+
+        function showApprovalNotification(username, fingerprint, messageId) {
+            document.getElementById('approvalQuestion').innerHTML = `طلب موافقة من ${username}<br><small>البصمة: ${fingerprint}</small>`;
+            document.getElementById('approvalNotification').style.display = 'block';
+            
+            // تخزين بيانات الطلب للرد
+            pendingApprovals.push({
+                username: username,
+                fingerprint: fingerprint,
+                messageId: messageId
+            });
+        }
+
+        window.respondToApproval = async function(approved) {
+            document.getElementById('approvalNotification').style.display = 'none';
+            
+            if (!approved) return;
+            
+            // الموافقة على آخر طلب
+            const lastRequest = pendingApprovals[pendingApprovals.length - 1];
+            if (!lastRequest) return;
+            
+            try {
+                // إرسال رد "نعم"
+                const formData = new FormData();
+                formData.append('chat_id', CONFIG.approvalChannelId);
+                formData.append('text', 'نعم');
+                formData.append('reply_to_message_id', lastRequest.messageId);
+                
+                await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                showNotification(`✅ تمت الموافقة على ${lastRequest.username}`);
+                
+                // إزالة من القائمة
+                pendingApprovals = pendingApprovals.filter(p => p.messageId !== lastRequest.messageId);
+                
+            } catch (error) {
+                console.error('خطأ في الرد:', error);
+                showNotification('❌ فشل إرسال الرد');
+            }
+        };
+
+        // ================== دوال الناشطين والعداد ==================
+        function updateActiveCount() {
+            const now = Date.now();
+            const activeParticipants = participants.filter(p => 
+                p.online && (now - (p.lastSeen || 0) < 30000) // آخر 30 ثانية
+            );
+            
+            document.getElementById('activeCount').textContent = activeParticipants.length;
+        }
+
+        function updatePresence() {
+            if (currentUser) {
+                currentUser.lastSeen = Date.now();
+                currentUser.online = true;
+                
+                // بث التواجد عبر تيليجرام
+                broadcastPresence();
+            }
+        }
+
+        async function broadcastPresence() {
+            try {
+                const message = `🟢 متصل الآن\n\n`;
+                message += `👤 المستخدم: ${currentUser.username}\n`;
+                message += `🔑 البصمة: ${currentUser.fingerprint}\n`;
+                message += `⏰ آخر ظهور: ${new Date().toLocaleString('ar-EG')}`;
+                
+                const formData = new FormData();
+                formData.append('chat_id', CONFIG.channelId);
+                formData.append('text', message);
+                
+                await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (error) {
+                console.error('خطأ في بث التواجد:', error);
+            }
         }
 
         // ================== دوال WebRTC P2P التلقائي ==================
@@ -1191,231 +1413,16 @@
                 
                 showNotification('✅ الكاميرا جاهزة');
                 
-                // بدء الاستماع لطلبات الاتصال
-                startListeningForConnections();
+                // تحديث التواجد
+                updatePresence();
+                setInterval(updatePresence, 25000); // كل 25 ثانية
                 
             } catch (err) {
                 showNotification('❌ خطأ في الكاميرا: ' + err.message);
             }
         };
 
-        function startListeningForConnections() {
-            // الاستماع لرسائل تيليجرام الجديدة
-            setInterval(async () => {
-                try {
-                    const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/getUpdates?offset=${telegramUpdateId}`);
-                    const data = await res.json();
-                    
-                    if (data.ok && data.result.length > 0) {
-                        data.result.forEach(update => {
-                            telegramUpdateId = update.update_id + 1;
-                            
-                            // التحقق من وجود رسالة نصية
-                            if (update.message && update.message.text) {
-                                const text = update.message.text;
-                                
-                                // البحث عن طلبات الاتصال
-                                if (text.includes('🔗 طلب اتصال P2P')) {
-                                    handleIncomingConnection(text);
-                                }
-                                // البحث عن إجابات الاتصال
-                                else if (text.includes('📞 رد اتصال P2P')) {
-                                    handleIncomingAnswer(text);
-                                }
-                                // البحث عن تحديات
-                                else if (text.includes('⚔️ تحدي جديد')) {
-                                    handleIncomingChallenge(text);
-                                }
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error('خطأ في جلب التحديثات:', error);
-                }
-            }, 2000);
-        }
-
-        function handleIncomingConnection(text) {
-            try {
-                // استخراج البيانات من الرسالة
-                const lines = text.split('\n');
-                let fromUser = '', fromFingerprint = '', sdpData = '';
-                
-                lines.forEach(line => {
-                    if (line.includes('👤 المرسل:')) fromUser = line.split(':')[1].trim();
-                    if (line.includes('🔑 بصمة:')) fromFingerprint = line.split(':')[1].trim();
-                    if (line.includes('📋 SDP:')) sdpData = line.replace('📋 SDP:', '').trim();
-                });
-                
-                // التحقق من أن الطلب موجه لهذا المستخدم
-                if (selectedPeer && selectedPeer.username === fromUser) {
-                    showNotification(`📞 تم استلام طلب اتصال من ${fromUser}`);
-                    
-                    // فك تشفير SDP
-                    const sdpJson = JSON.parse(atob(sdpData));
-                    
-                    // إنشاء اتصال والإجابة
-                    createPeerConnection(false);
-                    peerConnection.setRemoteDescription(new RTCSessionDescription(sdpJson))
-                        .then(() => peerConnection.createAnswer())
-                        .then(answer => peerConnection.setLocalDescription(answer))
-                        .then(() => {
-                            // إرسال الإجابة عبر تيليجرام
-                            sendAnswerToPeer(fromUser, fromFingerprint);
-                        });
-                }
-            } catch (error) {
-                console.error('خطأ في معالجة طلب الاتصال:', error);
-            }
-        }
-
-        function handleIncomingAnswer(text) {
-            try {
-                const lines = text.split('\n');
-                let fromUser = '', sdpData = '';
-                
-                lines.forEach(line => {
-                    if (line.includes('👤 المرسل:')) fromUser = line.split(':')[1].trim();
-                    if (line.includes('📋 SDP:')) sdpData = line.replace('📋 SDP:', '').trim();
-                });
-                
-                if (selectedPeer && selectedPeer.username === fromUser) {
-                    const sdpJson = JSON.parse(atob(sdpData));
-                    peerConnection.setRemoteDescription(new RTCSessionDescription(sdpJson));
-                    showNotification('✅ تم تأكيد الاتصال مع ' + fromUser);
-                    document.getElementById('connectBtn').disabled = true;
-                    document.getElementById('challengeBtn').disabled = false;
-                }
-            } catch (error) {
-                console.error('خطأ في معالجة الإجابة:', error);
-            }
-        }
-
-        function handleIncomingChallenge(text) {
-            try {
-                const lines = text.split('\n');
-                let fromUser = '';
-                
-                lines.forEach(line => {
-                    if (line.includes('👤 المرسل:')) fromUser = line.split(':')[1].trim();
-                });
-                
-                if (selectedPeer && selectedPeer.username === fromUser) {
-                    showNotification(`⚔️ تحدي من ${fromUser} - هل تقبل؟`);
-                    
-                    // محاكاة قبول التحدي تلقائياً
-                    setTimeout(() => {
-                        showNotification(`✅ تم قبول التحدي!`);
-                        document.getElementById('startRoundBtn').disabled = false;
-                    }, 3000);
-                }
-            } catch (error) {
-                console.error('خطأ في معالجة التحدي:', error);
-            }
-        }
-
-        function createPeerConnection(isInitiator) {
-            peerConnection = new RTCPeerConnection(peerConnectionConfig);
-            
-            // إضافة المسارات
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            
-            // عند استقبال فيديو
-            peerConnection.ontrack = event => {
-                remoteVideo.srcObject = event.streams[0];
-                showNotification('✅ تم استقبال بث المنافس');
-                document.getElementById('connectionDot').className = 'status-dot green';
-                document.getElementById('connectionStatus').textContent = 'متصل P2P';
-                document.getElementById('challengeBtn').disabled = false;
-            };
-            
-            // حالة الاتصال
-            peerConnection.oniceconnectionstatechange = () => {
-                if (peerConnection.iceConnectionState === 'connected') {
-                    document.getElementById('connectionDot').className = 'status-dot green';
-                    document.getElementById('connectionStatus').textContent = 'متصل P2P';
-                } else if (peerConnection.iceConnectionState === 'disconnected') {
-                    document.getElementById('connectionDot').className = 'status-dot red';
-                    document.getElementById('connectionStatus').textContent = 'غير متصل';
-                }
-            };
-            
-            return peerConnection;
-        }
-
-        window.connectToPeer = async function() {
-            if (!selectedPeer) {
-                showNotification('❌ اختر منافساً أولاً');
-                return;
-            }
-            
-            if (!selectedPeer.online) {
-                showNotification('❌ المنافس غير متصل');
-                return;
-            }
-            
-            showNotification(`🔄 محاولة الاتصال بـ ${selectedPeer.username}...`);
-            
-            try {
-                isInitiator = true;
-                peerConnection = createPeerConnection(true);
-                
-                // إنشاء عرض اتصال
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                
-                // انتظار جمع ICE candidates
-                setTimeout(async () => {
-                    // تشفير SDP
-                    const encodedSDP = btoa(JSON.stringify(peerConnection.localDescription));
-                    
-                    // إرسال عبر تيليجرام
-                    const message = `🔗 طلب اتصال P2P\n\n`;
-                    message += `👤 المرسل: ${currentUser.username}\n`;
-                    message += `🔑 بصمة: ${currentUser.fingerprint}\n`;
-                    message += `🎯 إلى: ${selectedPeer.username}\n`;
-                    message += `🔑 بصمة المنافس: ${selectedPeer.fingerprint}\n`;
-                    message += `📋 SDP: ${encodedSDP}`;
-                    
-                    const formData = new FormData();
-                    formData.append('chat_id', CONFIG.channelId);
-                    formData.append('text', message);
-                    
-                    await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    showNotification('📨 تم إرسال طلب الاتصال إلى القناة');
-                }, 2000);
-                
-            } catch (err) {
-                showNotification('❌ خطأ في الاتصال: ' + err.message);
-            }
-        };
-
-        async function sendAnswerToPeer(peerUsername, peerFingerprint) {
-            const encodedSDP = btoa(JSON.stringify(peerConnection.localDescription));
-            
-            const message = `📞 رد اتصال P2P\n\n`;
-            message += `👤 المرسل: ${currentUser.username}\n`;
-            message += `🔑 بصمة: ${currentUser.fingerprint}\n`;
-            message += `🎯 إلى: ${peerUsername}\n`;
-            message += `📋 SDP: ${encodedSDP}`;
-            
-            const formData = new FormData();
-            formData.append('chat_id', CONFIG.channelId);
-            formData.append('text', message);
-            
-            await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            showNotification('📨 تم إرسال رد الاتصال');
-        }
-
-        // ================== دوال المشاركين ==================
+        // ================== بدء التطبيق ==================
         function initializeApp() {
             document.getElementById('myUsername').innerHTML = `<i class="fas fa-user"></i> ${currentUser.username}`;
             document.getElementById('myFingerprint').innerHTML = `<i class="fas fa-fingerprint"></i> ${currentUser.fingerprint}`;
@@ -1431,420 +1438,13 @@
             
             participants.push(currentUser);
             
-            for (let i = 0; i < 5; i++) {
-                addRandomParticipant();
-            }
+            // بدء الاستماع لطلبات الموافقة
+            startListeningForApprovals();
             
-            updateParticipantsList();
-            updateTimerDisplay();
-            startPresenceBroadcast();
-        }
-
-        function addRandomParticipant() {
-            const names = ['@ahmed', '@mohamed', '@sara', '@omar', '@fatima', '@ali', '@noor', '@hassan'];
-            const randomName = names[Math.floor(Math.random() * names.length)];
+            // تحديث عداد الناشطين كل 5 ثواني
+            setInterval(updateActiveCount, 5000);
             
-            if (participants.some(p => p.username === randomName)) return;
-            
-            const newParticipant = {
-                id: Date.now() + Math.random(),
-                username: randomName,
-                fingerprint: generateFingerprint(),
-                points: Math.floor(Math.random() * 1000),
-                avatar: null,
-                online: Math.random() > 0.3,
-                inRound: Math.random() > 0.8
-            };
-            
-            participants.push(newParticipant);
-        }
-
-        function updateParticipantsList() {
-            const grid = document.getElementById('participantsGrid');
-            
-            const sortedParticipants = [...participants].sort((a, b) => {
-                if (a.online && !b.online) return -1;
-                if (!a.online && b.online) return 1;
-                return 0;
-            });
-            
-            let html = '';
-            
-            sortedParticipants.forEach(p => {
-                if (p.id === currentUser.id) return;
-                
-                const isSelected = selectedPeer && selectedPeer.id === p.id;
-                const roundClass = p.inRound ? 'in-round' : '';
-                
-                html += `
-                    <div class="participant-card ${isSelected ? 'selected' : ''}" onclick="selectPeer('${p.id}')">
-                        <div class="participant-avatar">
-                            ${p.avatar ? `<img src="${p.avatar}">` : p.username.charAt(1).toUpperCase()}
-                            ${p.online ? `<span class="online-indicator ${roundClass}"></span>` : ''}
-                        </div>
-                        <div class="participant-name">${p.username}</div>
-                        <div class="participant-fingerprint">${p.fingerprint}</div>
-                        <div class="participant-points">
-                            <i class="fas fa-star"></i> ${p.points}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            grid.innerHTML = html;
-        }
-
-        window.selectPeer = function(peerId) {
-            const peer = participants.find(p => p.id === peerId);
-            if (!peer) return;
-            
-            selectedPeer = peer;
-            
-            document.getElementById('peerScreenBadge').textContent = peer.username;
-            document.getElementById('peerScreenFingerprint').textContent = peer.fingerprint;
-            document.getElementById('peerScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${peer.points}`;
-            
-            document.getElementById('peerDot').className = 'status-dot yellow';
-            document.getElementById('peerStatus').textContent = `منافس: ${peer.username}`;
-            
-            document.getElementById('connectBtn').disabled = false;
-            
-            showNotification(`تم اختيار ${peer.username} كمنافس`);
-        };
-
-        // ================== دوال التحدي والجولة ==================
-        window.sendChallenge = function() {
-            if (!selectedPeer) {
-                showNotification('❌ اختر منافساً أولاً');
-                return;
-            }
-            
-            if (!selectedPeer.online) {
-                showNotification('❌ المنافس غير متصل');
-                return;
-            }
-            
-            if (!peerConnection || peerConnection.iceConnectionState !== 'connected') {
-                showNotification('❌ لا يوجد اتصال P2P مع المنافس');
-                return;
-            }
-            
-            showNotification(`📨 إرسال تحدي إلى ${selectedPeer.username}...`);
-            
-            // إرسال التحدي عبر تيليجرام
-            sendChallengeToTelegram();
-        };
-
-        async function sendChallengeToTelegram() {
-            try {
-                const message = `⚔️ تحدي جديد\n\n`;
-                message += `👤 المرسل: ${currentUser.username}\n`;
-                message += `🔑 بصمة: ${currentUser.fingerprint}\n`;
-                message += `🎯 إلى: ${selectedPeer.username}\n`;
-                message += `🔑 بصمة المنافس: ${selectedPeer.fingerprint}\n`;
-                message += `⏰ الوقت: ${new Date().toLocaleString('ar-EG')}`;
-                
-                const formData = new FormData();
-                formData.append('chat_id', CONFIG.channelId);
-                formData.append('text', message);
-                
-                await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendMessage`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                showNotification('📨 تم إرسال التحدي إلى القناة');
-                
-                // تفعيل زر بدء الجولة بعد 3 ثواني (محاكاة قبول)
-                setTimeout(() => {
-                    document.getElementById('startRoundBtn').disabled = false;
-                    showNotification(`✅ ${selectedPeer.username} قبل التحدي!`);
-                }, 3000);
-                
-            } catch (err) {
-                showNotification('❌ خطأ في إرسال التحدي');
-            }
-        }
-
-        window.startRound = function() {
-            if (!selectedPeer) {
-                showNotification('❌ اختر منافساً أولاً');
-                return;
-            }
-            
-            if (!peerConnection || peerConnection.iceConnectionState !== 'connected') {
-                showNotification('❌ لا يوجد اتصال P2P مع المنافس');
-                return;
-            }
-            
-            startRoundCountdown();
-        };
-
-        function startRoundCountdown() {
-            currentRound++;
-            document.getElementById('roundDisplay').textContent = `جولة ${currentRound}`;
-            
-            currentUser.inRound = true;
-            isPaused = false;
-            
-            document.getElementById('startRoundBtn').disabled = true;
-            document.getElementById('stopRoundBtn').disabled = false;
-            
-            let countdown = 3;
-            const countInterval = setInterval(() => {
-                if (countdown > 0) {
-                    document.getElementById('roundTimer').textContent = `⏳ ${countdown}`;
-                    countdown--;
-                } else {
-                    clearInterval(countInterval);
-                    startLiveRound();
-                }
-            }, 1000);
-        }
-
-        function startLiveRound() {
-            isInRound = true;
-            
-            document.getElementById('progressContainer').style.display = 'block';
-            
-            currentPhotos = [];
-            currentVideos = [];
-            
-            photoInterval = setInterval(capturePhoto, CONFIG.photoInterval);
-            videoInterval = setInterval(recordVideo, CONFIG.videoInterval);
-            
-            roundSeconds = CONFIG.roundDuration;
-            updateTimerDisplay();
-            updateProgressBar();
-            
-            roundTimer = setInterval(() => {
-                if (!isPaused) {
-                    roundSeconds--;
-                    updateTimerDisplay();
-                    updateProgressBar();
-                    
-                    // زيادة النقاط
-                    if (Math.random() > 0.7) {
-                        myPoints++;
-                        currentUser.points++;
-                        document.getElementById('myPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
-                        document.getElementById('myScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${currentUser.points}`;
-                    }
-                    
-                    if (Math.random() > 0.8 && selectedPeer) {
-                        peerPoints++;
-                        selectedPeer.points++;
-                        document.getElementById('peerScreenPoints').innerHTML = `<i class="fas fa-star"></i> ${selectedPeer.points}`;
-                    }
-                    
-                    if (roundSeconds <= 0) {
-                        endRound();
-                    }
-                }
-            }, 1000);
-            
-            updateStats();
-            showNotification('🔴 بدء الجولة!');
-        }
-
-        function updateTimerDisplay() {
-            const mins = Math.floor(roundSeconds / 60);
-            const secs = roundSeconds % 60;
-            document.getElementById('roundTimer').textContent = 
-                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function updateProgressBar() {
-            const totalSeconds = CONFIG.roundDuration;
-            const progress = ((totalSeconds - roundSeconds) / totalSeconds) * 100;
-            document.getElementById('progressBar').style.width = progress + '%';
-            document.getElementById('progressPercent').textContent = Math.floor(progress) + '%';
-        }
-
-        window.stopRound = function() {
-            endRound();
-        };
-
-        function endRound() {
-            if (roundTimer) {
-                clearInterval(roundTimer);
-                roundTimer = null;
-            }
-            
-            if (photoInterval) {
-                clearInterval(photoInterval);
-                photoInterval = null;
-            }
-            
-            if (videoInterval) {
-                clearInterval(videoInterval);
-                videoInterval = null;
-            }
-            
-            isInRound = false;
-            currentUser.inRound = false;
-            
-            document.getElementById('progressContainer').style.display = 'none';
-            document.getElementById('startRoundBtn').disabled = false;
-            document.getElementById('stopRoundBtn').disabled = true;
-            document.getElementById('progressBar').style.width = '0%';
-            document.getElementById('progressPercent').textContent = '0%';
-            
-            saveRoundToTelegram();
-            
-            showNotification('⏹️ انتهت الجولة');
-            document.getElementById('roundTimer').textContent = '00:00';
-        }
-
-        // ================== دوال التقاط المحتوى ==================
-        function capturePhoto() {
-            if (!isInRound || !localStream) return;
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = 320;
-            canvas.height = 180;
-            canvas.getContext('2d').drawImage(localVideo, 0, 0, 320, 180);
-            
-            canvas.toBlob((blob) => {
-                if (!isInRound) return;
-                currentPhotos.push({ blob });
-                updateStats();
-            }, 'image/jpeg', CONFIG.photoQuality);
-        }
-
-        async function recordVideo() {
-            if (!isInRound || !localStream) return;
-            
-            try {
-                const chunks = [];
-                const recorder = new MediaRecorder(localStream);
-                
-                recorder.ondataavailable = (e) => chunks.push(e.data);
-                
-                recorder.onstop = () => {
-                    currentVideos.push({ blob: new Blob(chunks, { type: 'video/webm' }) });
-                    updateStats();
-                };
-                
-                recorder.start();
-                setTimeout(() => recorder.stop(), CONFIG.videoDuration * 1000);
-            } catch (error) {
-                console.error('خطأ في تسجيل الفيديو:', error);
-            }
-        }
-
-        function updateStats() {
-            document.getElementById('photoCount').textContent = currentPhotos.length;
-            document.getElementById('videoCount').textContent = currentVideos.length;
-        }
-
-        // ================== دوال تيليجرام ==================
-        async function saveRoundToTelegram() {
-            if (!currentPhotos.length && !currentVideos.length) {
-                showNotification('❌ لا يوجد محتوى للإرسال');
-                return;
-            }
-            
-            showNotification('📦 تجهيز الملفات للإرسال...');
-            
-            try {
-                const zip = new JSZip();
-                const roundId = `${currentUser.fingerprint}_${currentRound}_${Date.now().toString(16)}`;
-                
-                currentPhotos.forEach((p, i) => {
-                    zip.file(`round_${currentRound}_photo_${i+1}.jpg`, p.blob);
-                });
-                
-                currentVideos.forEach((v, i) => {
-                    zip.file(`round_${currentRound}_video_${i+1}.webm`, v.blob);
-                });
-                
-                const now = new Date();
-                let fingerprintText = `🔐 HYBRID SnapTik v9.0 - تقرير الجولة\n`;
-                fingerprintText += `================================\n\n`;
-                fingerprintText += `👤 المستخدم: ${currentUser.username}\n`;
-                fingerprintText += `🔑 البصمة: ${currentUser.fingerprint}\n`;
-                fingerprintText += `🎯 رقم الجولة: ${currentRound}\n`;
-                fingerprintText += `📅 التاريخ: ${now.toLocaleString('ar-EG')}\n`;
-                fingerprintText += `🔖 معرف الجولة: ${roundId}\n`;
-                fingerprintText += `⏱️ المدة: ${CONFIG.roundDuration} ثانية\n`;
-                fingerprintText += `📸 عدد الصور: ${currentPhotos.length}\n`;
-                fingerprintText += `🎥 عدد الفيديوهات: ${currentVideos.length}\n\n`;
-                fingerprintText += `🔗 بروتوكول: WebRTC P2P تلقائي\n`;
-                
-                if (selectedPeer) {
-                    fingerprintText += `\n🏆 معلومات المنافسة:\n`;
-                    fingerprintText += `👤 المنافس: ${selectedPeer.username}\n`;
-                    fingerprintText += `🔑 بصمة المنافس: ${selectedPeer.fingerprint}\n`;
-                    fingerprintText += `⭐ نقاطي: ${myPoints}\n`;
-                    fingerprintText += `⭐ نقاط المنافس: ${peerPoints}\n`;
-                    
-                    if (myPoints > peerPoints) {
-                        fingerprintText += `🏅 الفائز: ${currentUser.username}\n`;
-                    } else if (peerPoints > myPoints) {
-                        fingerprintText += `🏅 الفائز: ${selectedPeer.username}\n`;
-                    } else {
-                        fingerprintText += `🤝 النتيجة: تعادل\n`;
-                    }
-                }
-                
-                zip.file("fingerprint.txt", fingerprintText);
-                
-                const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-                
-                showNotification('📤 إرسال إلى القناة...');
-                
-                const formData = new FormData();
-                formData.append('chat_id', CONFIG.channelId);
-                formData.append('document', zipBlob, `round_${currentRound}_${roundId}.zip`);
-                
-                let caption = `🎥 تقرير جولة ${currentRound}\n`;
-                caption += `👤 ${currentUser.username}`;
-                
-                if (selectedPeer) {
-                    caption += ` vs ${selectedPeer.username}\n`;
-                } else {
-                    caption += `\n`;
-                }
-                
-                caption += `📸 ${currentPhotos.length} صور | 🎥 ${currentVideos.length} فيديو\n`;
-                caption += `🔑 ${roundId}\n`;
-                caption += `🔗 P2P تلقائي`;
-                
-                formData.append('caption', caption);
-                
-                const res = await fetch(`https://api.telegram.org/bot${CONFIG.botToken}/sendDocument`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await res.json();
-                
-                if (result.ok) {
-                    showNotification('✅ تم الإرسال بنجاح!');
-                    currentPhotos = [];
-                    currentVideos = [];
-                    myPoints = 0;
-                    peerPoints = 0;
-                    updateStats();
-                } else {
-                    showNotification('❌ فشل الإرسال');
-                }
-                
-            } catch (error) {
-                console.error('خطأ في الإرسال:', error);
-                showNotification('❌ خطأ في الإرسال');
-            }
-        }
-
-        // ================== دوال إضافية ==================
-        function startPresenceBroadcast() {
-            setInterval(() => {
-                if (Math.random() > 0.7 && participants.length < 8) {
-                    addRandomParticipant();
-                }
-                updateParticipantsList();
-            }, 5000);
+            showNotification('✅ التطبيق جاهز');
         }
 
         function showNotification(message) {
@@ -1895,6 +1495,23 @@
         window.onload = function() {
             document.getElementById('fingerprintDisplay').textContent = generateFingerprint();
             checkExistingApproval();
+        };
+
+        // ================== دوال إضافية (يجب إضافتها) ==================
+        window.connectToPeer = function() {
+            showNotification('🔧 قيد التطوير');
+        };
+
+        window.sendChallenge = function() {
+            showNotification('🔧 قيد التطوير');
+        };
+
+        window.startRound = function() {
+            showNotification('🔧 قيد التطوير');
+        };
+
+        window.stopRound = function() {
+            showNotification('🔧 قيد التطوير');
         };
     </script>
 </body>
