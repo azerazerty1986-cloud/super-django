@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🔥 HYBRID SnapTik v31.0 - الإصدار النهائي</title>
+    <title>🔥 HYBRID SnapTik v34.0 - نظام الألبوم الموثق</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
@@ -303,35 +303,26 @@
             color: white;
         }
 
-        /* نافذة حالة الإرسال */
-        .message-status-popup {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+        /* شريط حالة الألبوم */
+        .album-status {
             background: #1f2630;
-            border: 2px solid #ffd700;
-            border-radius: 20px;
-            padding: 10px 20px;
-            z-index: 3500;
-            display: none;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 15px;
+            border: 1px solid #ffd700;
+            display: flex;
             align-items: center;
-            gap: 10px;
-            color: white;
-            font-size: 12px;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #ffd700;
         }
 
-        .message-status-icon {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
+        .album-name {
+            font-family: monospace;
+            background: #0a0c10;
+            padding: 2px 5px;
+            border-radius: 10px;
         }
-
-        .message-status-icon.sending { background: #ffd700; animation: pulse 1s infinite; }
-        .message-status-icon.sent { background: #4caf50; }
-        .message-status-icon.waiting { background: #ffa500; animation: pulse 1s infinite; }
-        .message-status-icon.received { background: #4caf50; }
-        .message-status-icon.failed { background: #ff4444; }
 
         /* التصميم الأساسي */
         .app-header {
@@ -799,10 +790,10 @@
             </div>
         </div>
 
-        <!-- نافذة حالة الإرسال -->
-        <div class="message-status-popup" id="messageStatusPopup">
-            <div class="message-status-icon" id="messageStatusIcon"></div>
-            <span id="messageStatusText">جاري إرسال الطلب...</span>
+        <!-- شريط حالة الألبوم -->
+        <div class="album-status" id="albumStatus" style="display: none;">
+            <span>📁 الألبوم:</span>
+            <span class="album-name" id="albumName">---</span>
         </div>
 
         <!-- التطبيق الرئيسي -->
@@ -894,226 +885,135 @@
             STUN_SERVERS: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']
         };
 
-        // ================== كلاس التواصل الموثوق ==================
-        class P2PCommunication {
-            constructor(user) {
-                this.user = user;
-                this.offsetKey = `tg_offset_${user.fingerprint}`;
-                this.lastUpdateId = parseInt(localStorage.getItem(this.offsetKey)) || 0;
-                this.pendingMessages = new Map();
-                this.messageCallbacks = new Map();
-                this.isListening = false;
+        // ================== كلاس إدارة الألبوم ==================
+        class RoundAlbum {
+            constructor(user1, user2) {
+                this.user1 = user1;
+                this.user2 = user2;
+                this.albumName = `round_${user1.fingerprint}_${user2.fingerprint}_${Date.now()}`;
+                this.files = {
+                    offer: null,
+                    answer: null,
+                    candidates: []
+                };
+                this.checkInterval = null;
             }
 
-            // بدء الاستماع
-            startListening() {
-                if (this.isListening) return;
-                this.isListening = true;
-                console.log(`👂 ${this.user.username} بدأ الاستماع...`);
-                setInterval(() => this.checkMessages(), 1500);
+            // إنشاء ألبوم جديد (إرسال رسالة تعريفية)
+            async create() {
+                const message = `📁 **ألبوم جولة جديدة**\n\n` +
+                    `👤 **المستخدم 1:** ${this.user1.username} (${this.user1.fingerprint})\n` +
+                    `👤 **المستخدم 2:** ${this.user2.username} (${this.user2.fingerprint})\n` +
+                    `📌 **اسم الألبوم:** \`${this.albumName}\`\n\n` +
+                    `🔄 سيتم تبادل ملفات الاتصال هنا:\n` +
+                    `1. offer.json - من المرسل\n` +
+                    `2. answer.json - من المستقبل\n` +
+                    `3. candidates.json - مرشحات الاتصال`;
+
+                await this.sendMessage(message);
+                this.showAlbumStatus();
             }
 
-            // التحقق من الرسائل الجديدة
-            async checkMessages() {
+            // إرسال ملف إلى الألبوم
+            async uploadFile(fileName, data) {
+                const fileContent = JSON.stringify(data, null, 2);
+                const blob = new Blob([fileContent], { type: 'application/json' });
+                
+                const formData = new FormData();
+                formData.append('chat_id', CONFIG.CHANNEL_ID);
+                formData.append('document', blob, fileName);
+                formData.append('caption', `📎 ملف ${fileName} للجولة ${this.albumName}`);
+
                 try {
-                    const url = `https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates?offset=${this.lastUpdateId}&timeout=1`;
-                    const res = await fetch(url);
-                    const data = await res.json();
-
-                    if (data.ok && data.result) {
-                        for (const update of data.result) {
-                            this.lastUpdateId = update.update_id + 1;
-                            
-                            if (update.message?.text) {
-                                this.processMessage(update.message.text);
-                            }
-                        }
-                        localStorage.setItem(this.offsetKey, this.lastUpdateId);
+                    const response = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendDocument`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    if (result.ok) {
+                        console.log(`✅ تم رفع ${fileName}`);
+                        return result.result;
+                    } else {
+                        throw new Error(result.description);
                     }
                 } catch (error) {
-                    console.error('خطأ في التحقق:', error);
+                    console.error(`❌ فشل رفع ${fileName}:`, error);
+                    throw error;
                 }
             }
 
-            // معالجة الرسالة
-            processMessage(text) {
-                // استخراج نوع الرسالة ومعرفها
-                const type = text.split('\n')[0];
-                const msgIdMatch = text.match(/MSG_ID:(\w+)/);
-                if (!msgIdMatch) return;
+            // البحث عن ملف في الألبوم
+            async findFile(fileName, timeout = 30000) {
+                const startTime = Date.now();
                 
-                const msgId = msgIdMatch[1];
-                
-                // منع التكرار
-                if (this.pendingMessages.has(msgId)) return;
-                this.pendingMessages.set(msgId, true);
-
-                // معالجة حسب النوع
-                if (type === 'OFFER') {
-                    this.handleOffer(text);
-                } else if (type === 'ACK') {
-                    this.handleAck(text);
-                } else if (type === 'ANSWER') {
-                    this.handleAnswer(text);
-                }
-            }
-
-            // إرسال عرض اتصال
-            async sendOffer(targetUser, offerData) {
-                const msgId = `offer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-                
-                const message = [
-                    'OFFER',
-                    `MSG_ID:${msgId}`,
-                    `FROM:${this.user.fingerprint}`,
-                    `FROM_NAME:${this.user.username}`,
-                    `TO:${targetUser.fingerprint}`,
-                    `TO_NAME:${targetUser.username}`,
-                    `DATA:${btoa(JSON.stringify(offerData))}`
-                ].join('\n');
-
-                // إرسال
-                await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: CONFIG.CHANNEL_ID,
-                        text: message
-                    })
-                });
-
-                showMessageStatus('تم الإرسال، في انتظار التأكيد...', 'waiting');
-
-                // انتظار التأكيد
-                return new Promise((resolve, reject) => {
-                    let attempts = 0;
-                    const maxAttempts = 10;
+                while (Date.now() - startTime < timeout) {
+                    try {
+                        const response = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getUpdates`);
+                        const data = await response.json();
+                        
+                        if (data.ok && data.result) {
+                            for (const update of data.result) {
+                                if (update.message?.document) {
+                                    const file = update.message.document;
+                                    if (file.file_name === fileName) {
+                                        // تحميل الملف
+                                        const fileResponse = await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getFile?file_id=${file.file_id}`);
+                                        const fileData = await fileResponse.json();
+                                        
+                                        if (fileData.ok) {
+                                            const fileUrl = `https://api.telegram.org/file/bot${CONFIG.BOT_TOKEN}/${fileData.result.file_path}`;
+                                            const contentResponse = await fetch(fileUrl);
+                                            const content = await contentResponse.text();
+                                            return JSON.parse(content);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('خطأ في البحث عن ملف:', error);
+                    }
                     
-                    const checkInterval = setInterval(() => {
-                        attempts++;
-                        
-                        if (this.pendingMessages.has(`ack_${msgId}`)) {
-                            clearInterval(checkInterval);
-                            showMessageStatus('تم تأكيد الاستلام!', 'received');
-                            setTimeout(hideMessageStatus, 1000);
-                            resolve(true);
-                        }
-                        
-                        if (attempts >= maxAttempts) {
-                            clearInterval(checkInterval);
-                            showMessageStatus('فشل الإرسال', 'failed');
-                            setTimeout(hideMessageStatus, 2000);
-                            reject(new Error('لم يتم الاستلام'));
-                        }
-                    }, 1000);
-                });
-            }
-
-            // إرسال تأكيد استلام
-            async sendAck(originalMsgId) {
-                const message = [
-                    'ACK',
-                    `MSG_ID:ack_${originalMsgId}`,
-                    `FOR:${originalMsgId}`,
-                    `FROM:${this.user.fingerprint}`
-                ].join('\n');
-
-                await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: CONFIG.CHANNEL_ID,
-                        text: message
-                    })
-                });
-            }
-
-            // إرسال إجابة
-            async sendAnswer(targetUser, answerData) {
-                const msgId = `answer_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-                
-                const message = [
-                    'ANSWER',
-                    `MSG_ID:${msgId}`,
-                    `FROM:${this.user.fingerprint}`,
-                    `TO:${targetUser.fingerprint}`,
-                    `DATA:${btoa(JSON.stringify(answerData))}`
-                ].join('\n');
-
-                await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: CONFIG.CHANNEL_ID,
-                        text: message
-                    })
-                });
-            }
-
-            // معالجة العرض الوارد
-            handleOffer(text) {
-                const lines = text.split('\n');
-                let fromFingerprint = '', fromName = '', toFingerprint = '', data = '';
-                
-                lines.forEach(line => {
-                    if (line.startsWith('FROM:')) fromFingerprint = line.replace('FROM:', '');
-                    if (line.startsWith('FROM_NAME:')) fromName = line.replace('FROM_NAME:', '');
-                    if (line.startsWith('TO:')) toFingerprint = line.replace('TO:', '');
-                    if (line.startsWith('DATA:')) data = line.replace('DATA:', '');
-                });
-
-                // التأكد أن العرض موجه لي
-                if (toFingerprint !== this.user.fingerprint) return;
-
-                // إرسال تأكيد الاستلام
-                const msgIdMatch = text.match(/MSG_ID:(\w+)/);
-                if (msgIdMatch) {
-                    this.sendAck(msgIdMatch[1]);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
+                
+                throw new Error(`لم يتم العثور على الملف ${fileName}`);
+            }
 
-                // استدعاء callback
-                if (this.messageCallbacks.has('offer')) {
-                    this.messageCallbacks.get('offer')({
-                        from: fromFingerprint,
-                        fromName: fromName,
-                        data: JSON.parse(atob(data))
+            // إرسال رسالة نصية
+            async sendMessage(text) {
+                try {
+                    await fetch(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: CONFIG.CHANNEL_ID,
+                            text: text,
+                            parse_mode: 'Markdown'
+                        })
                     });
+                } catch (error) {
+                    console.error('خطأ في إرسال الرسالة:', error);
                 }
             }
 
-            // معالجة التأكيد
-            handleAck(text) {
-                const match = text.match(/FOR:(\w+)/);
-                if (match) {
-                    const originalId = match[1];
-                    this.pendingMessages.set(`ack_${originalId}`, true);
-                }
+            // إظهار حالة الألبوم في الواجهة
+            showAlbumStatus() {
+                const statusDiv = document.getElementById('albumStatus');
+                const nameSpan = document.getElementById('albumName');
+                nameSpan.textContent = this.albumName;
+                statusDiv.style.display = 'flex';
             }
 
-            // معالجة الإجابة
-            handleAnswer(text) {
-                const lines = text.split('\n');
-                let fromFingerprint = '', toFingerprint = '', data = '';
-                
-                lines.forEach(line => {
-                    if (line.startsWith('FROM:')) fromFingerprint = line.replace('FROM:', '');
-                    if (line.startsWith('TO:')) toFingerprint = line.replace('TO:', '');
-                    if (line.startsWith('DATA:')) data = line.replace('DATA:', '');
-                });
-
-                if (toFingerprint !== this.user.fingerprint) return;
-
-                if (this.messageCallbacks.has('answer')) {
-                    this.messageCallbacks.get('answer')({
-                        from: fromFingerprint,
-                        data: JSON.parse(atob(data))
-                    });
-                }
+            // بدء مراقبة الملفات
+            startMonitoring() {
+                this.checkInterval = setInterval(() => this.checkForNewFiles(), 3000);
             }
 
-            // تسجيل callback
-            on(event, callback) {
-                this.messageCallbacks.set(event, callback);
+            // التحقق من الملفات الجديدة
+            async checkForNewFiles() {
+                // سيتم تنفيذها حسب الحاجة
             }
         }
 
@@ -1130,7 +1030,7 @@
         let roundSeconds = 0;
         let roundTimer = null;
         let myPoints = 0;
-        let p2pComm = null;
+        let currentAlbum = null;
 
         // عناصر
         const localVideo = document.getElementById('localVideo');
@@ -1179,14 +1079,6 @@
             document.getElementById('myScreenPoints').innerHTML = `${currentUser.points} ★`;
             document.getElementById('myScreenBadge').textContent = currentUser.username;
             document.getElementById('myScreenFingerprint').textContent = currentUser.fingerprint;
-            
-            // إنشاء نظام التواصل
-            p2pComm = new P2PCommunication(currentUser);
-            p2pComm.startListening();
-            
-            // تسجيل callback للعروض الواردة
-            p2pComm.on('offer', handleIncomingOffer);
-            p2pComm.on('answer', handleIncomingAnswer);
             
             addTestUsers();
             startTimeUpdates();
@@ -1282,7 +1174,7 @@
             }
         };
 
-        // ================== اتصال P2P ==================
+        // ================== اتصال P2P عبر الألبوم ==================
         window.connectToPeer = async function() {
             if (!selectedPeer) {
                 showNotification('❌ اختر منافس أولاً');
@@ -1295,9 +1187,13 @@
             }
             
             document.getElementById('connectBtn').disabled = true;
-            showMessageStatus('جاري إنشاء الاتصال...', 'sending');
+            showNotification('🔄 إنشاء ألبوم الجولة...');
             
             try {
+                // إنشاء ألبوم جديد
+                currentAlbum = new RoundAlbum(currentUser, selectedPeer);
+                await currentAlbum.create();
+                
                 // إنشاء اتصال WebRTC
                 const config = { iceServers: CONFIG.STUN_SERVERS.map(url => ({ urls: url })) };
                 peerConnection = new RTCPeerConnection(config);
@@ -1317,21 +1213,50 @@
                     document.getElementById('startRoundBtn').disabled = false;
                     showNotification('✅ تم استقبال بث المنافس');
                 };
+
+                // جمع مرشحات ICE
+                peerConnection.onicecandidate = async (event) => {
+                    if (event.candidate) {
+                        // إضافة المرشح إلى قائمة المرشحات
+                        if (!currentAlbum.files.candidates) {
+                            currentAlbum.files.candidates = [];
+                        }
+                        currentAlbum.files.candidates.push(event.candidate);
+                        
+                        // رفع المرشحات كل 5 مرشحات أو بعد 2 ثانية
+                        if (currentAlbum.files.candidates.length % 5 === 0) {
+                            await currentAlbum.uploadFile('candidates.json', currentAlbum.files.candidates);
+                        }
+                    }
+                };
                 
-                // إنشاء عرض
+                // إنشاء العرض
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 
-                // إرسال العرض عبر نظام التواصل
-                await p2pComm.sendOffer(selectedPeer, peerConnection.localDescription);
+                // رفع العرض إلى الألبوم
+                await currentAlbum.uploadFile('offer.json', {
+                    from: currentUser.fingerprint,
+                    to: selectedPeer.fingerprint,
+                    sdp: peerConnection.localDescription
+                });
                 
-                showNotification('✅ تم إرسال طلب الاتصال');
+                showNotification('📤 تم رفع العرض، في انتظار الرد...');
+                
+                // انتظار الرد
+                try {
+                    const answer = await currentAlbum.findFile('answer.json', 30000);
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer.sdp));
+                    showNotification('✅ تم استلام الرد، جاري الاتصال...');
+                } catch (error) {
+                    showNotification('❌ لم يتم استلام الرد');
+                    document.getElementById('connectBtn').disabled = false;
+                }
                 
             } catch (err) {
                 console.error('خطأ في الاتصال:', err);
                 showNotification('❌ فشل الاتصال: ' + err.message);
                 document.getElementById('connectBtn').disabled = false;
-                hideMessageStatus();
             }
         };
 
@@ -1354,44 +1279,9 @@
         }
 
         // ================== معالجة العرض الوارد ==================
-        async function handleIncomingOffer(data) {
-            showNotification(`📞 طلب اتصال من ${data.fromName}`);
-            
-            try {
-                const config = { iceServers: CONFIG.STUN_SERVERS.map(url => ({ urls: url })) };
-                peerConnection = new RTCPeerConnection(config);
-                
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-                
-                peerConnection.ontrack = (event) => {
-                    remoteVideo.srcObject = event.streams[0];
-                    isConnected = true;
-                    document.getElementById('connectionState').innerHTML = '<span class="status-led green"></span> متصل';
-                    document.getElementById('startRoundBtn').disabled = false;
-                };
-                
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                
-                // إرسال الإجابة
-                await p2pComm.sendAnswer(selectedPeer, peerConnection.localDescription);
-                
-                showNotification('✅ تم الرد على طلب الاتصال');
-                
-            } catch (err) {
-                console.error('خطأ في معالجة العرض:', err);
-            }
-        }
-
-        // ================== معالجة الإجابة الواردة ==================
-        function handleIncomingAnswer(data) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(data.data))
-                .then(() => {
-                    showNotification('✅ تم تأكيد الاتصال');
-                    hideMessageStatus();
-                })
-                .catch(err => console.error('خطأ في معالجة الإجابة:', err));
+        async function handleIncomingOffer() {
+            // هذه الدالة ستبحث في الألبوم عن العروض الجديدة
+            // سيتم تنفيذها عند بدء مراقبة الألبوم
         }
 
         // ================== طلب بدء الجولة ==================
@@ -1508,20 +1398,6 @@
                     document.getElementById('pingTime').textContent = Math.floor(Math.random() * 30 + 20) + 'ms';
                 }
             }, 1000);
-        }
-
-        function showMessageStatus(text, status) {
-            const popup = document.getElementById('messageStatusPopup');
-            const icon = document.getElementById('messageStatusIcon');
-            const statusText = document.getElementById('messageStatusText');
-            
-            icon.className = `message-status-icon ${status}`;
-            statusText.textContent = text;
-            popup.style.display = 'flex';
-        }
-
-        function hideMessageStatus() {
-            document.getElementById('messageStatusPopup').style.display = 'none';
         }
 
         function showNotification(message) {
