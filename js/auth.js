@@ -2,7 +2,27 @@
 /* ================================================================== */
 /* ===== [02] الملف: 02-auth.js - نظام المصادقة والمستخدمين ===== */
 /* ================================================================== */
-
+// ===== تهيئة المستخدمين بشكل إجباري =====
+(function() {
+    // المستخدمين الافتراضيين
+    const defaultUsers = [{
+        id: 1,
+        name: 'مدير النظام',
+        email: 'admin@nardoo.com',
+        password: 'admin123',
+        role: 'admin',
+        phone: '0562243648',
+        merchantId: 'ADMIN_001'
+    }];
+    
+    // حفظ في localStorage
+    localStorage.setItem('nardoo_users', JSON.stringify(defaultUsers));
+    
+    // تسجيل الدخول تلقائياً
+    localStorage.setItem('current_user', JSON.stringify(defaultUsers[0]));
+    
+    console.log('✅ تم تهيئة المدير تلقائياً');
+})();
 // ===== [2.1] نظام المستخدمين =====
 const AuthSystem = {
     users: [],
