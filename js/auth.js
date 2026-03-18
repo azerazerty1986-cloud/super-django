@@ -1,33 +1,7 @@
-
 /* ================================================================== */
 /* ===== [02] الملف: 02-auth.js - نظام المصادقة والمستخدمين ===== */
 /* ================================================================== */
-// ===== تهيئة المستخدمين بشكل إجباري =====
-(function() {
-    // إنشاء مستخدمين افتراضيين
-createDefaultUsers() {
-    this.users = [{
-        id: 1,
-        name: 'azer',
-        email: 'azer@nardoo.com',
-        password: '123456',
-        role: 'admin',
-        phone: CONFIG.phone,
-        merchantId: 'ADMIN_001',
-        avatar: `${CONFIG.defaultAvatar}azer`,
-        createdAt: new Date().toISOString()
-    }];
-    this.save();
-},
-    
-    // حفظ في localStorage
-    localStorage.setItem('nardoo_users', JSON.stringify(defaultUsers));
-    
-    // تسجيل الدخول تلقائياً
-    localStorage.setItem('current_user', JSON.stringify(defaultUsers[0]));
-    
-    console.log('✅ تم تهيئة المدير تلقائياً');
-})();
+
 // ===== [2.1] نظام المستخدمين =====
 const AuthSystem = {
     users: [],
@@ -64,7 +38,7 @@ const AuthSystem = {
         console.log('👥 نظام المستخدمين جاهز');
     },
     
-    // إنشاء مستخدمين افتراضيين
+    // إنشاء مستخدمين افتراضيين (معدل)
     createDefaultUsers() {
         const adminId = IDSystem.generateId('admin', { includeDate: true });
         
@@ -72,13 +46,13 @@ const AuthSystem = {
             {
                 id: 1,
                 userId: adminId,
-                name: 'مدير النظام',
-                email: 'admin@nardoo.com',
-                password: 'admin123',
+                name: 'azer',                          // ✅ اسم المستخدم
+                email: 'azer@nardoo.com',              // ✅ البريد الإلكتروني
+                password: '123456',                     // ✅ كلمة المرور
                 role: 'admin',
                 roleName: 'مدير النظام',
                 phone: CONFIG.phone,
-                avatar: `${CONFIG.defaultAvatar}admin`,
+                avatar: `${CONFIG.defaultAvatar}azer`,
                 fingerprint: Fingerprint.fingerprint,
                 createdAt: new Date().toISOString(),
                 lastLogin: null,
@@ -100,7 +74,7 @@ const AuthSystem = {
         Utils.save('role_requests', this.pendingRequests);
     },
     
-    // تسجيل الدخول
+    // تسجيل الدخول (يدعم الاسم أو البريد)
     login(email, password) {
         const user = this.users.find(u => 
             (u.email === email || u.name === email) && u.password === password
