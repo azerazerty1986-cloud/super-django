@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ناردو ريلز | منصة الفيديو القصير</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        body { background: linear-gradient(135deg, #0a0a0a, #1a1a2e); min-height: 100vh; }
+        
+        /* رأس الصفحة */
+        .reels-header {
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 3px solid #d4af37;
+        }
+        
+        .reels-header h1 {
+            color: #d4af37;
+            font-size: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        /* شبكة الريلز */
+        .reels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* بطاقة الريل */
+        .reel-card {
+            background: #1e1e2e;
+            border: 2px solid #d4af37;
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        
+        .reel-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(212,175,55,0.3);
+        }
+        
+        .reel-video {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+        }
+        
+        .reel-video video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .reel-info {
+            padding: 15px;
+            color: white;
+        }
+        
+        .reel-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+        
+        .reel-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        /* أزرار */
+        .back-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #d4af37;
+            color: black;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(212,175,55,0.4);
+            transition: 0.3s;
+            z-index: 1000;
+        }
+        
+        .back-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* رسالة لا توجد ريلز */
+        .no-reels {
+            grid-column: 1/-1;
+            text-align: center;
+            padding: 100px 20px;
+            color: #d4af37;
+        }
+        
+        .no-reels i {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="reels-header">
+        <h1>
+            <i class="fas fa-film"></i>
+            ناردو ريلز
+        </h1>
+    </div>
+    
+    <div class="reels-grid" id="reelsGrid">
+        <!-- محتوى الريلز يضاف هنا بواسطة JavaScript -->
+    </div>
+    
+    <div class="back-btn" onclick="window.location.href='00-index.html'" title="العودة للمتجر">
+        <i class="fas fa-home"></i>
+    </div>
+    
+    <script>
+        // تحميل الريلز من localStorage
+        function loadReels() {
+            const reels = JSON.parse(localStorage.getItem('nardoo_reels') || '[]');
+            const grid = document.getElementById('reelsGrid');
+            
+            if (reels.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-reels">
+                        <i class="fas fa-film"></i>
+                        <h2>لا توجد ريلز حالياً</h2>
+                        <p>قم بإضافة ريلز جديدة من التطبيق الرئيسي</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = reels.map(reel => `
+                <div class="reel-card" onclick="playReel('${reel.videoUrl}')">
+                    <div class="reel-video">
+                        <video src="${reel.videoUrl}" poster="${reel.thumbnail}"></video>
+                    </div>
+                    <div class="reel-info">
+                        <h3 class="reel-title">${reel.title}</h3>
+                        <div class="reel-meta">
+                            <span><i class="fas fa-eye"></i> ${reel.views || 0}</span>
+                            <span><i class="fas fa-heart"></i> ${reel.likes || 0}</span>
+                            <span><i class="fas fa-user"></i> ${reel.publisher || 'ناردو'}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function playReel(videoUrl) {
+            if (videoUrl) {
+                window.open(videoUrl, '_blank');
+            }
+        }
+        
+        loadReels();
+    </script>
+</body>
+</html>
