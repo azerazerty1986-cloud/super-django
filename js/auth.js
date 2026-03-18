@@ -4,16 +4,21 @@
 /* ================================================================== */
 // ===== تهيئة المستخدمين بشكل إجباري =====
 (function() {
-    // المستخدمين الافتراضيين
-    const defaultUsers = [{
+    // إنشاء مستخدمين افتراضيين
+createDefaultUsers() {
+    this.users = [{
         id: 1,
-        name: 'مدير النظام',
-        email: 'admin@nardoo.com',
-        password: 'admin123',
+        name: 'azer',
+        email: 'azer@nardoo.com',
+        password: '123456',
         role: 'admin',
-        phone: '0562243648',
-        merchantId: 'ADMIN_001'
+        phone: CONFIG.phone,
+        merchantId: 'ADMIN_001',
+        avatar: `${CONFIG.defaultAvatar}azer`,
+        createdAt: new Date().toISOString()
     }];
+    this.save();
+},
     
     // حفظ في localStorage
     localStorage.setItem('nardoo_users', JSON.stringify(defaultUsers));
