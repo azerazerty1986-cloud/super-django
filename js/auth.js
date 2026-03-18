@@ -1,5 +1,5 @@
 /* ================================================================== */
-/* ===== [02] الملف: 02-auth.js - نظام المصادقة والمستخدمين ===== */
+/* ===== [02] الملف: 02-auth.js - نظام المصادقة (دخول بالاسم فقط) ===== */
 /* ================================================================== */
 
 // ===== [2.1] نظام المستخدمين =====
@@ -38,7 +38,7 @@ const AuthSystem = {
         console.log('👥 نظام المستخدمين جاهز');
     },
     
-    // إنشاء مستخدمين افتراضيين (معدل)
+    // إنشاء مستخدمين افتراضيين
     createDefaultUsers() {
         const adminId = IDSystem.generateId('admin', { includeDate: true });
         
@@ -46,8 +46,8 @@ const AuthSystem = {
             {
                 id: 1,
                 userId: adminId,
-                name: 'azer',                          // ✅ اسم المستخدم
-                email: 'azer@nardoo.com',              // ✅ البريد الإلكتروني
+                name: 'azer',                          // ✅ اسم المستخدم فقط
+                email: 'azer@nardoo.com',              // ✅ البريد (اختياري)
                 password: '123456',                     // ✅ كلمة المرور
                 role: 'admin',
                 roleName: 'مدير النظام',
@@ -74,10 +74,11 @@ const AuthSystem = {
         Utils.save('role_requests', this.pendingRequests);
     },
     
-    // تسجيل الدخول (يدعم الاسم أو البريد)
-    login(email, password) {
+    // ===== تسجيل الدخول بالاسم فقط =====
+    login(username, password) {
+        // البحث عن المستخدم بالاسم فقط
         const user = this.users.find(u => 
-            (u.email === email || u.name === email) && u.password === password
+            u.name === username && u.password === password
         );
         
         if (user) {
@@ -90,7 +91,7 @@ const AuthSystem = {
             return { success: true, user };
         }
         
-        return { success: false, message: '❌ بيانات الدخول غير صحيحة' };
+        return { success: false, message: '❌ اسم المستخدم أو كلمة المرور غير صحيحة' };
     },
     
     // تسجيل الخروج
@@ -105,9 +106,9 @@ const AuthSystem = {
     
     // تسجيل مستخدم جديد
     register(userData) {
-        // التحقق من وجود البريد
-        if (this.users.find(u => u.email === userData.email)) {
-            return { success: false, message: '❌ البريد الإلكتروني مستخدم بالفعل' };
+        // التحقق من وجود الاسم
+        if (this.users.find(u => u.name === userData.name)) {
+            return { success: false, message: '❌ اسم المستخدم موجود بالفعل' };
         }
         
         // إنشاء معرف جديد
@@ -117,7 +118,7 @@ const AuthSystem = {
             id: this.users.length + 1,
             userId: userId,
             name: userData.name,
-            email: userData.email,
+            email: userData.email || '',
             password: userData.password,
             phone: userData.phone || '',
             role: 'customer',
@@ -252,7 +253,6 @@ const AuthSystem = {
         if (!this.currentUser) return false;
         if (this.currentUser.role === 'admin') return true;
         
-        // يمكن إضافة نظام صلاحيات متقدم هنا
         return false;
     },
     
@@ -263,7 +263,6 @@ const AuthSystem = {
         const adminAppsNav = document.getElementById('adminAppsNav');
         
         if (this.currentUser) {
-            // تغيير أيقونة المستخدم
             if (this.currentUser.role === 'admin') {
                 userBtn.innerHTML = '<i class="fas fa-crown"></i>';
                 if (dashboardBtn) dashboardBtn.style.display = 'flex';
@@ -296,4 +295,4 @@ const AuthSystem = {
 window.Auth = AuthSystem;
 AuthSystem.init();
 
-console.log('✅ نظام المصادقة جاهز');
+console.log('✅ نظام المصادقة جاهز - دخول بالاسم فقط');
