@@ -58,8 +58,7 @@ const IDSystem = {
         order: 'ORD',
         warehouse: 'WRH',
         reel: 'REL',
-        request: 'REQ',
-        telegram: 'TLG' // بادئة للمنتجات القادمة من تلغرام
+        request: 'REQ'
     },
     
     // تحميل العدادات
@@ -114,11 +113,6 @@ const IDSystem = {
         return `${merchantId}_PRD_${productNum}`;
     },
     
-    // إنشاء معرف لمنتج من تلغرام (باستخدام message_id)
-    generateTelegramProductId(telegramId) {
-        return `TLG_${telegramId}`;
-    },
-    
     // إنشاء معرف لمستودع
     generateWarehouseId(merchantId) {
         this.counters.warehouse++;
@@ -147,21 +141,6 @@ const IDSystem = {
             type: type,
             parts: parts
         };
-    },
-    
-    // التحقق من معرف تلغرام
-    isTelegramId(id) {
-        return id && (id.toString().startsWith('TLG_') || /^\d+$/.test(id.toString()));
-    },
-    
-    // استخراج الرقم الأصلي من معرف تلغرام
-    extractTelegramId(telegramProductId) {
-        if (!telegramProductId) return null;
-        const idStr = telegramProductId.toString();
-        if (idStr.startsWith('TLG_')) {
-            return parseInt(idStr.replace('TLG_', ''));
-        }
-        return parseInt(idStr);
     }
 };
 
@@ -324,27 +303,6 @@ const Utils = {
         }).catch(() => {
             this.showNotification('فشل النسخ', 'error');
         });
-    },
-    
-    // البحث عن منتج بالمعرف (يدعم المعرفات المحلية والتلغرام)
-    findProductById(products, id) {
-        if (!products || !id) return null;
-        
-        // محاولة البحث بالمعرف المباشر
-        let product = products.find(p => p.id == id || p.telegramId == id);
-        
-        // إذا لم نجد، جرب البحث بـ TLG_ بادئة
-        if (!product && !id.toString().startsWith('TLG_')) {
-            product = products.find(p => p.id == `TLG_${id}`);
-        }
-        
-        return product;
-    },
-    
-    // الحصول على معرف المنتج للعرض
-    getProductDisplayId(product) {
-        if (!product) return 'غير معروف';
-        return product.telegramId || product.id;
     }
 };
 
@@ -358,4 +316,4 @@ window.Utils = Utils;
 Fingerprint.init();
 IDSystem.loadCounters();
 
-console.log('✅ نظام المعرفات جاهز (يدعم المعرفات التلقائية من تلغرام)');
+console.log('✅ نظام المعرفات جاهز');
