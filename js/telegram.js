@@ -448,29 +448,211 @@ ${itemsList}
     }
 }
 
-// ===== [4.15] إرسال طلب انضمام تاجر =====
+
+/* ================================================================== */
+/* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
+/* ===== مع أزرار تفاعلية للموافقة والرفض (نعم أولاً) ===== */
+/* ================================================================== */
+
+// ===== [4.1] إعدادات تلغرام الأساسية =====
+const TELEGRAM = {
+    botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
+    channelId: '-1003822964890',
+    adminId: '7461896689',
+    apiUrl: 'https://api.telegram.org/bot'
+};
+
+// ===== [4.2] نظام إدارة طلبات التجار =====
+const MerchantRequestSystem = {
+    // تخزين الطلبات المعلقة
+    pendingRequests: {},
+    
+    // تحميل الطلبات من localStorage
+    loadRequests() {
+        const saved = localStorage.getItem('merchant_requests');
+        if (saved) {
+            this.pendingRequests = JSON.parse(saved);
+        }
+        return this.pendingRequests;
+    },
+    
+    // حفظ الطلبات في localStorage
+    saveRequests() {
+        localStorage.setItem('merchant_requests', JSON.stringify(this.pendingRequests));
+    },
+    
+    // إنشاء طلب جديد
+    createRequest(merchantData) {
+        const requestId = `REQ_${Date.now()}_${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+        
+        const request = {
+            id: requestId,
+            merchantId: merchantData.id || Date.now(),
+            name: merchantData.name,
+            email: merchantData.email,
+            phone: merchantData.phone,
+            storeName: merchantData.storeName || merchantData.name,
+            specialization: merchantData.specialization || 'عام',
+            workArea: merchantData.workArea || 'غير محدد',
+            experience: merchantData.experience || '0',
+            level: merchantData.merchantLevel || '1',
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+            telegramMessageId: null,
+            telegramChatId: null
+        };
+        
+        this.pendingRequests[requestId] = request;
+        this.saveRequests();
+        
+        return request;
+    },
+    
+    // تحديث حالة الطلب
+    updateRequestStatus(requestId, status, adminName = 'مدير النظام') {
+        if (this.pendingRequests[requestId]) {
+            this.pendingRequests[requestId].status = status;
+            this.pendingRequests[requestId].processedAt = new Date().toISOString();
+            this.pendingRequests[requestId].processedBy = adminName;
+            this.saveRequests();
+            return true;
+        }
+        return false;
+    },
+    
+    // الحصول على طلب
+    getRequest(requestId) {
+        return this.pendingRequests[requestId];
+    },
+    
+    // الحصول على جميع الطلبات المعلقة
+    getPendingRequests() {
+        return Object.values(this.pendingRequests).filter(r => r.status === 'pending');
+    }
+};
+
+// تحميل الطلبات عند بدء التشغيل
+MerchantRequestSystem.loadRequests();
+
+// ===== [4.3] إرسال طلب تاجر مع أزرار تفاعلية متقدمة =====
 async function sendMerchantRequestToTelegram(merchant) {
-    const message = `
+    try {
+        console.log('🔵 جاري إرسال طلب تاجر مع أزرار تفاعلية...');
+        
+        // إنشاء طلب جديد في النظام
+        const request = MerchantRequestSystem.createRequest(merchant);
+        
+        // نص الرسالة مع تنسيق جميل
+        const message = `
 🔵 *طلب انضمام تاجر جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
-👤 *التاجر:* ${merchant.name}
-🏪 *المتجر:* ${merchant.storeName}
-📧 *البريد:* ${merchant.email}
-📞 *الهاتف:* ${merchant.phone}
-📊 *المستوى:* ${merchant.level}
-📝 *الوصف:* ${merchant.desc}
+🆔 *رقم الطلب:* \`${request.id}\`
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *المتقدم:* ${request.name}
+📧 *البريد:* ${request.email}
+📞 *الهاتف:* ${request.phone || 'غير محدد'}
 
-⬇️ *للإجراء*
-✅ للموافقة: /approve_${merchant.id}
-❌ للرفض: /reject_${merchant.id}
-    `;
+🏪 *معلومات المتجر:*
+• اسم المتجر: ${request.storeName}
+• التخصص: ${request.specialization}
+• المنطقة: ${request.workArea}
+• الخبرة: ${request.experience} سنة
+• المستوى: ${request.level}
 
-    try {
-        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+📅 *تاريخ الطلب:* ${new Date(request.createdAt).toLocaleString('ar-EG')}
+
+━━━━━━━━━━━━━━━━━━━━━━
+⬇️ *يرجى اختيار الإجراء المناسب*
+        `;
+
+        // إرسال الرسالة مع أزرار تفاعلية من صفين
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chat_id: TELEGRAM.channelId,
+                text: message,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        // الصف الأول: نعم (موافقة) - بارز وأكبر
+                        [
+                            { 
+                                text: "✅ نعم، أوافق على الطلب", 
+                                callback_data: `approve_${request.id}`,
+                                callback_data: `approve_${request.id}`
+                            }
+                        ],
+                        // الصف الثاني: لا (رفض)
+                        [
+                            { 
+                                text: "❌ لا، أرفض الطلب", 
+                                callback_data: `reject_${request.id}` 
+                            }
+                        ],
+                        // الصف الثالث: تفاصيل إضافية
+                        [
+                            { 
+                                text: "📋 عرض التفاصيل الكاملة", 
+                                callback_data: `details_${request.id}` 
+                            },
+                            { 
+                                text: "📞 التواصل مع المتقدم", 
+                                callback_data: `contact_${request.id}` 
+                            }
+                        ]
+                    ]
+                }
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.ok) {
+            console.log(`✅ تم إرسال طلب التاجر - المعرف: ${request.id}`);
+            
+            // حفظ معرف الرسالة للرجوع إليه لاحقاً
+            request.telegramMessageId = data.result.message_id;
+            request.telegramChatId = data.result.chat.id;
+            MerchantRequestSystem.saveRequests();
+            
+            // إرسال إشعار للمدير الخاص
+            await sendNotificationToAdmin(request);
+            
+            return { 
+                success: true, 
+                requestId: request.id,
+                messageId: data.result.message_id 
+            };
+        }
+        
+        return { success: false, error: data.description };
+        
+    } catch (error) {
+        console.error('❌ خطأ في إرسال طلب التاجر:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ===== [4.4] إرسال إشعار للمدير الخاص =====
+async function sendNotificationToAdmin(request) {
+    try {
+        const message = `
+🔔 *إشعار بطلب تاجر جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 رقم الطلب: \`${request.id}\`
+👤 المتقدم: ${request.name}
+🏪 المتجر: ${request.storeName}
+📅 ${new Date().toLocaleString('ar-EG')}
+
+تم إرسال الطلب إلى القناة مع أزرار تفاعلية.
+        `;
+
+        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.adminId,
                 text: message,
                 parse_mode: 'Markdown'
             })
@@ -479,11 +661,357 @@ async function sendMerchantRequestToTelegram(merchant) {
         return true;
         
     } catch (error) {
-        console.error('❌ خطأ في إرسال طلب التاجر:', error);
+        console.error('❌ خطأ في إرسال إشعار للمدير:', error);
         return false;
     }
 }
 
+// ===== [4.5] معالجة الأزرار التفاعلية =====
+async function handleTelegramCallbacks() {
+    try {
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
+        const data = await response.json();
+        
+        if (data.ok && data.result) {
+            for (const update of data.result) {
+                // التحقق من وجود ضغطة زر
+                if (update.callback_query) {
+                    const callback = update.callback_query;
+                    const callbackData = callback.data;
+                    const chatId = callback.message.chat.id;
+                    const messageId = callback.message.message_id;
+                    const userId = callback.from.id;
+                    const userName = callback.from.first_name || 'مدير';
+                    
+                    console.log(`🔘 تم الضغط على زر: ${callbackData} من ${userName}`);
+                    
+                    // الرد على الضغطة لإزالة حالة "جاري التحميل"
+                    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/answerCallbackQuery`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            callback_query_id: callback.id,
+                            text: "جاري معالجة طلبك...",
+                            show_alert: false
+                        })
+                    });
+                    
+                    // معالجة حسب نوع الزر
+                    if (callbackData.startsWith('approve_')) {
+                        await handleApproveMerchant(callbackData, chatId, messageId, userName);
+                    }
+                    else if (callbackData.startsWith('reject_')) {
+                        await handleRejectMerchant(callbackData, chatId, messageId, userName);
+                    }
+                    else if (callbackData.startsWith('details_')) {
+                        await handleShowDetails(callbackData, chatId);
+                    }
+                    else if (callbackData.startsWith('contact_')) {
+                        await handleContactMerchant(callbackData, chatId);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ خطأ في معالجة الأزرار:', error);
+    }
+}
+
+// ===== [4.6] معالجة الموافقة على التاجر =====
+async function handleApproveMerchant(callbackData, chatId, messageId, adminName) {
+    const requestId = callbackData.replace('approve_', '');
+    const request = MerchantRequestSystem.getRequest(requestId);
+    
+    if (!request) {
+        await sendErrorMessage(chatId, 'الطلب غير موجود');
+        return;
+    }
+    
+    // تحديث حالة الطلب
+    MerchantRequestSystem.updateRequestStatus(requestId, 'approved', adminName);
+    
+    // تحديث المستخدم في نظام Auth
+    if (window.Auth) {
+        const user = Auth.users.find(u => u.email === request.email);
+        if (user) {
+            user.role = 'merchant_approved';
+            user.status = 'approved';
+            user.approvedBy = adminName;
+            user.approvedAt = new Date().toISOString();
+            Auth.save();
+        }
+    }
+    
+    // تحديث الرسالة الأصلية
+    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/editMessageText`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            text: `✅ *تمت الموافقة على طلب التاجر*
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 رقم الطلب: \`${requestId}\`
+👤 التاجر: ${request.name}
+🏪 المتجر: ${request.storeName}
+👤 بواسطة: ${adminName}
+📅 ${new Date().toLocaleString('ar-EG')}
+
+🎉 مرحباً بك في منصة ناردو برو!`,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "📊 عرض التجار", callback_data: "show_merchants" },
+                        { text: "🏠 الرئيسية", callback_data: "home" }
+                    ]
+                ]
+            }
+        })
+    });
+    
+    // إرسال إشعار للتاجر
+    await sendMerchantApprovalNotification(request);
+    
+    console.log(`✅ تمت الموافقة على التاجر: ${request.name}`);
+}
+
+// ===== [4.7] معالجة رفض التاجر =====
+async function handleRejectMerchant(callbackData, chatId, messageId, adminName) {
+    const requestId = callbackData.replace('reject_', '');
+    const request = MerchantRequestSystem.getRequest(requestId);
+    
+    if (!request) {
+        await sendErrorMessage(chatId, 'الطلب غير موجود');
+        return;
+    }
+    
+    // تحديث حالة الطلب
+    MerchantRequestSystem.updateRequestStatus(requestId, 'rejected', adminName);
+    
+    // تحديث المستخدم في نظام Auth
+    if (window.Auth) {
+        const user = Auth.users.find(u => u.email === request.email);
+        if (user) {
+            user.role = 'customer';
+            user.status = 'rejected';
+            user.rejectedBy = adminName;
+            user.rejectedAt = new Date().toISOString();
+            Auth.save();
+        }
+    }
+    
+    // تحديث الرسالة الأصلية
+    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/editMessageText`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            text: `❌ *تم رفض طلب التاجر*
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 رقم الطلب: \`${requestId}\`
+👤 التاجر: ${request.name}
+🏪 المتجر: ${request.storeName}
+👤 بواسطة: ${adminName}
+📅 ${new Date().toLocaleString('ar-EG')}
+
+نأسف، يمكنك التقديم مرة أخرى لاحقاً.`,
+            parse_mode: 'Markdown'
+        })
+    });
+    
+    // إرسال إشعار للتاجر
+    await sendMerchantRejectionNotification(request);
+    
+    console.log(`❌ تم رفض التاجر: ${request.name}`);
+}
+
+// ===== [4.8] عرض تفاصيل الطلب =====
+async function handleShowDetails(callbackData, chatId) {
+    const requestId = callbackData.replace('details_', '');
+    const request = MerchantRequestSystem.getRequest(requestId);
+    
+    if (!request) {
+        await sendErrorMessage(chatId, 'الطلب غير موجود');
+        return;
+    }
+    
+    const details = `
+📋 *تفاصيل الطلب الكاملة*
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 رقم الطلب: \`${request.id}\`
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *البيانات الشخصية:*
+• الاسم: ${request.name}
+• البريد: ${request.email}
+• الهاتف: ${request.phone || 'غير محدد'}
+
+🏪 *بيانات المتجر:*
+• اسم المتجر: ${request.storeName}
+• التخصص: ${request.specialization}
+• منطقة العمل: ${request.workArea}
+• سنوات الخبرة: ${request.experience}
+• المستوى: ${request.level}
+
+📊 *حالة الطلب:* ${request.status === 'pending' ? '⏳ قيد الانتظار' : request.status === 'approved' ? '✅ تمت الموافقة' : '❌ مرفوض'}
+📅 تاريخ التقديم: ${new Date(request.createdAt).toLocaleString('ar-EG')}
+    `;
+
+    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: details,
+            parse_mode: 'Markdown'
+        })
+    });
+}
+
+// ===== [4.9] التواصل مع التاجر =====
+async function handleContactMerchant(callbackData, chatId) {
+    const requestId = callbackData.replace('contact_', '');
+    const request = MerchantRequestSystem.getRequest(requestId);
+    
+    if (!request || !request.phone) {
+        await sendErrorMessage(chatId, 'رقم الهاتف غير متوفر');
+        return;
+    }
+    
+    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: `📞 *رقم هاتف التاجر*\n\n${request.phone}`,
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "📱 اتصال", url: `tel:${request.phone}` },
+                        { text: "💬 واتساب", url: `https://wa.me/${request.phone.replace('+', '')}` }
+                    ]
+                ]
+            }
+        })
+    });
+}
+
+// ===== [4.10] إرسال إشعار موافقة للتاجر =====
+async function sendMerchantApprovalNotification(request) {
+    try {
+        const message = `
+🎉 *تهانينا! تمت الموافقة على طلبك*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 عزيزي ${request.name}،
+
+✅ تمت الموافقة على طلب انضمامك كتاجر في منصة ناردو برو.
+
+🏪 *متجرك:* ${request.storeName}
+🆔 *معرفك:* ${request.id}
+
+✨ يمكنك الآن:
+• إضافة منتجاتك
+• إدارة متجرك
+• التواصل مع العملاء
+• متابعة طلباتك
+
+🔗 رابط المتجر: ${window.location.origin}
+📱 للدعم: @nardoo_support
+
+نتمنى لك تجارة موفقة 🌟
+        `;
+
+        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: request.email, // أو معرف التليجرام إذا كان متاحاً
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+        
+    } catch (error) {
+        console.error('❌ خطأ في إرسال إشعار الموافقة:', error);
+    }
+}
+
+// ===== [4.11] إرسال إشعار رفض للتاجر =====
+async function sendMerchantRejectionNotification(request) {
+    try {
+        const message = `
+😔 *نأسف، تم رفض طلبك*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 عزيزي ${request.name}،
+
+❌ نأسف لإعلامك أنه تم رفض طلب انضمامك كتاجر في منصة ناردو برو.
+
+📝 *يمكنك:*
+• التواصل مع الدعم لمعرفة السبب
+• تحسين بياناتك وإعادة التقديم
+• التسجيل كمشتري عادي
+
+📱 للدعم: @nardoo_support
+        `;
+
+        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: request.email,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+        
+    } catch (error) {
+        console.error('❌ خطأ في إرسال إشعار الرفض:', error);
+    }
+}
+
+// ===== [4.12] إرسال رسالة خطأ =====
+async function sendErrorMessage(chatId, errorText) {
+    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: `❌ *خطأ:* ${errorText}`,
+            parse_mode: 'Markdown'
+        })
+    });
+}
+
+// ===== [4.13] جلب جميع طلبات التجار =====
+async function fetchAllMerchantRequests() {
+    return MerchantRequestSystem.getPendingRequests();
+}
+
+// ===== [4.14] بدء الاستماع للأزرار كل 5 ثوان =====
+setInterval(handleTelegramCallbacks, 5000);
+
+// ===== [4.15] واجهة API =====
+window.TelegramAPI = {
+    // طلبات التجار
+    sendMerchantRequest: sendMerchantRequestToTelegram,
+    getPendingRequests: fetchAllMerchantRequests,
+    
+    // إدارة الطلبات
+    approveRequest: (requestId, adminName) => {
+        return MerchantRequestSystem.updateRequestStatus(requestId, 'approved', adminName);
+    },
+    rejectRequest: (requestId, adminName) => {
+        return MerchantRequestSystem.updateRequestStatus(requestId, 'rejected', adminName);
+    },
+    
+    // الاستعلام
+    getRequest: (requestId) => MerchantRequestSystem.getRequest(requestId)
+};
+
+console.log('✅ نظام طلبات التجار جاهز - مع أزرار تفاعلية (نعم أولاً)');
+ 
 // ===== [4.16] إرسال إشعار عام =====
 async function sendNotificationToTelegram(text) {
     const message = `
