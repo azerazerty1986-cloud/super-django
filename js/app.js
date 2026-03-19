@@ -457,7 +457,7 @@ const App = {
         container.innerHTML = products.map(p => `
             <div class="product-card" onclick="App.showProductDetail(${p.id})">
                 <div class="product-gallery">
-                    <img src="${p.image}" alt="${p.name}">
+                    <img src="${p.image}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c5330041e7?w=300'">
                 </div>
                 <div class="product-info">
                     <h3 class="product-title">${p.name}</h3>
@@ -713,20 +713,22 @@ const App = {
     playReel(reelId) {
         window.open(`07-reels.html?id=${reelId}`, '_blank');
     },
-    // ===== [إضافة] دوال التمرير المفقودة =====
-scrollToTop() {
-    window.scrollTo({ 
-        top: 0, 
-        behavior: 'smooth' 
-    });
-},
-
-scrollToBottom() {
-    window.scrollTo({ 
-        top: document.body.scrollHeight, 
-        behavior: 'smooth' 
-    });
-},
+    
+    // ===== دوال التمرير (نسخة واحدة فقط) =====
+    scrollToTop() {
+        window.scrollTo({ 
+            top: 0, 
+            behavior: 'smooth' 
+        });
+    },
+    
+    scrollToBottom() {
+        window.scrollTo({ 
+            top: document.body.scrollHeight, 
+            behavior: 'smooth' 
+        });
+    },
+    
     // ===== دوال مساعدة =====
     toggleTheme() {
         document.body.classList.toggle('light-mode');
@@ -734,14 +736,6 @@ scrollToBottom() {
         toggle.innerHTML = toggle.innerHTML.includes('moon') ? 
             '<i class="fas fa-sun"></i><span>نهاري</span>' : 
             '<i class="fas fa-moon"></i><span>ليلي</span>';
-    },
-    
-    scrollToTop() {
-        Utils.scrollToTop();
-    },
-    
-    scrollToBottom() {
-        Utils.scrollToBottom();
     },
     
     startTypingEffect() {
