@@ -713,7 +713,20 @@ const App = {
     playReel(reelId) {
         window.open(`07-reels.html?id=${reelId}`, '_blank');
     },
-    
+    // ===== [إضافة] دوال التمرير المفقودة =====
+scrollToTop() {
+    window.scrollTo({ 
+        top: 0, 
+        behavior: 'smooth' 
+    });
+},
+
+scrollToBottom() {
+    window.scrollTo({ 
+        top: document.body.scrollHeight, 
+        behavior: 'smooth' 
+    });
+},
     // ===== دوال مساعدة =====
     toggleTheme() {
         document.body.classList.toggle('light-mode');
