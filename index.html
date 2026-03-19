@@ -13,56 +13,32 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- ملفات CSS -->
+    <!-- ملفات CSS الخارجية -->
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
-    
-    <style>
-        /* أنماط إضافية للتأكد من ظهور النوافذ */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal.show {
-            display: flex !important;
-        }
-        
-        .modal-content {
-            background: var(--bg-secondary);
-            border: 3px solid var(--gold);
-            border-radius: 30px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-lg {
-            max-width: 1000px;
-        }
-    </style>
 </head>
 <body>
     <!-- خلفية متحركة -->
     <div class="animated-bg"></div>
 
+    <!-- ===== شريط الإشعارات ===== -->
+    <div id="toastContainer"></div>
+
+    <!-- ===== محمل التحميل ===== -->
+    <div id="loader">
+        <div class="loader-content">
+            <i class="fas fa-crown loader-icon"></i>
+            <h2 class="loader-text">ناردو برو</h2>
+        </div>
+    </div>
+
     <!-- ===== سلة التسوق الجانبية ===== -->
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
             <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
-            <i class="fas fa-times close-cart" onclick="App.toggleCart()"></i>
+            <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
         </div>
         <div class="cart-items" id="cartItems"></div>
         <div class="cart-footer">
@@ -70,7 +46,7 @@
                 <span>المجموع:</span>
                 <span id="cartTotal">0 دج</span>
             </div>
-            <button class="checkout-btn" onclick="App.checkout()">
+            <button class="checkout-btn" onclick="checkoutCart()">
                 <i class="fab fa-whatsapp"></i> إتمام الطلب
             </button>
         </div>
@@ -94,7 +70,7 @@
                 </div>
             </div>
             <div class="top-bar-right">
-                <div class="theme-toggle" onclick="App.toggleTheme()" id="themeToggle">
+                <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
                     <i class="fas fa-moon"></i>
                     <span>ليلي</span>
                 </div>
@@ -133,20 +109,20 @@
             
             <div class="search-wrapper">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="App.searchProducts()">
-                    <button onclick="App.searchProducts()"><i class="fas fa-search"></i></button>
+                    <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
+                    <button onclick="searchProducts()"><i class="fas fa-search"></i></button>
                 </div>
             </div>
             
             <div class="header-actions">
-                <button class="action-btn" onclick="App.openLoginModal()" id="userBtn">
+                <button class="action-btn" onclick="openLoginModal()" id="userBtn">
                     <i class="far fa-user"></i>
                 </button>
-                <button class="action-btn" onclick="App.toggleCart()">
+                <button class="action-btn" onclick="toggleCart()">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count" id="cartCounter">0</span>
                 </button>
-                <button class="action-btn" onclick="App.openDashboard()" id="dashboardBtn" style="display: none;">
+                <button class="action-btn" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
                     <i class="fas fa-chart-line"></i>
                 </button>
             </div>
@@ -156,12 +132,11 @@
     <!-- ===== القائمة الرئيسية ===== -->
     <div class="container">
         <nav class="nav-menu" id="mainNav">
-            <a class="nav-link active" onclick="App.filterProducts('all')"><i class="fas fa-home"></i> الرئيسية</a>
-            <a class="nav-link" onclick="App.filterProducts('promo')"><i class="fas fa-fire"></i> برموسيو</a>
-            <a class="nav-link" onclick="App.filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a>
-            <a class="nav-link" onclick="App.filterProducts('cosmetic')"><i class="fas fa-spa"></i> كوسمتيك</a>
-            <a class="nav-link" onclick="App.filterProducts('other')"><i class="fas fa-gem"></i> منتوجات أخرى</a>
-            <a class="nav-link" onclick="App.openAdminApps()" id="adminAppsNav" style="display: none;"><i class="fas fa-crown"></i> التطبيقات</a>
+            <a class="nav-link active" onclick="filterProducts('all')"><i class="fas fa-home"></i> الرئيسية</a>
+            <a class="nav-link" onclick="filterProducts('promo')"><i class="fas fa-fire"></i> برموسيو</a>
+            <a class="nav-link" onclick="filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a>
+            <a class="nav-link" onclick="filterProducts('cosmetic')"><i class="fas fa-spa"></i> كوسمتيك</a>
+            <a class="nav-link" onclick="filterProducts('other')"><i class="fas fa-gem"></i> منتوجات أخرى</a>
         </nav>
     </div>
 
@@ -179,36 +154,7 @@
                 </a>
             </div>
             <div class="reels-video-container" id="reelsVideoContainer">
-                <div class="reel-video-card" onclick="App.playReel(1)">
-                    <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400" loop muted></video>
-                    <div class="reel-video-overlay">
-                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">وصفة زعتر</span>
-                            <span class="reel-video-views">15K مشاهدة</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="reel-video-card" onclick="App.playReel(2)">
-                    <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1596040033229-a9821e1929c7?w=400" loop muted></video>
-                    <div class="reel-video-overlay">
-                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">كريم ترطيب</span>
-                            <span class="reel-video-views">8K مشاهدة</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="reel-video-card" onclick="App.playReel(3)">
-                    <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1608571423912-8a4c8a8c9b9a?w=400" loop muted></video>
-                    <div class="reel-video-overlay">
-                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">بخور عود</span>
-                            <span class="reel-video-views">23K مشاهدة</span>
-                        </div>
-                    </div>
-                </div>
+                <!-- سيتم تعبئتها عبر JavaScript -->
             </div>
         </div>
     </div>
@@ -221,14 +167,14 @@
     <!-- ===== لوحة التحكم الرئيسية ===== -->
     <div class="container dashboard-section" id="dashboardSection" style="display: none;">
         <div class="dashboard-tabs">
-            <button class="dashboard-tab active" onclick="App.switchDashboardTab('overview')">نظرة عامة</button>
-            <button class="dashboard-tab" onclick="App.switchDashboardTab('users')">المستخدمين</button>
-            <button class="dashboard-tab" onclick="App.switchDashboardTab('merchants')">التجار</button>
-            <button class="dashboard-tab" onclick="App.switchDashboardTab('requests')">طلبات الأدوار</button>
-            <button class="dashboard-tab" onclick="App.switchDashboardTab('products')">المنتجات</button>
+            <button class="dashboard-tab active" onclick="showDashboardOverview()">نظرة عامة</button>
+            <button class="dashboard-tab" onclick="showDashboardMerchants()">التجار</button>
         </div>
         <div class="dashboard-content" id="dashboardContent"></div>
     </div>
+
+    <!-- ===== لوحة التاجر ===== -->
+    <div class="container" id="merchantPanelContainer" style="display: none;"></div>
 
     <!-- ===== الفوتر ===== -->
     <footer class="footer">
@@ -241,10 +187,10 @@
                 </div>
                 <div class="footer-col">
                     <h3>روابط سريعة</h3>
-                    <p><a href="#" onclick="App.filterProducts('all')">الرئيسية</a></p>
-                    <p><a href="#" onclick="App.filterProducts('promo')">برموسيو</a></p>
-                    <p><a href="#" onclick="App.filterProducts('spices')">توابل</a></p>
-                    <p><a href="#" onclick="App.filterProducts('cosmetic')">كوسمتيك</a></p>
+                    <p><a href="#" onclick="filterProducts('all')">الرئيسية</a></p>
+                    <p><a href="#" onclick="filterProducts('promo')">برموسيو</a></p>
+                    <p><a href="#" onclick="filterProducts('spices')">توابل</a></p>
+                    <p><a href="#" onclick="filterProducts('cosmetic')">كوسمتيك</a></p>
                 </div>
                 <div class="footer-col">
                     <h3>مساعدة</h3>
@@ -266,40 +212,33 @@
     </footer>
 
     <!-- ===== الأيقونات الثابتة ===== -->
-    <!-- زر إضافة منتج (بدلاً من الأيقونة) -->
     <div class="add-product-button-container">
-        <button class="add-product-btn" onclick="App.openAddProductForm()">
+        <button class="add-product-btn" onclick="showAddProductModal()">
             <i class="fas fa-plus-circle"></i>
             <span>إضافة منتج جديد</span>
         </button>
     </div>
 
-    <div class="fixed-cart" onclick="App.toggleCart()" id="fixedCart">
+    <div class="fixed-cart" onclick="toggleCart()" id="fixedCart">
         <i class="fas fa-shopping-cart"></i>
         <span class="fixed-cart-count" id="fixedCartCounter">0</span>
     </div>
-
-    <a href="07-reels.html" target="_blank" class="fixed-reels" title="ناردو ريلز">
-        <i class="fas fa-film"></i>
-        <span class="reels-notification" id="reelsNotification">0</span>
-    </a>
 
     <a href="https://wa.me/213562243648" target="_blank" class="fixed-whatsapp" title="تواصل معنا">
         <i class="fab fa-whatsapp"></i>
     </a>
 
-    <!-- ===== أزرار التنقل (الأعلى والأسفل) ===== -->
+    <!-- ===== أزرار التنقل ===== -->
     <div class="navigation-buttons">
-        <button class="nav-btn up-btn" onclick="App.scrollToTop()" title="الأعلى">
+        <button class="nav-btn up-btn" onclick="scrollToTop()" title="الأعلى">
             <i class="fas fa-arrow-up"></i>
         </button>
-        <button class="nav-btn down-btn" onclick="App.scrollToBottom()" title="الأسفل">
+        <button class="nav-btn down-btn" onclick="scrollToBottom()" title="الأسفل">
             <i class="fas fa-arrow-down"></i>
         </button>
     </div>
 
-    <!-- زر العودة للأعلى السريع (يظهر عند التمرير) -->
-    <button class="quick-top-btn" onclick="App.scrollToTop()" id="quickTopBtn" title="الأعلى">
+    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn" title="الأعلى">
         <i class="fas fa-chevron-up"></i>
     </button>
 
@@ -308,15 +247,16 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
-                <button class="close-btn" onclick="App.closeModal('loginModal')">&times;</button>
+                <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
             </div>
             
             <div class="auth-tabs">
-                <button class="btn-gold" onclick="App.switchAuthTab('login')">دخول</button>
-                <button class="btn-outline-gold" onclick="App.switchAuthTab('register')">تسجيل</button>
+                <button class="btn-gold" onclick="switchAuthTab('login')">دخول</button>
+                <button class="btn-outline-gold" onclick="switchAuthTab('register')">تسجيل</button>
             </div>
 
-            <form id="loginForm" onsubmit="event.preventDefault(); App.handleLogin();">
+            <!-- نموذج تسجيل الدخول -->
+            <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
                 <div class="form-group">
                     <label>👤 اسم المستخدم</label>
                     <input type="text" class="form-control" id="loginEmail" required placeholder="أدخل اسم المستخدم">
@@ -328,7 +268,8 @@
                 <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
             </form>
 
-            <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); App.handleRegister();">
+            <!-- نموذج التسجيل -->
+            <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); handleRegister();">
                 <div class="form-group">
                     <label>👤 الاسم الكامل</label>
                     <input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري">
@@ -343,28 +284,32 @@
                 </div>
                 <div class="form-group">
                     <label>📱 رقم الهاتف</label>
-                    <input type="tel" class="form-control" id="regPhone" required placeholder="05XXXXXXXX">
+                    <input type="tel" class="form-control" id="regPhone" placeholder="05XXXXXXXX">
                 </div>
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" id="requestRole" onchange="App.toggleRoleFields()">
-                        <span>طلب دور</span>
+                        <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()">
+                        <span>تسجيل كتاجر</span>
                     </label>
                 </div>
                 
-                <div id="roleFields" style="display:none;">
+                <!-- حقول التاجر -->
+                <div id="merchantFields" style="display:none;">
                     <div class="form-group">
-                        <label>🎯 اختر الدور</label>
-                        <select class="form-control" id="requestedRole">
-                            <option value="merchant">تاجر</option>
-                            <option value="distributor">موزع</option>
-                            <option value="delivery_person">مندوب توصيل</option>
-                            <option value="content_creator">صانع محتوى</option>
+                        <label>🏪 اسم المتجر</label>
+                        <input type="text" class="form-control" id="storeName" placeholder="اسم المتجر">
+                    </div>
+                    <div class="form-group">
+                        <label>📊 المستوى</label>
+                        <select class="form-control" id="merchantLevel">
+                            <option value="1">مبتدئ</option>
+                            <option value="2">متوسط</option>
+                            <option value="3">متقدم</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>🏷️ اسم المتجر</label>
-                        <input type="text" class="form-control" id="storeName" placeholder="اسم المتجر">
+                        <label>📝 وصف المتجر</label>
+                        <textarea class="form-control" id="merchantDesc" rows="2" placeholder="وصف المتجر..."></textarea>
                     </div>
                 </div>
                 
@@ -373,14 +318,16 @@
         </div>
     </div>
 
-    <!-- ===== نافذة إضافة منتج (الأصلية) ===== -->
+    <!-- ===== نافذة إضافة منتج ===== -->
     <div class="modal" id="productModal">
         <div class="modal-content modal-lg">
             <div class="modal-header">
                 <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
-                <button class="close-btn" onclick="App.closeModal('productModal')">&times;</button>
+                <button class="close-btn" onclick="closeModal('productModal')">&times;</button>
             </div>
-            <form id="productForm" onsubmit="event.preventDefault(); App.saveProduct();">
+            
+            <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
+            <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
                 <div class="form-group">
                     <label>📦 اسم المنتج</label>
                     <input type="text" class="form-control" id="productName" required placeholder="زعتر فلسطيني">
@@ -405,65 +352,19 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>⚠️ الحد الأدنى</label>
-                    <input type="number" class="form-control" id="productMinStock" value="5" min="0" placeholder="5">
-                </div>
-                <div class="form-group">
                     <label>📝 وصف المنتج</label>
                     <textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea>
                 </div>
+                
+                <!-- ✅ تم التعديل: استخدام handleImageUpload بدلاً من App.handleImageUpload -->
                 <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>اضغط لرفع صور</p>
                 </div>
-                <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="App.handleImageUpload(event)">
+                <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="handleImageUpload(event)">
                 <div class="image-preview" id="imagePreview"></div>
-                <button type="submit" class="btn-gold">حفظ المنتج</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- ===== نافذة إضافة منتج (للأيقونة) ===== -->
-    <div class="modal" id="addProductModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
-                <button class="close-btn" onclick="App.closeAddProductForm()">&times;</button>
-            </div>
-            <form id="addProductForm" onsubmit="event.preventDefault(); App.saveNewProduct();">
-                <div class="form-group">
-                    <label>📦 اسم المنتج</label>
-                    <input type="text" class="form-control" id="newProductName" required placeholder="زعتر فلسطيني">
-                </div>
-                <div class="form-group">
-                    <label>🏷️ القسم</label>
-                    <select class="form-control" id="newProductCategory" required>
-                        <option value="promo">برموسيو</option>
-                        <option value="spices">توابل</option>
-                        <option value="cosmetic">كوسمتيك</option>
-                        <option value="other">منتوجات أخرى</option>
-                    </select>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>💰 السعر (دج)</label>
-                        <input type="number" class="form-control" id="newProductPrice" required placeholder="500">
-                    </div>
-                    <div class="form-group">
-                        <label>📊 الكمية</label>
-                        <input type="number" class="form-control" id="newProductStock" required placeholder="50">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>📝 وصف المنتج</label>
-                    <textarea class="form-control" id="newProductDescription" rows="3" placeholder="وصف المنتج..."></textarea>
-                </div>
-                <div class="image-upload-area" onclick="document.getElementById('newProductImages').click()">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>اضغط لرفع صور</p>
-                </div>
-                <input type="file" id="newProductImages" accept="image/*" style="display:none;" multiple onchange="App.handleNewImageUpload(event)">
-                <div class="image-preview" id="newImagePreview"></div>
+                
+                <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
                 <button type="submit" class="btn-gold">حفظ المنتج</button>
             </form>
         </div>
@@ -474,33 +375,23 @@
         <div class="modal-content modal-lg" id="productDetailContent"></div>
     </div>
 
-    <!-- ===== نافذة التطبيقات ===== -->
-    <div class="modal" id="adminAppsModal">
-        <div class="modal-content" style="max-width: 1200px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-crown"></i> التطبيقات</h2>
-                <button class="close-btn" onclick="App.closeModal('adminAppsModal')">&times;</button>
-            </div>
-            <div class="modal-body" id="adminAppsContent"></div>
-        </div>
-    </div>
-
-    <!-- ===== ملفات JavaScript ===== -->
-    <script src="js/core.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/shop.js"></script>
-    <script src="js/telegram.js"></script>
-    <script src="js/inventory.js"></script>
-    <script src="js/roles.js"></script>
-    <script src="js/delivery.js"></script>
-    <script src="js/app.js"></script>
+    <!-- ===== ملفات JavaScript (بالترتيب الصحيح) ===== -->
+    <script src="js/core.js"></script>      <!-- المتغيرات العامة أولاً -->
+    <script src="js/auth.js"></script>      <!-- نظام المستخدمين -->
+    <script src="js/telegram.js"></script>  <!-- دوال تلغرام -->
+    <script src="js/shop.js"></script>      <!-- دوال المتجر -->
+    <script src="js/app.js"></script>       <!-- الكود الرئيسي آخراً -->
 
     <script>
-        // التحقق من وجود النوافذ بعد التحميل
+        // ===== كود التشخيص =====
         setTimeout(() => {
-            console.log('✅ productModal:', document.getElementById('productModal') ? 'موجود' : 'غير موجود');
-            console.log('✅ addProductModal:', document.getElementById('addProductModal') ? 'موجود' : 'غير موجود');
-        }, 500);
+            console.log('🔍 === تشخيص النظام ===');
+            console.log('✅ productModal:', document.getElementById('productModal') ? 'موجود' : '❌ غير موجود');
+            console.log('✅ productForm:', document.getElementById('productForm') ? 'موجود' : '❌ غير موجود');
+            console.log('✅ saveProduct:', typeof saveProduct === 'function' ? 'موجود' : '❌ غير موجود');
+            console.log('✅ handleImageUpload:', typeof handleImageUpload === 'function' ? 'موجود' : '❌ غير موجود');
+            console.log('🔍 === انتهى التشخيص ===');
+        }, 1000);
     </script>
 </body>
 </html>
