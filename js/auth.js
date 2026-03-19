@@ -1,298 +1,240 @@
 /* ================================================================== */
-/* ===== [02] الملف: 02-auth.js - نظام المصادقة (دخول بالاسم فقط) ===== */
+/* ===== [02] الملف: 02-auth.js - نظام المصادقة مع المعرفات ===== */
 /* ================================================================== */
 
-// ===== [2.1] نظام المستخدمين =====
 const AuthSystem = {
     users: [],
     currentUser: null,
-    pendingRequests: [],
     
-    // قائمة الأدوار المتاحة
-    availableRoles: [
-        { id: 'merchant', name: 'تاجر', icon: '🏪', description: 'بيع المنتجات وإدارة المتجر' },
-        { id: 'distributor', name: 'موزع', icon: '🚚', description: 'توزيع المنتجات على التجار' },
-        { id: 'delivery_company', name: 'شركة توصيل', icon: '🚛', description: 'إدارة أسطول توصيل' },
-        { id: 'delivery_person', name: 'مندوب توصيل', icon: '🛵', description: 'توصيل الطلبات للعملاء' },
-        { id: 'content_creator', name: 'صانع محتوى', icon: '🎬', description: 'إنشاء ريلز ومحتوى ترويجي' },
-        { id: 'entertainer', name: 'ترفيه', icon: '🎪', description: 'بث مباشر وتفاعل مع الجمهور' },
-        { id: 'customer', name: 'مشتري', icon: '👤', description: 'شراء المنتجات فقط' }
-    ],
-    
-    // التهيئة
     init() {
         this.users = Utils.load('nardoo_users', []);
-        this.pendingRequests = Utils.load('role_requests', []);
-        
-        // إنشاء مستخدم افتراضي إذا لم يوجد
         if (this.users.length === 0) {
             this.createDefaultUsers();
         }
         
-        // استعادة المستخدم الحالي
         const saved = Utils.load('current_user');
         if (saved) {
             this.currentUser = saved;
         }
-        
-        console.log('👥 نظام المستخدمين جاهز');
     },
     
-    // إنشاء مستخدمين افتراضيين
     createDefaultUsers() {
-        const adminId = IDSystem.generateId('admin', { includeDate: true });
+        // مدير النظام
+        const adminId = IDSystem.generateUserId('admin');
         
         this.users = [
             {
                 id: 1,
                 userId: adminId,
-                name: 'azer',                          // ✅ اسم المستخدم فقط
-                email: 'azer@nardoo.com',              // ✅ البريد (اختياري)
-                password: '123456',                     // ✅ كلمة المرور
+                name: 'مدير النظام',
+                email: 'admin@nardoo.com',
+                password: 'admin123',
                 role: 'admin',
                 roleName: 'مدير النظام',
                 phone: CONFIG.phone,
-                avatar: `${CONFIG.defaultAvatar}azer`,
+                avatar: `${CONFIG.defaultAvatar}admin`,
                 fingerprint: Fingerprint.fingerprint,
                 createdAt: new Date().toISOString(),
-                lastLogin: null,
                 status: 'active',
-                permissions: ['all']
+                stats: {
+                    products: 0,
+                    followers: 0
+                }
+            },
+            {
+                id: 2,
+                userId: 'MER_1001',
+                name: 'تاجر تجريبي',
+                email: 'merchant@nardoo.com',
+                password: 'merchant123',
+                role: 'merchant',
+                roleName: 'تاجر',
+                phone: '0555123456',
+                storeName: 'متجر التجريبي',
+                avatar: `${CONFIG.defaultAvatar}merchant`,
+                fingerprint: 'FP_TEST',
+                createdAt: new Date().toISOString(),
+                status: 'active',
+                stats: {
+                    products: 5,
+                    followers: 120
+                }
             }
         ];
         
         this.save();
     },
     
-    // حفظ المستخدمين
     save() {
         Utils.save('nardoo_users', this.users);
     },
     
-    // حفظ الطلبات
-    saveRequests() {
-        Utils.save('role_requests', this.pendingRequests);
-    },
-    
-    // ===== تسجيل الدخول بالاسم فقط =====
-    login(username, password) {
-        // البحث عن المستخدم بالاسم فقط
-        const user = this.users.find(u => 
-            u.name === username && u.password === password
-        );
-        
-        if (user) {
-            this.currentUser = user;
-            user.lastLogin = new Date().toISOString();
-            user.fingerprint = Fingerprint.fingerprint;
-            Utils.save('current_user', user);
-            this.save();
-            
-            return { success: true, user };
-        }
-        
-        return { success: false, message: '❌ اسم المستخدم أو كلمة المرور غير صحيحة' };
-    },
-    
-    // تسجيل الخروج
-    logout() {
-        this.currentUser = null;
-        localStorage.removeItem('current_user');
-        Utils.showNotification('👋 تم تسجيل الخروج', 'info');
-        
-        // إعادة تحميل الصفحة
-        setTimeout(() => location.reload(), 500);
-    },
-    
-    // تسجيل مستخدم جديد
+    // ===== [معدل] تسجيل مستخدم جديد مع معرف فوري =====
     register(userData) {
-        // التحقق من وجود الاسم
-        if (this.users.find(u => u.name === userData.name)) {
-            return { success: false, message: '❌ اسم المستخدم موجود بالفعل' };
+        if (this.users.find(u => u.email === userData.email)) {
+            return { success: false, message: '❌ البريد مستخدم بالفعل' };
         }
         
-        // إنشاء معرف جديد
-        const userId = IDSystem.generateId('customer', { includeDate: true });
+        // تحديد الدور
+        let role = userData.role || 'customer';
+        let roleName = this.getRoleName(role);
+        
+        // إنشاء معرف فوري للمستخدم
+        const userId = IDSystem.generateUserId(role);
         
         const newUser = {
             id: this.users.length + 1,
             userId: userId,
             name: userData.name,
-            email: userData.email || '',
+            email: userData.email,
             password: userData.password,
             phone: userData.phone || '',
-            role: 'customer',
-            roleName: 'مشتري',
+            role: role,
+            roleName: roleName,
             avatar: `${CONFIG.defaultAvatar}${userId}`,
             fingerprint: Fingerprint.fingerprint,
             createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            status: 'active',
+            status: role === 'customer' ? 'active' : 'pending',
             stats: {
-                orders: 0,
-                spent: 0,
-                reviews: 0
+                products: 0,
+                followers: 0
             }
         };
+        
+        // إضافة حقول إضافية حسب الدور
+        if (role === 'merchant') {
+            newUser.storeName = userData.storeName || `متجر ${userData.name}`;
+            newUser.specialization = userData.specialization || 'عام';
+        } else if (role === 'distributor') {
+            newUser.companyName = userData.companyName || `شركة ${userData.name}`;
+            newUser.serviceArea = userData.serviceArea || 'الجزائر';
+        } else if (role === 'delivery') {
+            newUser.vehicleType = userData.vehicleType || 'دراجة نارية';
+            newUser.workArea = userData.workArea || 'الجزائر';
+        } else if (role === 'content_creator') {
+            newUser.niche = userData.niche || 'عام';
+            newUser.platforms = userData.platforms || ['instagram'];
+        }
         
         this.users.push(newUser);
         this.save();
         
-        return { success: true, user: newUser };
+        return { 
+            success: true, 
+            user: newUser,
+            message: `✅ تم التسجيل - معرفك: ${userId}`
+        };
     },
     
-    // تقديم طلب دور
-    submitRoleRequest(userId, requestedRole, roleData = {}) {
-        const user = this.users.find(u => u.userId === userId || u.id == userId);
-        if (!user) {
-            return { success: false, message: 'المستخدم غير موجود' };
-        }
-        
-        // التحقق من وجود طلب سابق
-        const existing = this.pendingRequests.find(r => 
-            r.userId === user.userId && r.requestedRole === requestedRole && r.status === 'pending'
+    getRoleName(role) {
+        const names = {
+            'admin': 'مدير النظام',
+            'merchant': 'تاجر',
+            'distributor': 'موزع',
+            'delivery': 'مندوب توصيل',
+            'content_creator': 'صانع محتوى',
+            'customer': 'مشتري'
+        };
+        return names[role] || role;
+    },
+    
+    login(username, password) {
+        const user = this.users.find(u => 
+            (u.email === username || u.name === username || u.userId === username) && 
+            u.password === password
         );
         
-        if (existing) {
-            return { success: false, message: 'لديك طلب قيد الانتظار لهذا الدور' };
-        }
-        
-        // إنشاء معرف للطلب
-        const requestId = IDSystem.generateId('request', { includeDate: true });
-        
-        const request = {
-            id: requestId,
-            requestNumber: this.pendingRequests.length + 1,
-            userId: user.userId,
-            userName: user.name,
-            userEmail: user.email,
-            userPhone: user.phone,
-            currentRole: user.role,
-            requestedRole: requestedRole,
-            requestedRoleName: this.getRoleName(requestedRole),
-            status: 'pending',
-            submittedAt: new Date().toISOString(),
-            reviewedAt: null,
-            reviewedBy: null,
-            notes: '',
-            data: roleData
-        };
-        
-        this.pendingRequests.push(request);
-        this.saveRequests();
-        
-        // إشعار المدير عبر تلغرام
-        this.notifyAdmin(request);
-        
-        return { success: true, request };
-    },
-    
-    // إشعار المدير
-    notifyAdmin(request) {
-        if (window.Telegram) {
-            const message = `🔵 *طلب دور جديد*\n👤 ${request.userName}\n🎯 ${request.requestedRoleName}\n🆔 ${request.id}`;
-            Telegram.sendMessage(message);
-        }
-    },
-    
-    // الحصول على اسم الدور
-    getRoleName(roleId) {
-        const role = this.availableRoles.find(r => r.id === roleId);
-        return role ? role.name : roleId;
-    },
-    
-    // الموافقة على طلب
-    approveRequest(requestId) {
-        const request = this.pendingRequests.find(r => r.id === requestId);
-        if (!request) return false;
-        
-        request.status = 'approved';
-        request.reviewedAt = new Date().toISOString();
-        request.reviewedBy = this.currentUser?.userId || 'system';
-        
-        // تحديث دور المستخدم
-        const user = this.users.find(u => u.userId === request.userId);
         if (user) {
-            user.role = request.requestedRole;
-            user.roleName = request.requestedRoleName;
-            user.approvedAt = new Date().toISOString();
-            
-            // إنشاء مستودع للتاجر إذا كان الدور تاجر
-            if (request.requestedRole === 'merchant' && window.Inventory) {
-                Inventory.createMerchantWarehouse(user);
-            }
+            this.currentUser = user;
+            user.lastLogin = new Date().toISOString();
+            Utils.save('current_user', user);
+            return { success: true, user };
         }
         
-        this.saveRequests();
-        this.save();
-        
-        return true;
+        return { success: false, message: '❌ بيانات غير صحيحة' };
     },
     
-    // رفض الطلب
-    rejectRequest(requestId, reason = '') {
-        const request = this.pendingRequests.find(r => r.id === requestId);
-        if (!request) return false;
-        
-        request.status = 'rejected';
-        request.reviewedAt = new Date().toISOString();
-        request.reviewedBy = this.currentUser?.userId || 'system';
-        request.rejectionReason = reason;
-        
-        this.saveRequests();
-        return true;
+    logout() {
+        this.currentUser = null;
+        localStorage.removeItem('current_user');
+        Utils.showNotification('👋 تم تسجيل الخروج');
+        setTimeout(() => location.reload(), 500);
     },
     
-    // الحصول على طلبات pending
-    getPendingRequests() {
-        return this.pendingRequests.filter(r => r.status === 'pending');
-    },
-    
-    // التحقق من الصلاحية
-    hasPermission(permission) {
-        if (!this.currentUser) return false;
-        if (this.currentUser.role === 'admin') return true;
-        
-        return false;
-    },
-    
-    // تحديث واجهة المستخدم
     updateUI() {
         const userBtn = document.getElementById('userBtn');
         const dashboardBtn = document.getElementById('dashboardBtn');
         const adminAppsNav = document.getElementById('adminAppsNav');
         
         if (this.currentUser) {
+            // أيقونة حسب الدور
+            const icons = {
+                'admin': 'crown',
+                'merchant': 'store',
+                'distributor': 'truck',
+                'delivery': 'motorcycle',
+                'content_creator': 'video',
+                'customer': 'user'
+            };
+            
+            const icon = icons[this.currentUser.role] || 'user';
+            userBtn.innerHTML = `<i class="fas fa-${icon}"></i>`;
+            
+            // إظهار زر dashboard للمدير فقط
             if (this.currentUser.role === 'admin') {
-                userBtn.innerHTML = '<i class="fas fa-crown"></i>';
                 if (dashboardBtn) dashboardBtn.style.display = 'flex';
                 if (adminAppsNav) adminAppsNav.style.display = 'flex';
-            } else if (this.currentUser.role === 'merchant') {
-                userBtn.innerHTML = '<i class="fas fa-store"></i>';
-            } else {
-                userBtn.innerHTML = '<i class="fas fa-user-check"></i>';
             }
+            
+            // إضافة معرف المستخدم في واجهة المستخدم (اختياري)
+            this.showUserIdBadge();
         } else {
             userBtn.innerHTML = '<i class="far fa-user"></i>';
         }
     },
     
-    // إحصائيات المستخدمين
+    showUserIdBadge() {
+        // يمكن إضافة شارة صغيرة تظهر معرف المستخدم
+        const existingBadge = document.getElementById('userIdBadge');
+        if (existingBadge) existingBadge.remove();
+        
+        if (this.currentUser) {
+            const badge = document.createElement('div');
+            badge.id = 'userIdBadge';
+            badge.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: var(--gold);
+                color: black;
+                padding: 5px 15px;
+                border-radius: 30px;
+                font-size: 12px;
+                font-weight: bold;
+                z-index: 9999;
+                border: 2px solid white;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            `;
+            badge.innerHTML = `🆔 ${this.currentUser.userId}`;
+            document.body.appendChild(badge);
+        }
+    },
+    
     getStats() {
         return {
             total: this.users.length,
             admins: this.users.filter(u => u.role === 'admin').length,
             merchants: this.users.filter(u => u.role === 'merchant').length,
-            pending: this.users.filter(u => u.role === 'pending').length,
+            distributors: this.users.filter(u => u.role === 'distributor').length,
+            delivery: this.users.filter(u => u.role === 'delivery').length,
+            creators: this.users.filter(u => u.role === 'content_creator').length,
             customers: this.users.filter(u => u.role === 'customer').length,
-            delivery: this.users.filter(u => ['delivery_company', 'delivery_person'].includes(u.role)).length,
-            creators: this.users.filter(u => ['content_creator', 'entertainer'].includes(u.role)).length
+            pending: this.users.filter(u => u.status === 'pending').length
         };
     }
 };
 
-// ===== [2.2] تهيئة النظام =====
 window.Auth = AuthSystem;
 AuthSystem.init();
 
-console.log('✅ نظام المصادقة جاهز - دخول بالاسم فقط');
+console.log('✅ نظام المصادقة جاهز - كل مستخدم له معرف فوري');
