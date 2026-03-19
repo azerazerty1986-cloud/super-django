@@ -1,5 +1,6 @@
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
+/* ===== متوافق مع المعرفات الجديدة (معرف المستخدم + رقم تسلسلي) ===== */
 /* ================================================================== */
 
 // ===== إعدادات تلغرام =====
@@ -10,12 +11,13 @@ const TELEGRAM_CONFIG = {
     apiUrl: 'https://api.telegram.org/bot'
 };
 
-// ===== [4.1] نظام تلغرام الأساسي مع دعم الصور والمعرفات =====
+// ===== [4.1] نظام تلغرام مع دعم المعرفات الجديدة =====
 const TelegramSystem = {
-    // إضافة منتج مع صورة (والحصول على معرف تلقائي)
+    // إضافة منتج مع صورة (يدعم المعرف الجديد)
     async addProductWithPhoto(product, imageFile) {
         try {
             console.log('📸 جاري إرسال المنتج مع الصورة إلى تلغرام...');
+            console.log('🆔 معرف المنتج الجديد:', product.productId);
             
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM_CONFIG.channelId);
@@ -26,9 +28,10 @@ const TelegramSystem = {
 💰 *السعر:* ${product.price} دج
 🏷️ *القسم:* ${product.category}
 📊 *الكمية:* ${product.stock}
-👤 *التاجر:* ${product.merchantName}
+👤 *الناشر:* ${product.merchantName}
+🆔 *معرف المنتج:* ${product.productId}
+🆔 *معرف الناشر:* ${product.merchantId}
 📝 *الوصف:* ${product.description || 'منتج ممتاز'}
-🆔 *معرف المنتج:* ${product.id || 'جاري الإنشاء'}
 🕐 ${new Date().toLocaleString('ar-EG')}
             `);
             formData.append('parse_mode', 'Markdown');
@@ -41,7 +44,8 @@ const TelegramSystem = {
             const data = await response.json();
             
             if (data.ok) {
-                console.log(`✅ تم الإرسال - المعرف: ${data.result.message_id}`);
+                console.log(`✅ تم الإرسال - معرف تلغرام: ${data.result.message_id}`);
+                console.log(`✅ معرف المنتج الجديد: ${product.productId}`);
                 
                 // الحصول على رابط الصورة
                 const fileId = data.result.photo[data.result.photo.length - 1].file_id;
@@ -59,7 +63,8 @@ const TelegramSystem = {
                     success: true, 
                     messageId: data.result.message_id,
                     telegramId: data.result.message_id,
-                    photoUrl: photoUrl
+                    photoUrl: photoUrl,
+                    productId: product.productId  // المعرف الجديد
                 };
             }
             
@@ -75,19 +80,12 @@ const TelegramSystem = {
     // إضافة منتج مع عدة صور (ألبوم)
     async addProductWithAlbum(product, imageFiles) {
         try {
-            console.log(`📸 جاري إرسال ${imageFiles.length} صور كألبوم إلى تلغرام...`);
+            console.log(`📸 جاري إرسال ${imageFiles.length} صور كألبوم...`);
+            console.log('🆔 معرف المنتج:', product.productId);
             
             const media = [];
             
             for (let i = 0; i < Math.min(imageFiles.length, 10); i++) {
-                const file = imageFiles[i];
-                const reader = new FileReader();
-                
-                const base64 = await new Promise((resolve) => {
-                    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-                    reader.readAsDataURL(file);
-                });
-                
                 if (i === 0) {
                     media.push({
                         type: 'photo',
@@ -98,7 +96,9 @@ const TelegramSystem = {
 💰 *السعر:* ${product.price} دج
 🏷️ *القسم:* ${product.category}
 📊 *الكمية:* ${product.stock}
-👤 *التاجر:* ${product.merchantName}
+👤 *الناشر:* ${product.merchantName}
+🆔 *معرف المنتج:* ${product.productId}
+🆔 *معرف الناشر:* ${product.merchantId}
 📝 *الوصف:* ${product.description || 'منتج ممتاز'}
 🕐 ${new Date().toLocaleString('ar-EG')}`,
                         parse_mode: 'Markdown'
@@ -127,23 +127,24 @@ const TelegramSystem = {
             const data = await response.json();
             
             if (data.ok) {
-                console.log(`✅ تم إرسال الألبوم بنجاح`);
+                console.log(`✅ تم إرسال الألبوم - معرف المنتج: ${product.productId}`);
                 return { 
                     success: true, 
                     messageId: data.result[0].message_id,
-                    telegramId: data.result[0].message_id
+                    telegramId: data.result[0].message_id,
+                    productId: product.productId
                 };
             }
             
             return { success: false, error: 'فشل إرسال الألبوم' };
             
         } catch (error) {
-            console.error('❌ خطأ في إضافة الألبوم:', error);
+            console.error('❌ خطأ:', error);
             return { success: false };
         }
     },
     
-    // جلب المنتجات من تلغرام (مع الصور والمعرفات)
+    // جلب المنتجات من تلغرام
     async fetchProducts() {
         try {
             console.log('🔄 جلب المنتجات من تلغرام...');
@@ -156,14 +157,12 @@ const TelegramSystem = {
             const products = [];
             
             if (data.ok && data.result) {
-                // جلب آخر 200 تحديث
                 const updates = data.result.slice(-200).reverse();
                 
                 for (const update of updates) {
                     const post = update.channel_post || update.message;
                     if (!post || !post.photo) continue;
                     
-                    // التأكد من أن الرسالة تحتوي على المنتج (🟣)
                     const caption = post.caption || '';
                     if (!caption.includes('🟣')) continue;
                     
@@ -175,35 +174,31 @@ const TelegramSystem = {
             }
             
             console.log(`✅ تم جلب ${products.length} منتج من تلغرام`);
-            
-            // حفظ نسخة احتياطية
             localStorage.setItem('telegram_products', JSON.stringify(products));
             
             return products;
             
         } catch (error) {
-            console.error('❌ خطأ في جلب المنتجات:', error);
-            
-            // استخدام الكاش في حالة الخطأ
+            console.error('❌ خطأ:', error);
             const cached = localStorage.getItem('telegram_products');
             return cached ? JSON.parse(cached) : [];
         }
     },
     
-    // تحليل المنتج من رسالة تلغرام
+    // تحليل المنتج من رسالة تلغرام (معرف جديد)
     async parseProductFromMessage(post) {
         try {
             const caption = post.caption || '';
             const lines = caption.split('\n');
             
-            // استخراج البيانات
             let name = 'منتج';
             let price = 0;
             let category = 'promo';
             let stock = 0;
             let merchant = 'المتجر';
             let description = '';
-            let productId = post.message_id;
+            let productId = '';
+            let merchantId = '';
             
             lines.forEach(line => {
                 if (line.includes('المنتج:')) {
@@ -215,24 +210,26 @@ const TelegramSystem = {
                 }
                 else if (line.includes('القسم:')) {
                     const cat = line.replace('القسم:', '').replace(/[🟣*]/g, '').trim().toLowerCase();
-                    if (cat.includes('promo') || cat.includes('برموسيو')) category = 'promo';
-                    else if (cat.includes('spices') || cat.includes('توابل')) category = 'spices';
-                    else if (cat.includes('cosmetic') || cat.includes('كوسمتيك')) category = 'cosmetic';
+                    if (cat.includes('promo')) category = 'promo';
+                    else if (cat.includes('spices')) category = 'spices';
+                    else if (cat.includes('cosmetic')) category = 'cosmetic';
                     else category = 'other';
                 }
                 else if (line.includes('الكمية:')) {
                     const match = line.match(/\d+/);
                     if (match) stock = parseInt(match[0]);
                 }
-                else if (line.includes('التاجر:')) {
-                    merchant = line.replace('التاجر:', '').replace(/[🟣*]/g, '').trim();
+                else if (line.includes('الناشر:')) {
+                    merchant = line.replace('الناشر:', '').replace(/[🟣*]/g, '').trim();
+                }
+                else if (line.includes('معرف المنتج:')) {
+                    productId = line.replace('معرف المنتج:', '').replace(/[🟣*]/g, '').trim();
+                }
+                else if (line.includes('معرف الناشر:')) {
+                    merchantId = line.replace('معرف الناشر:', '').replace(/[🟣*]/g, '').trim();
                 }
                 else if (line.includes('الوصف:')) {
                     description = line.replace('الوصف:', '').replace(/[🟣*]/g, '').trim();
-                }
-                else if (line.includes('معرف المنتج:')) {
-                    const idMatch = line.match(/\d+/);
-                    if (idMatch) productId = parseInt(idMatch[0]);
                 }
             });
             
@@ -248,17 +245,16 @@ const TelegramSystem = {
                 imageUrl = `https://api.telegram.org/file/bot${TELEGRAM_CONFIG.botToken}/${fileData.result.file_path}`;
             }
             
-            // إنشاء المعرف المحلي
-            const localId = IDSystem ? IDSystem.generateTelegramProductId(productId) : `TLG_${productId}`;
-            
             return {
-                id: localId,                    // المعرف المحلي (TLG_12345)
-                telegramId: productId,           // المعرف الأصلي من تلغرام
+                id: productId || `TLG_${post.message_id}`,
+                productId: productId || `TLG_${post.message_id}`,
+                telegramId: post.message_id,
                 name: name,
                 price: price || 1000,
                 category: category,
                 stock: stock || 10,
                 merchantName: merchant,
+                merchantId: merchantId,
                 description: description || 'منتج ممتاز',
                 image: imageUrl,
                 images: imageUrl ? [imageUrl] : [],
@@ -284,6 +280,22 @@ const TelegramSystem = {
         if (seconds < 3600) return `منذ ${Math.floor(seconds / 60)} دقيقة`;
         if (seconds < 86400) return `منذ ${Math.floor(seconds / 3600)} ساعة`;
         return `منذ ${Math.floor(seconds / 86400)} يوم`;
+    },
+    
+    // البحث عن منتج بالمعرف الجديد
+    async findProductById(productId) {
+        const products = await this.fetchProducts();
+        return products.find(p => 
+            p.productId === productId || 
+            p.id === productId ||
+            p.telegramId == productId
+        );
+    },
+    
+    // البحث عن منتجات ناشر معين
+    async findProductsByMerchant(merchantId) {
+        const products = await this.fetchProducts();
+        return products.filter(p => p.merchantId === merchantId);
     },
     
     // إرسال طلب شراء
@@ -327,11 +339,10 @@ ${itemsList}
                 })
             });
             
-            console.log('✅ تم إرسال الطلب');
             return true;
             
         } catch (error) {
-            console.error('❌ خطأ في إرسال الطلب:', error);
+            console.error('❌ خطأ:', error);
             return false;
         }
     },
@@ -342,6 +353,7 @@ ${itemsList}
 🔵 *طلب تاجر جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 *التاجر:* ${merchant.name}
+🆔 *معرف التاجر:* ${merchant.userId || 'جديد'}
 🏪 *المتجر:* ${merchant.storeName}
 📧 *البريد:* ${merchant.email}
 📞 *الهاتف:* ${merchant.phone}
@@ -364,37 +376,21 @@ ${itemsList}
                     parse_mode: 'Markdown'
                 })
             });
-            
             return true;
-            
         } catch (error) {
-            console.error('❌ خطأ في إرسال طلب التاجر:', error);
+            console.error('❌ خطأ:', error);
             return false;
         }
     },
     
-    // البحث عن منتج بالمعرف
-    async findProductById(productId) {
-        const products = await this.fetchProducts();
-        
-        // البحث بالمعرف المحلي أو الأصلي
-        return products.find(p => 
-            p.id == productId || 
-            p.telegramId == productId ||
-            p.id == `TLG_${productId}`
-        );
-    },
-    
-    // تحديث المنتجات المحلية من تلغرام
+    // مزامنة المنتجات مع المتجر المحلي
     async syncProducts() {
         const telegramProducts = await this.fetchProducts();
-        
-        // دمج مع المنتجات المحلية
         const localProducts = Utils.load('products', []);
-        const existingIds = new Set(localProducts.map(p => p.telegramId));
+        const existingIds = new Set(localProducts.map(p => p.productId));
         
         telegramProducts.forEach(tp => {
-            if (!existingIds.has(tp.telegramId)) {
+            if (!existingIds.has(tp.productId)) {
                 localProducts.push(tp);
             }
         });
@@ -422,13 +418,11 @@ ${itemsList}
                     if (update.message?.text) {
                         const text = update.message.text;
                         
-                        // أمر تحديث المنتجات
                         if (text === '/update_products') {
                             await this.syncProducts();
                             await this.sendMessage('✅ تم تحديث المنتجات');
                         }
                         
-                        // أمر البحث بالمعرف
                         if (text.startsWith('/product_')) {
                             const id = text.replace('/product_', '');
                             const product = await this.findProductById(id);
@@ -436,10 +430,10 @@ ${itemsList}
                             if (product) {
                                 await this.sendMessage(`
 🔍 *المنتج موجود*
-🆔 المعرف: ${product.id}
+🆔 المعرف: ${product.productId}
 📦 الاسم: ${product.name}
 💰 السعر: ${product.price} دج
-👤 التاجر: ${product.merchantName}
+👤 الناشر: ${product.merchantName}
 📊 المخزون: ${product.stock}
                                 `);
                             } else {
@@ -447,13 +441,15 @@ ${itemsList}
                             }
                         }
                         
-                        // أمر الإحصائيات
                         if (text === '/stats') {
                             const products = await this.fetchProducts();
+                            const merchants = new Set(products.map(p => p.merchantId)).size;
+                            
                             await this.sendMessage(`
 📊 *إحصائيات المتجر*
 ━━━━━━━━━━━━━━━━━━━━━━
 📦 المنتجات: ${products.length}
+👥 الناشرون: ${merchants}
 🕐 آخر تحديث: ${new Date().toLocaleString('ar-EG')}
                             `);
                         }
@@ -477,11 +473,9 @@ ${itemsList}
                     parse_mode: 'Markdown'
                 })
             });
-            
             return true;
-            
         } catch (error) {
-            console.error('❌ خطأ في إرسال الرسالة:', error);
+            console.error('❌ خطأ:', error);
             return false;
         }
     }
@@ -493,4 +487,5 @@ window.Telegram = TelegramSystem;
 // بدء الاستماع للأوامر كل 30 ثانية
 setInterval(() => Telegram.checkCommands(), 30000);
 
-console.log('✅ نظام تلغرام المتكامل جاهز - المعرفات التلقائية من message_id');
+console.log('✅ نظام تلغرام جاهز - متوافق مع المعرفات الجديدة');
+console.log('📌 معرف المنتج = معرف الناشر + رقم تسلسلي');
