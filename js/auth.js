@@ -26,9 +26,9 @@ const AuthSystem = {
             {
                 id: 1,
                 userId: adminId,
-                name: 'مدير النظام',
+                name: 'azer',
                 email: 'admin@nardoo.com',
-                password: 'admin123',
+                password: '123456',
                 role: 'admin',
                 roleName: 'مدير النظام',
                 phone: CONFIG.phone,
