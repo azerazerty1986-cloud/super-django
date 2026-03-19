@@ -15,6 +15,7 @@ const App = {
         // تحميل المنتجات
         if (window.Shop) {
             await Shop.loadProducts();
+            this.products = Shop.products;
         } else {
             this.loadLocalProducts();
         }
@@ -92,9 +93,9 @@ const App = {
     },
     
     handleLogin() {
-        const email = document.getElementById('loginEmail').value;
+        const username = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
-        const result = Auth.login(email, password);
+        const result = Auth.login(username, password);
         
         if (result.success) {
             this.closeModal('loginModal');
@@ -143,7 +144,7 @@ const App = {
         }
     },
     
-    // ===== دوال المنتجات =====
+    // ===== دوال المنتجات (لجميع المستخدمين) =====
     filterProducts(category) {
         if (window.Shop) {
             Shop.filter(category);
@@ -204,7 +205,7 @@ const App = {
                         </span>
                     </div>
                     <div style="display:flex; gap:15px;">
-                        <button class="btn-gold" style="flex:2;" onclick="App.addToCart(${product.id}); App.closeModal('productDetailModal');">
+                        <button class="btn-gold" style="flex:2;" onclick="App.addToCart('${product.id}'); App.closeModal('productDetailModal');">
                             <i class="fas fa-shopping-cart"></i> أضف للسلة
                         </button>
                         <button class="btn-outline-gold" style="flex:1;" onclick="App.closeModal('productDetailModal')">
@@ -218,7 +219,7 @@ const App = {
         Utils.openModal('productDetailModal');
     },
     
-    // ===== [معدل] دالة إضافة منتج للتاجر =====
+    // ===== [للمدير والتاجر فقط] دوال إضافة المنتج =====
     openAddProductModal() {
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -226,6 +227,7 @@ const App = {
             return;
         }
         
+        // السماح فقط للمدير والتاجر
         if (Auth.currentUser.role === 'admin' || Auth.currentUser.role === 'merchant') {
             Utils.openModal('productModal');
         } else {
@@ -246,7 +248,7 @@ const App = {
         }
     },
     
-    // ===== [معدل] دالة حفظ المنتج للتاجر =====
+    // ===== [للمدير والتاجر فقط] حفظ المنتج =====
     async saveProduct() {
         // التحقق من تسجيل الدخول
         if (!Auth.currentUser) {
@@ -254,7 +256,7 @@ const App = {
             return;
         }
         
-        // التحقق من الصلاحية
+        // التحقق من الصلاحية (مدير أو تاجر فقط)
         if (Auth.currentUser.role !== 'admin' && Auth.currentUser.role !== 'merchant') {
             Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
             return;
@@ -306,6 +308,7 @@ const App = {
         if (window.Telegram) {
             try {
                 await Telegram.addProduct(product, Auth.currentUser);
+                Utils.showNotification('✅ تم الإرسال إلى تلغرام');
             } catch (error) {
                 console.error('خطأ في إرسال تلغرام:', error);
             }
@@ -315,178 +318,10 @@ const App = {
         this.closeModal('productModal');
     },
     
-    // ===== دوال إضافة المنتج للأيقونة =====
-    openAddProductForm() {
-        Utils.openModal('addProductModal');
-    },
-    
-    closeAddProductForm() {
-        Utils.closeModal('addProductModal');
-    },
-    
-    handleNewImageUpload(event) {
-        const preview = document.getElementById('newImagePreview');
-        if (!preview) return;
-        
-        preview.innerHTML = '';
-        for (let file of event.target.files) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
-            };
-            reader.readAsDataURL(file);
-        }
-    },
-    
-    async saveNewProduct() {
-        // التحقق من تسجيل الدخول
-        if (!Auth.currentUser) {
-            Utils.showNotification('❌ يجب تسجيل الدخول أولاً', 'error');
-            this.openLoginModal();
-            return;
-        }
-        
-        // الأدوار المسموح لها بإضافة منتجات
-        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
-        if (!allowedRoles.includes(Auth.currentUser.role)) {
-            Utils.showNotification('❌ غير مصرح لك بإضافة منتجات', 'error');
-            return;
-        }
-        
-        // التحقق من الحقول
-        const name = document.getElementById('newProductName')?.value;
-        const category = document.getElementById('newProductCategory')?.value;
-        const price = parseInt(document.getElementById('newProductPrice')?.value);
-        const stock = parseInt(document.getElementById('newProductStock')?.value);
-        const description = document.getElementById('newProductDescription')?.value;
-        
-        if (!name || !category || !price || !stock) {
-            Utils.showNotification('❌ الرجاء ملء جميع الحقول', 'error');
-            return;
-        }
-        
-        // إنشاء المنتج الجديد
-        const product = {
-            id: Date.now(),
-            name: name,
-            category: category,
-            price: price,
-            stock: stock,
-            description: description || '',
-            image: CONFIG.defaultImage,
-            merchantId: Auth.currentUser.merchantId || Auth.currentUser.userId || 'USER',
-            merchantName: Auth.currentUser.name,
-            createdAt: new Date().toISOString(),
-            dateStr: 'الآن'
-        };
-        
-        // حفظ في نظام Shop
-        if (window.Shop) {
-            if (!Shop.products) Shop.products = [];
-            Shop.products.push(product);
-            Shop.saveProducts();
-            Shop.displayProducts();
-        } else {
-            // حفظ محلياً
-            let products = Utils.load('products', []);
-            products.push(product);
-            Utils.save('products', products);
-            this.displayProducts(products);
-        }
-        
-        // إرسال إلى تلغرام
-        try {
-            const message = `
-🟣 *منتج جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-📦 *المنتج:* ${product.name}
-💰 *السعر:* ${product.price} دج
-🏷️ *القسم:* ${product.category}
-📊 *الكمية:* ${product.stock}
-👤 *التاجر:* ${product.merchantName}
-🆔 *المعرف:* ${product.merchantId}
-📝 *الوصف:* ${product.description || 'لا يوجد'}
-🕐 ${new Date().toLocaleString('ar-EG')}
-            `;
-            
-            await fetch(`https://api.telegram.org/bot8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: '-1003822964890',
-                    text: message,
-                    parse_mode: 'Markdown'
-                })
-            });
-        } catch (error) {
-            console.error('❌ خطأ في الاتصال بتلغرام:', error);
-        }
-        
-        Utils.showNotification('✅ تم إضافة المنتج');
-        this.closeAddProductForm();
-    },
-    
-    // عرض المنتجات
-    displayProducts(products) {
-        const container = document.getElementById('productsContainer');
-        if (!container) return;
-        
-        container.innerHTML = products.map(p => `
-            <div class="product-card" onclick="App.showProductDetail(${p.id})">
-                <div class="product-gallery">
-                    <img src="${p.image}" alt="${p.name}">
-                </div>
-                <div class="product-info">
-                    <h3 class="product-title">${p.name}</h3>
-                    <div class="product-price">${p.price} دج</div>
-                    <button class="add-to-cart" onclick="event.stopPropagation(); App.addToCart(${p.id})">
-                        <i class="fas fa-shopping-cart"></i> أضف للسلة
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    },
-    
-    // ===== دوال السلة =====
-    addToCart(productId) {
-        if (window.Cart) {
-            Cart.add(productId);
-        } else {
-            Utils.showNotification('تمت الإضافة للسلة (تجريبي)');
-        }
-    },
-    
-    toggleCart() {
-        document.getElementById('cartSidebar').classList.toggle('open');
-        if (window.Cart) {
-            Cart.display();
-        }
-    },
-    
-    updateCartItem(productId, newQuantity) {
-        if (window.Cart) {
-            Cart.update(productId, newQuantity);
-        }
-    },
-    
-    removeFromCart(productId) {
-        if (window.Cart) {
-            Cart.remove(productId);
-        }
-    },
-    
-    checkout() {
-        if (window.Cart) {
-            Cart.checkout();
-        } else {
-            alert('تم التوجيه إلى واتساب');
-        }
-    },
-    
-    // ===== دوال المدير =====
+    // ===== [للمدير فقط] دوال لوحة التحكم =====
     openDashboard() {
         if (!Auth.currentUser || Auth.currentUser.role !== 'admin') {
-            Utils.showNotification('غير مصرح', 'error');
+            Utils.showNotification('غير مصرح - هذه الصفحة للمدير فقط', 'error');
             return;
         }
         document.getElementById('dashboardSection').style.display = 'block';
@@ -509,6 +344,8 @@ const App = {
             content.innerHTML = this.getRequestsHTML();
         } else if (tab === 'products') {
             content.innerHTML = this.getProductsHTML();
+        } else if (tab === 'delivery') {
+            content.innerHTML = this.getDeliveryHTML();
         }
     },
     
@@ -615,6 +452,13 @@ const App = {
         `;
     },
     
+    getDeliveryHTML() {
+        return `
+            <h3 style="color:var(--gold); margin-bottom:20px;">نظام التوصيل</h3>
+            <p>قريباً...</p>
+        `;
+    },
+    
     openAdminApps() {
         if (!Auth.currentUser || Auth.currentUser.role !== 'admin') {
             Utils.showNotification('غير مصرح', 'error');
@@ -644,12 +488,81 @@ const App = {
         Utils.openModal('adminAppsModal');
     },
     
-    // ===== دالة تشغيل الريلز =====
+    // ===== [للمدير فقط] الموافقة على طلبات التجار =====
+    approveMerchant(userId) {
+        if (!Auth.currentUser || Auth.currentUser.role !== 'admin') {
+            Utils.showNotification('غير مصرح', 'error');
+            return;
+        }
+        
+        const user = Auth.users.find(u => u.id == userId || u.userId == userId);
+        if (user) {
+            user.role = 'merchant';
+            user.roleName = 'تاجر';
+            Auth.save();
+            Utils.showNotification(`✅ تمت الموافقة على ${user.name} كتاجر`);
+            this.switchDashboardTab('merchants');
+        }
+    },
+    
+    rejectMerchant(userId) {
+        if (!Auth.currentUser || Auth.currentUser.role !== 'admin') {
+            Utils.showNotification('غير مصرح', 'error');
+            return;
+        }
+        
+        const user = Auth.users.find(u => u.id == userId || u.userId == userId);
+        if (user) {
+            user.role = 'customer';
+            user.roleName = 'مشتري';
+            Auth.save();
+            Utils.showNotification(`❌ تم رفض طلب ${user.name}`);
+            this.switchDashboardTab('merchants');
+        }
+    },
+    
+    // ===== دوال السلة (لجميع المستخدمين) =====
+    addToCart(productId) {
+        if (window.Cart) {
+            Cart.add(productId);
+        } else {
+            Utils.showNotification('تمت الإضافة للسلة (تجريبي)');
+        }
+    },
+    
+    toggleCart() {
+        document.getElementById('cartSidebar').classList.toggle('open');
+        if (window.Cart) {
+            Cart.display();
+        }
+    },
+    
+    updateCartItem(productId, newQuantity) {
+        if (window.Cart) {
+            Cart.update(productId, newQuantity);
+        }
+    },
+    
+    removeFromCart(productId) {
+        if (window.Cart) {
+            Cart.remove(productId);
+        }
+    },
+    
+    checkout() {
+        if (window.Cart) {
+            Cart.checkout();
+        } else {
+            alert('تم التوجيه إلى واتساب');
+        }
+    },
+    
+    // ===== دالة تشغيل الريلز (لجميع المستخدمين) =====
     playReel(reelId) {
         window.open(`07-reels.html?id=${reelId}`, '_blank');
     },
     
-    // ===== دوال مساعدة =====
+    // ===== دوال مساعدة (لجميع المستخدمين) =====
     toggleTheme() {
         document.body.classList.toggle('light-mode');
         const toggle = document.getElementById('themeToggle');
