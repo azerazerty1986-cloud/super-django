@@ -11,7 +11,13 @@ const App = {
         // تهيئة الأنظمة
         Auth.init();
         Cart.init();
-        await Shop.loadProducts();
+        
+        // تحميل المنتجات
+        if (window.Shop) {
+            await Shop.loadProducts();
+        } else {
+            this.loadLocalProducts();
+        }
         
         // تحديث واجهة المستخدم
         Auth.updateUI();
@@ -31,6 +37,16 @@ const App = {
         }, 1000);
         
         console.log('✅ تم التشغيل بنجاح');
+    },
+    
+    // تحميل المنتجات محلياً
+    loadLocalProducts() {
+        this.products = Utils.load('products', [
+            { id: 1, name: 'زعتر فلسطيني', price: 500, category: 'spices', stock: 50, image: 'https://images.unsplash.com/photo-1542838132-92c5330041e7?w=300', merchantName: 'المتجر' },
+            { id: 2, name: 'كريم ترطيب', price: 1200, category: 'cosmetic', stock: 30, image: 'https://images.unsplash.com/photo-1596040033229-a9821e1929c7?w=300', merchantName: 'المتجر' },
+            { id: 3, name: 'بخور عود', price: 1500, category: 'other', stock: 15, image: 'https://images.unsplash.com/photo-1608571423912-8a4c8a8c9b9a?w=300', merchantName: 'المتجر' }
+        ]);
+        this.displayProducts(this.products);
     },
     
     // إعداد مستمعي الأحداث
@@ -129,43 +145,66 @@ const App = {
     
     // ===== دوال المنتجات =====
     filterProducts(category) {
-        Shop.filter(category);
+        if (window.Shop) {
+            Shop.filter(category);
+        } else {
+            // تصفية محلية
+            let filtered = this.products;
+            if (category !== 'all') {
+                filtered = this.products.filter(p => p.category === category);
+            }
+            this.displayProducts(filtered);
+        }
+        
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         event.target.classList.add('active');
     },
     
     searchProducts() {
         const term = document.getElementById('searchInput').value;
-        Shop.search(term);
+        if (window.Shop) {
+            Shop.search(term);
+        } else {
+            // بحث محلي
+            const filtered = this.products.filter(p => 
+                p.name.toLowerCase().includes(term.toLowerCase())
+            );
+            this.displayProducts(filtered);
+        }
     },
     
     showProductDetail(productId) {
-        const product = Shop.getProduct(productId);
-        if (!product) return;
+        let product;
         
-        const images = product.images?.length ? product.images : [CONFIG.defaultImage];
+        if (window.Shop) {
+            product = Shop.getProduct(productId);
+        } else {
+            product = this.products.find(p => p.id == productId);
+        }
+        
+        if (!product) return;
         
         document.getElementById('productDetailContent').innerHTML = `
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
                 <div>
-                    <img src="${images[0]}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
+                    <img src="${product.image}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
                 </div>
                 <div>
                     <h2 style="color:var(--gold); font-size:28px;">${product.name}</h2>
                     <p style="margin:20px 0;">${product.description || 'منتج عالي الجودة'}</p>
                     <div style="background:var(--glass); padding:15px; border-radius:15px; margin-bottom:20px;">
-                        <p><i class="fas fa-store"></i> ${product.merchantName}</p>
-                        <p style="color:var(--gold-light);">🆔 ${product.merchantId}</p>
-                        <p>🆔 ${product.id}</p>
+                        <p><i class="fas fa-store"></i> ${product.merchantName || 'المتجر'}</p>
                     </div>
                     <div style="font-size:36px; color:var(--gold); font-weight:800; margin-bottom:20px;">
                         ${product.price.toLocaleString()} <small style="font-size:16px;">دج</small>
                     </div>
-                    <div class="product-stock ${Shop.getStockClass(product.stock)}" style="margin-bottom:20px;">
-                        ${Shop.getStockText(product.stock)}
+                    <div style="margin-bottom:20px;">
+                        <span class="product-stock ${product.stock <= 0 ? 'out-of-stock' : product.stock < 5 ? 'low-stock' : 'in-stock'}">
+                            ${product.stock <= 0 ? 'غير متوفر' : product.stock < 5 ? `كمية محدودة (${product.stock})` : `متوفر (${product.stock})`}
+                        </span>
                     </div>
                     <div style="display:flex; gap:15px;">
-                        <button class="btn-gold" style="flex:2;" onclick="App.addToCart('${product.id}'); App.closeModal('productDetailModal');">
+                        <button class="btn-gold" style="flex:2;" onclick="App.addToCart(${product.id}); App.closeModal('productDetailModal');">
                             <i class="fas fa-shopping-cart"></i> أضف للسلة
                         </button>
                         <button class="btn-outline-gold" style="flex:1;" onclick="App.closeModal('productDetailModal')">
@@ -179,6 +218,7 @@ const App = {
         Utils.openModal('productDetailModal');
     },
     
+    // ===== [معدل] دالة إضافة منتج للتاجر =====
     openAddProductModal() {
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -206,72 +246,84 @@ const App = {
         }
     },
     
+    // ===== [معدل] دالة حفظ المنتج للتاجر =====
     async saveProduct() {
+        // التحقق من تسجيل الدخول
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
             return;
         }
         
-        const product = {
-            name: document.getElementById('productName').value,
-            category: document.getElementById('productCategory').value,
-            price: parseInt(document.getElementById('productPrice').value),
-            stock: parseInt(document.getElementById('productStock').value),
-            description: document.getElementById('productDescription').value
-        };
+        // التحقق من الصلاحية
+        if (Auth.currentUser.role !== 'admin' && Auth.currentUser.role !== 'merchant') {
+            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
+            return;
+        }
         
-        if (!product.name || !product.price || !product.stock) {
+        // جمع البيانات
+        const name = document.getElementById('productName')?.value;
+        const category = document.getElementById('productCategory')?.value;
+        const price = parseInt(document.getElementById('productPrice')?.value);
+        const stock = parseInt(document.getElementById('productStock')?.value);
+        const description = document.getElementById('productDescription')?.value;
+        
+        if (!name || !category || !price || !stock) {
             Utils.showNotification('الرجاء ملء جميع الحقول', 'error');
             return;
         }
         
-        // إنشاء معرف للمنتج
-        const productId = IDSystem.generateProductId(Auth.currentUser.merchantId || 'ADMIN_001');
-        
-        const newProduct = {
-            id: productId,
-            productId: productId,
-            ...product,
-            merchantId: Auth.currentUser.merchantId || 'ADMIN_001',
+        // إنشاء المنتج
+        const product = {
+            id: Date.now(),
+            name: name,
+            category: category,
+            price: price,
+            stock: stock,
+            description: description || '',
+            image: CONFIG.defaultImage,
+            merchantId: Auth.currentUser.merchantId || Auth.currentUser.userId || 'ADMIN',
             merchantName: Auth.currentUser.name,
-            images: [CONFIG.defaultImage],
-            rating: 4.5,
             createdAt: new Date().toISOString(),
             dateStr: 'الآن'
         };
         
-        // إضافة للمنتجات
-        Shop.products.push(newProduct);
-        Shop.saveProducts();
-        
-        // إرسال لتلغرام
-        if (window.Telegram) {
-            await Telegram.addProduct(newProduct, Auth.currentUser);
+        // حفظ في نظام Shop
+        if (window.Shop) {
+            if (!Shop.products) Shop.products = [];
+            Shop.products.push(product);
+            Shop.saveProducts();
+            Shop.displayProducts();
+            console.log('✅ تمت الإضافة إلى Shop');
+        } else {
+            // حفظ محلياً
+            if (!this.products) this.products = [];
+            this.products.push(product);
+            Utils.save('products', this.products);
+            this.displayProducts(this.products);
         }
         
-        // إضافة للمستودع
-        if (window.Inventory && Auth.currentUser.role === 'merchant') {
-            Inventory.addProduct(Auth.currentUser.merchantId, newProduct);
+        // إرسال إلى تلغرام
+        if (window.Telegram) {
+            try {
+                await Telegram.addProduct(product, Auth.currentUser);
+            } catch (error) {
+                console.error('خطأ في إرسال تلغرام:', error);
+            }
         }
         
         Utils.showNotification('✅ تم إضافة المنتج');
         this.closeModal('productModal');
-        Shop.displayProducts();
     },
     
-    // ===== [إضافة] دوال إضافة المنتج للأيقونة مع حفظ في تلغرام =====
-    
-    // فتح نموذج إضافة منتج (للأيقونة)
+    // ===== دوال إضافة المنتج للأيقونة =====
     openAddProductForm() {
         Utils.openModal('addProductModal');
     },
     
-    // إغلاق نموذج إضافة منتج (للأيقونة)
     closeAddProductForm() {
         Utils.closeModal('addProductModal');
     },
     
-    // رفع الصور للنموذج الجديد
     handleNewImageUpload(event) {
         const preview = document.getElementById('newImagePreview');
         if (!preview) return;
@@ -286,7 +338,6 @@ const App = {
         }
     },
     
-    // حفظ المنتج الجديد (للأيقونة) مع الإرسال إلى تلغرام
     async saveNewProduct() {
         // التحقق من تسجيل الدخول
         if (!Auth.currentUser) {
@@ -329,22 +380,18 @@ const App = {
             dateStr: 'الآن'
         };
         
-        // حفظ محلياً في localStorage
-        let products = Utils.load('products', []);
-        products.push(product);
-        Utils.save('products', products);
-        
-        // تحديث Shop
+        // حفظ في نظام Shop
         if (window.Shop) {
             if (!Shop.products) Shop.products = [];
             Shop.products.push(product);
             Shop.saveProducts();
             Shop.displayProducts();
         } else {
-            // إذا Shop غير موجود، استخدم window.products
-            if (!window.products) window.products = [];
-            window.products.push(product);
-            this.displayProducts(window.products);
+            // حفظ محلياً
+            let products = Utils.load('products', []);
+            products.push(product);
+            Utils.save('products', products);
+            this.displayProducts(products);
         }
         
         // إرسال إلى تلغرام
@@ -362,7 +409,7 @@ const App = {
 🕐 ${new Date().toLocaleString('ar-EG')}
             `;
             
-            const response = await fetch(`https://api.telegram.org/bot8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0/sendMessage`, {
+            await fetch(`https://api.telegram.org/bot8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -371,26 +418,15 @@ const App = {
                     parse_mode: 'Markdown'
                 })
             });
-            
-            const result = await response.json();
-            
-            if (result.ok) {
-                console.log('✅ تم إرسال المنتج إلى تلغرام');
-                Utils.showNotification('✅ تم الإرسال إلى تلغرام', 'success');
-            } else {
-                console.error('❌ فشل الإرسال إلى تلغرام:', result);
-                Utils.showNotification('❌ فشل الإرسال إلى تلغرام', 'error');
-            }
         } catch (error) {
             console.error('❌ خطأ في الاتصال بتلغرام:', error);
-            Utils.showNotification('❌ خطأ في الاتصال', 'error');
         }
         
-        Utils.showNotification('✅ تم إضافة المنتج محلياً');
+        Utils.showNotification('✅ تم إضافة المنتج');
         this.closeAddProductForm();
     },
     
-    // عرض المنتجات (دالة مساعدة)
+    // عرض المنتجات
     displayProducts(products) {
         const container = document.getElementById('productsContainer');
         if (!container) return;
@@ -413,24 +449,38 @@ const App = {
     
     // ===== دوال السلة =====
     addToCart(productId) {
-        Cart.add(productId);
+        if (window.Cart) {
+            Cart.add(productId);
+        } else {
+            Utils.showNotification('تمت الإضافة للسلة (تجريبي)');
+        }
     },
     
     toggleCart() {
         document.getElementById('cartSidebar').classList.toggle('open');
-        Cart.display();
+        if (window.Cart) {
+            Cart.display();
+        }
     },
     
     updateCartItem(productId, newQuantity) {
-        Cart.update(productId, newQuantity);
+        if (window.Cart) {
+            Cart.update(productId, newQuantity);
+        }
     },
     
     removeFromCart(productId) {
-        Cart.remove(productId);
+        if (window.Cart) {
+            Cart.remove(productId);
+        }
     },
     
     checkout() {
-        Cart.checkout();
+        if (window.Cart) {
+            Cart.checkout();
+        } else {
+            alert('تم التوجيه إلى واتساب');
+        }
     },
     
     // ===== دوال المدير =====
@@ -463,7 +513,9 @@ const App = {
     },
     
     getOverviewHTML() {
-        const stats = Auth.getStats();
+        const stats = Auth.getStats ? Auth.getStats() : { total: 0, merchants: 0, pending: 0 };
+        const productCount = window.Shop ? Shop.products.length : (this.products ? this.products.length : 0);
+        
         return `
             <h3 style="color:var(--gold); margin-bottom:20px;">نظرة عامة</h3>
             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px;">
@@ -485,26 +537,26 @@ const App = {
                 <div style="background:var(--glass); padding:20px; border-radius:20px; text-align:center;">
                     <i class="fas fa-box" style="font-size:40px; color:var(--gold);"></i>
                     <h4>المنتجات</h4>
-                    <p style="font-size:24px;">${Shop.products.length}</p>
+                    <p style="font-size:24px;">${productCount}</p>
                 </div>
             </div>
         `;
     },
     
     getUsersHTML() {
+        const users = Auth.users || [];
         return `
             <h3 style="color:var(--gold); margin-bottom:20px;">المستخدمين</h3>
             <table style="width:100%;">
                 <thead>
-                    <tr><th>الاسم</th><th>البريد</th><th>الدور</th><th>المعرف</th></tr>
+                    <tr><th>الاسم</th><th>البريد</th><th>الدور</th></tr>
                 </thead>
                 <tbody>
-                    ${Auth.users.map(u => `
+                    ${users.map(u => `
                         <tr>
                             <td>${u.name}</td>
                             <td>${u.email}</td>
-                            <td>${u.roleName || u.role}</td>
-                            <td>${u.userId}</td>
+                            <td>${u.role || 'user'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -513,27 +565,25 @@ const App = {
     },
     
     getMerchantsHTML() {
-        const merchants = Auth.users.filter(u => u.role === 'merchant');
+        const users = Auth.users || [];
+        const merchants = users.filter(u => u.role === 'merchant');
         return `
             <h3 style="color:var(--gold); margin-bottom:20px;">التجار (${merchants.length})</h3>
             ${merchants.map(m => `
                 <div style="background:var(--glass); padding:15px; border-radius:15px; margin:10px 0;">
                     <p><strong>${m.name}</strong> - ${m.email}</p>
-                    <p>معرف: ${m.userId}</p>
                 </div>
             `).join('')}
         `;
     },
     
     getRequestsHTML() {
-        const requests = Auth.getPendingRequests();
+        const requests = Auth.getPendingRequests ? Auth.getPendingRequests() : [];
         return `
             <h3 style="color:var(--gold); margin-bottom:20px;">طلبات الأدوار (${requests.length})</h3>
             ${requests.map(r => `
                 <div style="background:var(--glass); padding:15px; border-radius:15px; margin:10px 0;">
                     <p><strong>${r.userName}</strong> يطلب دور <span style="color:var(--gold);">${r.requestedRoleName}</span></p>
-                    <p>البريد: ${r.userEmail}</p>
-                    <p>البيانات: ${JSON.stringify(r.data)}</p>
                     <div style="display:flex; gap:10px; margin-top:10px;">
                         <button class="btn-gold" onclick="Auth.approveRequest('${r.id}'); location.reload();">موافقة</button>
                         <button class="btn-outline-gold" onclick="Auth.rejectRequest('${r.id}'); location.reload();">رفض</button>
@@ -544,6 +594,7 @@ const App = {
     },
     
     getProductsHTML() {
+        const products = window.Shop ? Shop.products : (this.products || []);
         return `
             <h3 style="color:var(--gold); margin-bottom:20px;">المنتجات</h3>
             <table style="width:100%;">
@@ -551,12 +602,12 @@ const App = {
                     <tr><th>المنتج</th><th>السعر</th><th>المخزون</th><th>التاجر</th></tr>
                 </thead>
                 <tbody>
-                    ${Shop.products.map(p => `
+                    ${products.map(p => `
                         <tr>
                             <td>${p.name}</td>
                             <td>${p.price} دج</td>
                             <td>${p.stock}</td>
-                            <td>${p.merchantName}</td>
+                            <td>${p.merchantName || 'المتجر'}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -593,7 +644,7 @@ const App = {
         Utils.openModal('adminAppsModal');
     },
     
-    // ===== [مضافة] دالة تشغيل الريلز =====
+    // ===== دالة تشغيل الريلز =====
     playReel(reelId) {
         window.open(`07-reels.html?id=${reelId}`, '_blank');
     },
