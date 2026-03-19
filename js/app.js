@@ -259,7 +259,7 @@ const App = {
         Shop.displayProducts();
     },
     
-    // ===== [إضافة] دوال إضافة المنتج للأيقونة =====
+    // ===== [إضافة] دوال إضافة المنتج للأيقونة مع حفظ في تلغرام =====
     
     // فتح نموذج إضافة منتج (للأيقونة)
     openAddProductForm() {
@@ -286,8 +286,8 @@ const App = {
         }
     },
     
-    // حفظ المنتج الجديد (للأيقونة)
-    saveNewProduct() {
+    // حفظ المنتج الجديد (للأيقونة) مع الإرسال إلى تلغرام
+    async saveNewProduct() {
         // التحقق من تسجيل الدخول
         if (!Auth.currentUser) {
             Utils.showNotification('❌ يجب تسجيل الدخول أولاً', 'error');
@@ -325,24 +325,68 @@ const App = {
             image: CONFIG.defaultImage,
             merchantId: Auth.currentUser.merchantId || Auth.currentUser.userId || 'USER',
             merchantName: Auth.currentUser.name,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            dateStr: 'الآن'
         };
         
-        // إضافة للمنتجات
-        if (!window.products) window.products = [];
-        window.products.push(product);
-        Utils.save('products', window.products);
+        // حفظ محلياً في localStorage
+        let products = Utils.load('products', []);
+        products.push(product);
+        Utils.save('products', products);
         
-        // إضافة لـ Shop إذا كان موجوداً
-        if (Shop && Shop.products) {
+        // تحديث Shop
+        if (window.Shop) {
+            if (!Shop.products) Shop.products = [];
             Shop.products.push(product);
             Shop.saveProducts();
             Shop.displayProducts();
         } else {
+            // إذا Shop غير موجود، استخدم window.products
+            if (!window.products) window.products = [];
+            window.products.push(product);
             this.displayProducts(window.products);
         }
         
-        Utils.showNotification('✅ تم إضافة المنتج');
+        // إرسال إلى تلغرام
+        try {
+            const message = `
+🟣 *منتج جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *المنتج:* ${product.name}
+💰 *السعر:* ${product.price} دج
+🏷️ *القسم:* ${product.category}
+📊 *الكمية:* ${product.stock}
+👤 *التاجر:* ${product.merchantName}
+🆔 *المعرف:* ${product.merchantId}
+📝 *الوصف:* ${product.description || 'لا يوجد'}
+🕐 ${new Date().toLocaleString('ar-EG')}
+            `;
+            
+            const response = await fetch(`https://api.telegram.org/bot8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: '-1003822964890',
+                    text: message,
+                    parse_mode: 'Markdown'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.ok) {
+                console.log('✅ تم إرسال المنتج إلى تلغرام');
+                Utils.showNotification('✅ تم الإرسال إلى تلغرام', 'success');
+            } else {
+                console.error('❌ فشل الإرسال إلى تلغرام:', result);
+                Utils.showNotification('❌ فشل الإرسال إلى تلغرام', 'error');
+            }
+        } catch (error) {
+            console.error('❌ خطأ في الاتصال بتلغرام:', error);
+            Utils.showNotification('❌ خطأ في الاتصال', 'error');
+        }
+        
+        Utils.showNotification('✅ تم إضافة المنتج محلياً');
         this.closeAddProductForm();
     },
     
