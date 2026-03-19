@@ -33,32 +33,24 @@ const IDSystem = {
     counters: {
         admin: 1,
         merchant: 1000,
-        delivery_company: 2000,
-        delivery_person: 3000,
+        distributor: 2000,
+        delivery: 3000,
         content_creator: 4000,
-        entertainer: 5000,
-        customer: 6000,
+        customer: 5000,
         product: 1,
         order: 1,
-        warehouse: 1,
-        reel: 1,
-        request: 1
+        reel: 1
     },
     
     // بادئات المعرفات
     prefixes: {
         admin: 'ADM',
         merchant: 'MER',
-        delivery_company: 'DLC',
-        delivery_person: 'DLP',
-        content_creator: 'CRC',
-        entertainer: 'ENT',
+        distributor: 'DIS',
+        delivery: 'DEL',
+        content_creator: 'CRE',
         customer: 'CUS',
-        product: 'PRD',
-        order: 'ORD',
-        warehouse: 'WRH',
-        reel: 'REL',
-        request: 'REQ'
+        product: 'PRD'
     },
     
     // تحميل العدادات
@@ -76,49 +68,49 @@ const IDSystem = {
     
     // إنشاء معرف فريد
     generateId(type, options = {}) {
-        // زيادة العداد
         this.counters[type] = (this.counters[type] || 0) + 1;
-        
-        // الحصول على البادئة
         const prefix = this.prefixes[type] || 'GEN';
-        
-        // تنسيق الرقم (6 أرقام)
-        const number = this.counters[type].toString().padStart(6, '0');
-        
-        // إضافة تاريخ إذا طلب
-        const date = options.includeDate ? `_${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}` : '';
-        
-        // إضافة بصمة إذا طلب
-        const fingerprint = options.includeFingerprint && window.Fingerprint ? `_${Fingerprint.fingerprint.slice(0, 4)}` : '';
-        
-        // المعرف النهائي
-        const id = `${prefix}${date}${fingerprint}_${number}`;
-        
-        // حفظ العدادات
+        const number = this.counters[type].toString().padStart(4, '0');
         this.saveCounters();
-        
-        return id;
+        return `${prefix}_${number}`;
     },
     
-    // إنشاء معرف للتاجر
-    generateMerchantId(merchantData) {
-        return this.generateId('merchant', { includeDate: true, includeFingerprint: true });
+    // ===== [جديد] إنشاء معرف للمستخدم عند التسجيل =====
+    generateUserId(role) {
+        switch(role) {
+            case 'admin':
+                return this.generateId('admin');
+            case 'merchant':
+                return this.generateId('merchant');
+            case 'distributor':
+                return this.generateId('distributor');
+            case 'delivery':
+                return this.generateId('delivery');
+            case 'content_creator':
+                return this.generateId('content_creator');
+            default:
+                return this.generateId('customer');
+        }
     },
     
-    // إنشاء معرف لمنتج (مرتبط بالتاجر)
-    generateProductId(merchantId) {
+    // ===== [جديد] إنشاء معرف للمنتج = معرف صاحبه + رقم تسلسلي =====
+    generateProductId(ownerId) {
         this.counters.product++;
         const productNum = this.counters.product.toString().padStart(6, '0');
         this.saveCounters();
-        return `${merchantId}_PRD_${productNum}`;
+        
+        // إزالة أي مسافات أو رموز غير مرغوب فيها من ownerId
+        const cleanOwnerId = ownerId.replace(/[^A-Za-z0-9_]/g, '');
+        
+        // المنتج يأخذ معرف صاحبه + رقم تسلسلي
+        return `${cleanOwnerId}_PRD_${productNum}`;
     },
     
-    // إنشاء معرف لمستودع
-    generateWarehouseId(merchantId) {
-        this.counters.warehouse++;
-        const warehouseNum = this.counters.warehouse.toString().padStart(4, '0');
-        this.saveCounters();
-        return `WRH_${merchantId}_${warehouseNum}`;
+    // ===== [جديد] استخراج معرف صاحب المنتج من معرف المنتج =====
+    extractOwnerId(productId) {
+        if (!productId) return null;
+        const parts = productId.split('_PRD_');
+        return parts[0];
     },
     
     // تحليل المعرف
@@ -126,7 +118,6 @@ const IDSystem = {
         const parts = id.split('_');
         const prefix = parts[0];
         
-        // تحديد النوع من البادئة
         let type = 'unknown';
         for (const [key, value] of Object.entries(this.prefixes)) {
             if (value === prefix) {
@@ -148,24 +139,20 @@ const IDSystem = {
 const FingerprintSystem = {
     fingerprint: null,
     
-    // إنشاء بصمة فريدة
     generate() {
         const components = [
             navigator.userAgent,
             screen.width + 'x' + screen.height,
             new Date().getTimezoneOffset(),
             navigator.language,
-            navigator.hardwareConcurrency || 'unknown',
-            navigator.deviceMemory || 'unknown',
             Date.now()
         ];
         
         const hash = this.hashString(components.join('###'));
-        this.fingerprint = `FP_${hash.slice(0, 12)}`;
+        this.fingerprint = `FP_${hash.slice(0, 8)}`;
         return this.fingerprint;
     },
     
-    // تحويل النص إلى hash
     hashString(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -176,7 +163,6 @@ const FingerprintSystem = {
         return Math.abs(hash).toString(36).toUpperCase();
     },
     
-    // التهيئة
     init() {
         this.fingerprint = this.generate();
         console.log('🆔 بصمة الجهاز:', this.fingerprint);
@@ -185,70 +171,41 @@ const FingerprintSystem = {
 
 // ===== [1.4] دوال مساعدة =====
 const Utils = {
-    // تنسيق الأرقام (1K, 1M)
     formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
         if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
         return num.toString();
     },
     
-    // حساب الوقت المنقضي
     getTimeAgo(timestamp) {
         const now = new Date();
         const past = new Date(timestamp * 1000);
         const seconds = Math.floor((now - past) / 1000);
         
         if (seconds < 60) return `منذ ${seconds} ثانية`;
-        
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `منذ ${minutes} ${minutes === 1 ? 'دقيقة' : 'دقائق'}`;
-        
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `منذ ${hours} ${hours === 1 ? 'ساعة' : 'ساعات'}`;
-        
-        const days = Math.floor(hours / 24);
-        if (days < 7) return `منذ ${days} ${days === 1 ? 'يوم' : 'أيام'}`;
-        
-        const weeks = Math.floor(days / 7);
-        if (weeks < 4) return `منذ ${weeks} ${weeks === 1 ? 'أسبوع' : 'أسابيع'}`;
-        
-        const months = Math.floor(days / 30);
-        if (months < 12) return `منذ ${months} ${months === 1 ? 'شهر' : 'أشهر'}`;
-        
-        const years = Math.floor(days / 365);
-        return `منذ ${years} ${years === 1 ? 'سنة' : 'سنوات'}`;
+        if (seconds < 3600) return `منذ ${Math.floor(seconds / 60)} دقيقة`;
+        if (seconds < 86400) return `منذ ${Math.floor(seconds / 3600)} ساعة`;
+        return `منذ ${Math.floor(seconds / 86400)} يوم`;
     },
     
-    // إظهار إشعار
     showNotification(message, type = 'success') {
         const container = document.getElementById('toastContainer');
-        if (!container) {
-            console.warn('toastContainer غير موجود');
-            return;
-        }
+        if (!container) return;
         
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         
-        // اختيار الأيقونة حسب النوع
         let icon = '✅';
         if (type === 'error') icon = '❌';
         else if (type === 'warning') icon = '⚠️';
         else if (type === 'info') icon = 'ℹ️';
         
         toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle"></i> ${icon} ${message}`;
-        
         container.appendChild(toast);
         
-        // إزالة الإشعار بعد 3 ثوان
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 3000);
+        setTimeout(() => toast.remove(), 3000);
     },
     
-    // حفظ في localStorage
     save(key, data) {
         try {
             localStorage.setItem(key, JSON.stringify(data));
@@ -259,50 +216,29 @@ const Utils = {
         }
     },
     
-    // تحميل من localStorage
     load(key, defaultValue = null) {
         try {
             const data = localStorage.getItem(key);
             return data ? JSON.parse(data) : defaultValue;
         } catch (e) {
-            console.error('خطأ في التحميل:', e);
             return defaultValue;
         }
     },
     
-    // فتح نافذة
     openModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.add('show');
-        }
+        document.getElementById(modalId)?.classList.add('show');
     },
     
-    // إغلاق نافذة
     closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.remove('show');
-        }
+        document.getElementById(modalId)?.classList.remove('show');
     },
     
-    // التمرير للأعلى
     scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     },
     
-    // التمرير للأسفل
     scrollToBottom() {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    },
-    
-    // نسخ نص
-    copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            this.showNotification('تم النسخ', 'success');
-        }).catch(() => {
-            this.showNotification('فشل النسخ', 'error');
-        });
     }
 };
 
@@ -312,8 +248,7 @@ window.IDSystem = IDSystem;
 window.Fingerprint = FingerprintSystem;
 window.Utils = Utils;
 
-// تهيئة البصمة
 Fingerprint.init();
 IDSystem.loadCounters();
 
-console.log('✅ نظام المعرفات جاهز');
+console.log('✅ نظام المعرفات جاهز - كل مستخدم له معرف، وكل منتج يحمل معرف صاحبه');
