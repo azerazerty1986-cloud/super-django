@@ -13,52 +13,195 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- ملفات CSS -->
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    
     <style>
-        /* أنماط إضافية للتأكد من ظهور النوافذ */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
+        /* متغيرات الألوان - ثيم افتراضي فاتح */
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --gold: #d4af37;
+            --gold-light: #f1e5b3;
+            --border: #e2e8f0;
+            --shadow: 0 10px 30px rgba(0,0,0,0.05);
+            --card-bg: #ffffff;
+            --nav-bg: rgba(255,255,255,0.9);
+            --transition: all 0.3s ease;
         }
-        
-        .modal.show {
-            display: flex !important;
+        /* ثيم ليلي */
+        body.dark-mode {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: #334155;
+            --card-bg: #1e293b;
+            --nav-bg: rgba(30,41,59,0.9);
+            --shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        
-        .modal-content {
-            background: var(--bg-secondary);
-            border: 3px solid var(--gold);
-            border-radius: 30px;
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; transition: var(--transition); overflow-x: hidden; }
+        .container { max-width: 1300px; margin: 0 auto; padding: 0 20px; width: 100%; }
+
+        /* خلفية متحركة ناعمة */
+        .animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 30% 50%, rgba(212,175,55,0.03) 0%, transparent 50%); pointer-events: none; z-index: -1; animation: floatBg 20s infinite; }
+        @keyframes floatBg { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* الشريط العلوي */
+        .top-bar { background: var(--gold); color: #1e293b; padding: 8px 0; font-weight: 600; font-size: 0.9rem; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); background: rgba(212,175,55,0.95); box-shadow: var(--shadow); }
+        .top-bar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .top-bar-left { display: flex; gap: 25px; flex-wrap: wrap; }
+        .top-bar-item { display: flex; align-items: center; gap: 8px; }
+        .top-bar-item i { font-size: 1.1rem; }
+        .theme-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; background: rgba(0,0,0,0.1); padding: 5px 15px; border-radius: 50px; transition: var(--transition); }
+        .theme-toggle:hover { background: rgba(0,0,0,0.2); }
+
+        /* شريط العروض المتحرك */
+        .marquee-bar { background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 10px 0; overflow: hidden; position: relative; }
+        .marquee-content { display: flex; animation: scroll 20s linear infinite; width: max-content; }
+        .marquee-item { display: flex; align-items: center; gap: 10px; padding: 0 30px; font-size: 1rem; font-weight: 500; }
+        .marquee-item i { font-size: 1.2rem; color: var(--gold-light); }
+        @keyframes scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* هيدر رئيسي */
+        .main-header { padding: 20px 0; background: var(--nav-bg); backdrop-filter: blur(15px); position: sticky; top: 40px; z-index: 99; border-bottom: 1px solid var(--border); }
+        .header-content { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo-icon { width: 50px; height: 50px; background: var(--gold); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #1e293b; transform: rotate(10deg); transition: var(--transition); }
+        .logo:hover .logo-icon { transform: rotate(0deg); }
+        .logo-text h1 { font-size: 1.7rem; font-weight: 800; line-height: 1.2; }
+        .logo-text span { font-size: 0.9rem; color: var(--gold); font-weight: 600; }
+
+        /* بحث */
+        .search-wrapper { flex: 1; max-width: 500px; }
+        .search-box { display: flex; background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 60px; overflow: hidden; transition: var(--transition); }
+        .search-box:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.2); }
+        .search-box input { flex: 1; padding: 15px 20px; border: none; background: transparent; color: var(--text-primary); font-size: 1rem; }
+        .search-box input::placeholder { color: var(--text-secondary); }
+        .search-box button { background: var(--gold); border: none; padding: 0 25px; color: #1e293b; font-size: 1.2rem; cursor: pointer; transition: var(--transition); }
+        .search-box button:hover { background: #c9b037; }
+
+        /* أزرار الهيدر */
+        .header-actions { display: flex; gap: 12px; }
+        .action-btn { background: var(--bg-secondary); border: 1px solid var(--border); width: 50px; height: 50px; border-radius: 60px; display: flex; align-items: center; justify-content: center; color: var(--text-primary); font-size: 1.2rem; cursor: pointer; transition: var(--transition); position: relative; box-shadow: var(--shadow); }
+        .action-btn:hover { background: var(--gold); color: #1e293b; border-color: var(--gold); transform: translateY(-3px); }
+        .cart-count { position: absolute; top: -5px; right: -5px; background: red; color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        /* القائمة الرئيسية */
+        .nav-menu { background: var(--nav-bg); backdrop-filter: blur(10px); border-radius: 60px; padding: 10px; margin: 20px 0; display: flex; flex-wrap: wrap; gap: 5px; border: 1px solid var(--border); position: sticky; top: 110px; z-index: 98; }
+        .nav-link { padding: 12px 25px; border-radius: 60px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        .nav-link i { font-size: 1.1rem; }
+        .nav-link.active, .nav-link:hover { background: var(--gold); color: #1e293b; }
+
+        /* ريلز */
+        .reels-video-section { margin: 30px 0; }
+        .reels-video-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header-title { display: flex; align-items: center; gap: 10px; }
+        .reel-section-icon { font-size: 2rem; color: var(--gold); }
+        .view-all-link { display: flex; align-items: center; gap: 5px; color: var(--gold); font-weight: 600; text-decoration: none; cursor: pointer; }
+        .reels-video-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .reel-video-card { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 9/16; cursor: pointer; box-shadow: var(--shadow); transition: var(--transition); }
+        .reel-video-card:hover { transform: scale(1.02); }
+        .reel-video-card video { width: 100%; height: 100%; object-fit: cover; }
+        .reel-video-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px 15px 15px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: white; display: flex; flex-direction: column; justify-content: flex-end; }
+        .reel-video-play { font-size: 2.5rem; margin-bottom: 10px; }
+        .reel-video-info { display: flex; justify-content: space-between; font-size: 0.85rem; }
+        .reel-video-title { font-weight: 700; }
+        .reel-video-views { opacity: 0.9; }
+
+        /* منتجات */
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; margin: 30px 0; }
+        .product-card { background: var(--card-bg); border-radius: 30px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); transition: var(--transition); cursor: pointer; }
+        .product-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(212,175,55,0.15); }
+        .product-image { height: 200px; background: linear-gradient(145deg, var(--border), var(--bg-secondary)); display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 3rem; position: relative; }
+        .product-badge { position: absolute; top: 10px; right: 10px; background: var(--gold); color: #1e293b; padding: 5px 12px; border-radius: 50px; font-weight: 700; font-size: 0.75rem; }
+        .product-info { padding: 20px; }
+        .product-title { font-weight: 800; font-size: 1.2rem; margin-bottom: 5px; }
+        .product-category { color: var(--gold); font-weight: 600; font-size: 0.9rem; margin-bottom: 10px; }
+        .product-price { font-size: 1.5rem; font-weight: 900; color: var(--gold); margin: 10px 0; }
+        .product-stock { font-size: 0.9rem; color: var(--text-secondary); }
+        .product-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-add { flex: 1; background: var(--gold); border: none; padding: 12px; border-radius: 60px; font-weight: 700; color: #1e293b; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-add:hover { background: #c9b037; transform: scale(1.02); }
+
+        /* سلة جانبية */
+        .cart-sidebar { position: fixed; top: 0; left: -400px; width: 380px; height: 100vh; background: var(--bg-secondary); border-left: 2px solid var(--gold); box-shadow: -10px 0 30px rgba(0,0,0,0.2); transition: left 0.4s ease; z-index: 2000; display: flex; flex-direction: column; }
+        .cart-sidebar.open { left: 0; }
+        .cart-header { padding: 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .close-cart { font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); transition: var(--transition); }
+        .close-cart:hover { color: var(--gold); transform: rotate(90deg); }
+        .cart-items { flex: 1; overflow-y: auto; padding: 20px; }
+        .cart-footer { padding: 25px; border-top: 1px solid var(--border); }
+        .cart-total { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; }
+        .checkout-btn { width: 100%; background: #25D366; color: white; border: none; padding: 15px; border-radius: 60px; font-weight: 700; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: var(--transition); }
+        .checkout-btn:hover { background: #20b859; transform: translateY(-2px); }
+
+        /* الأيقونات الثابتة */
+        .add-product-icon { position: fixed; bottom: 100px; left: 30px; width: 60px; height: 60px; background: var(--gold); border-radius: 60px; display: flex; align-items: center; justify-content: center; color: #1e293b; font-size: 1.8rem; box-shadow: 0 5px 20px rgba(212,175,55,0.4); cursor: pointer; transition: var(--transition); z-index: 99; }
+        .add-product-icon:hover { transform: scale(1.1) rotate(90deg); }
+        .fixed-cart { position: fixed; bottom: 180px; left: 30px; width: 60px; height: 60px; background: var(--bg-secondary); border: 2px solid var(--gold); border-radius: 60px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: 1.5rem; box-shadow: var(--shadow); cursor: pointer; transition: var(--transition); z-index: 99; }
+        .fixed-cart .fixed-cart-count { position: absolute; top: -5px; right: -5px; background: red; color: white; width: 24px; height: 24px; border-radius: 50%; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .fixed-reels, .fixed-whatsapp { position: fixed; left: 30px; width: 60px; height: 60px; border-radius: 60px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: var(--shadow); cursor: pointer; transition: var(--transition); z-index: 99; color: white; }
+        .fixed-reels { bottom: 260px; background: #e1306c; }
+        .fixed-whatsapp { bottom: 340px; background: #25D366; }
+        .reels-notification { position: absolute; top: -5px; right: -5px; background: red; color: white; width: 24px; height: 24px; border-radius: 50%; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+
+        /* أزرار التنقل */
+        .navigation-buttons { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; z-index: 999; }
+        .nav-btn { width: 50px; height: 50px; border-radius: 60px; background: var(--gold); border: none; color: #1e293b; font-size: 1.3rem; cursor: pointer; box-shadow: var(--shadow); transition: var(--transition); }
+        .nav-btn:hover { transform: scale(1.1); }
+        .quick-top-btn { position: fixed; bottom: 30px; right: 100px; width: 50px; height: 50px; border-radius: 60px; background: var(--bg-secondary); border: 2px solid var(--gold); color: var(--gold); font-size: 1.3rem; cursor: pointer; box-shadow: var(--shadow); transition: var(--transition); display: none; z-index: 999; }
+        .quick-top-btn.show { display: block; }
+
+        /* نوافذ مودال */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 10000; justify-content: center; align-items: center; }
+        .modal.show { display: flex !important; }
+        .modal-content { background: var(--bg-secondary); border: 3px solid var(--gold); border-radius: 30px; padding: 30px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-lg { max-width: 1000px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-btn { background: none; border: none; font-size: 2rem; cursor: pointer; color: var(--text-secondary); transition: var(--transition); }
+        .close-btn:hover { color: var(--gold); transform: rotate(90deg); }
+
+        /* استمارات */
+        .form-group { margin-bottom: 20px; }
+        .form-control { width: 100%; padding: 15px; background: var(--bg-primary); border: 2px solid var(--border); border-radius: 60px; color: var(--text-primary); font-size: 1rem; transition: var(--transition); }
+        .form-control:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,0.2); }
+        .btn-gold { background: var(--gold); color: #1e293b; border: none; padding: 15px 30px; border-radius: 60px; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: var(--transition); }
+        .btn-outline-gold { background: transparent; border: 2px solid var(--gold); color: var(--gold); padding: 15px 30px; border-radius: 60px; font-weight: 700; cursor: pointer; transition: var(--transition); }
+        .btn-gold:hover, .btn-outline-gold:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(212,175,55,0.3); }
+
+        /* لوحة التحكم */
+        .dashboard-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .dashboard-tab { padding: 12px 25px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 60px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+        .dashboard-tab.active, .dashboard-tab:hover { background: var(--gold); color: #1e293b; }
+
+        /* فوتر */
+        .footer { background: var(--bg-secondary); border-top: 2px solid var(--gold); margin-top: 60px; padding: 60px 0 20px; }
+        .footer-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; }
+        .footer-col h3 { font-size: 1.3rem; margin-bottom: 20px; color: var(--gold); }
+        .footer-col p { margin-bottom: 10px; color: var(--text-secondary); cursor: pointer; transition: var(--transition); }
+        .footer-col p:hover { color: var(--gold); transform: translateX(-5px); }
+        .copyright { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-secondary); }
+
+        /* تجاوب */
+        @media (max-width: 768px) {
+            .header-content { flex-direction: column; }
+            .search-wrapper { max-width: 100%; }
+            .top-bar-left { justify-content: center; }
+            .cart-sidebar { width: 100%; left: -100%; }
+            .navigation-buttons { right: 15px; }
+            .quick-top-btn { right: 80px; }
         }
-        
-        .modal-lg {
-            max-width: 1000px;
-        }
+        /* معاينة الصور */
+        .image-upload-area { border: 2px dashed var(--gold); border-radius: 30px; padding: 30px; text-align: center; margin: 20px 0; cursor: pointer; }
+        .image-preview { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+        .image-preview img { width: 80px; height: 80px; border-radius: 15px; object-fit: cover; border: 2px solid var(--gold); }
     </style>
 </head>
 <body>
-    <!-- خلفية متحركة -->
     <div class="animated-bg"></div>
 
-    <!-- ===== سلة التسوق الجانبية ===== -->
+    <!-- سلة التسوق الجانبية -->
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
             <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
@@ -66,94 +209,56 @@
         </div>
         <div class="cart-items" id="cartItems"></div>
         <div class="cart-footer">
-            <div class="cart-total">
-                <span>المجموع:</span>
-                <span id="cartTotal">0 دج</span>
-            </div>
-            <button class="checkout-btn" onclick="App.checkout()">
-                <i class="fab fa-whatsapp"></i> إتمام الطلب
-            </button>
+            <div class="cart-total"><span>المجموع:</span> <span id="cartTotal">0 دج</span></div>
+            <button class="checkout-btn" onclick="App.checkout()"><i class="fab fa-whatsapp"></i> إتمام الطلب</button>
         </div>
     </div>
 
-    <!-- ===== الشريط العلوي ===== -->
+    <!-- الشريط العلوي -->
     <div class="top-bar">
         <div class="container">
             <div class="top-bar-left">
-                <div class="top-bar-item">
-                    <i class="fas fa-truck-fast"></i>
-                    <span>شحن مجاني للطلبات فوق 5000 دج</span>
-                </div>
-                <div class="top-bar-item">
-                    <i class="fas fa-headset"></i>
-                    <span>دعم VIP 24/7</span>
-                </div>
-                <div class="top-bar-item">
-                    <i class="fas fa-gem"></i>
-                    <span>منتجات أصلية 100%</span>
-                </div>
+                <div class="top-bar-item"><i class="fas fa-truck-fast"></i><span>شحن مجاني للطلبات فوق 5000 دج</span></div>
+                <div class="top-bar-item"><i class="fas fa-headset"></i><span>دعم VIP 24/7</span></div>
+                <div class="top-bar-item"><i class="fas fa-gem"></i><span>منتجات أصلية 100%</span></div>
             </div>
             <div class="top-bar-right">
-                <div class="theme-toggle" onclick="App.toggleTheme()" id="themeToggle">
-                    <i class="fas fa-moon"></i>
-                    <span>ليلي</span>
-                </div>
+                <div class="theme-toggle" onclick="App.toggleTheme()" id="themeToggle"><i class="fas fa-moon"></i><span>ليلي</span></div>
             </div>
         </div>
     </div>
 
-    <!-- ===== شريط العروض المتحرك ===== -->
+    <!-- شريط العروض المتحرك -->
     <div class="marquee-bar">
         <div class="marquee-content">
-            <div class="marquee-item">
-                <i class="fas fa-fire"></i>
-                <span>تخفيضات تصل 50%</span>
-            </div>
-            <div class="marquee-item">
-                <i class="fas fa-gem"></i>
-                <span>عروض حصرية</span>
-            </div>
-            <div class="marquee-item">
-                <i class="fas fa-clock"></i>
-                <span>الوقت: <span id="marqueeHours">12</span>:<span id="marqueeMinutes">30</span>:<span id="marqueeSeconds">45</span></span>
-            </div>
+            <div class="marquee-item"><i class="fas fa-fire"></i><span>تخفيضات تصل 50%</span></div>
+            <div class="marquee-item"><i class="fas fa-gem"></i><span>عروض حصرية</span></div>
+            <div class="marquee-item"><i class="fas fa-clock"></i><span>الوقت: <span id="marqueeHours">12</span>:<span id="marqueeMinutes">30</span>:<span id="marqueeSeconds">45</span></span></div>
         </div>
     </div>
 
-    <!-- ===== الهيدر الرئيسي ===== -->
+    <!-- الهيدر الرئيسي -->
     <header class="main-header">
         <div class="container header-content">
             <div class="logo">
                 <div class="logo-icon"><i class="fas fa-crown"></i></div>
-                <div class="logo-text">
-                    <h1>نكهة وجمال</h1>
-                    <span>ناردو برو 2026</span>
-                </div>
+                <div class="logo-text"><h1>نكهة وجمال</h1><span>ناردو برو 2026</span></div>
             </div>
-            
             <div class="search-wrapper">
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="App.searchProducts()">
                     <button onclick="App.searchProducts()"><i class="fas fa-search"></i></button>
                 </div>
             </div>
-            
             <div class="header-actions">
-                <button class="action-btn" onclick="App.openLoginModal()" id="userBtn">
-                    <i class="far fa-user"></i>
-                </button>
-                <button class="action-btn" onclick="App.toggleCart()">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-count" id="cartCounter">0</span>
-                </button>
-                <button class="action-btn" onclick="App.openDashboard()" id="dashboardBtn" style="display: none;">
-                    <i class="fas fa-chart-line"></i>
-                </button>
+                <button class="action-btn" onclick="App.openLoginModal()" id="userBtn"><i class="far fa-user"></i></button>
+                <button class="action-btn" onclick="App.toggleCart()"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCounter">0</span></button>
+                <button class="action-btn" onclick="App.openDashboard()" id="dashboardBtn" style="display: none;"><i class="fas fa-chart-line"></i></button>
             </div>
         </div>
     </header>
 
-    <!-- ===== القائمة الرئيسية ===== -->
+    <!-- القائمة الرئيسية -->
     <div class="container">
         <nav class="nav-menu" id="mainNav">
             <a class="nav-link active" onclick="App.filterProducts('all')"><i class="fas fa-home"></i> الرئيسية</a>
@@ -165,60 +270,34 @@
         </nav>
     </div>
 
-    <!-- ===== قسم ريلز الفيديو ===== -->
+    <!-- ريلز الفيديو -->
     <div class="reels-video-section">
         <div class="container">
             <div class="reels-video-header">
-                <div class="header-title">
-                    <i class="fas fa-film reel-section-icon"></i>
-                    <h2>ناردو ريلز</h2>
-                </div>
-                <a href="07-reels.html" class="view-all-link">
-                    <span>شاهد الكل</span>
-                    <i class="fas fa-arrow-left"></i>
-                </a>
+                <div class="header-title"><i class="fas fa-film reel-section-icon"></i><h2>ناردو ريلز</h2></div>
+                <a href="#" class="view-all-link" onclick="App.viewAllReels()"><span>شاهد الكل</span><i class="fas fa-arrow-left"></i></a>
             </div>
             <div class="reels-video-container" id="reelsVideoContainer">
                 <div class="reel-video-card" onclick="App.playReel(1)">
                     <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400" loop muted></video>
-                    <div class="reel-video-overlay">
-                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">وصفة زعتر</span>
-                            <span class="reel-video-views">15K مشاهدة</span>
-                        </div>
-                    </div>
+                    <div class="reel-video-overlay"><div class="reel-video-play"><i class="fas fa-play-circle"></i></div><div class="reel-video-info"><span class="reel-video-title">وصفة زعتر</span><span class="reel-video-views">15K مشاهدة</span></div></div>
                 </div>
                 <div class="reel-video-card" onclick="App.playReel(2)">
                     <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1596040033229-a9821e1929c7?w=400" loop muted></video>
-                    <div class="reel-video-overlay">
-                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">كريم ترطيب</span>
-                            <span class="reel-video-views">8K مشاهدة</span>
-                        </div>
-                    </div>
+                    <div class="reel-video-overlay"><div class="reel-video-play"><i class="fas fa-play-circle"></i></div><div class="reel-video-info"><span class="reel-video-title">كريم ترطيب</span><span class="reel-video-views">8K مشاهدة</span></div></div>
                 </div>
                 <div class="reel-video-card" onclick="App.playReel(3)">
                     <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1608571423912-8a4c8a8c9b9a?w=400" loop muted></video>
-                    <div class="reel-video-overlay">
-                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">بخور عود</span>
-                            <span class="reel-video-views">23K مشاهدة</span>
-                        </div>
-                    </div>
+                    <div class="reel-video-overlay"><div class="reel-video-play"><i class="fas fa-play-circle"></i></div><div class="reel-video-info"><span class="reel-video-title">بخور عود</span><span class="reel-video-views">23K مشاهدة</span></div></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== المنتجات ===== -->
-    <div class="container">
-        <div class="products-grid" id="productsContainer"></div>
-    </div>
+    <!-- المنتجات -->
+    <div class="container"><div class="products-grid" id="productsContainer"></div></div>
 
-    <!-- ===== لوحة التحكم الرئيسية ===== -->
+    <!-- لوحة التحكم -->
     <div class="container dashboard-section" id="dashboardSection" style="display: none;">
         <div class="dashboard-tabs">
             <button class="dashboard-tab active" onclick="App.switchDashboardTab('overview')">نظرة عامة</button>
@@ -230,273 +309,78 @@
         <div class="dashboard-content" id="dashboardContent"></div>
     </div>
 
-    <!-- ===== الفوتر ===== -->
+    <!-- فوتر -->
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-col">
-                    <h3>نكهة وجمال</h3>
-                    <p><i class="fas fa-store"></i> المتجر الذكي المتكامل</p>
-                    <p><i class="fas fa-star"></i> التقييم: 4.8/5</p>
-                </div>
-                <div class="footer-col">
-                    <h3>روابط سريعة</h3>
-                    <p><a href="#" onclick="App.filterProducts('all')">الرئيسية</a></p>
-                    <p><a href="#" onclick="App.filterProducts('promo')">برموسيو</a></p>
-                    <p><a href="#" onclick="App.filterProducts('spices')">توابل</a></p>
-                    <p><a href="#" onclick="App.filterProducts('cosmetic')">كوسمتيك</a></p>
-                </div>
-                <div class="footer-col">
-                    <h3>مساعدة</h3>
-                    <p>سياسة الخصوصية</p>
-                    <p>شروط الاستخدام</p>
-                    <p>طرق الدفع</p>
-                    <p>الشحن والتوصيل</p>
-                </div>
-                <div class="footer-col">
-                    <h3>اتصل بنا</h3>
-                    <p><i class="fab fa-whatsapp"></i> +213 56 224 36 48</p>
-                    <p><i class="fas fa-envelope"></i> info@nardoo.com</p>
-                </div>
+                <div class="footer-col"><h3>نكهة وجمال</h3><p><i class="fas fa-store"></i> المتجر الذكي المتكامل</p><p><i class="fas fa-star"></i> التقييم: 4.8/5</p></div>
+                <div class="footer-col"><h3>روابط سريعة</h3><p><a href="#" onclick="App.filterProducts('all')">الرئيسية</a></p><p><a href="#" onclick="App.filterProducts('promo')">برموسيو</a></p><p><a href="#" onclick="App.filterProducts('spices')">توابل</a></p><p><a href="#" onclick="App.filterProducts('cosmetic')">كوسمتيك</a></p></div>
+                <div class="footer-col"><h3>مساعدة</h3><p>سياسة الخصوصية</p><p>شروط الاستخدام</p><p>طرق الدفع</p><p>الشحن والتوصيل</p></div>
+                <div class="footer-col"><h3>اتصل بنا</h3><p><i class="fab fa-whatsapp"></i> +213 56 224 36 48</p><p><i class="fas fa-envelope"></i> info@nardoo.com</p></div>
             </div>
-            <div class="copyright">
-                © 2026 ناردو برو | جميع الحقوق محفوظة
-            </div>
+            <div class="copyright">© 2026 ناردو برو | جميع الحقوق محفوظة</div>
         </div>
     </footer>
 
-    <!-- ===== الأيقونات الثابتة ===== -->
-    <div class="add-product-icon" onclick="App.openAddProductForm()" title="إضافة منتج">
-        <i class="fas fa-plus"></i>
-    </div>
+    <!-- أيقونات ثابتة -->
+    <div class="add-product-icon" onclick="App.openAddProductForm()" title="إضافة منتج"><i class="fas fa-plus"></i></div>
+    <div class="fixed-cart" onclick="App.toggleCart()" id="fixedCart"><i class="fas fa-shopping-cart"></i><span class="fixed-cart-count" id="fixedCartCounter">0</span></div>
+    <a href="#" class="fixed-reels" onclick="App.viewAllReels()" title="ناردو ريلز"><i class="fas fa-film"></i><span class="reels-notification" id="reelsNotification">0</span></a>
+    <a href="https://wa.me/213562243648" target="_blank" class="fixed-whatsapp" title="تواصل معنا"><i class="fab fa-whatsapp"></i></a>
 
-    <div class="fixed-cart" onclick="App.toggleCart()" id="fixedCart">
-        <i class="fas fa-shopping-cart"></i>
-        <span class="fixed-cart-count" id="fixedCartCounter">0</span>
-    </div>
+    <!-- أزرار التنقل -->
+    <div class="navigation-buttons"><button class="nav-btn up-btn" onclick="App.scrollToTop()" title="الأعلى"><i class="fas fa-arrow-up"></i></button><button class="nav-btn down-btn" onclick="App.scrollToBottom()" title="الأسفل"><i class="fas fa-arrow-down"></i></button></div>
+    <button class="quick-top-btn" onclick="App.scrollToTop()" id="quickTopBtn" title="الأعلى"><i class="fas fa-chevron-up"></i></button>
 
-    <a href="07-reels.html" target="_blank" class="fixed-reels" title="ناردو ريلز">
-        <i class="fas fa-film"></i>
-        <span class="reels-notification" id="reelsNotification">0</span>
-    </a>
+    <!-- نوافذ مودال -->
+    <div class="modal" id="loginModal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2><button class="close-btn" onclick="App.closeModal('loginModal')">&times;</button></div><div class="auth-tabs"><button class="btn-gold" onclick="App.switchAuthTab('login')">دخول</button><button class="btn-outline-gold" onclick="App.switchAuthTab('register')">تسجيل</button></div><form id="loginForm" onsubmit="event.preventDefault(); App.handleLogin();"><div class="form-group"><label>👤 اسم المستخدم</label><input type="text" class="form-control" id="loginEmail" required placeholder="أدخل اسم المستخدم"></div><div class="form-group"><label>🔑 كلمة المرور</label><input type="password" class="form-control" id="loginPassword" required placeholder="********"></div><button type="submit" class="btn-gold" style="width:100%;">دخول</button></form><form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); App.handleRegister();"><div class="form-group"><label>👤 الاسم الكامل</label><input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري"></div><div class="form-group"><label>📧 البريد الإلكتروني</label><input type="email" class="form-control" id="regEmail" required placeholder="example@email.com"></div><div class="form-group"><label>🔑 كلمة المرور</label><input type="password" class="form-control" id="regPassword" required placeholder="******"></div><div class="form-group"><label>📱 رقم الهاتف</label><input type="tel" class="form-control" id="regPhone" required placeholder="05XXXXXXXX"></div><div class="form-group"><label><input type="checkbox" id="requestRole" onchange="App.toggleRoleFields()"> <span>طلب دور</span></label></div><div id="roleFields" style="display:none;"><div class="form-group"><label>🎯 اختر الدور</label><select class="form-control" id="requestedRole"><option value="merchant">تاجر</option><option value="distributor">موزع</option><option value="delivery_person">مندوب توصيل</option><option value="content_creator">صانع محتوى</option></select></div><div class="form-group"><label>🏷️ اسم المتجر</label><input type="text" class="form-control" id="storeName" placeholder="اسم المتجر"></div></div><button type="submit" class="btn-gold" style="width:100%;">تسجيل</button></form></div></div>
 
-    <a href="https://wa.me/213562243648" target="_blank" class="fixed-whatsapp" title="تواصل معنا">
-        <i class="fab fa-whatsapp"></i>
-    </a>
+    <!-- مودال إضافة منتج (الأصلية) -->
+    <div class="modal" id="productModal"><div class="modal-content modal-lg"><div class="modal-header"><h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2><button class="close-btn" onclick="App.closeModal('productModal')">&times;</button></div><form id="productForm" onsubmit="event.preventDefault(); App.saveProduct();"><div class="form-group"><label>📦 اسم المنتج</label><input type="text" class="form-control" id="productName" required placeholder="زعتر فلسطيني"></div><div class="form-group"><label>🏷️ القسم</label><select class="form-control" id="productCategory" required><option value="promo">برموسيو</option><option value="spices">توابل</option><option value="cosmetic">كوسمتيك</option><option value="other">منتوجات أخرى</option></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>💰 السعر (دج)</label><input type="number" class="form-control" id="productPrice" required min="0" placeholder="500"></div><div class="form-group"><label>📊 الكمية</label><input type="number" class="form-control" id="productStock" required min="0" placeholder="50"></div></div><div class="form-group"><label>⚠️ الحد الأدنى</label><input type="number" class="form-control" id="productMinStock" value="5" min="0" placeholder="5"></div><div class="form-group"><label>📝 وصف المنتج</label><textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea></div><div class="image-upload-area" onclick="document.getElementById('productImages').click()"><i class="fas fa-cloud-upload-alt"></i><p>اضغط لرفع صور</p></div><input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="App.handleImageUpload(event)"><div class="image-preview" id="imagePreview"></div><button type="submit" class="btn-gold">حفظ المنتج</button></form></div></div>
 
-    <!-- ===== نافذة تسجيل الدخول ===== -->
-    <div class="modal" id="loginModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
-                <button class="close-btn" onclick="App.closeModal('loginModal')">&times;</button>
-            </div>
-            
-            <div class="auth-tabs">
-                <button class="btn-gold" onclick="App.switchAuthTab('login')">دخول</button>
-                <button class="btn-outline-gold" onclick="App.switchAuthTab('register')">تسجيل</button>
-            </div>
+    <!-- مودال إضافة منتج (للأيقونة) -->
+    <div class="modal" id="addProductModal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2><button class="close-btn" onclick="App.closeAddProductForm()">&times;</button></div><form id="addProductForm" onsubmit="event.preventDefault(); App.saveNewProduct();"><div class="form-group"><label>📦 اسم المنتج</label><input type="text" class="form-control" id="newProductName" required placeholder="زعتر فلسطيني"></div><div class="form-group"><label>🏷️ القسم</label><select class="form-control" id="newProductCategory" required><option value="promo">برموسيو</option><option value="spices">توابل</option><option value="cosmetic">كوسمتيك</option><option value="other">منتوجات أخرى</option></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>💰 السعر (دج)</label><input type="number" class="form-control" id="newProductPrice" required placeholder="500"></div><div class="form-group"><label>📊 الكمية</label><input type="number" class="form-control" id="newProductStock" required placeholder="50"></div></div><div class="form-group"><label>📝 وصف المنتج</label><textarea class="form-control" id="newProductDescription" rows="3" placeholder="وصف المنتج..."></textarea></div><div class="image-upload-area" onclick="document.getElementById('newProductImages').click()"><i class="fas fa-cloud-upload-alt"></i><p>اضغط لرفع صور</p></div><input type="file" id="newProductImages" accept="image/*" style="display:none;" multiple onchange="App.handleNewImageUpload(event)"><div class="image-preview" id="newImagePreview"></div><button type="submit" class="btn-gold">حفظ المنتج</button></form></div></div>
 
-            <form id="loginForm" onsubmit="event.preventDefault(); App.handleLogin();">
-                <div class="form-group">
-                    <label>👤 اسم المستخدم</label>
-                    <input type="text" class="form-control" id="loginEmail" required placeholder="أدخل اسم المستخدم">
-                </div>
-                <div class="form-group">
-                    <label>🔑 كلمة المرور</label>
-                    <input type="password" class="form-control" id="loginPassword" required placeholder="********">
-                </div>
-                <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
-            </form>
+    <!-- مودال تفاصيل المنتج -->
+    <div class="modal" id="productDetailModal"><div class="modal-content modal-lg" id="productDetailContent"></div></div>
 
-            <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); App.handleRegister();">
-                <div class="form-group">
-                    <label>👤 الاسم الكامل</label>
-                    <input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري">
-                </div>
-                <div class="form-group">
-                    <label>📧 البريد الإلكتروني</label>
-                    <input type="email" class="form-control" id="regEmail" required placeholder="example@email.com">
-                </div>
-                <div class="form-group">
-                    <label>🔑 كلمة المرور</label>
-                    <input type="password" class="form-control" id="regPassword" required placeholder="******">
-                </div>
-                <div class="form-group">
-                    <label>📱 رقم الهاتف</label>
-                    <input type="tel" class="form-control" id="regPhone" required placeholder="05XXXXXXXX">
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="requestRole" onchange="App.toggleRoleFields()">
-                        <span>طلب دور</span>
-                    </label>
-                </div>
-                
-                <div id="roleFields" style="display:none;">
-                    <div class="form-group">
-                        <label>🎯 اختر الدور</label>
-                        <select class="form-control" id="requestedRole">
-                            <option value="merchant">تاجر</option>
-                            <option value="distributor">موزع</option>
-                            <option value="delivery_person">مندوب توصيل</option>
-                            <option value="content_creator">صانع محتوى</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>🏷️ اسم المتجر</label>
-                        <input type="text" class="form-control" id="storeName" placeholder="اسم المتجر">
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn-gold" style="width:100%;">تسجيل</button>
-            </form>
-        </div>
-    </div>
+    <!-- مودال التطبيقات -->
+    <div class="modal" id="adminAppsModal"><div class="modal-content" style="max-width: 1200px;"><div class="modal-header"><h2><i class="fas fa-crown"></i> التطبيقات</h2><button class="close-btn" onclick="App.closeModal('adminAppsModal')">&times;</button></div><div class="modal-body" id="adminAppsContent"></div></div></div>
 
-    <!-- ===== نافذة إضافة منتج (الأصلية) ===== -->
-    <div class="modal" id="productModal">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
-                <button class="close-btn" onclick="App.closeModal('productModal')">&times;</button>
-            </div>
-            <form id="productForm" onsubmit="event.preventDefault(); App.saveProduct();">
-                <div class="form-group">
-                    <label>📦 اسم المنتج</label>
-                    <input type="text" class="form-control" id="productName" required placeholder="زعتر فلسطيني">
-                </div>
-                <div class="form-group">
-                    <label>🏷️ القسم</label>
-                    <select class="form-control" id="productCategory" required>
-                        <option value="promo">برموسيو</option>
-                        <option value="spices">توابل</option>
-                        <option value="cosmetic">كوسمتيك</option>
-                        <option value="other">منتوجات أخرى</option>
-                    </select>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>💰 السعر (دج)</label>
-                        <input type="number" class="form-control" id="productPrice" required min="0" placeholder="500">
-                    </div>
-                    <div class="form-group">
-                        <label>📊 الكمية</label>
-                        <input type="number" class="form-control" id="productStock" required min="0" placeholder="50">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>⚠️ الحد الأدنى</label>
-                    <input type="number" class="form-control" id="productMinStock" value="5" min="0" placeholder="5">
-                </div>
-                <div class="form-group">
-                    <label>📝 وصف المنتج</label>
-                    <textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea>
-                </div>
-                <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>اضغط لرفع صور</p>
-                </div>
-                <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="App.handleImageUpload(event)">
-                <div class="image-preview" id="imagePreview"></div>
-                <button type="submit" class="btn-gold">حفظ المنتج</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- ===== نافذة إضافة منتج (للأيقونة) ===== -->
-    <div class="modal" id="addProductModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
-                <button class="close-btn" onclick="App.closeAddProductForm()">&times;</button>
-            </div>
-            <form id="addProductForm" onsubmit="event.preventDefault(); App.saveNewProduct();">
-                <div class="form-group">
-                    <label>📦 اسم المنتج</label>
-                    <input type="text" class="form-control" id="newProductName" required placeholder="زعتر فلسطيني">
-                </div>
-                <div class="form-group">
-                    <label>🏷️ القسم</label>
-                    <select class="form-control" id="newProductCategory" required>
-                        <option value="promo">برموسيو</option>
-                        <option value="spices">توابل</option>
-                        <option value="cosmetic">كوسمتيك</option>
-                        <option value="other">منتوجات أخرى</option>
-                    </select>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>💰 السعر (دج)</label>
-                        <input type="number" class="form-control" id="newProductPrice" required placeholder="500">
-                    </div>
-                    <div class="form-group">
-                        <label>📊 الكمية</label>
-                        <input type="number" class="form-control" id="newProductStock" required placeholder="50">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>📝 وصف المنتج</label>
-                    <textarea class="form-control" id="newProductDescription" rows="3" placeholder="وصف المنتج..."></textarea>
-                </div>
-                <div class="image-upload-area" onclick="document.getElementById('newProductImages').click()">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>اضغط لرفع صور</p>
-                </div>
-                <input type="file" id="newProductImages" accept="image/*" style="display:none;" multiple onchange="App.handleNewImageUpload(event)">
-                <div class="image-preview" id="newImagePreview"></div>
-                <button type="submit" class="btn-gold">حفظ المنتج</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- ===== نافذة تفاصيل المنتج ===== -->
-    <div class="modal" id="productDetailModal">
-        <div class="modal-content modal-lg" id="productDetailContent"></div>
-    </div>
-
-    <!-- ===== نافذة التطبيقات ===== -->
-    <div class="modal" id="adminAppsModal">
-        <div class="modal-content" style="max-width: 1200px;">
-            <div class="modal-header">
-                <h2><i class="fas fa-crown"></i> التطبيقات</h2>
-                <button class="close-btn" onclick="App.closeModal('adminAppsModal')">&times;</button>
-            </div>
-            <div class="modal-body" id="adminAppsContent"></div>
-        </div>
-    </div>
-
-    <!-- ===== ملفات JavaScript ===== -->
-    <script src="js/core.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/shop.js"></script>
-    <script src="js/telegram.js"></script>
-    <script src="js/inventory.js"></script>
-    <script src="js/roles.js"></script>
-    <script src="js/delivery.js"></script>
-    <script src="js/app.js"></script>
-
+    <!-- كائن App الرئيسي وهمي لتشغيل الوظائف بدون أخطار -->
     <script>
-        // التحقق من وجود النوافذ بعد التحميل
-        setTimeout(() => {
-            console.log('✅ productModal:', document.getElementById('productModal') ? 'موجود' : 'غير موجود');
-            console.log('✅ addProductModal:', document.getElementById('addProductModal') ? 'موجود' : 'غير موجود');
-        }, 500);
+        window.App = {
+            cartSidebar: document.getElementById('cartSidebar'),
+            toggleCart() { this.cartSidebar.classList.toggle('open'); },
+            toggleTheme() { document.body.classList.toggle('dark-mode'); const t = document.getElementById('themeToggle'); t.innerHTML = document.body.classList.contains('dark-mode') ? '<i class="fas fa-sun"></i><span>نهاري</span>' : '<i class="fas fa-moon"></i><span>ليلي</span>'; },
+            filterProducts(cat) { document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active')); event.target.classList.add('active'); this.showNotification(`تم تصفية المنتجات: ${cat}`, 'info'); },
+            searchProducts() { this.showNotification('بحث: ' + document.getElementById('searchInput').value, 'info'); },
+            openLoginModal() { document.getElementById('loginModal').classList.add('show'); },
+            closeModal(id) { document.getElementById(id).classList.remove('show'); },
+            switchAuthTab(tab) { document.getElementById('loginForm').style.display = tab==='login'?'block':'none'; document.getElementById('registerForm').style.display = tab==='register'?'block':'none'; },
+            toggleRoleFields() { document.getElementById('roleFields').style.display = document.getElementById('requestRole').checked ? 'block' : 'none'; },
+            handleLogin() { this.showNotification('تم تسجيل الدخول بنجاح', 'success'); this.closeModal('loginModal'); },
+            handleRegister() { this.showNotification('تم إنشاء الحساب', 'success'); this.closeModal('loginModal'); },
+            openAddProductForm() { document.getElementById('addProductModal').classList.add('show'); },
+            closeAddProductForm() { document.getElementById('addProductModal').classList.remove('show'); },
+            saveNewProduct() { this.showNotification('تمت إضافة المنتج بنجاح', 'success'); this.closeAddProductForm(); this.renderProducts(); },
+            handleNewImageUpload(e) { const preview = document.getElementById('newImagePreview'); preview.innerHTML = ''; Array.from(e.target.files).forEach(f => { const img = document.createElement('img'); img.src = URL.createObjectURL(f); preview.appendChild(img); }); },
+            handleImageUpload(e) { const preview = document.getElementById('imagePreview'); preview.innerHTML = ''; Array.from(e.target.files).forEach(f => { const img = document.createElement('img'); img.src = URL.createObjectURL(f); preview.appendChild(img); }); },
+            saveProduct() { this.showNotification('تم حفظ المنتج', 'success'); this.closeModal('productModal'); this.renderProducts(); },
+            renderProducts() { const container = document.getElementById('productsContainer'); container.innerHTML = ''; for (let i=0;i<6;i++) { const card = document.createElement('div'); card.className = 'product-card'; card.innerHTML = `<div class="product-image"><i class="fas fa-box-open"></i><span class="product-badge">جديد</span></div><div class="product-info"><div class="product-title">منتج ناردو ${i+1}</div><div class="product-category">توابل</div><div class="product-price">750 دج</div><div class="product-stock">متوفر: 15 قطعة</div><div class="product-actions"><button class="btn-add" onclick="event.stopPropagation(); App.addToCart(1)"><i class="fas fa-cart-plus"></i> أضف</button></div></div>`; card.onclick = ()=> App.showProductDetail(i); container.appendChild(card); } },
+            addToCart(id) { let c = document.getElementById('cartCounter'); c.innerText = +c.innerText+1; document.getElementById('fixedCartCounter').innerText = c.innerText; this.showNotification('تمت الإضافة للسلة', 'success'); },
+            showProductDetail(id) { document.getElementById('productDetailContent').innerHTML = '<h2>تفاصيل المنتج</h2><p>اسم المنتج التجاري</p><button class="btn-gold" onclick="App.addToCart(1)">أضف للسلة</button>'; document.getElementById('productDetailModal').classList.add('show'); },
+            checkout() { window.open('https://wa.me/213562243648?text=طلب جديد', '_blank'); this.showNotification('جاري التوجيه للواتساب', 'info'); },
+            scrollToTop() { window.scrollTo({top:0,behavior:'smooth'}); },
+            scrollToBottom() { window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); },
+            playReel(id) { this.showNotification(`تشغيل الريل ${id}`, 'info'); },
+            viewAllReels() { this.showNotification('عرض كل الريلات', 'info'); },
+            openDashboard() { document.getElementById('dashboardSection').style.display = 'block'; this.showNotification('لوحة التحكم', 'info'); },
+            switchDashboardTab(tab) { document.getElementById('dashboardContent').innerHTML = `<p>محتوى ${tab}</p>`; },
+            openAdminApps() { document.getElementById('adminAppsModal').classList.add('show'); document.getElementById('adminAppsContent').innerHTML = '<p>قائمة التطبيقات الداخلية</p>'; },
+            showNotification(msg, type) { alert(msg); } // بسيط للعرض
+        };
+        window.onload = function() { App.renderProducts(); document.getElementById('cartCounter').innerText = 0; document.getElementById('fixedCartCounter').innerText = 0; setInterval(()=>{ const d=new Date(); document.getElementById('marqueeHours').innerText = d.getHours().toString().padStart(2,'0'); document.getElementById('marqueeMinutes').innerText = d.getMinutes().toString().padStart(2,'0'); document.getElementById('marqueeSeconds').innerText = d.getSeconds().toString().padStart(2,'0'); },1000); window.addEventListener('scroll', ()=> document.getElementById('quickTopBtn').classList.toggle('show', window.scrollY>300)); };
     </script>
-
-    <!-- ===== أزرار التنقل (الأعلى والأسفل) ===== -->
-<div class="navigation-buttons">
-    <button class="nav-btn up-btn" onclick="App.scrollToTop()" title="الأعلى">
-        <i class="fas fa-arrow-up"></i>
-    </button>
-    <button class="nav-btn down-btn" onclick="App.scrollToBottom()" title="الأسفل">
-        <i class="fas fa-arrow-down"></i>
-    </button>
-</div>
-
-<!-- زر العودة للأعلى السريع (يظهر عند التمرير) -->
-<button class="quick-top-btn" onclick="App.scrollToTop()" id="quickTopBtn" title="الأعلى">
-    <i class="fas fa-chevron-up"></i>
-</button>
 </body>
 </html>
