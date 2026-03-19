@@ -1,5 +1,5 @@
 /* ================================================================== */
-/* ===== [04] الملف: 04-telegram.js - نظام تلغرام مع دعم الصور ===== */
+/* ===== [04] الملف: 04-telegram.js - نظام تلغرام مع دعم الألبوم ===== */
 /* ================================================================== */
 
 // ===== [4.1] نظام تلغرام الأساسي =====
@@ -129,7 +129,49 @@ const TelegramSystem = {
         return await response.blob();
     },
     
-    // إضافة منتج جديد مع صورة
+    // إرسال ألبوم صور (حتى 10 صور)
+    async sendMediaGroup(images, caption) {
+        try {
+            const media = [];
+            
+            for (let i = 0; i < Math.min(images.length, 10); i++) {
+                const image = images[i];
+                
+                if (image.startsWith('data:image')) {
+                    const blob = await this.base64ToBlob(image);
+                    
+                    // إنشاء FormData لكل صورة على حدة
+                    const formData = new FormData();
+                    formData.append('chat_id', CONFIG.telegram.channelId);
+                    formData.append('photo', blob, `product_${i+1}.jpg`);
+                    
+                    if (i === 0) {
+                        // إضافة caption للصورة الأولى فقط
+                        formData.append('caption', caption);
+                        formData.append('parse_mode', 'Markdown');
+                    }
+                    
+                    const response = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    if (!result.ok) {
+                        console.error(`❌ فشل إرسال الصورة ${i+1}:`, result);
+                    }
+                }
+            }
+            
+            return { success: true };
+            
+        } catch (error) {
+            console.error('❌ خطأ في إرسال الألبوم:', error);
+            return { success: false };
+        }
+    },
+    
+    // إضافة منتج جديد مع ألبوم صور
     async addProduct(product, user = null) {
         const merchantId = user?.merchantId || 'ADMIN_001';
         const merchantName = user?.name || 'مدير النظام';
@@ -149,40 +191,27 @@ const TelegramSystem = {
         `;
         
         try {
-            // البحث عن الصورة في المنتج
-            const imageToSend = product.images && product.images.length > 0 
-                ? product.images[0] 
-                : product.image;
+            // جمع كل الصور المتاحة
+            const images = [];
             
-            // إذا وجدت صورة (base64)
-            if (imageToSend && imageToSend.startsWith('data:image')) {
-                console.log('📸 جاري إرسال الصورة إلى تلغرام...');
+            if (product.images && product.images.length > 0) {
+                images.push(...product.images);
+            } else if (product.image) {
+                images.push(product.image);
+            }
+            
+            // إذا وجدت صور
+            if (images.length > 0) {
+                console.log(`📸 جاري إرسال ${images.length} صور إلى تلغرام...`);
                 
-                // تحويل base64 إلى blob
-                const blob = await this.base64ToBlob(imageToSend);
+                // إرسال الصور كألبوم
+                const result = await this.sendMediaGroup(images, message);
                 
-                // إنشاء FormData
-                const formData = new FormData();
-                formData.append('chat_id', CONFIG.telegram.channelId);
-                formData.append('photo', blob, 'product.jpg');
-                formData.append('caption', message);
-                formData.append('parse_mode', 'Markdown');
-                
-                // إرسال الصورة
-                const response = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendPhoto`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.ok) {
-                    console.log('✅ تم إرسال المنتج مع الصورة بنجاح');
-                    return { success: true, messageId: result.result.message_id };
+                if (result.success) {
+                    console.log('✅ تم إرسال الألبوم بنجاح');
+                    return { success: true };
                 } else {
-                    console.error('❌ فشل إرسال الصورة:', result);
-                    
-                    // محاولة إرسال نص فقط كبديل
+                    // إذا فشل الألبوم، أرسل نص فقط
                     return await this.sendTextOnly(message);
                 }
                 
@@ -193,8 +222,6 @@ const TelegramSystem = {
             
         } catch (error) {
             console.error('❌ خطأ في إضافة المنتج:', error);
-            
-            // محاولة إرسال نص فقط كبديل
             return await this.sendTextOnly(message);
         }
     },
@@ -378,4 +405,4 @@ window.Telegram = TelegramSystem;
 // بدء الاستماع للأوامر كل 30 ثانية
 setInterval(() => Telegram.checkCommands(), 30000);
 
-console.log('✅ نظام تلغرام جاهز مع دعم الصور');
+console.log('✅ نظام تلغرام جاهز مع دعم الألبوم');
