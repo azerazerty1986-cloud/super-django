@@ -549,6 +549,11 @@ const App = {
         Utils.openModal('adminAppsModal');
     },
     
+    // ===== [مضافة] دالة تشغيل الريلز =====
+    playReel(reelId) {
+        window.open(`07-reels.html?id=${reelId}`, '_blank');
+    },
+    
     // ===== دوال مساعدة =====
     toggleTheme() {
         document.body.classList.toggle('light-mode');
