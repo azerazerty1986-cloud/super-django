@@ -156,8 +156,7 @@ const App = {
         const product = this.products.find(p => p.id === productId || p.productId === productId);
         if (!product) return;
         
-        const ownerId = IDSystem.extractOwnerId(product.productId || product.id);
-        const owner = Auth.users.find(u => u.userId === ownerId);
+        const ownerId = product.productId ? product.productId.split('_PRD_')[0] : 'غير معروف';
         
         document.getElementById('productDetailContent').innerHTML = `
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
@@ -194,7 +193,7 @@ const App = {
         Utils.openModal('productDetailModal');
     },
     
-    // ===== [معدل] فتح نافذة إضافة منتج =====
+    // ===== [معدل] فتح نافذة إضافة منتج (للنافذة القديمة) =====
     openAddProductModal() {
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -202,7 +201,6 @@ const App = {
             return;
         }
         
-        // الأدوار المسموح لها بإضافة منتجات
         const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
         if (!allowedRoles.includes(Auth.currentUser.role)) {
             Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
@@ -257,12 +255,11 @@ const App = {
 
         Utils.showNotification('جاري رفع المنتج...', 'info');
 
-        // ===== [المعرف الجديد] =====
         // المنتج يأخذ معرف صاحبه + رقم تسلسلي
-        const productId = IDSystem.generateProductId(Auth.currentUser.userId);
+        const productId = `${Auth.currentUser.userId}_PRD_${Date.now().toString().slice(-6)}`;
         
         const product = {
-            productId: productId,        // مثال: MER_1001_PRD_000001
+            productId: productId,
             name: name,
             category: category,
             price: price,
@@ -272,7 +269,6 @@ const App = {
             merchantId: Auth.currentUser.userId
         };
 
-        // إرسال إلى تلغرام
         if (window.Telegram) {
             const result = await Telegram.addProductWithPhoto(product, imageFile);
             
@@ -299,6 +295,138 @@ const App = {
         }
     },
     
+    // ===== [جديد] دوال أيقونة إضافة المنتج (للأيقونة الخضراء) =====
+    
+    // فتح نافذة إضافة منتج من الأيقونة
+    openAddProductForm() {
+        console.log('📝 محاولة فتح نافذة إضافة منتج من الأيقونة');
+        
+        if (!Auth.currentUser) {
+            Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
+            this.openLoginModal();
+            return;
+        }
+        
+        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
+        if (!allowedRoles.includes(Auth.currentUser.role)) {
+            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
+            return;
+        }
+        
+        const modal = document.getElementById('addProductModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('show');
+            
+            const form = document.getElementById('addProductForm');
+            if (form) form.reset();
+            
+            const preview = document.getElementById('newImagePreview');
+            if (preview) preview.innerHTML = '';
+            
+            console.log('✅ تم فتح نافذة إضافة منتج');
+        } else {
+            console.error('❌ addProductModal غير موجود');
+            Utils.showNotification('النافذة غير موجودة', 'error');
+        }
+    },
+    
+    // إغلاق نافذة إضافة منتج من الأيقونة
+    closeAddProductForm() {
+        const modal = document.getElementById('addProductModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+        }
+    },
+    
+    // رفع الصور للنموذج الجديد
+    handleNewImageUpload(event) {
+        const preview = document.getElementById('newImagePreview');
+        if (!preview) return;
+        
+        preview.innerHTML = '';
+        for (let file of event.target.files) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    },
+    
+    // حفظ المنتج الجديد (للأيقونة)
+    async saveNewProduct() {
+        if (!Auth.currentUser) {
+            Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
+            this.openLoginModal();
+            return;
+        }
+        
+        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
+        if (!allowedRoles.includes(Auth.currentUser.role)) {
+            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
+            return;
+        }
+        
+        const name = document.getElementById('newProductName')?.value;
+        const category = document.getElementById('newProductCategory')?.value;
+        const price = parseInt(document.getElementById('newProductPrice')?.value);
+        const stock = parseInt(document.getElementById('newProductStock')?.value);
+        const description = document.getElementById('newProductDescription')?.value;
+        const imageFile = document.getElementById('newProductImages').files[0];
+        
+        if (!name || !category || !price || !stock) {
+            Utils.showNotification('الرجاء ملء جميع الحقول', 'error');
+            return;
+        }
+
+        if (!imageFile) {
+            Utils.showNotification('الرجاء اختيار صورة للمنتج', 'error');
+            return;
+        }
+
+        Utils.showNotification('جاري رفع المنتج...', 'info');
+
+        const productId = `${Auth.currentUser.userId}_PRD_${Date.now().toString().slice(-6)}`;
+        
+        const product = {
+            productId: productId,
+            name: name,
+            category: category,
+            price: price,
+            stock: stock,
+            description: description || '',
+            merchantName: Auth.currentUser.storeName || Auth.currentUser.name,
+            merchantId: Auth.currentUser.userId
+        };
+
+        if (window.Telegram) {
+            const result = await Telegram.addProductWithPhoto(product, imageFile);
+            
+            if (result.success) {
+                const newProduct = {
+                    ...product,
+                    id: productId,
+                    telegramId: result.messageId,
+                    image: result.photoUrl || CONFIG.defaultImage,
+                    images: result.photoUrl ? [result.photoUrl] : [],
+                    createdAt: new Date().toISOString()
+                };
+                
+                this.products.push(newProduct);
+                Utils.save('products', this.products);
+                this.displayProducts();
+                
+                Utils.showNotification(`✅ تم إضافة المنتج - المعرف: ${productId}`, 'success');
+                this.closeAddProductForm();
+                
+            } else {
+                Utils.showNotification('❌ فشل الإرسال إلى تلغرام', 'error');
+            }
+        }
+    },
+    
     displayProducts() {
         const container = document.getElementById('productsContainer');
         if (!container) return;
@@ -309,7 +437,6 @@ const App = {
         }
         
         container.innerHTML = this.products.map(p => {
-            // عرض أول 8 أحرف من المعرف للاختصار
             const shortId = p.productId ? p.productId.substring(0, 12) + '...' : 'ID';
             
             return `
