@@ -1,4 +1,3 @@
-
 /* ================================================================== */
 /* ===== [05] الملف: 05-app.js - التطبيق الرئيسي ===== */
 /* ================================================================== */
@@ -258,6 +257,114 @@ const App = {
         Utils.showNotification('✅ تم إضافة المنتج');
         this.closeModal('productModal');
         Shop.displayProducts();
+    },
+    
+    // ===== [إضافة] دوال إضافة المنتج للأيقونة =====
+    
+    // فتح نموذج إضافة منتج (للأيقونة)
+    openAddProductForm() {
+        Utils.openModal('addProductModal');
+    },
+    
+    // إغلاق نموذج إضافة منتج (للأيقونة)
+    closeAddProductForm() {
+        Utils.closeModal('addProductModal');
+    },
+    
+    // رفع الصور للنموذج الجديد
+    handleNewImageUpload(event) {
+        const preview = document.getElementById('newImagePreview');
+        if (!preview) return;
+        
+        preview.innerHTML = '';
+        for (let file of event.target.files) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    },
+    
+    // حفظ المنتج الجديد (للأيقونة)
+    saveNewProduct() {
+        // التحقق من تسجيل الدخول
+        if (!Auth.currentUser) {
+            Utils.showNotification('❌ يجب تسجيل الدخول أولاً', 'error');
+            this.openLoginModal();
+            return;
+        }
+        
+        // الأدوار المسموح لها بإضافة منتجات
+        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
+        if (!allowedRoles.includes(Auth.currentUser.role)) {
+            Utils.showNotification('❌ غير مصرح لك بإضافة منتجات', 'error');
+            return;
+        }
+        
+        // التحقق من الحقول
+        const name = document.getElementById('newProductName')?.value;
+        const category = document.getElementById('newProductCategory')?.value;
+        const price = parseInt(document.getElementById('newProductPrice')?.value);
+        const stock = parseInt(document.getElementById('newProductStock')?.value);
+        const description = document.getElementById('newProductDescription')?.value;
+        
+        if (!name || !category || !price || !stock) {
+            Utils.showNotification('❌ الرجاء ملء جميع الحقول', 'error');
+            return;
+        }
+        
+        // إنشاء المنتج الجديد
+        const product = {
+            id: Date.now(),
+            name: name,
+            category: category,
+            price: price,
+            stock: stock,
+            description: description || '',
+            image: CONFIG.defaultImage,
+            merchantId: Auth.currentUser.merchantId || Auth.currentUser.userId || 'USER',
+            merchantName: Auth.currentUser.name,
+            createdAt: new Date().toISOString()
+        };
+        
+        // إضافة للمنتجات
+        if (!window.products) window.products = [];
+        window.products.push(product);
+        Utils.save('products', window.products);
+        
+        // إضافة لـ Shop إذا كان موجوداً
+        if (Shop && Shop.products) {
+            Shop.products.push(product);
+            Shop.saveProducts();
+            Shop.displayProducts();
+        } else {
+            this.displayProducts(window.products);
+        }
+        
+        Utils.showNotification('✅ تم إضافة المنتج');
+        this.closeAddProductForm();
+    },
+    
+    // عرض المنتجات (دالة مساعدة)
+    displayProducts(products) {
+        const container = document.getElementById('productsContainer');
+        if (!container) return;
+        
+        container.innerHTML = products.map(p => `
+            <div class="product-card" onclick="App.showProductDetail(${p.id})">
+                <div class="product-gallery">
+                    <img src="${p.image}" alt="${p.name}">
+                </div>
+                <div class="product-info">
+                    <h3 class="product-title">${p.name}</h3>
+                    <div class="product-price">${p.price} دج</div>
+                    <button class="add-to-cart" onclick="event.stopPropagation(); App.addToCart(${p.id})">
+                        <i class="fas fa-shopping-cart"></i> أضف للسلة
+                    </button>
+                </div>
+            </div>
+        `).join('');
     },
     
     // ===== دوال السلة =====
