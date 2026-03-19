@@ -185,10 +185,26 @@ const App = {
         
         if (!product) return;
         
+        // عرض الصور المتعددة إن وجدت
+        const images = product.images && product.images.length > 0 ? product.images : [product.image];
+        const mainImage = images[0];
+        
+        // إنشاء معرض الصور المصغرة
+        let galleryThumbs = '';
+        if (images.length > 1) {
+            galleryThumbs = '<div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">' +
+                images.map((img, index) => 
+                    `<img src="${img}" onclick="document.getElementById('mainProductImage').src='${img}'" 
+                      style="width:60px; height:60px; object-fit:cover; border-radius:10px; border:2px solid var(--gold); cursor:pointer; ${index === 0 ? 'opacity:1;' : 'opacity:0.7;'}"
+                      onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${index === 0 ? '1' : '0.7'}'">`
+                ).join('') + '</div>';
+        }
+        
         document.getElementById('productDetailContent').innerHTML = `
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
                 <div>
-                    <img src="${product.image}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
+                    <img id="mainProductImage" src="${mainImage}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
+                    ${galleryThumbs}
                 </div>
                 <div>
                     <h2 style="color:var(--gold); font-size:28px;">${product.name}</h2>
@@ -219,6 +235,81 @@ const App = {
         Utils.openModal('productDetailModal');
     },
     
+    // ===== [إصلاح] دوال رفع الصور =====
+    
+    // رفع الصور للنموذج العادي
+    handleImageUpload(event) {
+        const preview = document.getElementById('imagePreview');
+        if (!preview) {
+            console.error('❌ imagePreview غير موجود');
+            return;
+        }
+        
+        // تخزين الصور في مصفوفة
+        if (!this.uploadedImages) this.uploadedImages = [];
+        
+        preview.innerHTML = '';
+        
+        for (let file of event.target.files) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'preview-image';
+                preview.appendChild(img);
+                
+                this.uploadedImages.push(e.target.result);
+                console.log('✅ تم رفع صورة:', file.name);
+            };
+            
+            reader.onerror = (error) => {
+                console.error('❌ خطأ في قراءة الصورة:', error);
+                Utils.showNotification('خطأ في رفع الصورة', 'error');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        Utils.showNotification(`جاري رفع ${event.target.files.length} صور`, 'info');
+    },
+    
+    // رفع الصور للنموذج الجديد
+    handleNewImageUpload(event) {
+        const preview = document.getElementById('newImagePreview');
+        if (!preview) {
+            console.error('❌ newImagePreview غير موجود');
+            return;
+        }
+        
+        if (!this.newUploadedImages) this.newUploadedImages = [];
+        
+        preview.innerHTML = '';
+        
+        for (let file of event.target.files) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'preview-image';
+                preview.appendChild(img);
+                
+                this.newUploadedImages.push(e.target.result);
+                console.log('✅ تم رفع صورة جديدة:', file.name);
+            };
+            
+            reader.onerror = (error) => {
+                console.error('❌ خطأ في قراءة الصورة:', error);
+                Utils.showNotification('خطأ في رفع الصورة', 'error');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        Utils.showNotification(`جاري رفع ${event.target.files.length} صور`, 'info');
+    },
+    
     // ===== [إصلاح] دوال إضافة المنتج =====
     
     // فتح نافذة إضافة منتج
@@ -233,6 +324,15 @@ const App = {
         if (Auth.currentUser.role === 'admin' || Auth.currentUser.role === 'merchant') {
             const modal = document.getElementById('productModal');
             if (modal) {
+                // إعادة تعيين الحقول
+                document.getElementById('productName').value = '';
+                document.getElementById('productCategory').value = 'promo';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productStock').value = '';
+                document.getElementById('productDescription').value = '';
+                document.getElementById('imagePreview').innerHTML = '';
+                this.uploadedImages = [];
+                
                 modal.classList.add('show');
                 console.log('✅ تم فتح نافذة إضافة منتج');
             } else {
@@ -241,21 +341,6 @@ const App = {
             }
         } else {
             Utils.showNotification('فقط المدير والتجار يمكنهم إضافة منتجات', 'error');
-        }
-    },
-    
-    // رفع الصور
-    handleImageUpload(event) {
-        const preview = document.getElementById('imagePreview');
-        if (!preview) return;
-        
-        preview.innerHTML = '';
-        for (let file of event.target.files) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
-            };
-            reader.readAsDataURL(file);
         }
     },
     
@@ -293,12 +378,21 @@ const App = {
             price: price,
             stock: stock,
             description: description || '',
-            image: 'https://images.unsplash.com/photo-1542838132-92c5330041e7?w=300',
+            image: 'https://images.unsplash.com/photo-1542838132-92c5330041e7?w=300', // صورة افتراضية
             merchantId: Auth.currentUser.merchantId || Auth.currentUser.userId || 'ADMIN',
             merchantName: Auth.currentUser.name,
             createdAt: new Date().toISOString(),
             dateStr: 'الآن'
         };
+        
+        // إضافة الصور المرفوعة إن وجدت
+        if (this.uploadedImages && this.uploadedImages.length > 0) {
+            product.images = this.uploadedImages;
+            product.image = this.uploadedImages[0]; // أول صورة كصورة رئيسية
+        }
+        
+        // تفريغ مصفوفة الصور بعد الحفظ
+        this.uploadedImages = [];
         
         // حفظ في نظام Shop
         if (window.Shop) {
@@ -333,6 +427,15 @@ const App = {
     openAddProductForm() {
         const modal = document.getElementById('addProductModal');
         if (modal) {
+            // إعادة تعيين الحقول
+            document.getElementById('newProductName').value = '';
+            document.getElementById('newProductCategory').value = 'promo';
+            document.getElementById('newProductPrice').value = '';
+            document.getElementById('newProductStock').value = '';
+            document.getElementById('newProductDescription').value = '';
+            document.getElementById('newImagePreview').innerHTML = '';
+            this.newUploadedImages = [];
+            
             modal.classList.add('show');
         } else {
             console.error('❌ addProductModal غير موجود');
@@ -344,20 +447,6 @@ const App = {
         const modal = document.getElementById('addProductModal');
         if (modal) {
             modal.classList.remove('show');
-        }
-    },
-    
-    handleNewImageUpload(event) {
-        const preview = document.getElementById('newImagePreview');
-        if (!preview) return;
-        
-        preview.innerHTML = '';
-        for (let file of event.target.files) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
-            };
-            reader.readAsDataURL(file);
         }
     },
     
@@ -402,6 +491,15 @@ const App = {
             createdAt: new Date().toISOString(),
             dateStr: 'الآن'
         };
+        
+        // إضافة الصور المرفوعة إن وجدت
+        if (this.newUploadedImages && this.newUploadedImages.length > 0) {
+            product.images = this.newUploadedImages;
+            product.image = this.newUploadedImages[0];
+        }
+        
+        // تفريغ مصفوفة الصور
+        this.newUploadedImages = [];
         
         // حفظ في نظام Shop
         if (window.Shop) {
@@ -454,10 +552,15 @@ const App = {
         const container = document.getElementById('productsContainer');
         if (!container) return;
         
-        container.innerHTML = products.map(p => `
+        container.innerHTML = products.map(p => {
+            // استخدام الصورة الأولى إن وجدت
+            const imageUrl = p.images && p.images.length > 0 ? p.images[0] : p.image;
+            
+            return `
             <div class="product-card" onclick="App.showProductDetail(${p.id})">
                 <div class="product-gallery">
-                    <img src="${p.image}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c5330041e7?w=300'">
+                    <img src="${imageUrl}" alt="${p.name}" onerror="this.src='https://images.unsplash.com/photo-1542838132-92c5330041e7?w=300'">
+                    ${p.images && p.images.length > 1 ? `<span class="image-counter"><i class="fas fa-images"></i> ${p.images.length}</span>` : ''}
                 </div>
                 <div class="product-info">
                     <h3 class="product-title">${p.name}</h3>
@@ -467,7 +570,7 @@ const App = {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     },
     
     // ===== دوال السلة =====
@@ -714,7 +817,7 @@ const App = {
         window.open(`07-reels.html?id=${reelId}`, '_blank');
     },
     
-    // ===== دوال التمرير (نسخة واحدة فقط) =====
+    // ===== دوال التمرير =====
     scrollToTop() {
         window.scrollTo({ 
             top: 0, 
