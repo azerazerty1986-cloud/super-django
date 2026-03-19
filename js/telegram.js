@@ -16,11 +16,13 @@ const TelegramSystem = {
             
             if (data.ok && data.result) {
                 for (const update of data.result) {
-                    if (update.channel_post && update.channel_post.text) {
+                    if (update.channel_post) {
                         const post = update.channel_post;
                         
-                        // البحث عن رسائل المنتجات (🟣)
-                        if (post.text.includes('🟣')) {
+                        // البحث عن رسائل المنتجات (🟣) في النص أو في caption الصورة
+                        const text = post.text || post.caption || '';
+                        
+                        if (text.includes('🟣')) {
                             const product = this.parseProduct(post);
                             if (product) {
                                 products.push(product);
@@ -46,7 +48,9 @@ const TelegramSystem = {
     // تحليل المنتج من الرسالة
     parseProduct(post) {
         try {
-            const lines = post.text.split('\n');
+            const text = post.text || post.caption || '';
+            const lines = text.split('\n');
+            
             const product = {
                 id: post.message_id,
                 telegramId: post.message_id,
@@ -57,10 +61,18 @@ const TelegramSystem = {
                 merchant: this.extractValue(lines, 'التاجر:') || 'المتجر',
                 merchantId: this.extractValue(lines, 'معرف التاجر:') || '',
                 description: this.extractValue(lines, 'وصف:') || '',
-                images: this.extractImages(lines),
+                images: [],
                 date: post.date,
                 dateStr: Utils.getTimeAgo(post.date)
             };
+            
+            // إضافة الصورة إذا وجدت
+            if (post.photo && post.photo.length > 0) {
+                // الحصول على أكبر صورة
+                const fileId = post.photo[post.photo.length - 1].file_id;
+                // سيتم جلب رابط الصورة لاحقاً
+                product.images.push(`https://api.telegram.org/file/bot${CONFIG.telegram.botToken}/${fileId}`);
+            }
             
             return product.name ? product : null;
             
@@ -96,20 +108,12 @@ const TelegramSystem = {
         return 'other';
     },
     
-    // استخراج الصور
-    extractImages(lines) {
-        const imagesLine = this.extractValue(lines, 'صور:');
-        if (imagesLine) {
-            return imagesLine.split(',').filter(url => url.startsWith('http'));
-        }
-        return [];
-    },
-    
-    // إضافة منتج جديد
+    // إضافة منتج جديد مع صورة
     async addProduct(product, user = null) {
         const merchantId = user?.merchantId || 'ADMIN_001';
         const merchantName = user?.name || 'مدير النظام';
         
+        // إنشاء نص الرسالة
         const message = `
 🟣 *منتج جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -119,32 +123,87 @@ const TelegramSystem = {
 📊 *الكمية:* ${product.stock}
 👤 *التاجر:* ${merchantName}
 🆔 *معرف التاجر:* ${merchantId}
-📝 *وصف:* ${product.description || 'منتج ممتاز'}
+📝 *الوصف:* ${product.description || 'لا يوجد'}
 🕐 ${new Date().toLocaleString('ar-EG')}
         `;
         
         try {
-            const response = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CONFIG.telegram.channelId,
-                    text: message,
-                    parse_mode: 'Markdown'
-                })
-            });
+            let result;
             
-            const result = await response.json();
+            // البحث عن الصورة في المنتج
+            const imageToSend = product.images && product.images.length > 0 
+                ? product.images[0] 
+                : product.image;
+            
+            // إذا وجدت صورة (base64)
+            if (imageToSend && imageToSend.startsWith('data:image')) {
+                // تحويل base64 إلى blob
+                const response = await fetch(imageToSend);
+                const blob = await response.blob();
+                
+                // إنشاء FormData لإرسال الصورة
+                const formData = new FormData();
+                formData.append('chat_id', CONFIG.telegram.channelId);
+                formData.append('photo', blob, 'product.jpg');
+                formData.append('caption', message);
+                formData.append('parse_mode', 'Markdown');
+                
+                // إرسال الصورة مع التعليق
+                const photoResponse = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                result = await photoResponse.json();
+                console.log('✅ تم إرسال المنتج مع صورة');
+                
+            } else {
+                // إرسال نص فقط بدون صورة
+                const response = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CONFIG.telegram.channelId,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                
+                result = await response.json();
+                console.log('✅ تم إرسال المنتج بدون صورة');
+            }
             
             if (result.ok) {
-                console.log('✅ تم إضافة المنتج');
                 return { success: true, messageId: result.result.message_id };
             }
             
+            console.error('❌ فشل الإرسال:', result);
             return { success: false };
             
         } catch (error) {
             console.error('❌ خطأ في إضافة المنتج:', error);
+            
+            // محاولة إرسال نص فقط كخطة بديلة
+            try {
+                const response = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: CONFIG.telegram.channelId,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.ok) {
+                    console.log('✅ تم إرسال النص فقط كبديل');
+                    return { success: true, messageId: result.result.message_id };
+                }
+            } catch (fallbackError) {
+                console.error('❌ فشل حتى إرسال النص:', fallbackError);
+            }
+            
             return { success: false };
         }
     },
@@ -275,8 +334,8 @@ ${itemsList}
                         }
                         
                         // أمر الإحصائيات
-                        if (text === '/stats' && Auth.currentUser?.role === 'admin') {
-                            const stats = this.getStats();
+                        if (text === '/stats') {
+                            const stats = await this.getStats();
                             await this.sendMessage(stats);
                         }
                     }
@@ -288,15 +347,13 @@ ${itemsList}
     },
     
     // إحصائيات
-    getStats() {
-        const userStats = Auth.getStats();
+    async getStats() {
+        const products = await this.fetchProducts();
         return `
 📊 *إحصائيات المتجر*
 ━━━━━━━━━━━━━━━━━━━━━━
-👥 المستخدمين: ${userStats.total}
-🏪 التجار: ${userStats.merchants}
-📦 المنتجات: ${Shop.products.length}
-🛒 طلبات pending: 0
+📦 المنتجات: ${products.length}
+🕐 آخر تحديث: ${new Date().toLocaleString('ar-EG')}
         `;
     }
 };
@@ -307,4 +364,4 @@ window.Telegram = TelegramSystem;
 // بدء الاستماع للأوامر كل 30 ثانية
 setInterval(() => Telegram.checkCommands(), 30000);
 
-console.log('✅ نظام تلغرام جاهز');
+console.log('✅ نظام تلغرام جاهز مع دعم الصور');
