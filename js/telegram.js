@@ -1182,8 +1182,16 @@ function showMerchantPanel() {
     `;
 }
 
-// ===== [4.39] إرسال طلب تاجر إلى تلغرام مع أزرار =====
+// ===== [4.39] إرسال طلب تاجر إلى تلغرام مع أزرار (مرة واحدة) =====
 async function sendMerchantRequestToTelegram(merchant) {
+    // التحقق إذا كان الطلب قد أرسل مسبقاً (يمكنك تخزين المعرفات المرسلة)
+    const sentRequests = JSON.parse(localStorage.getItem('sent_merchant_requests') || '[]');
+    
+    if (sentRequests.includes(merchant.id)) {
+        console.log('⚠️ طلب التاجر هذا أرسل مسبقاً');
+        return;
+    }
+    
     const message = `
 🔵 *طلب انضمام تاجر جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -1213,6 +1221,10 @@ async function sendMerchantRequestToTelegram(merchant) {
             }
         })
     });
+    
+    // حفظ المعرف بعد الإرسال
+    sentRequests.push(merchant.id);
+    localStorage.setItem('sent_merchant_requests', JSON.stringify(sentRequests));
 }
 
 // ===== [4.40] إظهار نافذة إضافة منتج =====
