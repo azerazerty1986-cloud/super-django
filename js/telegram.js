@@ -1390,11 +1390,16 @@ function showDashboardMerchants() {
         `).join('')}
     `;
 }
-
-// ===== [4.47] الموافقة على تاجر مع أزرار تلغرام =====
+// ===== [4.47] الموافقة على تاجر مع منع التكرار =====
 function approveMerchant(id) {
     const user = users.find(u => u.id == id);
     if (user) {
+        // التحقق إذا كان قد تمت الموافقة مسبقاً
+        if (user.role === 'merchant_approved') {
+            showNotification('✅ هذا التاجر معتمد بالفعل', 'info');
+            return;
+        }
+        
         user.role = 'merchant_approved';
         user.status = 'approved';
         localStorage.setItem('nardoo_users', JSON.stringify(users));
@@ -1404,41 +1409,36 @@ function approveMerchant(id) {
             showDashboardMerchants();
         }
         
-        // إرسال إشعار الموافقة إلى تلغرام مع أزرار
+        // إرسال إشعار واحد فقط بدون أزرار
         fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chat_id: TELEGRAM.channelId,
-                text: `✅ *تمت الموافقة على التاجر*
+                text: `✅ *تمت الموافقة على تاجر جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 *التاجر:* ${user.name}
-🏪 *المتجر:* ${user.storeName || 'غير محدد'}
+🏪 *المتجر:* ${user.storeName || user.name}
 📧 *البريد:* ${user.email}
 📞 *الهاتف:* ${user.phone || 'غير محدد'}
 🎉 *يمكنه الآن إضافة المنتجات*
 🕐 ${new Date().toLocaleString('ar-EG')}`,
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '✅ نعم', callback_data: `confirm_approve_${user.id}` },
-                            { text: '❌ لا', callback_data: `cancel_approve_${user.id}` }
-                        ],
-                        [
-                            { text: '📋 قائمة الطلبات', callback_data: 'show_pending' }
-                        ]
-                    ]
-                }
+                parse_mode: 'Markdown'
             })
         });
     }
 }
 
-// ===== [4.48] رفض تاجر مع أزرار تلغرام =====
+// ===== [4.48] رفض تاجر مع منع التكرار =====
 function rejectMerchant(id) {
     const user = users.find(u => u.id == id);
     if (user) {
+        // التحقق إذا كان قد تم الرفض مسبقاً
+        if (user.status === 'rejected') {
+            showNotification('❌ هذا التاجر مرفوض بالفعل', 'info');
+            return;
+        }
+        
         user.role = 'customer';
         user.status = 'rejected';
         localStorage.setItem('nardoo_users', JSON.stringify(users));
@@ -1448,31 +1448,20 @@ function rejectMerchant(id) {
             showDashboardMerchants();
         }
         
-        // إرسال إشعار الرفض إلى تلغرام مع أزرار
+        // إرسال إشعار واحد فقط بدون أزرار
         fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 chat_id: TELEGRAM.channelId,
-                text: `❌ *تم رفض طلب التاجر*
+                text: `❌ *تم رفض طلب تاجر*
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 *التاجر:* ${user.name}
-🏪 *المتجر:* ${user.storeName || 'غير محدد'}
+🏪 *المتجر:* ${user.storeName || user.name}
 📧 *البريد:* ${user.email}
 📞 *الهاتف:* ${user.phone || 'غير محدد'}
 🕐 ${new Date().toLocaleString('ar-EG')}`,
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '✅ نعم', callback_data: `confirm_reject_${user.id}` },
-                            { text: '❌ لا', callback_data: `cancel_reject_${user.id}` }
-                        ],
-                        [
-                            { text: '📋 قائمة الطلبات', callback_data: 'show_pending' }
-                        ]
-                    ]
-                }
+                parse_mode: 'Markdown'
             })
         });
     }
