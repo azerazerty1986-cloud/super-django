@@ -1531,95 +1531,300 @@ class TypingAnimation {
     }
 }
 
-// ===== [4.51] الاستماع لأوامر وأزرار تلغرام =====
+// ===== [4.51] الاستماع لأوامر وأزرار تلغرام مع تخزين في تلغرام =====
+// تخزين آخر تحديث تم معالجته
+let lastProcessedUpdateId = 0;
+
+// جلب المعاملات السابقة من تلغرام عند بدء التشغيل
+async function loadProcessedRequestsFromTelegram() {
+    try {
+        // استخدام قناة التلغرام كقاعدة بيانات لتخزين المعاملات
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
+        const data = await response.json();
+        
+        const processedRequests = {};
+        
+        if (data.ok && data.result) {
+            for (const update of data.result) {
+                // البحث عن رسائل خاصة بالمعاملات
+                if (update.message?.text) {
+                    const text = update.message.text;
+                    
+                    // تخزين المعرفات التي تمت معالجتها
+                    if (text.includes('✅ *تمت الموافقة*') || 
+                        text.includes('❌ *تم الرفض*') ||
+                        text.includes('تمت الموافقة على هذا الطلب')) {
+                        
+                        // استخراج معرف التاجر من الرسالة
+                        const match = text.match(/رقم الطلب: (\d+)/);
+                        if (match) {
+                            processedRequests[`approved_${match[1]}`] = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        console.log('✅ تم تحميل المعاملات السابقة من تلغرام');
+        return processedRequests;
+        
+    } catch (error) {
+        console.error('❌ خطأ في تحميل المعاملات:', error);
+        return {};
+    }
+}
+
+// تخزين المعاملات في الذاكرة
+let processedRequests = {};
+let processedRequestsLoaded = false;
+
+// تحميل المعاملات عند بدء التشغيل
+loadProcessedRequestsFromTelegram().then(data => {
+    processedRequests = data;
+    processedRequestsLoaded = true;
+});
+
 setInterval(async () => {
     try {
-        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates`);
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?offset=${lastProcessedUpdateId + 1}`);
         const data = await response.json();
         
         if (data.ok && data.result) {
             for (const update of data.result) {
-                // معالجة الضغط على الأزرار
+                // تحديث آخر ID تمت معالجته
+                lastProcessedUpdateId = update.update_id;
+                
+                // معالجة الضغط على الأزرار (callback_query)
                 if (update.callback_query) {
                     const callback = update.callback_query;
                     const data = callback.data;
+                    const callbackId = callback.id;
+                    const messageId = callback.message?.message_id;
                     
-                    // موافقة
-                    if (data.startsWith('approve_')) {
-                        const userId = data.replace('approve_', '');
-                        approveMerchant(userId);
+                    // إنشاء معرف فريد لهذا التفاعل
+                    const uniqueId = `${callbackId}_${messageId}_${data}`;
+                    
+                    // استخراج معرف التاجر من البيانات
+                    let userId = null;
+                    if (data.startsWith('approve_')) userId = data.replace('approve_', '');
+                    if (data.startsWith('reject_')) userId = data.replace('reject_', '');
+                    
+                    // التحقق إذا تمت معالجة هذا التاجر مسبقاً (من تلغرام)
+                    if (userId && processedRequests[`approved_${userId}`]) {
+                        console.log('⚠️ هذا التاجر تمت معالجته مسبقاً (من سجل تلغرام)');
                         
                         await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 callback_query_id: callback.id,
-                                text: '✅ تمت الموافقة على التاجر'
+                                text: '✅ هذا الطلب تمت معالجته مسبقاً',
+                                show_alert: true
                             })
                         });
+                        continue;
+                    }
+                    
+                    // التحقق إذا تمت معالجة هذا التفاعل مسبقاً (في الذاكرة)
+                    if (processedRequests[uniqueId]) {
+                        console.log('⚠️ هذا التفاعل تمت معالجته مسبقاً');
+                        
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                callback_query_id: callback.id,
+                                text: '✅ تمت معالجة هذا الطلب مسبقاً',
+                                show_alert: true
+                            })
+                        });
+                        continue;
+                    }
+                    
+                    // تسجيل هذا التفاعل كمعالج
+                    processedRequests[uniqueId] = true;
+                    if (userId) {
+                        processedRequests[`approved_${userId}`] = true;
+                    }
+                    
+                    // موافقة
+                    if (data.startsWith('approve_')) {
+                        const userId = data.replace('approve_', '');
+                        
+                        // التحقق من وجود المستخدم
+                        const user = users.find(u => u.id == userId);
+                        if (user && user.role !== 'merchant_approved') {
+                            approveMerchant(userId);
+                            
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    callback_query_id: callback.id,
+                                    text: '✅ تمت الموافقة على التاجر بنجاح'
+                                })
+                            });
+                            
+                            // تحديث الرسالة الأصلية وإضافة علامة الموافقة
+                            const newText = callback.message.text + '\n\n✅ *تمت الموافقة على هذا الطلب*\n🆔 رقم المعاملة: ' + uniqueId;
+                            
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/editMessageText`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    message_id: callback.message.message_id,
+                                    text: newText,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                            // إرسال تأكيد في قناة التلغرام كسجل دائم
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: TELEGRAM.channelId,
+                                    text: `📝 *سجل المعاملات*
+━━━━━━━━━━━━━━━━━━━━━━
+✅ *تمت الموافقة*
+👤 التاجر: ${user.name}
+🆔 رقم التاجر: ${userId}
+🆔 رقم المعاملة: ${uniqueId}
+🕐 ${new Date().toLocaleString('ar-EG')}`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                        } else {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    callback_query_id: callback.id,
+                                    text: '⚠️ هذا التاجر غير موجود أو معتمد مسبقاً',
+                                    show_alert: true
+                                })
+                            });
+                        }
                     }
                     
                     // رفض
                     if (data.startsWith('reject_')) {
                         const userId = data.replace('reject_', '');
-                        rejectMerchant(userId);
                         
-                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                callback_query_id: callback.id,
-                                text: '❌ تم رفض التاجر'
-                            })
-                        });
-                    }
-                    
-                    // تأكيد الموافقة
-                    if (data.startsWith('confirm_approve_')) {
-                        const userId = data.replace('confirm_approve_', '');
-                        approveMerchant(userId);
-                        
-                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                callback_query_id: callback.id,
-                                text: '✅ تم تأكيد الموافقة'
-                            })
-                        });
-                    }
-                    
-                    // إلغاء الموافقة
-                    if (data.startsWith('cancel_approve_')) {
-                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                callback_query_id: callback.id,
-                                text: '❌ تم إلغاء العملية'
-                            })
-                        });
+                        // التحقق من وجود المستخدم
+                        const user = users.find(u => u.id == userId);
+                        if (user && user.status !== 'rejected') {
+                            rejectMerchant(userId);
+                            
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    callback_query_id: callback.id,
+                                    text: '❌ تم رفض التاجر'
+                                })
+                            });
+                            
+                            // تحديث الرسالة الأصلية وإضافة علامة الرفض
+                            const newText = callback.message.text + '\n\n❌ *تم رفض هذا الطلب*\n🆔 رقم المعاملة: ' + uniqueId;
+                            
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/editMessageText`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    message_id: callback.message.message_id,
+                                    text: newText,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                            // إرسال تأكيد في قناة التلغرام كسجل دائم
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: TELEGRAM.channelId,
+                                    text: `📝 *سجل المعاملات*
+━━━━━━━━━━━━━━━━━━━━━━
+❌ *تم الرفض*
+👤 التاجر: ${user.name}
+🆔 رقم التاجر: ${userId}
+🆔 رقم المعاملة: ${uniqueId}
+🕐 ${new Date().toLocaleString('ar-EG')}`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                        } else {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    callback_query_id: callback.id,
+                                    text: '⚠️ هذا التاجر غير موجود أو مرفوض مسبقاً',
+                                    show_alert: true
+                                })
+                            });
+                        }
                     }
                     
                     // عرض قائمة الطلبات
                     if (data === 'show_pending') {
                         const pendingCount = users.filter(u => u.role === 'merchant_pending').length;
+                        const pendingList = users.filter(u => u.role === 'merchant_pending')
+                            .map(u => `• ${u.storeName || u.name} (🆔 ${u.id})`).join('\n');
                         
                         await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 callback_query_id: callback.id,
-                                text: `📋 عدد الطلبات المعلقة: ${pendingCount}`,
+                                text: `📋 الطلبات المعلقة: ${pendingCount}`,
                                 show_alert: true
                             })
                         });
+                        
+                        // إرسال قائمة مفصلة
+                        if (pendingCount > 0) {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    text: `📋 *قائمة الطلبات المعلقة*\n━━━━━━━━━━━━━━━━━━━━━━\n${pendingList}`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                        } else {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    text: `📋 *لا توجد طلبات معلقة*`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                        }
                     }
                 }
                 
-                // معالجة الأوامر النصية (كاحتياطي)
+                // معالجة الأوامر النصية
                 if (update.message?.text) {
                     const text = update.message.text;
+                    const messageId = update.message.message_id;
+                    const uniqueId = `text_${messageId}`;
+                    
+                    // التحقق من تكرار الأمر النصي
+                    if (processedRequests[uniqueId]) {
+                        console.log('⚠️ هذا الأمر تمت معالجته مسبقاً');
+                        continue;
+                    }
+                    
+                    processedRequests[uniqueId] = true;
                     
                     if (text.startsWith('/approve_')) {
                         const userId = text.replace('/approve_', '');
@@ -1630,13 +1835,61 @@ setInterval(async () => {
                         const userId = text.replace('/reject_', '');
                         rejectMerchant(userId);
                     }
+                    
+                    if (text === '/pending') {
+                        const pendingCount = users.filter(u => u.role === 'merchant_pending').length;
+                        const pendingList = users.filter(u => u.role === 'merchant_pending')
+                            .map(u => `• ${u.storeName || u.name} (🆔 ${u.id})`).join('\n');
+                        
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: update.message.chat.id,
+                                text: `📋 *الطلبات المعلقة*\n━━━━━━━━━━━━━━━━━━━━━━\nالعدد: ${pendingCount}\n\n${pendingCount > 0 ? pendingList : 'لا توجد طلبات'}`,
+                                parse_mode: 'Markdown'
+                            })
+                        });
+                    }
+                    
+                    if (text === '/history') {
+                        // جلب سجل المعاملات من قناة التلغرام
+                        const historyResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
+                        const historyData = await historyResponse.json();
+                        
+                        let historyText = "📜 *سجل المعاملات*\n━━━━━━━━━━━━━━━━━━━━━━\n";
+                        let count = 0;
+                        
+                        if (historyData.ok && historyData.result) {
+                            for (const hUpdate of historyData.result.slice(-10)) {
+                                if (hUpdate.message?.text?.includes('سجل المعاملات')) {
+                                    count++;
+                                    historyText += hUpdate.message.text.split('\n').slice(2, 5).join('\n') + '\n---\n';
+                                }
+                            }
+                        }
+                        
+                        if (count === 0) {
+                            historyText += "لا توجد معاملات سابقة";
+                        }
+                        
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: update.message.chat.id,
+                                text: historyText,
+                                parse_mode: 'Markdown'
+                            })
+                        });
+                    }
                 }
             }
         }
     } catch (error) {
-        console.error('خطأ في التحقق من أوامر تلغرام:', error);
+        console.error('❌ خطأ في التحقق من أوامر تلغرام:', error);
     }
-}, 5000);
+}, 10000); // فحص كل 10 ثواني
 
 // ===== [4.52] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
