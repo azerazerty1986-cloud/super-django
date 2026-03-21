@@ -691,8 +691,8 @@
                 <i class="fas fa-user"></i>
             </div>
             <div class="user-info">
-                <h3 id="userName">أحمد التاجر</h3>
-                <span class="user-role" id="userRole">تاجر معتمد</span>
+                <h3 id="userName">زائر</h3>
+                <span class="user-role" id="userRole">مشتري</span>
             </div>
         </div>
         <div class="user-stats">
@@ -712,11 +712,11 @@
     <div class="reels-grid" id="reelsContainer">
         <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: gold;">
             <i class="fas fa-spinner fa-pulse" style="font-size: 50px;"></i>
-            <p>جاري تحميل الريلز...</p>
+            <p>جاري تحميل الريلز من القناة...</p>
         </div>
     </div>
 
-    <div class="upload-btn" onclick="openUploadModal()" title="رفع ريلز جديد">
+    <div class="upload-btn" onclick="openUploadModal()" title="رفع ريلز جديد" id="uploadBtn">
         <i class="fas fa-plus"></i>
     </div>
 
@@ -803,10 +803,10 @@
         // ========== بيانات المستخدم ==========
         let currentUser = {
             id: 1001,
-            name: 'أحمد التاجر',
-            role: 'merchant_approved',
-            points: 450,
-            reelsCount: 12
+            name: 'زائر',
+            role: 'customer',
+            points: 0,
+            reelsCount: 0
         };
 
         // ========== قاعدة بيانات الريلز ==========
@@ -816,33 +816,149 @@
         let publishType = 'channel';
         let selectedFile = null;
         let currentThumbprint = '';
+        let thumbprintInterval = null;
 
-        // ========== تحميل البيانات المحفوظة ==========
-        function loadData() {
-            // تحميل بيانات المستخدم
-            const savedUser = localStorage.getItem('nardoo_current_user');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                document.getElementById('userName').textContent = currentUser.name;
-                document.getElementById('userReelsCount').textContent = currentUser.reelsCount;
-                document.getElementById('userPoints').textContent = currentUser.points;
+        // ========== جلب الريلز من قناة التليجرام ==========
+        async function fetchReelsFromTelegram() {
+            try {
+                const container = document.getElementById('reelsContainer');
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: gold;">
+                        <i class="fas fa-spinner fa-pulse" style="font-size: 50px;"></i>
+                        <p>جاري جلب الريلز من القناة...</p>
+                    </div>
+                `;
+                
+                // جلب آخر 50 منشور من القناة
+                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?offset=-100&limit=100`);
+                const data = await response.json();
+                
+                if (!data.ok) {
+                    throw new Error(data.description || 'فشل جلب البيانات');
+                }
+                
+                const reels = [];
+                const updates = data.result || [];
+                
+                // البحث عن رسائل الفيديو
+                for (const update of updates) {
+                    const message = update.channel_post || update.message;
+                    if (message && message.video) {
+                        const video = message.video;
+                        const caption = message.caption || '';
+                        
+                        // استخراج البصمة من التعليق
+                        let thumbprint = '';
+                        const thumbprintMatch = caption.match(/🔍 البصمة: ([^\n]+)/);
+                        if (thumbprintMatch) thumbprint = thumbprintMatch[1];
+                        
+                        // استخراج الناشر
+                        let publisher = 'ناردو برو';
+                        const publisherMatch = caption.match(/👤 المستخدم: ([^\n]+)/);
+                        if (publisherMatch) publisher = publisherMatch[1];
+                        
+                        // استخراج العنوان
+                        let title = 'ريلز';
+                        const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
+                        if (titleMatch) title = titleMatch[1].trim();
+                        
+                        // الحصول على الرابط الدائم
+                        const fileResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${video.file_id}`);
+                        const fileData = await fileResponse.json();
+                        
+                        if (fileData.ok) {
+                            const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                            
+                            reels.push({
+                                id: message.message_id,
+                                title: title,
+                                videoUrl: videoUrl,
+                                thumbnail: '',
+                                views: 0,
+                                likes: 0,
+                                publisher: publisher,
+                                thumbprint: thumbprint,
+                                telegramFileId: video.file_id,
+                                storedInTelegram: true,
+                                createdAt: new Date(message.date * 1000).toISOString()
+                            });
+                        }
+                    }
+                }
+                
+                // عكس الترتيب ليظهر الأحدث أولاً
+                reels.reverse();
+                
+                // حفظ في localStorage كنسخة مؤقتة
+                localStorage.setItem('nardoo_reels_database', JSON.stringify(reels));
+                reelsDatabase = reels;
+                
+                renderReels();
+                updateStats();
+                
+                if (reels.length === 0) {
+                    showNotification('⚠️ لا توجد ريلز في القناة حالياً', 'info');
+                } else {
+                    showNotification(`✅ تم جلب ${reels.length} ريلز من القناة`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('Error fetching reels:', error);
+                showNotification('⚠️ فشل جلب الريلز من القناة، يتم استخدام النسخة المحلية', 'error');
+                
+                // استخدام النسخة المحلية كاحتياطي
+                const saved = localStorage.getItem('nardoo_reels_database');
+                if (saved) {
+                    reelsDatabase = JSON.parse(saved);
+                    renderReels();
+                    updateStats();
+                } else {
+                    document.getElementById('reelsContainer').innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: gold;">
+                            <i class="fas fa-film" style="font-size: 80px; opacity: 0.5;"></i>
+                            <h2>لا توجد ريلز حالياً</h2>
+                            <p>اضغط على الزر + لرفع ريلز جديد</p>
+                        </div>
+                    `;
+                }
             }
-            
-            // تحميل الريلز
-            const saved = localStorage.getItem('nardoo_reels_database');
-            if (saved) {
-                reelsDatabase = JSON.parse(saved);
-            } else {
-                reelsDatabase = [];
-            }
-            
-            renderReels();
-            updateStats();
         }
 
-        // ========== حفظ الريلز ==========
-        function saveReels() {
-            localStorage.setItem('nardoo_reels_database', JSON.stringify(reelsDatabase));
+        // ========== تحميل بيانات المستخدم ==========
+        function loadUserData() {
+            const savedUser = localStorage.getItem('nardoo_current_user');
+            if (savedUser) {
+                try {
+                    const user = JSON.parse(savedUser);
+                    currentUser = {
+                        id: user.id || 1001,
+                        name: user.name || 'زائر',
+                        role: user.role || 'customer',
+                        points: user.points || 0,
+                        reelsCount: user.reelsCount || 0
+                    };
+                } catch(e) {}
+            }
+            
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userReelsCount').textContent = currentUser.reelsCount;
+            document.getElementById('userPoints').textContent = currentUser.points;
+            
+            // تحديد دور المستخدم
+            let roleText = 'مشتري';
+            if (currentUser.role === 'admin') roleText = 'مدير النظام';
+            else if (currentUser.role === 'merchant') roleText = 'تاجر معتمد';
+            else if (currentUser.role === 'content_creator') roleText = 'صانع محتوى';
+            
+            document.getElementById('userRole').textContent = roleText;
+            
+            // إظهار زر الرفع فقط للتجار والمديرين وصناع المحتوى
+            const uploadBtn = document.getElementById('uploadBtn');
+            if (currentUser.role === 'admin' || currentUser.role === 'merchant' || currentUser.role === 'content_creator') {
+                uploadBtn.style.display = 'flex';
+            } else {
+                uploadBtn.style.display = 'none';
+            }
         }
 
         // ========== حفظ بيانات المستخدم ==========
@@ -859,8 +975,7 @@
                     <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: gold;">
                         <i class="fas fa-film" style="font-size: 80px; opacity: 0.5;"></i>
                         <h2>لا توجد ريلز حالياً</h2>
-                        <p>اضغط على الزر + لرفع ريلز جديد</p>
-                        <p style="font-size: 12px; margin-top: 10px;">سيتم تخزين الفيديوهات بشكل دائم في قناة التليجرام</p>
+                        <p>كن أول من يرفع ريلز!</p>
                     </div>
                 `;
                 return;
@@ -880,7 +995,7 @@
                             <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
                             <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
                             <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
-                            <span><i class="fas fa-fingerprint"></i> ${reel.thumbprint.substring(0, 15)}...</span>
+                            ${reel.thumbprint ? `<span><i class="fas fa-fingerprint"></i> ${reel.thumbprint.substring(0, 15)}...</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -891,11 +1006,6 @@
         function playReel(id) {
             const reel = reelsDatabase.find(r => r.id === id);
             if (!reel) return;
-            
-            reel.views = (reel.views || 0) + 1;
-            saveReels();
-            renderReels();
-            updateStats();
             
             openVideoPlayer(reel);
         }
@@ -920,7 +1030,7 @@
                         <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px; flex-wrap: wrap;">
                             <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
                             <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
-                            <span><i class="fas fa-fingerprint"></i> ${reel.thumbprint}</span>
+                            ${reel.thumbprint ? `<span><i class="fas fa-fingerprint"></i> ${reel.thumbprint}</span>` : ''}
                             <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
                         </div>
                     </div>
@@ -937,7 +1047,6 @@
         // ========== تحديث الإحصائيات ==========
         function updateStats() {
             const totalViews = reelsDatabase.reduce((sum, r) => sum + (r.views || 0), 0);
-            const totalLikes = reelsDatabase.reduce((sum, r) => sum + (r.likes || 0), 0);
             
             document.getElementById('statsBar').innerHTML = `
                 <div class="stat-item-center">
@@ -949,10 +1058,6 @@
                     <div class="stat-label-center">مشاهدة</div>
                 </div>
                 <div class="stat-item-center">
-                    <div class="stat-value-center">${formatNumber(totalLikes)}</div>
-                    <div class="stat-label-center">إعجاب</div>
-                </div>
-                <div class="stat-item-center">
                     <div class="stat-value-center">${reelsDatabase.filter(r => r.storedInTelegram).length}</div>
                     <div class="stat-label-center">مخزنة في تليجرام</div>
                 </div>
@@ -961,6 +1066,12 @@
 
         // ========== فتح نافذة الرفع ==========
         function openUploadModal() {
+            // التحقق من صلاحية المستخدم
+            if (currentUser.role !== 'admin' && currentUser.role !== 'merchant' && currentUser.role !== 'content_creator') {
+                showNotification('❌ عذراً، فقط التجار وصناع المحتوى يمكنهم رفع ريلز', 'error');
+                return;
+            }
+            
             document.getElementById('uploadModal').style.display = 'flex';
             generateThumbprint();
             document.getElementById('errorMessage').style.display = 'none';
@@ -995,7 +1106,10 @@
         }
 
         // ========== تحديث البصمة كل ثانية ==========
-        let thumbprintInterval = setInterval(generateThumbprint, 1000);
+        function startThumbprintInterval() {
+            if (thumbprintInterval) clearInterval(thumbprintInterval);
+            thumbprintInterval = setInterval(generateThumbprint, 1000);
+        }
 
         // ========== اختيار نوع النشر ==========
         function selectPublishType(type, element) {
@@ -1073,7 +1187,7 @@
             document.getElementById('errorMessage').style.display = 'none';
 
             try {
-                // 1. رفع الفيديو إلى تليجرام
+                // رفع الفيديو إلى تليجرام
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', selectedFile);
@@ -1101,51 +1215,23 @@
                     throw new Error(uploadData.description || 'فشل رفع الفيديو');
                 }
                 
-                // 2. الحصول على رابط الفيديو الدائم
-                const fileId = uploadData.result.video.file_id;
-                const fileResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                const fileData = await fileResponse.json();
-                
-                if (!fileData.ok) {
-                    throw new Error('فشل الحصول على رابط الفيديو');
-                }
-                
-                // الرابط الدائم للفيديو من خوادم تليجرام
-                const permanentVideoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                
-                // 3. حفظ الريلز في قاعدة البيانات مع الرابط الدائم
-                const newReel = {
-                    id: Date.now(),
-                    title: title,
-                    videoUrl: permanentVideoUrl,
-                    thumbnail: '',
-                    views: 0,
-                    likes: 0,
-                    publisher: currentUser.name,
-                    thumbprint: currentThumbprint,
-                    telegramFileId: fileId,
-                    publishType: publishType,
-                    storedInTelegram: true,
-                    createdAt: new Date().toISOString()
-                };
-                
-                reelsDatabase.unshift(newReel);
-                saveReels();
-                
-                // 4. تحديث إحصائيات المستخدم
+                // تحديث بيانات المستخدم
                 currentUser.reelsCount = (currentUser.reelsCount || 0) + 1;
                 currentUser.points = (currentUser.points || 0) + 10;
                 saveUser();
                 
-                // 5. تحديث واجهة المستخدم
-                renderReels();
-                updateStats();
+                // تحديث واجهة المستخدم
                 document.getElementById('userReelsCount').textContent = currentUser.reelsCount;
                 document.getElementById('userPoints').textContent = currentUser.points;
                 
-                showNotification(`✅ تم التخزين بنجاح! البصمة: ${currentThumbprint}`, 'success');
+                showNotification(`✅ تم الرفع بنجاح! البصمة: ${currentThumbprint}`, 'success');
                 
-                // 6. تنظيف النموذج
+                // جلب الريلز من جديد لتعرض للجميع
+                setTimeout(() => {
+                    fetchReelsFromTelegram();
+                }, 2000);
+                
+                // تنظيف النموذج
                 document.getElementById('reelTitle').value = 'ريلز';
                 removeVideo();
                 
@@ -1199,8 +1285,27 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // ========== تحديث الريلز تلقائياً كل 30 ثانية ==========
+        let autoRefreshInterval = null;
+        
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    fetchReelsFromTelegram();
+                }
+            }, 30000);
+        }
+
         // ========== تهيئة الصفحة ==========
-        loadData();
+        async function init() {
+            loadUserData();
+            startThumbprintInterval();
+            await fetchReelsFromTelegram();
+            startAutoRefresh();
+        }
+        
+        init();
 
         // إغلاق النافذة عند الضغط خارجها
         window.onclick = function(event) {
@@ -1210,11 +1315,10 @@
             }
         };
         
-        // تنظيف المؤقت عند إغلاق الصفحة
+        // تنظيف المؤقتات عند إغلاق الصفحة
         window.onbeforeunload = function() {
-            if (thumbprintInterval) {
-                clearInterval(thumbprintInterval);
-            }
+            if (thumbprintInterval) clearInterval(thumbprintInterval);
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
         };
     </script>
 </body>
