@@ -1,1483 +1,499 @@
+
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو ريلز | نظام متكامل - تخزين في تليجرام</title>
+    <title>نكهة وجمال | ناردو برو - المنصة المتكاملة</title>
     
-    <!-- Font Awesome 6 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- ===== شريط الإشعارات ===== -->
+    <div id="toastContainer"></div>
     
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f2b23, #1e4a3f);
-            min-height: 100vh;
-            color: white;
-        }
-
-        /* ===== شريط المستخدم ===== */
-        .user-bar {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border-bottom: 3px solid #ff0066;
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-
-        .user-badge {
-            background: linear-gradient(135deg, #ff0066, #cc0052);
-            padding: 10px 25px;
-            border-radius: 50px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: bold;
-            font-size: 18px;
-            box-shadow: 0 0 15px rgba(255,0,102,0.5);
-        }
-
-        .user-badge i {
-            font-size: 24px;
-        }
-
-        .user-stats {
-            display: flex;
-            gap: 25px;
-        }
-
-        .user-stat {
-            background: rgba(255,255,255,0.1);
-            padding: 8px 20px;
-            border-radius: 25px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .user-stat .number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #ff0066;
-        }
-
-        .user-stat .label {
-            font-size: 12px;
-            color: rgba(255,255,255,0.7);
-        }
-
-        /* ===== تبويبات ===== */
-        .admin-tabs, .user-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            background: rgba(0,0,0,0.5);
-            padding: 12px 20px;
-            margin: 20px auto;
-            max-width: 1200px;
-            border-radius: 60px;
-            flex-wrap: wrap;
-            backdrop-filter: blur(10px);
-        }
-
-        .admin-tab, .user-tab {
-            padding: 12px 30px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 16px;
-        }
-
-        .admin-tab.active, .user-tab.active {
-            background: linear-gradient(135deg, gold, #ffd700);
-            color: black;
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(255,215,0,0.4);
-        }
-
-        .admin-tab:hover:not(.active), .user-tab:hover:not(.active) {
-            background: rgba(255,215,0,0.3);
-            transform: translateY(-2px);
-        }
-
-        /* ===== محتوى ===== */
-        .admin-content, .user-content {
-            display: none;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .admin-content.active, .user-content.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ===== بطاقات التحكم ===== */
-        .control-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 35px;
-        }
-
-        .control-card {
-            background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
-            backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 25px;
-            text-align: center;
-            border: 2px solid gold;
-            transition: all 0.3s ease;
-        }
-
-        .control-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(212,175,55,0.3);
-        }
-
-        .control-card i {
-            font-size: 50px;
-            color: gold;
-            margin-bottom: 15px;
-        }
-
-        .control-card h3 {
-            color: gold;
-            margin-bottom: 10px;
-            font-size: 22px;
-        }
-
-        .control-card p {
-            color: rgba(255,255,255,0.8);
-            margin-bottom: 15px;
-        }
-
-        /* ===== الجداول ===== */
-        .users-table {
-            width: 100%;
-            background: rgba(0,0,0,0.5);
-            border-radius: 25px;
-            overflow-x: auto;
-            backdrop-filter: blur(10px);
-            padding: 5px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 15px 12px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255,215,0,0.2);
-        }
-
-        th {
-            background: rgba(255,215,0,0.15);
-            color: gold;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        tr:hover {
-            background: rgba(255,215,0,0.05);
-        }
-
-        /* ===== الأزرار ===== */
-        .action-btn {
-            background: none;
-            border: 2px solid gold;
-            color: gold;
-            padding: 6px 15px;
-            border-radius: 25px;
-            cursor: pointer;
-            margin: 0 5px;
-            transition: all 0.3s ease;
-            font-weight: bold;
-            font-size: 13px;
-        }
-
-        .action-btn.delete {
-            border-color: #ff4444;
-            color: #ff4444;
-        }
-
-        .action-btn.delete:hover {
-            background: #ff4444;
-            color: white;
-            border-color: #ff4444;
-        }
-
-        .action-btn:hover {
-            background: gold;
-            color: black;
-            transform: scale(1.05);
-        }
-
-        .action-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        /* ===== شبكة الريلز ===== */
-        .reels-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 25px;
-            padding: 20px;
-        }
-
-        .reel-card {
-            background: linear-gradient(135deg, #1e1e2e, #2a2a3a);
-            border: 2px solid gold;
-            border-radius: 20px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .reel-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(212, 175, 55, 0.3);
-            border-color: #ffd966;
-        }
-
-        .reel-video {
-            height: 320px;
-            overflow: hidden;
-            background: #000;
-            position: relative;
-        }
-
-        .reel-video video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s;
-        }
-
-        .reel-card:hover .reel-video video {
-            transform: scale(1.05);
-        }
-
-        .reel-play-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            background: rgba(212, 175, 55, 0.9);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .reel-play-overlay i {
-            font-size: 30px;
-            color: white;
-        }
-
-        .reel-card:hover .reel-play-overlay {
-            opacity: 1;
-        }
-
-        .reel-info {
-            padding: 15px;
-        }
-
-        .reel-info h3 {
-            color: gold;
-            margin-bottom: 10px;
-            font-size: 18px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .reel-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #aaa;
-            margin-top: 10px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .reel-stats span {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        /* ===== أزرار عائمة ===== */
-        .upload-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: linear-gradient(135deg, gold, #ffd700);
-            color: black;
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.5);
-            transition: all 0.3s;
-            z-index: 1000;
-            border: 3px solid white;
-        }
-
-        .upload-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.8);
-        }
-
-        .back-btn {
-            position: fixed;
-            bottom: 30px;
-            left: 30px;
-            background: #2d2d3a;
-            color: gold;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            transition: all 0.3s;
-            z-index: 1000;
-            border: 2px solid gold;
-        }
-
-        .back-btn:hover {
-            transform: scale(1.1);
-            background: gold;
-            color: black;
-        }
-
-        /* ===== النوافذ المنبثقة ===== */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            backdrop-filter: blur(15px);
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #1a3a32, #0a1a15);
-            border: 3px solid gold;
-            border-radius: 30px;
-            padding: 35px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
-            animation: slideUp 0.5s ease;
-            position: relative;
-            box-shadow: 0 0 50px rgba(255,215,0,0.5);
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal-header {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        .modal-header h2 {
-            color: gold;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: none;
-            border: none;
-            color: gold;
-            font-size: 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .close-modal:hover {
-            transform: scale(1.2);
-            color: white;
-        }
-
-        /* ===== خيارات النشر ===== */
-        .publish-options {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 25px;
-        }
-
-        .publish-option {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            padding: 15px;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: bold;
-        }
-
-        .publish-option i {
-            font-size: 24px;
-        }
-
-        .publish-option.channel {
-            background: linear-gradient(135deg, #0088cc, #006699);
-        }
-
-        .publish-option.group {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-        }
-
-        .publish-option.story {
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-        }
-
-        .publish-option:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255,215,0,0.5);
-        }
-
-        .publish-option.active {
-            border: 3px solid gold;
-            transform: scale(1.05);
-        }
-
-        /* ===== منطقة الرفع ===== */
-        .upload-area {
-            border: 3px dashed gold;
-            border-radius: 20px;
-            padding: 40px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 25px;
-            background: rgba(255,215,0,0.05);
-        }
-
-        .upload-area:hover {
-            background: rgba(255,215,0,0.1);
-            transform: scale(1.02);
-        }
-
-        .upload-area i {
-            font-size: 60px;
-            color: gold;
-            margin-bottom: 15px;
-        }
-
-        .upload-area h3 {
-            font-size: 22px;
-            margin-bottom: 10px;
-            color: gold;
-        }
-
-        /* ===== معاينة الفيديو ===== */
-        .video-preview {
-            margin-bottom: 25px;
-            display: none;
-        }
-
-        .video-preview.show {
-            display: block;
-        }
-
-        .video-preview video {
-            width: 100%;
-            max-height: 350px;
-            border-radius: 15px;
-            border: 3px solid gold;
-            background: black;
-        }
-
-        .video-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-        }
-
-        .remove-video {
-            color: #f44336;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .remove-video:hover {
-            transform: scale(1.2);
-        }
-
-        /* ===== بصمة الريلز ===== */
-        .fingerprint-card {
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(10px);
-            border: 2px solid gold;
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .fingerprint-icon {
-            font-size: 40px;
-            color: gold;
-            margin-bottom: 10px;
-        }
-
-        .fingerprint-title {
-            color: gold;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .fingerprint-value {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: white;
-            background: rgba(0,0,0,0.5);
-            padding: 12px;
-            border-radius: 10px;
-            margin: 12px 0;
-            word-break: break-all;
-            direction: ltr;
-        }
-
-        .copy-btn {
-            background: none;
-            border: 2px solid gold;
-            color: gold;
-            padding: 8px 20px;
-            border-radius: 50px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .copy-btn:hover {
-            background: gold;
-            color: black;
-        }
-
-        /* ===== حقول النموذج ===== */
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: gold;
-            font-weight: bold;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(255,215,0,0.3);
-            border-radius: 12px;
-            color: white;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: gold;
-            background: rgba(255,255,255,0.15);
-        }
-
-        /* ===== أزرار الإرسال ===== */
-        .send-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, gold, #ffd700);
-            border: none;
-            border-radius: 50px;
-            color: black;
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-            border: 2px solid white;
-        }
-
-        .send-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px gold;
-        }
-
-        .send-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* ===== الإشعارات ===== */
-        .notification {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, gold, #ffd700);
-            color: black;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: bold;
-            box-shadow: 0 10px 30px rgba(212,175,55,0.5);
-            z-index: 2000;
-            animation: slideUp 0.3s ease;
-            font-size: 14px;
-        }
-
-        .error-message {
-            background: rgba(244,67,54,0.2);
-            border: 2px solid #f44336;
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 20px;
-            color: #f44336;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        /* ===== مؤشر التحميل ===== */
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,0,0,0.3);
-            border-radius: 50%;
-            border-top-color: black;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* ===== شارة التخزين ===== */
-        .telegram-storage-badge {
-            display: inline-block;
-            background: #0088cc;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 10px;
-            margin-top: 8px;
-        }
-
-        /* ===== شاشة تسجيل الدخول ===== */
-        .login-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f2b23, #1e4a3f);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 20000;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .login-box {
-            background: linear-gradient(135deg, rgba(0,0,0,0.8), rgba(0,0,0,0.6));
-            backdrop-filter: blur(20px);
-            border: 3px solid gold;
-            border-radius: 40px;
-            padding: 40px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .login-box h2 {
-            color: gold;
-            margin-bottom: 20px;
-            font-size: 28px;
-        }
-
-        .login-box input {
-            width: 100%;
-            padding: 15px;
-            margin: 15px 0;
-            background: rgba(255,255,255,0.1);
-            border: 2px solid gold;
-            border-radius: 30px;
-            color: white;
-            font-size: 16px;
-            text-align: center;
-        }
-
-        .login-box input:focus {
-            outline: none;
-            background: rgba(255,255,255,0.2);
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, gold, #ffd700);
-            border: none;
-            border-radius: 30px;
-            color: black;
-            font-weight: bold;
-            font-size: 18px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .login-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px gold;
-        }
-
-        /* ===== استجابة للشاشات الصغيرة ===== */
-        @media (max-width: 768px) {
-            .reels-grid {
-                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                gap: 15px;
-                padding: 15px;
-            }
-            
-            .reel-video {
-                height: 280px;
-            }
-            
-            .user-bar {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .user-stats {
-                justify-content: center;
-            }
-            
-            .admin-tabs, .user-tabs {
-                border-radius: 20px;
-                padding: 10px;
-            }
-            
-            .admin-tab, .user-tab {
-                padding: 8px 15px;
-                font-size: 12px;
-            }
-            
-            th, td {
-                padding: 10px 8px;
-                font-size: 12px;
-            }
-            
-            .upload-btn, .back-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
-            }
-            
-            .modal-content {
-                padding: 25px;
-            }
-        }
-    </style>
+    
+    <!-- الخطوط -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- ملفات CSS الخارجية -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
-    <!-- شاشة تسجيل الدخول -->
-    <div class="login-screen" id="loginScreen">
-        <div class="login-box">
-            <i class="fas fa-user-lock" style="font-size: 60px; color: gold; margin-bottom: 20px;"></i>
-            <h2>تسجيل الدخول</h2>
-            <input type="text" id="loginUsername" placeholder="اسم المستخدم" autocomplete="off">
-            <button class="login-btn" onclick="login()">
-                <i class="fas fa-sign-in-alt"></i> دخول
-            </button>
-            <div style="margin-top: 20px; font-size: 12px; color: #aaa;">
-                <p>👑 المدير: admin / admin123</p>
-                <p>👤 مستخدم: user / user123</p>
-            </div>
+    <!-- خلفية متحركة -->
+    <div class="animated-bg"></div>
+
+    
+
+    <!-- ===== محمل التحميل ===== -->
+    <div id="loader">
+        <div class="loader-content">
+            <i class="fas fa-crown loader-icon"></i>
+            <h2 class="loader-text">ناردو برو</h2>
         </div>
     </div>
 
-    <!-- واجهة المدير (تظهر فقط للمدير) -->
-    <div id="adminPanel" style="display: none;">
-        <!-- ===== شريط المدير ===== -->
-        <div class="user-bar">
-            <div class="user-badge">
-                <i class="fas fa-crown"></i>
-                <span id="adminName">المدير</span>
+    <!-- ===== سلة التسوق الجانبية ===== -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
+            <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
+        </div>
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>المجموع:</span>
+                <span id="cartTotal">0 دج</span>
             </div>
-            <div class="user-stats">
-                <div class="user-stat">
-                    <div class="number" id="totalReels">0</div>
-                    <div class="label">إجمالي الريلز</div>
-                </div>
-                <div class="user-stat">
-                    <div class="number" id="totalUsers">0</div>
-                    <div class="label">المستخدمين</div>
-                </div>
-                <div class="user-stat">
-                    <div class="number" id="totalViews">0</div>
-                    <div class="label">مشاهدة</div>
-                </div>
-                <div class="user-stat">
-                    <div class="number" id="telegramStored">0</div>
-                    <div class="label">مخزنة في تليجرام</div>
-                </div>
-            </div>
-            <button class="action-btn" onclick="logout()" style="background: rgba(255,0,102,0.3);">
-                <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+            <button class="checkout-btn" onclick="checkoutCart()">
+                <i class="fab fa-whatsapp"></i> إتمام الطلب
             </button>
         </div>
+    </div>
 
-        <!-- ===== تبويبات المدير ===== -->
-        <div class="admin-tabs">
-            <div class="admin-tab active" onclick="switchTab('reels')">
-                <i class="fas fa-film"></i> الريلز
-            </div>
-            <div class="admin-tab" onclick="switchTab('users')">
-                <i class="fas fa-users"></i> المستخدمين
-            </div>
-            <div class="admin-tab" onclick="switchTab('statistics')">
-                <i class="fas fa-chart-line"></i> الإحصائيات
-            </div>
-            <div class="admin-tab" onclick="switchTab('settings')">
-                <i class="fas fa-cog"></i> الإعدادات
-            </div>
-        </div>
-
-        <!-- ===== محتوى الريلز ===== -->
-        <div class="admin-content active" id="reelsContent">
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fas fa-plus-circle"></i>
-                    <h3>رفع ريلز جديد</h3>
-                    <p>أضف محتوى جديد إلى المنصة وسيتم تخزينه بشكل دائم في قناة التليجرام</p>
-                    <button class="action-btn" onclick="openUploadModal()" style="margin-top: 10px;">
-                        <i class="fas fa-upload"></i> رفع الآن
-                    </button>
+    <!-- ===== الشريط العلوي ===== -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar-left">
+                <div class="top-bar-item">
+                    <i class="fas fa-truck-fast"></i>
+                    <span>شحن مجاني للطلبات فوق 5000 دج</span>
                 </div>
-                <div class="control-card">
-                    <i class="fab fa-telegram"></i>
-                    <h3>التخزين في تليجرام</h3>
-                    <p>جميع الريلز مخزنة بشكل دائم في قناة التليجرام مع روابط مباشرة</p>
-                    <span class="telegram-storage-badge"><i class="fas fa-check-circle"></i> متصل بالقناة</span>
+                <div class="top-bar-item">
+                    <i class="fas fa-headset"></i>
+                    <span>دعم VIP 24/7</span>
                 </div>
-                <div class="control-card">
-                    <i class="fas fa-chart-simple"></i>
-                    <h3>إحصائيات سريعة</h3>
-                    <p id="quickStats">تحميل...</p>
+                <div class="top-bar-item">
+                    <i class="fas fa-gem"></i>
+                    <span>منتجات أصلية 100%</span>
                 </div>
             </div>
-            
-            <div class="reels-grid" id="reelsContainer">
-                <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
-                    <i class="fas fa-spinner fa-pulse" style="font-size: 40px;"></i>
-                    <p>جاري تحميل الريلز...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== محتوى المستخدمين ===== -->
-        <div class="admin-content" id="usersContent">
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fas fa-user-plus"></i>
-                    <h3>إضافة مستخدم</h3>
-                    <p>إضافة مستخدم جديد إلى النظام</p>
-                    <button class="action-btn" onclick="addNewUser()">
-                        <i class="fas fa-plus"></i> إضافة مستخدم
-                    </button>
-                </div>
-                <div class="control-card">
-                    <i class="fas fa-trash-alt"></i>
-                    <h3>تنظيف البيانات</h3>
-                    <p>حذف جميع المستخدمين العاديين (المدير محمي)</p>
-                    <button class="action-btn delete" onclick="clearAllUsers()">
-                        <i class="fas fa-trash"></i> حذف الكل
-                    </button>
-                </div>
-            </div>
-            
-            <div class="users-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>المعرف</th>
-                            <th>اسم المستخدم</th>
-                            <th>الدور</th>
-                            <th>عدد الريلز</th>
-                            <th>النقاط</th>
-                            <th>تاريخ التسجيل</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- ===== محتوى الإحصائيات ===== -->
-        <div class="admin-content" id="statisticsContent">
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fas fa-eye"></i>
-                    <h3>إجمالي المشاهدات</h3>
-                    <h2 id="statTotalViews" style="color: gold; font-size: 36px;">0</h2>
-                    <p>منذ بداية المنصة</p>
-                </div>
-                <div class="control-card">
-                    <i class="fas fa-heart"></i>
-                    <h3>إجمالي الإعجابات</h3>
-                    <h2 id="statTotalLikes" style="color: gold; font-size: 36px;">0</h2>
-                    <p>تفاعل المستخدمين</p>
-                </div>
-                <div class="control-card">
-                    <i class="fas fa-video"></i>
-                    <h3>إجمالي الريلز</h3>
-                    <h2 id="statTotalReels" style="color: gold; font-size: 36px;">0</h2>
-                    <p>محتوى منشور</p>
-                </div>
-                <div class="control-card">
-                    <i class="fab fa-telegram"></i>
-                    <h3>مخزنة في تليجرام</h3>
-                    <h2 id="statTelegramStorage" style="color: #0088cc; font-size: 36px;">0</h2>
-                    <p>تخزين دائم</p>
-                </div>
-            </div>
-            
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fas fa-chart-bar"></i>
-                    <h3>أكثر الريلز مشاهدة</h3>
-                    <div id="topReels" style="margin-top: 15px;"></div>
-                </div>
-                <div class="control-card">
-                    <i class="fas fa-trophy"></i>
-                    <h3>أكثر المستخدمين نشاطاً</h3>
-                    <div id="topUsers" style="margin-top: 15px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== محتوى الإعدادات ===== -->
-        <div class="admin-content" id="settingsContent">
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fab fa-telegram"></i>
-                    <h3>إعدادات تليجرام</h3>
-                    <p style="direction: ltr; font-size: 12px;">بوت: 8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0</p>
-                    <p style="direction: ltr; font-size: 12px;">قناة: -1003822964890</p>
-                    <button class="action-btn" onclick="testTelegramBot()">
-                        <i class="fas fa-plug"></i> اختبار الاتصال
-                    </button>
-                </div>
-                <div class="control-card">
-                    <i class="fas fa-database"></i>
-                    <h3>النسخ الاحتياطي</h3>
-                    <p>تصدير جميع البيانات إلى ملف JSON</p>
-                    <button class="action-btn" onclick="backupData()">
-                        <i class="fas fa-download"></i> تصدير البيانات
-                    </button>
-                    <button class="action-btn delete" onclick="clearAllData()" style="margin-top: 10px;">
-                        <i class="fas fa-trash"></i> مسح جميع البيانات
-                    </button>
-                </div>
-                <div class="control-card">
+               
+   <!-- ===== المدير الاحصاء  ===== -->
+         
+            <div class="header-actions">
+                <button class="action-btn" onclick="openLoginModal()" id="userBtn">
+                    <i class="far fa-user"></i>
+                </button>
+                <button class="action-btn" onclick="toggleCart()">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cartCounter">0</span>
+                </button>
+                <button class="action-btn" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
                     <i class="fas fa-chart-line"></i>
-                    <h3>إحصائيات النظام</h3>
-                    <p id="systemStats">تحميل...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- واجهة المستخدم العادي (تظهر للمستخدمين العاديين) -->
-    <div id="userPanel" style="display: none;">
-        <!-- ===== شريط المستخدم ===== -->
-        <div class="user-bar">
-            <div class="user-badge">
-                <i class="fas fa-user"></i>
-                <span id="userName">مستخدم</span>
-            </div>
-            <div class="user-stats">
-                <div class="user-stat">
-                    <div class="number" id="userTotalReels">0</div>
-                    <div class="label">الريلز المنشورة</div>
-                </div>
-                <div class="user-stat">
-                    <div class="number" id="userPoints">0</div>
-                    <div class="label">النقاط</div>
-                </div>
-            </div>
-            <button class="action-btn" onclick="logout()" style="background: rgba(255,0,102,0.3);">
-                <i class="fas fa-sign-out-alt"></i> تسجيل خروج
-            </button>
-        </div>
-
-        <!-- ===== تبويبات المستخدم ===== -->
-        <div class="user-tabs">
-            <div class="user-tab active" onclick="switchUserTab('reels')">
-                <i class="fas fa-film"></i> الريلز
-            </div>
-            <div class="user-tab" onclick="switchUserTab('myReels')">
-                <i class="fas fa-user-video"></i> ريلزاتي
-            </div>
-        </div>
-
-        <!-- ===== محتوى الريلز للمستخدم ===== -->
-        <div class="user-content active" id="userReelsContent">
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fas fa-plus-circle"></i>
-                    <h3>رفع ريلز جديد</h3>
-                    <p>أضف محتوى جديد إلى المنصة (فقط كمشاهدة، يتم التخزين في تليجرام)</p>
-                    <button class="action-btn" onclick="openUploadModal()" style="margin-top: 10px;">
-                        <i class="fas fa-upload"></i> رفع الآن
-                    </button>
-                </div>
-                <div class="control-card">
-                    <i class="fab fa-telegram"></i>
-                    <h3>التخزين في تليجرام</h3>
-                    <p>جميع الريلز مخزنة بشكل دائم في قناة التليجرام</p>
-                    <span class="telegram-storage-badge"><i class="fas fa-check-circle"></i> تخزين آمن</span>
-                </div>
-            </div>
-            
-            <div class="reels-grid" id="userReelsContainer">
-                <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
-                    <i class="fas fa-spinner fa-pulse" style="font-size: 40px;"></i>
-                    <p>جاري تحميل الريلز...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== محتوى ريلزاتي ===== -->
-        <div class="user-content" id="myReelsContent">
-            <div class="control-cards">
-                <div class="control-card">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>إحصائياتي</h3>
-                    <p id="myReelsStats">تحميل...</p>
-                </div>
-            </div>
-            
-            <div class="reels-grid" id="myReelsContainer">
-                <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
-                    <i class="fas fa-spinner fa-pulse" style="font-size: 40px;"></i>
-                    <p>جاري تحميل ريلزاتي...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== زر رفع ريلز جديد ===== -->
-    <div class="upload-btn" onclick="openUploadModal()" title="رفع ريلز جديد">
-        <i class="fas fa-plus"></i>
-    </div>
-
-    <!-- ===== زر العودة للمتجر ===== -->
-    <div class="back-btn" onclick="window.location.href='index.html'" title="العودة للمتجر">
-        <i class="fas fa-home"></i>
-    </div>
-
-    <!-- ===== نافذة رفع الريلز ===== -->
-    <div class="modal" id="uploadModal">
-        <div class="modal-content">
-            <button class="close-modal" onclick="closeUploadModal()">&times;</button>
-            
-            <div class="modal-header">
-                <i class="fas fa-film" style="font-size: 60px; color: gold;"></i>
-                <h2>رفع Reel جديد</h2>
-                <p style="color: #aaa;">سيتم التخزين بشكل دائم في قناة التليجرام</p>
-            </div>
-
-            <!-- خيارات النشر -->
-            <div class="publish-options">
-                <div class="publish-option channel active" onclick="selectPublishType('channel', this)">
-                    <i class="fas fa-tv"></i>
-                    <span>قناة</span>
-                </div>
-                <div class="publish-option group" onclick="selectPublishType('group', this)">
-                    <i class="fas fa-users"></i>
-                    <span>مجموعة</span>
-                </div>
-                <div class="publish-option story" onclick="selectPublishType('story', this)">
-                    <i class="fas fa-clock"></i>
-                    <span>ستوري</span>
-                </div>
-            </div>
-
-            <!-- منطقة رفع الفيديو -->
-            <div class="upload-area" onclick="document.getElementById('videoFile').click()">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h3>اضغط لرفع فيديو</h3>
-                <p>MP4, MOV, AVI - الحد الأقصى 50MB</p>
-                <p style="font-size: 12px; margin-top: 8px;">✅ يدعم جميع صيغ الفيديو</p>
-            </div>
-
-            <input type="file" id="videoFile" accept="video/*" style="display: none;" onchange="handleVideoUpload(this)">
-
-            <!-- معاينة الفيديو -->
-            <div class="video-preview" id="videoPreview">
-                <video id="videoPlayer" controls>
-                    <source src="" id="videoSource">
-                </video>
-                <div class="video-info">
-                    <div class="video-name" id="videoName"></div>
-                    <i class="fas fa-times-circle remove-video" onclick="removeVideo()"></i>
-                </div>
-            </div>
-
-            <!-- بصمة الريلز -->
-            <div class="fingerprint-card">
-                <div class="fingerprint-icon">
-                    <i class="fas fa-fingerprint"></i>
-                </div>
-                <div class="fingerprint-title">البصمة الفريدة</div>
-                <div class="fingerprint-value" id="thumbprintValue">---</div>
-                <button class="copy-btn" onclick="copyThumbprint()">
-                    <i class="fas fa-copy"></i>
-                    نسخ البصمة
                 </button>
             </div>
+        </div>
+            
+    
 
-            <!-- رسالة الخطأ -->
-            <div class="error-message" id="errorMessage" style="display: none;"></div>
+        
+            <div class="top-bar-right">
+                <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
+                    <i class="fas fa-moon"></i>
+                    <span>ليلي</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
 
-            <!-- حقول النشر -->
-            <div class="form-group">
-                <label><i class="fas fa-heading"></i> عنوان الريلز</label>
-                <input type="text" class="form-control" id="reelTitle" placeholder="أدخل عنوان الريلز..." value="ريلز جديد">
+    <!-- ===== شريط العروض المتحرك ===== -->
+    <div class="marquee-bar">
+        <div class="marquee-content">
+            <div class="marquee-item">
+                <i class="fas fa-fire"></i>
+                <span>تخفيضات تصل 50%</span>
+            </div>
+            <div class="marquee-item">
+                <i class="fas fa-gem"></i>
+                <span>عروض حصرية</span>
+            </div>
+            <div class="marquee-item">
+                <i class="fas fa-clock"></i>
+                <span>الوقت: <span id="marqueeHours">12</span>:<span id="marqueeMinutes">30</span>:<span id="marqueeSeconds">45</span></span>
+            </div>
+        </div>
+    </div>
+    
+
+
+    
+<!-- ===== قسم ريلز الفيديو في الأعلى مع أيقونة ===== -->
+<div class="reels-video-section">
+    <div class="container">
+        <div class="reels-video-header">
+            <div class="header-title">
+                <i class="fas fa-film reel-section-icon"></i>
+                <h2>ناردو ريلز</h2>
+            </div>
+            <a href="07-reels.html" class="view-all-link">
+                <span>شاهد الكل</span>
+                <i class="fas fa-arrow-left"></i>
+            </a>
+        </div>
+        
+        <div class="reels-video-container" id="reelsVideoContainer">
+            <!-- فيديو 1 -->
+            <div class="reel-video-card" onclick="App.playReel(1)">
+                <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400" loop muted></video>
+                <div class="reel-video-overlay">
+                    <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
+                    <div class="reel-video-info">
+                        <span class="reel-video-title">وصفة زعتر</span>
+                        <span class="reel-video-views">15K مشاهدة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- فيديو 2 -->
+            <div class="reel-video-card" onclick="App.playReel(2)">
+                <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1596040033229-a9821e1929c7?w=400" loop muted></video>
+                <div class="reel-video-overlay">
+                    <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
+                    <div class="reel-video-info">
+                        <span class="reel-video-title">كريم ترطيب</span>
+                        <span class="reel-video-views">8K مشاهدة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- فيديو 3 -->
+            <div class="reel-video-card" onclick="App.playReel(3)">
+                <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1608571423912-8a4c8a8c9b9a?w=400" loop muted></video>
+                <div class="reel-video-overlay">
+                    <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
+                    <div class="reel-video-info">
+                        <span class="reel-video-title">بخور عود</span>
+                        <span class="reel-video-views">23K مشاهدة</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- فيديو 4 -->
+            <div class="reel-video-card" onclick="App.playReel(4)">
+                <video src="https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4" poster="https://images.unsplash.com/photo-1542838132-92c5330041e7?w=400" loop muted></video>
+                <div class="reel-video-overlay">
+                    <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
+                    <div class="reel-video-info">
+                        <span class="reel-video-title">زعتر أخضر</span>
+                        <span class="reel-video-views">12K مشاهدة</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- ===== لوحة التاجر ===== -->
+    <div class="container" id="merchantPanelContainer" style="display: none;"></div>
+        <i class="fas fa-film"></i>
+
+    <!-- البحث -->
+    <div class="search-wrapper">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
+                    <button onclick="searchProducts()"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+    
+    <!-- ===== الهيدر الرئيسي ===== -->
+    <header class="main-header">
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-crown"></i></div>
+                <div class="logo-text">
+                    <h1>نكهة وجمال</h1>
+                    <span>ناردو برو 2026</span>
+                </div>
+            </div>
+        
+    </header>
+            
+            
+    <!-- ===== القائمة الرئيسية ===== -->
+    <div class="container">
+        <nav class="nav-menu" id="mainNav">
+            <a class="nav-link active" onclick="filterProducts('all')"><i class="fas fa-home"></i> الرئيسية</a>
+            <a class="nav-link" onclick="filterProducts('promo')"><i class="fas fa-fire"></i> برموسيو</a>
+            <a class="nav-link" onclick="filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a>
+            <a class="nav-link" onclick="filterProducts('cosmetic')"><i class="fas fa-spa"></i> كوسمتيك</a>
+            <a class="nav-link" onclick="filterProducts('other')"><i class="fas fa-gem"></i> منتوجات أخرى</a>
+        </nav>
+    </div>
+    
+    <!-- ===== المنتجات ===== -->
+    <div class="container">
+        <div class="products-grid" id="productsContainer"></div>
+    </div>
+    
+    <!-- ===== [01] لوحة التحكم الرئيسية ===== -->
+<div class="container dashboard-section" id="dashboardSection" style="display: none;">
+    <div class="dashboard-tabs">
+        <button class="dashboard-tab active" onclick="App.switchDashboardTab('overview')">نظرة عامة</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('orders')">الطلبات</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('products')">المنتجات</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('merchants')">التجار</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('users')">المستخدمين</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('requests')">طلبات الأدوار</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('apps')">التطبيقات</button>
+        <button class="dashboard-tab" onclick="App.switchDashboardTab('delivery')">التوصيل</button>
+    </div>
+    <div class="dashboard-content" id="dashboardContent"></div>
+</div>
+
+<!-- ===== [02] الناشرون ===== -->
+<div class="container">
+    <div class="publishers-section" id="publishersSection">
+        <h3><i class="fas fa-users"></i> الناشرون النشطون</h3>
+        <div class="publishers-grid" id="publishersGrid"></div>
+    </div>
+</div>
+
+<!-- ===== [03] Banner إعلاني ===== -->
+<div class="container">
+    <div class="promo-banner">
+        <div class="banner-content">
+            <h3>تخفيضات رمضان</h3>
+            <p>خصم يصل إلى 50% على جميع المنتجات</p>
+            <button class="btn-gold" onclick="App.filterProducts('promo')">تسوق الآن</button>
+        </div>
+        <div class="banner-image">
+            <i class="fas fa-moon"></i>
+        </div>
+    </div>
+</div>
+
+
+
+
+    <!-- ===== لوحة التحكم الرئيسية ===== -->
+    <div class="container dashboard-section" id="dashboardSection" style="display: none;">
+        <div class="dashboard-tabs">
+            <button class="dashboard-tab active" onclick="showDashboardOverview()">نظرة عامة</button>
+            <button class="dashboard-tab" onclick="showDashboardMerchants()">التجار</button>
+        </div>
+        <div class="dashboard-content" id="dashboardContent"></div>
+    </div>
+
+    
+        
+    <!-- ===== الفوتر ===== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-col">
+                    <h3>نكهة وجمال</h3>
+                    <p><i class="fas fa-store"></i> المتجر الذكي المتكامل</p>
+                    <p><i class="fas fa-star"></i> التقييم: 4.8/5</p>
+                </div>
+                <div class="footer-col">
+                    <h3>روابط سريعة</h3>
+                    <p><a href="#" onclick="filterProducts('all')">الرئيسية</a></p>
+                    <p><a href="#" onclick="filterProducts('promo')">برموسيو</a></p>
+                    <p><a href="#" onclick="filterProducts('spices')">توابل</a></p>
+                    <p><a href="#" onclick="filterProducts('cosmetic')">كوسمتيك</a></p>
+                </div>
+                <div class="footer-col">
+                    <h3>مساعدة</h3>
+                    <p>سياسة الخصوصية</p>
+                    <p>شروط الاستخدام</p>
+                    <p>طرق الدفع</p>
+                    <p>الشحن والتوصيل</p>
+                </div>
+                <div class="footer-col">
+                    <h3>اتصل بنا</h3>
+                    <p><i class="fab fa-whatsapp"></i> +213 56 224 36 48</p>
+                    <p><i class="fas fa-envelope"></i> info@nardoo.com</p>
+                </div>
+            </div>
+            <div class="copyright">
+                © 2026 ناردو برو | جميع الحقوق محفوظة
+            </div>
+        </div>
+    </footer>
+
+    <!-- ===== الأيقونات الثابتة ===== -->
+    
+    <div class="fixed-cart" onclick="toggleCart()" id="fixedCart">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="fixed-cart-count" id="fixedCartCounter">0</span>
+    </div>
+
+    <a href="https://wa.me/2135622448" target="_blank" class="fixed-whatsapp" title="تواصل معنا">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <!-- ===== أزرار التنقل ===== -->
+    <div class="navigation-buttons">
+        <button class="nav-btn up-btn" onclick="scrollToTop()" title="الأعلى">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button class="nav-btn down-btn" onclick="scrollToBottom()" title="الأسفل">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+    </div>
+
+    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn" title="الأعلى">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- ===== نافذة تسجيل الدخول ===== -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
+                <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+            </div>
+            
+            <div class="auth-tabs">
+                <button class="btn-gold" onclick="switchAuthTab('login')">دخول</button>
+                <button class="btn-outline-gold" onclick="switchAuthTab('register')">تسجيل</button>
             </div>
 
-            <div class="form-group">
-                <label><i class="fas fa-tag"></i> التصنيف</label>
-                <select class="form-control" id="reelCategory">
-                    <option value="عام">عام</option>
-                    <option value="منتجات">منتجات</option>
-                    <option value="وصفات">وصفات</option>
-                    <option value="عروض">عروض</option>
-                </select>
-            </div>
+            <!-- نموذج تسجيل الدخول -->
+            <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+                <div class="form-group">
+                    <label>👤 اسم المستخدم</label>
+                    <input type="text" class="form-control" id="loginEmail" required placeholder="أدخل اسم المستخدم">
+                </div>
+                <div class="form-group">
+                    <label>🔑 كلمة المرور</label>
+                    <input type="password" class="form-control" id="loginPassword" required placeholder="********">
+                </div>
+                <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
+            </form>
 
-            <!-- زر الإرسال -->
-            <button class="send-btn" id="sendBtn" onclick="sendReelToTelegram()">
-                <i class="fab fa-telegram"></i>
-                رفع وتخزين في تليجرام
-            </button>
+            <!-- نموذج التسجيل -->
+            <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); handleRegister();">
+                <div class="form-group">
+                    <label>👤 الاسم الكامل</label>
+                    <input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري">
+                </div>
+                <div class="form-group">
+                    <label>📧 البريد الإلكتروني</label>
+                    <input type="email" class="form-control" id="regEmail" required placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label>🔑 كلمة المرور</label>
+                    <input type="password" class="form-control" id="regPassword" required placeholder="******">
+                </div>
+                <div class="form-group">
+                    <label>📱 رقم الهاتف</label>
+                    <input type="tel" class="form-control" id="regPhone" placeholder="05XXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()">
+                        <span>تسجيل كتاجر</span>
+                    </label>
+                </div>
+                
+                <!-- حقول التاجر -->
+                <div id="merchantFields" style="display:none;">
+                    <div class="form-group">
+                        <label>🏪 اسم المتجر</label>
+                        <input type="text" class="form-control" id="storeName" placeholder="اسم المتجر">
+                    </div>
+                    <div class="form-group">
+                        <label>📊 المستوى</label>
+                        <select class="form-control" id="merchantLevel">
+                            <option value="1">مبتدئ</option>
+                            <option value="2">متوسط</option>
+                            <option value="3">متقدم</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>📝 وصف المتجر</label>
+                        <textarea class="form-control" id="merchantDesc" rows="2" placeholder="وصف المتجر..."></textarea>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-gold" style="width:100%;">تسجيل</button>
+            </form>
         </div>
     </div>
 
+    <!-- ===== نافذة إضافة منتج ===== -->
+    <div class="modal" id="productModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
+                <button class="close-btn" onclick="closeModal('productModal')">&times;</button>
+            </div>
+            
+            <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
+            <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
+                <div class="form-group">
+                    <label>📦 اسم المنتج</label>
+                    <input type="text" class="form-control" id="productName" required placeholder="زعتر فلسطيني">
+                </div>
+                <div class="form-group">
+                    <label>🏷️ القسم</label>
+                    <select class="form-control" id="productCategory" required>
+                        <option value="promo">برموسيو</option>
+                        <option value="spices">توابل</option>
+                        <option value="cosmetic">كوسمتيك</option>
+                        <option value="other">منتوجات أخرى</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>💰 السعر (دج)</label>
+                        <input type="number" class="form-control" id="productPrice" required min="0" placeholder="500">
+                    </div>
+                    <div class="form-group">
+                        <label>📊 الكمية</label>
+                        <input type="number" class="form-control" id="productStock" required min="0" placeholder="50">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>📝 وصف المنتج</label>
+                    <textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea>
+                </div>
+                
+                <!-- ✅ تم التعديل: استخدام handleImageUpload بدلاً من App.handleImageUpload -->
+                <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>اضغط لرفع صور</p>
+                </div>
+                <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="handleImageUpload(event)">
+                <div class="image-preview" id="imagePreview"></div>
+                
+                <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
+                <button type="submit" class="btn-gold">حفظ المنتج</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== نافذة تفاصيل المنتج ===== -->
+    <div class="modal" id="productDetailModal">
+        <div class="modal-content modal-lg" id="productDetailContent"></div>
+    </div>
+
+    <!-- ===== ملفات JavaScript (بالترتيب الصحيح) ===== -->
+    <script src="js/core.js"></script>      <!-- المتغيرات العامة أولاً -->
+    <script src="js/auth.js"></script>      <!-- نظام المستخدمين -->
+    <script src="js/telegram.js"></script>  <!-- دوال تلغرام -->
+    <script src="js/shop.js"></script>      <!-- دوال المتجر -->
+    <script src="js/app.js"></script>       <!-- الكود الرئيسي آخراً -->
+
     <script>
-        // ========== إعدادات تليجرام ==========
-        const TELEGRAM = {
-            botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
-            channelId: '-1003822964890'
-        };
-
-        // ========== بيانات النظام ==========
-        let users = [];
-        let reelsDatabase = [];
-        let selectedFile = null;
-        let currentThumbprint = '';
-        let publishType = 'channel';
-        let currentUser = null; // المستخدم الحالي
-
-        // ========== تسجيل الدخول ==========
-        function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            
-            if (!username) {
-                showNotification('❌ الرجاء إدخال اسم المستخدم', 'error');
-                return;
-            }
-            
-            // البحث عن المستخدم
-            const user = users.find(u => u.name === username || (u.username === username));
-            
-            if (user) {
-                currentUser = user;
-                showMainInterface();
-                showNotification(`✅ مرحباً ${user.name}`, 'success');
-            } else {
-                // إذا لم يوجد المستخدم، نضيفه كمستخدم جديد
-                const newUser = {
-                    id: Date.now(),
-                    name: username,
-                    username: username,
-                    role: 'user',
-                    reelsCount: 0,
-                    points: 0,
-                    joinDate: new Date().toISOString().split('T')[0]
-                };
-                users.push(newUser);
-                localStorage.setItem('nardoo_users', JSON.stringify(users));
-                currentUser = newUser;
-                showMainInterface();
-                showNotification(`✅ مرحباً ${username} (تم إنشاء حساب جديد)`, 'success');
-            }
-        }
-        
-        // ========== عرض الواجهة المناسبة حسب الصلاحيات ==========
-        function showMainInterface() {
-            document.getElementById('loginScreen').style.display = 'none';
-            
-            if (currentUser.role === 'admin') {
-                document.getElementById('adminPanel').style.display = 'block';
-                document.getElementById('userPanel').style.display = 'none';
-                document.getElementById('adminName').textContent = currentUser.name;
-                loadAdminData();
-            } else {
-                document.getElementById('adminPanel').style.display = 'none';
-                document.getElementById('userPanel').style.display = 'block';
-                document.getElementById('userName').textContent = currentUser.name;
-                document.getElementById('userPoints').textContent = currentUser.points || 0;
-                loadUserData();
-            }
-            
-            loadReelsData();
-        }
-        
-        // ========== تسجيل الخروج ==========
-        function logout() {
-            currentUser = null;
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('userPanel').style.display = 'none';
-            showNotification('👋 تم تسجيل الخروج بنجاح', 'info');
-        }
-        
-        // ========== تحميل بيانات المدير ==========
-        function loadAdminData() {
-            loadUsers();
-            loadReels();
-            updateAdminStats();
-            updateStatisticsDetails();
-        }
-        
-        // ========== تحميل بيانات المستخدم ==========
-        function loadUserData() {
-            loadReelsForUser();
-            loadMyReels();
-        }
-        
-        // ========== تحميل المستخدمين ==========
-        function loadUsers() {
-            const savedUsers = localStorage.getItem('nardoo_users');
-            if (savedUsers) {
-                users = JSON.parse(savedUsers);
-            } else {
-                users = [
-                    { id: 1001, name: 'أحمد التاجر', username: 'admin', role: 'admin', reelsCount: 12, points: 450, joinDate: '2024-01-15' },
-                    { id: 1002, name: 'محمد العمري', username: 'user', role: 'user', reelsCount: 8, points: 230, joinDate: '2024-02-20' },
-                    { id: 1003, name: 'سارة الخالدي', username: 'sarah', role: 'user', reelsCount: 3, points: 85, joinDate: '2024-03-10' }
-                ];
-                localStorage.setItem('nardoo_users', JSON.stringify(users));
-            }
-            
-            if (document.getElementById('usersTableBody')) {
-                renderUsers();
-            }
-        }
-        
-        // ========== عرض المستخدمين (للمدير فقط) ==========
-        function renderUsers() {
-            const tbody = document.getElementById('usersTableBody');
-            if (!tbody) return;
-            
-            tbody.innerHTML = users.map(user => `
-                <tr>
-                    <td>${user.id}</td>
-                    <td><i class="fas ${user.role === 'admin' ? 'fa-crown' : 'fa-user'}"></i> ${escapeHtml(user.name)}</td>
-                    <td>
-                        <span style="background: ${user.role === 'admin' ? '#ff0066' : '#00aa55'}; padding: 3px 10px; border-radius: 20px; font-size: 11px;">
-                            ${user.role === 'admin' ? 'مدير' : 'مستخدم'}
-                        </span>
-                    </td>
-                    <td>${user.reelsCount || 0}</td>
-                    <td>${user.points || 0}</td>
-                    <td>${user.joinDate || '2024-01-01'}</td>
-                    <td>
-                        <button class="action-btn" onclick="editUser(${user.id})"><i class="fas fa-edit"></i> تعديل</button>
-                        ${user.role !== 'admin' ? `<button class="action-btn delete" onclick="deleteUser(${user.id})"><i class="fas fa-trash"></i> حذف</button>` : ''}
-                    </td>
-                </tr>
-            `).join('');
-        }
-        
-        // ========== تحميل الريلز ==========
-        function loadReels() {
-            const savedReels = localStorage.getItem('nardoo_reels_database');
-            if (savedReels) {
-                reelsDatabase = JSON.parse(savedReels);
-            } else {
-                reelsDatabase = [];
-                localStorage.setItem('nardoo_reels_database', JSON.stringify(reelsDatabase));
-            }
-            
-            if (document.getElementById('reelsContainer')) {
-                renderReelsForAdmin();
-            }
-        }
-        
-        // ========== عرض الريلز للمدير ==========
-        function renderReelsForAdmin() {
-            const container = document.getElementById('reelsContainer');
-            if (!container) return;
-            
-            if (reelsDatabase.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: gold;">
-                        <i class="fas fa-film" style="font-size: 80px; opacity: 0.5;"></i>
-                        <h2>لا توجد ريلز حالياً</h2>
-                        <p>اضغط على الزر + لرفع ريلز جديد</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = reelsDatabase.map(reel => `
-                <div class="reel-card" onclick="playReel(${reel.id})">
-                    <div class="reel-video">
-                        <video src="${reel.videoUrl}" preload="metadata" muted></video>
-                        <div class="reel-play-overlay">
-                            <i class="fas fa-play-circle"></i>
-                        </div>
-                    </div>
-                    <div class="reel-info">
-                        <h3>${escapeHtml(reel.title)}</h3>
-                        <div class="reel-stats">
-                            <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
-                            <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
-                            <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
-                        </div>
-                        ${reel.storedInTelegram ? '<span class="telegram-storage-badge"><i class="fas fa-cloud-upload-alt"></i> تخزين دائم</span>' : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // ========== عرض الريلز للمستخدم العادي ==========
-        function loadReelsForUser() {
-            const container = document.getElementById('userReelsContainer');
-            if (!container) return;
-            
-            if (reelsDatabase.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 100px; color: gold;">
-                        <i class="fas fa-film" style="font-size: 80px; opacity: 0.5;"></i>
-                        <h2>لا توجد ريلز حالياً</h2>
-                        <p>كن أول من يرفع ريلز!</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = reelsDatabase.map(reel => `
-                <div class="reel-card" onclick="playReel(${reel.id})">
-                    <div class="reel-video">
-                        <video src="${reel.videoUrl}" preload="metadata" muted></video>
-                        <div class="reel-play-overlay">
-                            <i class="fas fa-play-circle"></i>
-                        </div>
-                    </div>
-                    <div class="reel-info">
-                        <h3>${escapeHtml(reel.title)}</h3>
-                        <div class="reel-stats">
-                            <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
-                            <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
-                            <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // ========== عرض ريلزات المستخدم ==========
-        function loadMyReels() {
-            const container = document.getElementById('myReelsContainer');
-            if (!container) return;
-            
-            const myReels = reelsDatabase.filter(reel => reel.publisherId === currentUser.id);
-            
-            document.getElementById('myReelsStats').innerHTML = `
-                📊 إجمالي ريلزاتي: ${myReels.length}<br>
-                👁️ إجمالي المشاهدات: ${myReels.reduce((sum, r) => sum + (r.views || 0), 0)}<br>
-                ❤️ إجمالي الإعجابات: ${myReels.reduce((sum, r) => sum + (r.likes || 0), 0)}<br>
-                ⭐ النقاط: ${currentUser.points || 0}
-            `;
-            
-            if (myReels.length === 0) {
-                cont
+        // ===== كود التشخيص =====
+        setTimeout(() => {
+            console.log('🔍 === تشخيص النظام ===');
+            console.log('✅ productModal:', document.getElementById('productModal') ? 'موجود' : '❌ غير موجود');
+            console.log('✅ productForm:', document.getElementById('productForm') ? 'موجود' : '❌ غير موجود');
+            console.log('✅ saveProduct:', typeof saveProduct === 'function' ? 'موجود' : '❌ غير موجود');
+            console.log('✅ handleImageUpload:', typeof handleImageUpload === 'function' ? 'موجود' : '❌ غير موجود');
+            console.log('🔍 === انتهى التشخيص ===');
+        }, 1000);
+    </script>
+</body>
+</html>
