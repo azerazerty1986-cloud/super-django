@@ -1,511 +1,526 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>بيئة أرضية احترافية - Battle Royale Terrain</title>
+    <title>لعبة 3B | بيئة ثلاثية الأبعاد - سيارة متحركة</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
         }
         
-        .info-panel {
+        /* لوحة التحكم */
+        .ui-panel {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.85);
+            right: 20px;
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(10px);
-            padding: 15px 25px;
-            border-radius: 15px;
-            color: white;
+            border-radius: 60px;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
             z-index: 100;
-            font-family: monospace;
-            font-size: 12px;
-            border-left: 4px solid #4caf50;
-            pointer-events: none;
-            direction: ltr;
+            border: 2px solid #ffd700;
+            pointer-events: auto;
         }
         
-        .info-panel h3 {
-            margin: 0 0 8px 0;
-            color: #4caf50;
-        }
-        
-        .info-panel p {
-            margin: 4px 0;
+        .info {
+            color: #ffd700;
+            font-weight: bold;
         }
         
         .controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            padding: 8px 15px;
-            border-radius: 20px;
-            color: #ccc;
-            font-size: 11px;
-            z-index: 100;
-            font-family: monospace;
+            display: flex;
+            gap: 20px;
+            color: white;
+            font-size: 14px;
         }
         
-        .stats {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            padding: 8px 15px;
-            border-radius: 20px;
-            color: #4caf50;
-            font-size: 11px;
-            font-family: monospace;
-            z-index: 100;
-            text-align: right;
+        .controls i {
+            margin: 0 5px;
+            color: #ffd700;
         }
         
-        @media (max-width: 768px) {
-            .info-panel { font-size: 8px; padding: 8px 12px; top: 10px; left: 10px; }
-            .controls { font-size: 8px; }
-            .stats { font-size: 8px; }
+        button {
+            background: linear-gradient(135deg, #ffd700, #ffaa33);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        }
+        
+        .speed-meter {
+            background: rgba(0,0,0,0.6);
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-family: monospace;
+            font-size: 18px;
+            color: #ffd700;
+        }
+        
+        @media (max-width: 700px) {
+            .ui-panel { flex-direction: column; text-align: center; top: 10px; left: 10px; right: 10px; }
+            .controls { font-size: 11px; flex-wrap: wrap; justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <div class="info-panel">
-        <h3>🏔️ PROFESSIONAL TERRAIN SYSTEM</h3>
-        <p>📐 Terrain Size: 200x200 | 🗺️ Height Map: Procedural Perlin Noise</p>
-        <p>🎨 Multi-Layer Textures: Grass | Soil | Rock | Sand</p>
-        <p>💧 Water Bodies: 2 Lakes | 🌳 Vegetation: 2500+ Instances</p>
-        <p>🌬️ Wind Effect: Active | ☁️ Dynamic Clouds: Real-time</p>
+
+<div class="ui-panel">
+    <div class="info">
+        🎮 لعبة 3B | عالم ثلاثي الأبعاد
     </div>
     <div class="controls">
-        🖱️ Mouse: Rotate | 🖱️ Right Click + Drag: Pan | 🔍 Scroll: Zoom
+        <span><i class="fas fa-arrow-up"></i> <i class="fas fa-arrow-down"></i> <i class="fas fa-arrow-left"></i> <i class="fas fa-arrow-right"></i> للتحكم</span>
+        <span><i class="fas fa-mouse-pointer"></i> اسحب الفأرة لتدوير الكاميرا</span>
     </div>
-    <div class="stats" id="stats">
-        📊 Loading terrain...
+    <div class="speed-meter" id="speedMeter">
+        🚗 السرعة: 0
     </div>
+    <button onclick="resetPosition()">
+        <i class="fas fa-sync-alt"></i> إعادة تعيين
+    </button>
+</div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
-            }
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
         }
-    </script>
+    }
+</script>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ========== 1. إعداد المشهد ==========
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 30, 80);
+
+    // الكاميرا
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 8, 15);
+    camera.lookAt(0, 0, 0);
+
+    // المحرك
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // محرك CSS2D للنصوص
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0px';
+    labelRenderer.domElement.style.left = '0px';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    document.body.appendChild(labelRenderer.domElement);
+
+    // ========== 2. الإضاءة ==========
+    // الشمس
+    const sunLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
+    sunLight.position.set(15, 20, 10);
+    sunLight.castShadow = true;
+    sunLight.receiveShadow = true;
+    sunLight.shadow.mapSize.width = 1024;
+    sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 50;
+    sunLight.shadow.camera.left = -10;
+    sunLight.shadow.camera.right = 10;
+    sunLight.shadow.camera.top = 10;
+    sunLight.shadow.camera.bottom = -10;
+    scene.add(sunLight);
+    
+    // إضاءة محيطة
+    const ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+    scene.add(ambientLight);
+    
+    // إضاءة خلفية
+    const backLight = new THREE.PointLight(0x4466cc, 0.5);
+    backLight.position.set(-5, 5, -8);
+    scene.add(backLight);
+    
+    // إضاءة من الأرض
+    const fillLight = new THREE.PointLight(0x88aaff, 0.3);
+    fillLight.position.set(0, -2, 0);
+    scene.add(fillLight);
+
+    // ========== 3. الأرضية ==========
+    const groundGeo = new THREE.CircleGeometry(50, 32);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a8c3a, roughness: 0.8, metalness: 0.1 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.5;
+    ground.receiveShadow = true;
+    scene.add(ground);
+    
+    // شبكة مساعدة
+    const gridHelper = new THREE.GridHelper(100, 20, 0x88aa88, 0x446644);
+    gridHelper.position.y = -0.4;
+    scene.add(gridHelper);
+    
+    // عشب صغير
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x5a9e5a });
+    for (let i = 0; i < 300; i++) {
+        const grass = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.2, 3), grassMat);
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 15 + Math.random() * 30;
+        grass.position.x = Math.cos(angle) * radius;
+        grass.position.z = Math.sin(angle) * radius;
+        grass.position.y = -0.4;
+        grass.castShadow = true;
+        scene.add(grass);
+    }
+
+    // ========== 4. إنشاء الأشجار ==========
+    function createTree(x, z) {
+        const group = new THREE.Group();
         
-        // ==================== إعداد المشهد ====================
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
+        // الجذع
+        const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 1.2, 6);
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = 0;
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
+        group.add(trunk);
         
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.setPixelRatio(window.devicePixelRatio);
-        document.body.appendChild(renderer.domElement);
+        // تاج الشجرة (طبقات)
+        const leavesMat = new THREE.MeshStandardMaterial({ color: 0x3a8c3a, roughness: 0.4 });
         
-        // ==================== Effect Composer (Bloom) ====================
-        const renderScene = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.3, 0.2);
-        bloomPass.threshold = 0.1;
-        bloomPass.strength = 0.6;
-        bloomPass.radius = 0.5;
-        const effectComposer = new EffectComposer(renderer);
-        effectComposer.addPass(renderScene);
-        effectComposer.addPass(bloomPass);
+        const leaves1 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1, 8), leavesMat);
+        leaves1.position.y = 0.9;
+        leaves1.castShadow = true;
+        group.add(leaves1);
         
-        // ==================== إضاءة متقدمة ====================
-        // ضوء الشمس الرئيسي
-        const sunLight = new THREE.DirectionalLight(0xfff5d1, 1.5);
-        sunLight.position.set(30, 40, 20);
-        sunLight.castShadow = true;
-        sunLight.receiveShadow = true;
-        sunLight.shadow.mapSize.width = 4096;
-        sunLight.shadow.mapSize.height = 4096;
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 120;
-        sunLight.shadow.camera.left = -40;
-        sunLight.shadow.camera.right = 40;
-        sunLight.shadow.camera.top = 40;
-        sunLight.shadow.camera.bottom = -40;
-        scene.add(sunLight);
+        const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 8), leavesMat);
+        leaves2.position.y = 1.5;
+        leaves2.castShadow = true;
+        group.add(leaves2);
         
-        // ضوء محيطي
-        const ambientLight = new THREE.AmbientLight(0x404060, 0.55);
-        scene.add(ambientLight);
+        const leaves3 = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.7, 8), leavesMat);
+        leaves3.position.y = 2.0;
+        leaves3.castShadow = true;
+        group.add(leaves3);
         
-        // ضوء خلفي دافئ
-        const backLight = new THREE.PointLight(0xffaa66, 0.4);
-        backLight.position.set(-20, 25, -30);
-        scene.add(backLight);
+        group.position.set(x, -0.2, z);
+        scene.add(group);
+    }
+    
+    // توزيع الأشجار
+    for (let i = 0; i < 80; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 12 + Math.random() * 35;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        createTree(x, z);
+    }
+    
+    // أشجار إضافية قريبة
+    for (let i = 0; i < 30; i++) {
+        const x = (Math.random() - 0.5) * 40;
+        const z = (Math.random() - 0.5) * 40;
+        if (Math.abs(x) < 5 && Math.abs(z) < 5) continue;
+        createTree(x, z);
+    }
+    
+    // ========== 5. إنشاء سيارة اللاعب ==========
+    const carGroup = new THREE.Group();
+    
+    // هيكل السيارة
+    const bodyGeo = new THREE.BoxGeometry(1.2, 0.4, 2);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff3366, metalness: 0.7, roughness: 0.3 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.2;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    carGroup.add(body);
+    
+    // سقف السيارة
+    const roofGeo = new THREE.BoxGeometry(0.9, 0.3, 1.3);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0xcc2255, metalness: 0.5 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.y = 0.55;
+    roof.castShadow = true;
+    carGroup.add(roof);
+    
+    // عجلات
+    const wheelGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.2, 16);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.4 });
+    
+    const positions = [[-0.7, 0.1, -0.7], [0.7, 0.1, -0.7], [-0.7, 0.1, 0.7], [0.7, 0.1, 0.7]];
+    positions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(pos[0], pos[1], pos[2]);
+        wheel.castShadow = true;
+        carGroup.add(wheel);
+    });
+    
+    // زجاج
+    const glassGeo = new THREE.BoxGeometry(0.8, 0.2, 0.8);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.6 });
+    const glass = new THREE.Mesh(glassGeo, glassMat);
+    glass.position.y = 0.45;
+    glass.position.z = -0.2;
+    carGroup.add(glass);
+    
+    // مصابيح أمامية
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffaa66, emissive: 0xff4411, emissiveIntensity: 0.5 });
+    const leftLight = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), lightMat);
+    leftLight.position.set(-0.45, 0.2, 1.05);
+    carGroup.add(leftLight);
+    
+    const rightLight = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), lightMat);
+    rightLight.position.set(0.45, 0.2, 1.05);
+    carGroup.add(rightLight);
+    
+    scene.add(carGroup);
+    
+    // ========== 6. مؤشر السرعة CSS2D ==========
+    const speedDiv = document.createElement('div');
+    speedDiv.textContent = '🏎️ 0';
+    speedDiv.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    speedDiv.style.color = '#ffd700';
+    speedDiv.style.padding = '4px 12px';
+    speedDiv.style.borderRadius = '20px';
+    speedDiv.style.fontSize = '14px';
+    speedDiv.style.fontWeight = 'bold';
+    speedDiv.style.fontFamily = 'monospace';
+    speedDiv.style.border = '1px solid #ffd700';
+    speedDiv.style.whiteSpace = 'nowrap';
+    
+    const speedLabel = new CSS2DObject(speedDiv);
+    speedLabel.position.set(0, 1.2, 0);
+    carGroup.add(speedLabel);
+    
+    // ========== 7. متغيرات التحكم ==========
+    let carSpeed = 0;
+    let carAngle = 0;
+    let carPosition = { x: 0, z: 0 };
+    let keys = { w: false, s: false, a: false, d: false };
+    let cameraAngle = 0;
+    
+    carGroup.position.set(0, 0, 0);
+    
+    // ========== 8. التحكم باللوحة ==========
+    document.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w') keys.w = true;
+        if (key === 's') keys.s = true;
+        if (key === 'a') keys.a = true;
+        if (key === 'd') keys.d = true;
         
-        // ضوء تعبئة أزرق
-        const fillLight = new THREE.PointLight(0x6688aa, 0.35);
-        fillLight.position.set(15, 20, 25);
-        scene.add(fillLight);
+        // منع تمرير الصفحة
+        if (['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+            e.preventDefault();
+        }
+    });
+    
+    document.addEventListener('keyup', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w') keys.w = false;
+        if (key === 's') keys.s = false;
+        if (key === 'a') keys.a = false;
+        if (key === 'd') keys.d = false;
+    });
+    
+    // ========== 9. تحكم الكاميرا ==========
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = false;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 1;
+    controls.rotateSpeed = 1;
+    controls.target.set(0, 1, 0);
+    
+    // ========== 10. تحديث حركة السيارة ==========
+    function updateCar() {
+        // تسارع وفرامل
+        if (keys.w) {
+            carSpeed = Math.min(carSpeed + 0.15, 8);
+        } else if (keys.s) {
+            carSpeed = Math.max(carSpeed - 0.2, -3);
+        } else {
+            carSpeed *= 0.98;
+        }
         
-        // ==================== إنشاء تضاريس احترافية ====================
-        const terrainSize = 180;
-        const terrainSegments = 256;
+        // دوران
+        if (keys.a) {
+            carAngle += 0.05 * (Math.abs(carSpeed) / 5 + 0.5);
+        }
+        if (keys.d) {
+            carAngle -= 0.05 * (Math.abs(carSpeed) / 5 + 0.5);
+        }
         
-        // دالة توليد ارتفاع باستخدام Perlin-like noise
-        function getHeight(x, z) {
-            // نطاق التضاريس
-            const nx = x / terrainSize;
-            const nz = z / terrainSize;
-            
-            // طبقات متعددة من التضاريس
-            let height = 0;
-            
-            // طبقة 1: تلال كبيرة
-            height += Math.sin(nx * Math.PI * 2.5) * Math.cos(nz * Math.PI * 2.3) * 1.8;
-            
-            // طبقة 2: تلال متوسطة
-            height += Math.sin(nx * Math.PI * 6) * Math.cos(nz * Math.PI * 5.5) * 0.9;
-            
-            // طبقة 3: تفاصيل دقيقة
-            height += Math.sin(nx * Math.PI * 15) * 0.3;
-            height += Math.cos(nz * Math.PI * 14) * 0.3;
-            
-            // طبقة 4: تأثير شعاعي (قمة مركزية)
-            const radial = Math.sqrt(x * x + z * z) / terrainSize;
-            height += Math.cos(radial * Math.PI * 3) * 0.5 * (1 - radial);
-            
-            // حواف منخفضة
-            const edgeFactor = Math.max(0, (Math.abs(x) / terrainSize) - 0.7);
-            height -= edgeFactor * 1.2;
-            
-            // قمة مركزية مرتفعة
-            const centerDist = Math.sqrt(x * x + z * z);
-            if (centerDist < 25) {
-                height += Math.cos(centerDist * 0.15) * 1.2;
+        // تحديث الموقع
+        const rad = carAngle;
+        const moveX = Math.sin(rad) * carSpeed * 0.1;
+        const moveZ = Math.cos(rad) * carSpeed * 0.1;
+        
+        carPosition.x += moveX;
+        carPosition.z += moveZ;
+        
+        // حدود الخريطة
+        const limit = 45;
+        carPosition.x = Math.min(Math.max(carPosition.x, -limit), limit);
+        carPosition.z = Math.min(Math.max(carPosition.z, -limit), limit);
+        
+        // تحديث موضع السيارة وزاويتها
+        carGroup.position.set(carPosition.x, 0, carPosition.z);
+        carGroup.rotation.y = carAngle;
+        
+        // تحديث مؤشر السرعة
+        const speedKmh = Math.floor(Math.abs(carSpeed) * 25);
+        speedDiv.textContent = `🏎️ ${speedKmh} كم/س`;
+        document.getElementById('speedMeter').innerHTML = `🚗 السرعة: ${speedKmh} كم/س`;
+        
+        // دوران العجلات
+        const wheelRotation = carSpeed * 0.5;
+        carGroup.children.forEach(child => {
+            if (child.geometry && child.geometry.type === 'CylinderGeometry') {
+                child.rotation.x += wheelRotation * 0.1;
             }
-            
-            return Math.max(-1.5, Math.min(3.5, height));
-        }
-        
-        // إنشاء الهندسة
-        const geometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
-        geometry.rotateX(-Math.PI / 2);
-        
-        const positions = geometry.attributes.position.array;
-        const heights = [];
-        
-        // تعديل الارتفاعات
-        for (let i = 0; i <= terrainSegments; i++) {
-            for (let j = 0; j <= terrainSegments; j++) {
-                const x = (j / terrainSegments - 0.5) * terrainSize;
-                const z = (i / terrainSegments - 0.5) * terrainSize;
-                const y = getHeight(x, z);
-                
-                const idx = (i * (terrainSegments + 1) + j) * 3;
-                positions[idx + 1] = y;
-                heights.push(y);
-            }
-        }
-        
-        geometry.computeVertexNormals();
-        
-        // ==================== إنشاء نسيج متعدد الطبقات ====================
-        const canvasTexture = document.createElement('canvas');
-        canvasTexture.width = 2048;
-        canvasTexture.height = 2048;
-        const ctx = canvasTexture.getContext('2d');
-        
-        // رسم نسيج تفصيلي
-        ctx.fillStyle = '#4a784a';
-        ctx.fillRect(0, 0, 2048, 2048);
-        
-        // إضافة تفاصيل عشب
-        for (let i = 0; i < 5000; i++) {
-            const x = Math.random() * 2048;
-            const y = Math.random() * 2048;
-            const size = Math.random() * 3 + 1;
-            ctx.fillStyle = `rgba(80, 120, 60, ${Math.random() * 0.5})`;
-            ctx.fillRect(x, y, size, size);
-        }
-        
-        // إضافة تفاصيل تراب
-        for (let i = 0; i < 3000; i++) {
-            const x = Math.random() * 2048;
-            const y = Math.random() * 2048;
-            ctx.fillStyle = `rgba(100, 70, 40, ${Math.random() * 0.6})`;
-            ctx.fillRect(x, y, Math.random() * 4 + 1, Math.random() * 4 + 1);
-        }
-        
-        const terrainTexture = new THREE.CanvasTexture(canvasTexture);
-        terrainTexture.wrapS = THREE.RepeatWrapping;
-        terrainTexture.wrapT = THREE.RepeatWrapping;
-        terrainTexture.repeat.set(12, 12);
-        
-        // ==================== نسيج Normal Map (تفاصيل) ====================
-        const normalCanvas = document.createElement('canvas');
-        normalCanvas.width = 1024;
-        normalCanvas.height = 1024;
-        const normalCtx = normalCanvas.getContext('2d');
-        normalCtx.fillStyle = '#8080ff';
-        normalCtx.fillRect(0, 0, 1024, 1024);
-        for (let i = 0; i < 8000; i++) {
-            normalCtx.fillStyle = `rgba(128, 128, ${150 + Math.random() * 105}, 1)`;
-            normalCtx.fillRect(Math.random() * 1024, Math.random() * 1024, 2, 2);
-        }
-        const normalMap = new THREE.CanvasTexture(normalCanvas);
-        
-        // ==================== مادة التضاريس ====================
-        const terrainMaterial = new THREE.MeshStandardMaterial({
-            map: terrainTexture,
-            normalMap: normalMap,
-            color: 0xffffff,
-            roughness: 0.7,
-            metalness: 0.1,
-            emissive: 0x000000,
-            emissiveIntensity: 0,
-            flatShading: false,
-            side: THREE.DoubleSide
         });
         
-        const terrain = new THREE.Mesh(geometry, terrainMaterial);
-        terrain.receiveShadow = true;
-        terrain.castShadow = true;
-        scene.add(terrain);
+        // تحديث اتجاه الكاميرا إذا لم يكن المستخدم يتحكم
+        if (!controls.autoRotate && Math.abs(carSpeed) > 0.5) {
+            // الكاميرا تتبع السيارة قليلاً
+            const targetCamPos = {
+                x: carPosition.x + Math.sin(carAngle) * -5,
+                z: carPosition.z + Math.cos(carAngle) * -5
+            };
+            controls.target.lerp(new THREE.Vector3(carPosition.x, 1, carPosition.z), 0.05);
+        } else {
+            controls.target.lerp(new THREE.Vector3(carPosition.x, 1, carPosition.z), 0.05);
+        }
+    }
+    
+    // ========== 11. جسيمات الدخان ==========
+    let smokeParticles = [];
+    
+    function createSmoke() {
+        if (Math.abs(carSpeed) < 1) return;
         
-        // ==================== مسطحات مائية ====================
-        const waterGeometry = new THREE.CircleGeometry(22, 32);
-        const waterMaterial = new THREE.MeshStandardMaterial({
-            color: 0x3a86ff,
-            emissive: 0x1a4488,
-            emissiveIntensity: 0.3,
-            metalness: 0.95,
-            roughness: 0.25,
-            transparent: true,
-            opacity: 0.92
+        const smokeGeo = new THREE.SphereGeometry(0.08, 6, 6);
+        const smokeMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.6 });
+        const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+        
+        const offsetX = (Math.random() - 0.5) * 0.5;
+        const offsetZ = (Math.random() - 0.5) * 0.3 - 0.8;
+        smoke.position.set(offsetX, 0.1, offsetZ);
+        smoke.userData = { life: 1, speed: 0.02 };
+        carGroup.add(smoke);
+        smokeParticles.push(smoke);
+        
+        setTimeout(() => {
+            carGroup.remove(smoke);
+            smokeParticles = smokeParticles.filter(p => p !== smoke);
+        }, 800);
+    }
+    
+    // ========== 12. إعادة تعيين الموقع ==========
+    window.resetPosition = function() {
+        carPosition = { x: 0, z: 0 };
+        carSpeed = 0;
+        carAngle = 0;
+        carGroup.position.set(0, 0, 0);
+        carGroup.rotation.y = 0;
+        controls.target.set(0, 1, 0);
+        camera.position.set(0, 8, 15);
+        controls.update();
+    };
+    
+    // ========== 13. حلقة الرسم ==========
+    let lastSmoke = 0;
+    
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        updateCar();
+        
+        // إضافة دخان كل بضع إطارات
+        if (Math.abs(carSpeed) > 2 && Date.now() > lastSmoke + 80) {
+            createSmoke();
+            lastSmoke = Date.now();
+        }
+        
+        // تحديث الجسيمات
+        smokeParticles.forEach(particle => {
+            particle.userData.life -= 0.02;
+            particle.material.opacity = particle.userData.life * 0.6;
+            particle.scale.setScalar(particle.userData.life * 2);
         });
         
-        const lake1 = new THREE.Mesh(waterGeometry, waterMaterial);
-        lake1.position.set(-35, -0.2, 28);
-        lake1.rotation.x = -Math.PI / 2;
-        lake1.receiveShadow = true;
-        scene.add(lake1);
+        // دوران ضوء الشمس
+        const time = Date.now() * 0.0005;
+        sunLight.position.x = 15 + Math.sin(time) * 2;
+        sunLight.position.z = 10 + Math.cos(time * 0.7) * 3;
         
-        const lake2 = new THREE.Mesh(waterGeometry, waterMaterial);
-        lake2.position.set(42, -0.15, -25);
-        lake2.rotation.x = -Math.PI / 2;
-        lake2.receiveShadow = true;
-        scene.add(lake2);
-        
-        // ==================== نظام النباتات (InstancedMesh) ====================
-        const grassMat = new THREE.MeshStandardMaterial({ color: 0x5aae5a, roughness: 0.6 });
-        const grassGeo = new THREE.ConeGeometry(0.25, 0.5, 4);
-        
-        const grassCount = 3500;
-        const grasses = [];
-        
-        for (let i = 0; i < grassCount; i++) {
-            const x = (Math.random() - 0.5) * (terrainSize - 15);
-            const z = (Math.random() - 0.5) * (terrainSize - 15);
-            const y = getHeight(x, z);
-            
-            // تجنب المياه
-            const distToLake1 = Math.hypot(x + 35, z - 28);
-            const distToLake2 = Math.hypot(x - 42, z + 25);
-            
-            if (y > -0.5 && y < 2.5 && distToLake1 > 8 && distToLake2 > 8) {
-                const grass = new THREE.Mesh(grassGeo, grassMat.clone());
-                grass.position.set(x, y, z);
-                grass.scale.set(0.8 + Math.random() * 0.7, 0.8 + Math.random() * 0.7, 0.8 + Math.random() * 0.7);
-                grass.castShadow = true;
-                grass.receiveShadow = false;
-                scene.add(grass);
-                grasses.push(grass);
-            }
-        }
-        
-        // ==================== أشجار متقدمة ====================
-        function createAdvancedTree(x, z, size = 1) {
-            const y = getHeight(x, z);
-            if (y < -0.3 || y > 2.8) return null;
-            
-            const treeGroup = new THREE.Group();
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.8 });
-            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x4cae4c, roughness: 0.4 });
-            
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * size, 0.5 * size, 1.2 * size, 8), trunkMat);
-            trunk.castShadow = true;
-            trunk.position.y = 0.6 * size;
-            
-            const leaves1 = new THREE.Mesh(new THREE.ConeGeometry(0.8 * size, 1.2 * size, 8), leavesMat);
-            leaves1.castShadow = true;
-            leaves1.position.y = 1.2 * size;
-            
-            const leaves2 = new THREE.Mesh(new THREE.ConeGeometry(0.65 * size, 1.0 * size, 8), leavesMat);
-            leaves2.castShadow = true;
-            leaves2.position.y = 1.9 * size;
-            
-            treeGroup.add(trunk, leaves1, leaves2);
-            treeGroup.position.set(x, y, z);
-            scene.add(treeGroup);
-            return treeGroup;
-        }
-        
-        const trees = [];
-        const treeCount = 380;
-        
-        for (let i = 0; i < treeCount; i++) {
-            let x, z, attempts = 0;
-            while (attempts < 30) {
-                x = (Math.random() - 0.5) * (terrainSize - 25);
-                z = (Math.random() - 0.5) * (terrainSize - 25);
-                const y = getHeight(x, z);
-                const distToLake1 = Math.hypot(x + 35, z - 28);
-                const distToLake2 = Math.hypot(x - 42, z + 25);
-                
-                let tooClose = false;
-                for (let t of trees) {
-                    if (Math.hypot(x - t.x, z - t.z) < 2.2) tooClose = true;
-                }
-                
-                if (!tooClose && y > -0.2 && y < 2.5 && distToLake1 > 6 && distToLake2 > 6) {
-                    const size = 0.7 + Math.random() * 0.6;
-                    createAdvancedTree(x, z, size);
-                    trees.push({ x, z });
-                    break;
-                }
-                attempts++;
-            }
-        }
-        
-        // ==================== صخور متفرقة ====================
-        const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a6e5d, roughness: 0.85 });
-        for (let i = 0; i < 180; i++) {
-            const x = (Math.random() - 0.5) * (terrainSize - 15);
-            const z = (Math.random() - 0.5) * (terrainSize - 15);
-            const y = getHeight(x, z);
-            if (y > -0.5 && y < 2.2) {
-                const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.2), rockMat);
-                rock.position.set(x, y, z);
-                rock.scale.set(1, 0.5 + Math.random() * 0.4, 0.8);
-                rock.castShadow = true;
-                scene.add(rock);
-            }
-        }
-        
-        // ==================== جزيئات الغبار ====================
-        const dustCount = 800;
-        const dustGeometry = new THREE.BufferGeometry();
-        const dustPositions = [];
-        
-        for (let i = 0; i < dustCount; i++) {
-            dustPositions.push(
-                (Math.random() - 0.5) * (terrainSize + 20),
-                Math.random() * 2.5,
-                (Math.random() - 0.5) * (terrainSize + 20)
-            );
-        }
-        dustGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(dustPositions), 3));
-        const dustMat = new THREE.PointsMaterial({ color: 0xccaa88, size: 0.05, transparent: true, opacity: 0.4 });
-        const dust = new THREE.Points(dustGeometry, dustMat);
-        scene.add(dust);
-        
-        // ==================== سحب متحركة ====================
-        const cloudMatCloud = new THREE.MeshStandardMaterial({ color: 0xf8f8ff, transparent: true, opacity: 0.85 });
-        const clouds = [];
-        
-        function createCloud(x, z, scale) {
-            const cloudGroup = new THREE.Group();
-            const parts = [[0,0,0,0.8], [0.7,-0.1,0.3,0.65], [-0.6,-0.1,0.25,0.7], [0.2,0.15,0.7,0.55]];
-            parts.forEach(p => {
-                const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.6, 7, 7), cloudMatCloud);
-                sphere.position.set(p[0], p[1] + 0.5, p[2]);
-                sphere.scale.set(p[3] * scale, p[3] * scale * 0.7, p[3] * scale);
-                cloudGroup.add(sphere);
-            });
-            cloudGroup.position.set(x, 12 + Math.random() * 3, z);
-            scene.add(cloudGroup);
-            return cloudGroup;
-        }
-        
-        for (let i = 0; i < 12; i++) {
-            clouds.push(createCloud((Math.random() - 0.5) * 150, (Math.random() - 0.5) * 100, 0.8 + Math.random() * 0.7));
-        }
-        
-        // ==================== التحكم بالكاميرا ====================
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.06;
-        controls.rotateSpeed = 0.8;
-        controls.zoomSpeed = 1.2;
-        controls.panSpeed = 0.8;
-        controls.enableZoom = true;
-        controls.enablePan = true;
-        controls.target.set(0, 8, 0);
-        camera.position.set(25, 18, 35);
+        // تحديث الكاميرا
         controls.update();
         
-        // ==================== إحصائيات ====================
-        const statsDiv = document.getElementById('stats');
-        statsDiv.innerHTML = `
-            🏔️ Terrain: ${terrainSegments}x${terrainSegments}<br>
-            🌳 Trees: ${trees.length}<br>
-            🌿 Grass: ${grasses.length}<br>
-            💧 Water: 2 Lakes<br>
-            ☁️ Clouds: ${clouds.length}
-        `;
-        
-        // ==================== حلقة التحديث ====================
-        let time = 0;
-        
-        function animate() {
-            requestAnimationFrame(animate);
-            time += 0.008;
-            
-            // تحريك السحب
-            clouds.forEach((cloud, idx) => {
-                cloud.position.x += 0.008 * (idx % 2 === 0 ? 1 : -0.8);
-                if (cloud.position.x > 100) cloud.position.x = -90;
-                if (cloud.position.x < -100) cloud.position.x = 90;
-            });
-            
-            // تأثير الرياح على العشب (تناوب بسيط)
-            grasses.forEach((grass, idx) => {
-                grass.rotation.y = Math.sin(time * 2 + idx) * 0.1;
-            });
-            
-            // تحريك المياه (تأثير انعكاس)
-            const waterTime = time * 0.5;
-            waterMaterial.emissiveIntensity = 0.25 + Math.sin(waterTime) * 0.1;
-            
-            // تغيير شدة الضوء
-            sunLight.intensity = 1.3 + Math.sin(time * 0.05) * 0.1;
-            
-            controls.update();
-            effectComposer.render();
-        }
-        
-        animate();
-        
-        // ==================== التكيف مع حجم الشاشة ====================
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            effectComposer.setSize(window.innerWidth, window.innerHeight);
-        });
-        
-        console.log('✅ بيئة أرضية احترافية جاهزة!');
-        console.log(`📊 الإحصائيات: ${trees.length} شجرة, ${grasses.length} عشبة, ${clouds.length} سحابة`);
-    </script>
+        // رسم المشهد
+        renderer.render(scene, camera);
+        labelRenderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // ========== 14. تكييف حجم النافذة ==========
+    window.addEventListener('resize', onWindowResize, false);
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    // ========== 15. إضافة علامات مرجعية ==========
+    function addMarker(x, z, text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        div.style.backgroundColor = 'rgba(0,0,0,0.6)';
+        div.style.color = '#ffd700';
+        div.style.padding = '2px 8px';
+        div.style.borderRadius = '20px';
+        div.style.fontSize = '12px';
+        div.style.border = '1px solid #ffd700';
+        const label = new CSS2DObject(div);
+        label.position.set(x, 0.5, z);
+        scene.add(label);
+    }
+    
+    addMarker(0, 0, '🏁 نقطة الانطلاق');
+    addMarker(20, 20, '🌲 الغابة');
+    addMarker(-20, 25, '🏔️ التلة');
+    addMarker(15, -25, '🏞️ الوادي');
+    
+    console.log('🎮 لعبة 3B - بيئة ثلاثية الأبعاد جاهزة!');
+    console.log('🎮 استخدم WASD للتحكم بالسيارة');
+    console.log('🖱️ اسحب الفأرة لتدوير الكاميرا');
+</script>
 </body>
 </html>
