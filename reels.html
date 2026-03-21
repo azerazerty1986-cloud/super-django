@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو جيم برو | ألعاب متعددة اللاعبين + 3D</title>
+    <title>ناردو جيم برو | ألعاب متعددة اللاعبين - دخول بدون كلمة سر</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -19,6 +19,7 @@
             min-height: 100vh;
         }
 
+        /* شاشة تسجيل الدخول */
         .login-screen {
             position: fixed;
             top: 0;
@@ -107,6 +108,31 @@
         .login-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 10px 30px rgba(0,255,136,0.5);
+        }
+
+        .quick-login {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-login-btn {
+            background: rgba(0,255,136,0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 8px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .quick-login-btn:hover {
+            background: #00ff88;
+            color: black;
+            transform: translateY(-2px);
         }
 
         .user-bar {
@@ -440,28 +466,44 @@
                 padding: 5px 15px;
                 font-size: 12px;
             }
+            .quick-login {
+                gap: 8px;
+            }
+            .quick-login-btn {
+                padding: 5px 12px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- شاشة تسجيل الدخول -->
+    <!-- شاشة تسجيل الدخول - بدون كلمة سر -->
     <div class="login-screen" id="loginScreen">
         <div class="login-box">
             <i class="fas fa-gamepad" style="font-size: 70px; color: #00ff88; margin-bottom: 20px;"></i>
             <h2>🎮 ناردو جيم برو</h2>
-            <p>ألعاب متعددة اللاعبين + 3D + سباقات سيارات</p>
+            <p>ألعاب متعددة اللاعبين + 3D + سباقات سيارات<br>✨ دخول بدون كلمة سر ✨</p>
             <input type="text" id="loginUsername" placeholder="اسم المستخدم" autocomplete="off">
             <button class="login-btn" onclick="login()">
                 <i class="fas fa-sign-in-alt"></i> دخول
             </button>
+            
+            <!-- أزرار دخول سريع -->
+            <div class="quick-login">
+                <div class="quick-login-btn" onclick="quickLogin('🎮 لاعب 1')">👤 لاعب 1</div>
+                <div class="quick-login-btn" onclick="quickLogin('🏆 بطل')">🏆 بطل</div>
+                <div class="quick-login-btn" onclick="quickLogin('👑 admin')">👑 admin</div>
+                <div class="quick-login-btn" onclick="quickLogin('🎯 محارب')">🎯 محارب</div>
+            </div>
+            
             <div style="margin-top: 20px; font-size: 12px; color: #aaa;">
-                👤 أدخل أي اسم للدخول | 👑 admin للدخول كمدير
+                💡 أدخل أي اسم تريده | لا توجد كلمة سر مطلوبة
             </div>
         </div>
     </div>
 
-    <!-- شريط المستخدم (يظهر بعد الدخول) -->
+    <!-- شريط المستخدم -->
     <div id="topBar" style="display: none;">
         <div class="user-bar">
             <div class="user-badge">
@@ -492,7 +534,7 @@
     <!-- شبكة الألعاب -->
     <div id="gamesGrid" class="games-grid" style="display: none;"></div>
 
-    <!-- زر إضافة لعبة (يظهر للمدير فقط) -->
+    <!-- زر إضافة لعبة (للمدير فقط) -->
     <div id="fabButtons" style="display: none;">
         <div class="upload-fab" onclick="openAddGameModal()">
             <i class="fas fa-plus"></i>
@@ -563,8 +605,7 @@
                 users = JSON.parse(saved);
             } else {
                 users = [
-                    { id: 1, name: 'المدير', username: 'admin', role: 'admin' },
-                    { id: 2, name: 'مستخدم', username: 'user', role: 'user' }
+                    { id: 1, name: 'المدير', username: 'admin', role: 'admin' }
                 ];
                 localStorage.setItem('nardoo_users', JSON.stringify(users));
             }
@@ -608,19 +649,20 @@
             ];
         }
 
-        // لعبة سباق السيارات
+        // لعبة سباق السيارات (مبسطة)
         function getRacingGame() {
             return `<!DOCTYPE html>
 <html>
 <head>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Cairo', monospace; }
-        #score { position: absolute; top: 20px; left: 20px; color: white; font-size: 24px; z-index: 100; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 30px; }
-        #controls { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: white; background: rgba(0,0,0,0.6); padding: 12px; font-size: 14px; }
+        body { margin: 0; overflow: hidden; font-family: monospace; background: #0a2a0a; }
+        #score { position: absolute; top: 20px; left: 20px; color: white; font-size: 24px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 30px; z-index: 100; }
+        #controls { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: white; background: rgba(0,0,0,0.6); padding: 12px; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <div id="score">🏁 السرعة: 0 كم/س | 🏆 النقاط: 0</div>
+    <div id="score">🏁 النقاط: 0 | 🚗 السرعة: 0</div>
     <div id="controls">← → للتحكم | ↑ للتسارع | ↓ للفرامل</div>
     <canvas id="gameCanvas"></canvas>
     <script>
@@ -629,32 +671,29 @@
         canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
         
-        let carX = canvas.width/2 - 30;
+        let carX = canvas.width/2 - 35;
         let carY = canvas.height - 100;
         let speed = 0;
         let score = 0;
         let obstacles = [];
-        let roadOffset = 0;
         
         document.addEventListener('keydown', (e) => {
-            if(e.key === 'ArrowLeft') carX = Math.max(40, carX - 35);
-            if(e.key === 'ArrowRight') carX = Math.min(canvas.width - 90, carX + 35);
-            if(e.key === 'ArrowUp') speed = Math.min(18, speed + 1.5);
-            if(e.key === 'ArrowDown') speed = Math.max(0, speed - 2);
+            if(e.key === 'ArrowLeft') carX = Math.max(30, carX - 40);
+            if(e.key === 'ArrowRight') carX = Math.min(canvas.width - 100, carX + 40);
+            if(e.key === 'ArrowUp') speed = Math.min(12, speed + 1);
+            if(e.key === 'ArrowDown') speed = Math.max(0, speed - 1.5);
         });
         
         function gameLoop() {
-            roadOffset = (roadOffset + speed) % 100;
-            if(Math.random() < 0.025 + speed/200) {
-                obstacles.push({ x: 50 + Math.random() * (canvas.width - 130), y: -60, width: 60, height: 60 });
+            if(Math.random() < 0.02 + speed/150) {
+                obstacles.push({ x: 30 + Math.random() * (canvas.width - 100), y: -60 });
             }
             obstacles = obstacles.filter(obs => obs.y < canvas.height);
-            obstacles.forEach(obs => obs.y += speed + 4);
+            obstacles.forEach(obs => obs.y += speed + 3);
             
             for(let obs of obstacles) {
-                if(obs.x < carX + 70 && obs.x + obs.width > carX && 
-                   obs.y + obs.height > carY && obs.y < carY + 90) {
-                    alert('💥 حادث! النقاط النهائية: ' + score);
+                if(obs.x < carX + 70 && obs.x + 60 > carX && obs.y + 60 > carY && obs.y < carY + 85) {
+                    alert('💥 حادث! النقاط: ' + score);
                     speed = 0;
                     obstacles = [];
                     score = 0;
@@ -663,48 +702,24 @@
             
             score += Math.floor(speed);
             
-            ctx.fillStyle = '#1a2a1a';
+            ctx.fillStyle = '#1a3a1a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // رسم الطريق
-            ctx.fillStyle = '#333';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            for(let i = 0; i < 8; i++) {
-                ctx.fillStyle = '#ffaa44';
-                ctx.fillRect(canvas.width/2 - 6, (roadOffset + i * 120) % canvas.height, 12, 60);
-            }
             
             // خطوط الطريق
-            ctx.strokeStyle = '#ffaa44';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(canvas.width/2 - 80, 0);
-            ctx.lineTo(canvas.width/2 - 80, canvas.height);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(canvas.width/2 + 80, 0);
-            ctx.lineTo(canvas.width/2 + 80, canvas.height);
-            ctx.stroke();
+            for(let i = 0; i < 6; i++) {
+                ctx.fillStyle = '#ffaa44';
+                ctx.fillRect(canvas.width/2 - 5, (i * 120 + Date.now()/10 * speed) % canvas.height, 10, 60);
+            }
             
-            // رسم السيارة
             ctx.fillStyle = '#ff3366';
             ctx.fillRect(carX, carY, 70, 85);
             ctx.fillStyle = '#ffaa44';
-            ctx.fillRect(carX + 12, carY - 12, 46, 12);
-            ctx.fillStyle = '#333';
-            ctx.fillRect(carX + 10, carY + 70, 15, 15);
-            ctx.fillRect(carX + 45, carY + 70, 15, 15);
+            ctx.fillRect(carX + 15, carY - 12, 40, 12);
             
-            // رسم العوائق
             ctx.fillStyle = '#ff6633';
-            obstacles.forEach(obs => {
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                ctx.fillStyle = '#ff9933';
-                ctx.fillRect(obs.x + 10, obs.y + 10, 40, 40);
-                ctx.fillStyle = '#ff6633';
-            });
+            obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, 60, 60));
             
-            document.getElementById('score').innerHTML = \`🏁 السرعة: \${Math.floor(speed * 8)} كم/س | 🏆 النقاط: \${Math.floor(score)}\`;
+            document.getElementById('score').innerHTML = \`🏁 النقاط: \${Math.floor(score)} | 🚗 السرعة: \${Math.floor(speed * 8)}\`;
             requestAnimationFrame(gameLoop);
         }
         gameLoop();
@@ -723,6 +738,7 @@
         body { margin: 0; overflow: hidden; background: #1a3a1a; font-family: monospace; }
         #stats { position: absolute; top: 20px; left: 20px; color: white; font-size: 20px; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 30px; z-index: 100; }
         #controls { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: white; background: rgba(0,0,0,0.6); padding: 12px; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -740,8 +756,8 @@
         let bullets = [];
         let mouseX = canvas.width/2, mouseY = canvas.height/2;
         
-        for(let i = 0; i < 6; i++) {
-            enemies.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, health: 60 });
+        for(let i = 0; i < 5; i++) {
+            enemies.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, health: 50 });
         }
         
         document.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
@@ -755,8 +771,8 @@
             if(e.key === 's') player.y += step;
             if(e.key === 'a') player.x -= step;
             if(e.key === 'd') player.x += step;
-            player.x = Math.min(Math.max(35, player.x), canvas.width - 35);
-            player.y = Math.min(Math.max(35, player.y), canvas.height - 35);
+            player.x = Math.min(Math.max(30, player.x), canvas.width - 30);
+            player.y = Math.min(Math.max(30, player.y), canvas.height - 30);
         });
         
         function gameLoop() {
@@ -764,11 +780,11 @@
                 let dx = b.targetX - b.x;
                 let dy = b.targetY - b.y;
                 let dist = Math.hypot(dx, dy);
-                if(dist < 12) {
+                if(dist < 15) {
                     bullets.splice(i,1);
                 } else {
-                    b.x += dx / dist * 18;
-                    b.y += dy / dist * 18;
+                    b.x += dx / dist * 15;
+                    b.y += dy / dist * 15;
                 }
             });
             
@@ -780,7 +796,7 @@
                         if(e.health <= 0) {
                             enemies.splice(ei,1);
                             player.kills++;
-                            enemies.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, health: 60 });
+                            enemies.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, health: 50 });
                         }
                     }
                 });
@@ -788,39 +804,26 @@
                 let dx = e.x - player.x;
                 let dy = e.y - player.y;
                 let dist = Math.hypot(dx, dy);
-                if(dist < 55) {
-                    player.health -= 0.8;
-                    e.x += (dx / dist) * 2.5;
-                    e.y += (dy / dist) * 2.5;
+                if(dist < 60) {
+                    player.health -= 0.7;
+                    e.x += (dx / dist) * 2;
+                    e.y += (dy / dist) * 2;
                 } else {
-                    e.x += (dx / dist) * 1.2;
-                    e.y += (dy / dist) * 1.2;
+                    e.x += (dx / dist) * 1;
+                    e.y += (dy / dist) * 1;
                 }
             });
             
             ctx.fillStyle = '#1a3a1a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // رسم الخلفية
-            for(let i = 0; i < 50; i++) {
-                ctx.fillStyle = '#2a5a2a';
-                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 5, 5);
-            }
-            
-            // رسم اللاعب
+            // اللاعب
             ctx.fillStyle = '#33ff66';
             ctx.beginPath();
             ctx.arc(player.x, player.y, 22, 0, Math.PI*2);
             ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(player.x - 8, player.y - 8, 5, 0, Math.PI*2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(player.x + 8, player.y - 8, 5, 0, Math.PI*2);
-            ctx.fill();
             
-            // رسم الأعداء
+            // الأعداء
             ctx.fillStyle = '#ff4444';
             enemies.forEach(e => {
                 ctx.beginPath();
@@ -828,7 +831,7 @@
                 ctx.fill();
             });
             
-            // رسم الرصاص
+            // الرصاص
             ctx.fillStyle = '#ffff00';
             bullets.forEach(b => {
                 ctx.beginPath();
@@ -862,6 +865,7 @@
         body { margin: 0; overflow: hidden; background: #1a1a2e; font-family: monospace; }
         #players { position: absolute; top: 20px; right: 20px; color: white; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 30px; z-index: 100; }
         #controls { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: white; background: rgba(0,0,0,0.6); padding: 12px; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -878,7 +882,7 @@
         let otherPlayers = {};
         let foods = [];
         
-        for(let i = 0; i < 15; i++) {
+        for(let i = 0; i < 12; i++) {
             foods.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
         }
         
@@ -895,7 +899,7 @@
         }, 100);
         
         document.addEventListener('keydown', (e) => {
-            let step = 18;
+            let step = 15;
             if(e.key === 'ArrowUp') player.y -= step;
             if(e.key === 'ArrowDown') player.y += step;
             if(e.key === 'ArrowLeft') player.x -= step;
@@ -915,16 +919,14 @@
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // رسم اللاعب
             ctx.fillStyle = '#ff3366';
             ctx.beginPath();
             ctx.arc(player.x, player.y, 22, 0, Math.PI*2);
             ctx.fill();
             ctx.fillStyle = 'white';
             ctx.font = 'bold 20px monospace';
-            ctx.fillText(\`\${player.score}\`, player.x-12, player.y-15);
+            ctx.fillText(player.score, player.x-12, player.y-18);
             
-            // رسم اللاعبين الآخرين
             ctx.fillStyle = '#33ff66';
             for(let id in otherPlayers) {
                 let p = otherPlayers[id];
@@ -932,11 +934,10 @@
                 ctx.arc(p.x, p.y, 22, 0, Math.PI*2);
                 ctx.fill();
                 ctx.fillStyle = 'white';
-                ctx.fillText(\`\${p.score}\`, p.x-12, p.y-15);
+                ctx.fillText(p.score, p.x-12, p.y-18);
                 ctx.fillStyle = '#33ff66';
             }
             
-            // رسم النقاط
             ctx.fillStyle = '#ffaa44';
             foods.forEach(f => {
                 ctx.beginPath();
@@ -953,7 +954,7 @@
 </html>`;
         }
 
-        // عالم ثلاثي الأبعاد
+        // عالم ثلاثي الأبعاد (مبسط)
         function get3DWorldGame() {
             return `<!DOCTYPE html>
 <html>
@@ -974,57 +975,31 @@
         
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 40, 80);
         
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 6, 12);
+        camera.position.set(0, 8, 15);
         
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
         
         // أرضية
-        const groundGeometry = new THREE.PlaneGeometry(80, 80);
+        const groundGeometry = new THREE.PlaneGeometry(60, 60);
         const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x3a9e3a });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -1;
         scene.add(ground);
         
-        // شبكة
-        const gridHelper = new THREE.GridHelper(80, 20, 0x88ff88, 0xffffff);
-        scene.add(gridHelper);
-        
-        // أشجار
-        for(let i = 0; i < 30; i++) {
-            const tree = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.8, 1.2, 2),
-                new THREE.MeshStandardMaterial({ color: 0x8B4513 })
-            );
-            tree.position.x = (Math.random() - 0.5) * 70;
-            tree.position.z = (Math.random() - 0.5) * 70;
-            tree.position.y = 0;
-            scene.add(tree);
-            
-            const leaves = new THREE.Mesh(
-                new THREE.ConeGeometry(1, 1.5, 8),
-                new THREE.MeshStandardMaterial({ color: 0x2e8b57 })
-            );
-            leaves.position.x = tree.position.x;
-            leaves.position.z = tree.position.z;
-            leaves.position.y = 1.5;
-            scene.add(leaves);
-        }
-        
-        // عملات ذهبية
+        // عملات
         let coins = [];
-        for(let i = 0; i < 25; i++) {
+        for(let i = 0; i < 20; i++) {
             const coin = new THREE.Mesh(
                 new THREE.SphereGeometry(0.4, 16, 16),
                 new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 })
             );
-            coin.position.x = (Math.random() - 0.5) * 60;
-            coin.position.z = (Math.random() - 0.5) * 60;
+            coin.position.x = (Math.random() - 0.5) * 50;
+            coin.position.z = (Math.random() - 0.5) * 50;
             coin.position.y = 0.3;
             scene.add(coin);
             coins.push(coin);
@@ -1032,7 +1007,7 @@
         
         // لاعب
         const player = new THREE.Mesh(
-            new THREE.SphereGeometry(0.6, 32, 32),
+            new THREE.SphereGeometry(0.7, 32, 32),
             new THREE.MeshStandardMaterial({ color: 0xff3366 })
         );
         player.position.y = 0.3;
@@ -1058,16 +1033,16 @@
             if(keys.a) player.position.x -= 0.25;
             if(keys.d) player.position.x += 0.25;
             
-            player.position.x = Math.min(Math.max(player.position.x, -35), 35);
-            player.position.z = Math.min(Math.max(player.position.z, -35), 35);
+            player.position.x = Math.min(Math.max(player.position.x, -28), 28);
+            player.position.z = Math.min(Math.max(player.position.z, -28), 28);
             
             camera.position.x = player.position.x;
-            camera.position.z = player.position.z + 10;
+            camera.position.z = player.position.z + 12;
             camera.position.y = 6;
             camera.lookAt(player.position);
             
             coins.forEach((coin, i) => {
-                if(coin.position.distanceTo(player.position) < 1) {
+                if(coin.position.distanceTo(player.position) < 1.2) {
                     scene.remove(coin);
                     coins.splice(i,1);
                     score++;
@@ -1076,16 +1051,12 @@
                         new THREE.SphereGeometry(0.4, 16, 16),
                         new THREE.MeshStandardMaterial({ color: 0xffaa00 })
                     );
-                    newCoin.position.x = (Math.random() - 0.5) * 60;
-                    newCoin.position.z = (Math.random() - 0.5) * 60;
+                    newCoin.position.x = (Math.random() - 0.5) * 50;
+                    newCoin.position.z = (Math.random() - 0.5) * 50;
                     newCoin.position.y = 0.3;
                     scene.add(newCoin);
                     coins.push(newCoin);
                 }
-            });
-            
-            coins.forEach(coin => {
-                coin.rotation.y += 0.05;
             });
             
             renderer.render(scene, camera);
@@ -1108,14 +1079,13 @@
             isLoading = true;
             
             try {
-                // محاولة جلب من localStorage أولاً
                 const saved = localStorage.getItem('nardoo_games');
                 if (saved) {
                     gamesCache = JSON.parse(saved);
                 }
                 
-                // جلب من تليجرام
-                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?limit=100`);
+                // محاولة جلب من تليجرام
+                const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?limit=50`);
                 const data = await response.json();
                 const telegramGames = [];
                 
@@ -1145,7 +1115,6 @@
                     }
                 }
                 
-                // دمج الألعاب
                 const builtIn = getBuiltInGames();
                 const allGames = [...builtIn, ...telegramGames, ...gamesCache];
                 const uniqueGames = [];
@@ -1162,15 +1131,12 @@
                 localStorage.setItem('nardoo_games', JSON.stringify(gamesCache));
                 displayGames();
                 
-                showNotification(`✅ تم تحميل ${gamesCache.length} لعبة`, 'success');
-                
             } catch (error) {
                 console.error('خطأ:', error);
                 if (gamesCache.length === 0) {
                     gamesCache = getBuiltInGames();
                     displayGames();
                 }
-                showNotification('⚠️ تم عرض الألعاب المخزنة', 'warning');
             } finally {
                 isLoading = false;
             }
@@ -1324,7 +1290,7 @@
             document.getElementById('addGameModal').style.display = 'none';
         }
         
-        // ========== تسجيل الدخول ==========
+        // ========== تسجيل الدخول - بدون كلمة سر ==========
         function login() {
             const username = document.getElementById('loginUsername').value.trim();
             if (!username) {
@@ -1335,6 +1301,7 @@
             // البحث عن المستخدم أو إنشاء جديد
             let user = users.find(u => u.username === username || u.name === username);
             if (!user) {
+                // إنشاء مستخدم جديد تلقائياً
                 user = { 
                     id: Date.now(), 
                     name: username, 
@@ -1369,6 +1336,12 @@
             setInterval(updateOnlineCount, 5000);
             
             showNotification(`👋 مرحباً ${currentUser.name}`, 'success');
+        }
+        
+        // دخول سريع بدون كتابة
+        function quickLogin(name) {
+            document.getElementById('loginUsername').value = name;
+            login();
         }
         
         function updateOnlineCount() {
@@ -1430,7 +1403,7 @@
             }
         }
         
-        // إغلاق النوافذ عند الضغط خارجها
+        // إغلاق النوافذ
         window.onclick = function(e) {
             const addModal = document.getElementById('addGameModal');
             const gameModal = document.getElementById('gameModal');
@@ -1438,7 +1411,7 @@
             if (e.target === gameModal) closeGame();
         };
         
-        console.log('🎮 ناردو جيم برو جاهز - ألعاب متعددة اللاعبين + 3D');
+        console.log('🎮 ناردو جيم برو - دخول بدون كلمة سر');
     </script>
 </body>
 </html>
