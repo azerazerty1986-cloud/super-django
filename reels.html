@@ -3,572 +3,565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>لعبة 3B | 5D Realistic Simulation</title>
+    <title>لعبة 3B | 5D Real - نرد ثلاثي الأبعاد</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
-
         body {
-            min-height: 100vh;
-            background: radial-gradient(circle at center, #0a0a2a, #000000);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
             overflow: hidden;
-            position: relative;
+            font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
         }
 
-        /* تأثيرات 5D - ضباب وجسيمات */
-        #particles-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .game-container {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 550px;
-            margin: 20px;
-        }
-
-        .game-card {
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(20px);
-            border-radius: 60px;
-            padding: 30px 25px;
-            text-align: center;
-            border: 2px solid rgba(255, 215, 0, 0.6);
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.3), inset 0 0 30px rgba(255, 215, 0, 0.1);
-            transition: all 0.3s ease;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-        }
-
-        h1 {
-            background: linear-gradient(135deg, #ffd966, #ffaa33, #ff8800);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            font-size: 2.2rem;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-        }
-
-        .target-area {
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 100, 0, 0.2));
-            border-radius: 50px;
-            padding: 15px;
-            margin: 15px 0;
-            border: 1px solid rgba(255, 215, 0, 0.5);
-        }
-
-        .target-number {
-            font-size: 4rem;
-            font-weight: bold;
-            color: #ffd966;
-            text-shadow: 0 0 20px #ffaa33, 0 0 40px #ff6600;
-            letter-spacing: 5px;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { text-shadow: 0 0 20px #ffaa33; }
-            50% { text-shadow: 0 0 40px #ff6600, 0 0 60px #ff3300; }
-        }
-
-        /* منطقة النرد 5D */
-        .dice-5d-area {
-            display: flex;
-            justify-content: center;
-            gap: 25px;
-            margin: 30px 0;
-            perspective: 1000px;
-        }
-
-        .dice-5d {
-            width: 100px;
-            height: 100px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            transform-style: preserve-3d;
-        }
-
-        .dice-5d.rolling {
-            animation: roll3d 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-        }
-
-        @keyframes roll3d {
-            0% { transform: rotateX(0) rotateY(0) rotateZ(0); }
-            25% { transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg); }
-            50% { transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg); }
-            75% { transform: rotateX(1080deg) rotateY(540deg) rotateZ(270deg); }
-            100% { transform: rotateX(1440deg) rotateY(720deg) rotateZ(360deg); }
-        }
-
-        .dice-face {
+        /* لوحة التحكم */
+        .ui-panel {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(145deg, #fff, #f0f0f0);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: bold;
-            color: #333;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            border: 2px solid #ffd966;
-            backface-visibility: hidden;
-        }
-
-        .dice-face-front { transform: translateZ(50px); }
-        .dice-face-back { transform: rotateY(180deg) translateZ(50px); }
-        .dice-face-right { transform: rotateY(90deg) translateZ(50px); }
-        .dice-face-left { transform: rotateY(-90deg) translateZ(50px); }
-        .dice-face-top { transform: rotateX(90deg) translateZ(50px); }
-        .dice-face-bottom { transform: rotateX(-90deg) translateZ(50px); }
-
-        .dice-value {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(145deg, #ffd966, #ffaa33);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-            transition: all 0.2s;
-        }
-
-        .dice-5d:hover .dice-value {
-            transform: scale(1.05);
-            box-shadow: 0 15px 35px rgba(255, 215, 0, 0.5);
-        }
-
-        /* مؤثرات صوتية مرئية */
-        .shockwave {
-            position: fixed;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,215,0,0.8), transparent);
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 100;
             pointer-events: none;
-            animation: shock 0.5s ease-out forwards;
-            z-index: 1000;
         }
 
-        @keyframes shock {
-            0% { transform: scale(0); opacity: 0.8; }
-            100% { transform: scale(10); opacity: 0; }
+        .game-info {
+            display: inline-block;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(15px);
+            padding: 15px 30px;
+            border-radius: 60px;
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 30px rgba(255,215,0,0.3);
+            pointer-events: auto;
         }
 
-        .score-stats {
+        .target {
+            font-size: 2rem;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .target span {
+            font-size: 3rem;
+            text-shadow: 0 0 20px #ffaa33;
+        }
+
+        .score-board {
             display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            margin: 20px 0;
+            gap: 20px;
+            margin-top: 10px;
+            justify-content: center;
         }
 
-        .stat-card {
-            flex: 1;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(5px);
-            padding: 12px;
+        .stat {
+            background: rgba(0,0,0,0.5);
+            padding: 5px 15px;
             border-radius: 30px;
-            border: 1px solid rgba(255,215,0,0.3);
         }
 
-        .stat-label {
-            font-size: 11px;
-            color: #aaa;
-        }
-
-        .stat-value {
-            font-size: 28px;
+        .stat .value {
+            font-size: 1.5rem;
             font-weight: bold;
-            color: #ffd966;
+            color: #ffd700;
         }
 
-        .result-area {
-            background: rgba(255,215,0,0.1);
-            border-radius: 40px;
-            padding: 15px;
-            margin: 15px 0;
-            font-size: 18px;
-            font-weight: bold;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255,215,0,0.3);
-            transition: all 0.3s;
+        .message-area {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
         }
 
-        button {
-            background: linear-gradient(135deg, #ffd966, #ffaa33);
-            border: none;
-            padding: 14px 28px;
+        .message {
+            display: inline-block;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px 25px;
             border-radius: 50px;
-            font-size: 18px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffd700;
+            border: 1px solid #ffd700;
+        }
+
+        .reset-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #ffd700, #ffaa33);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
             font-weight: bold;
             color: #1e3c2c;
             cursor: pointer;
+            z-index: 100;
             transition: all 0.3s;
-            width: 100%;
-            margin-top: 10px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
-        button:hover {
-            transform: scale(1.02);
+        .reset-btn:hover {
+            transform: scale(1.05);
             box-shadow: 0 8px 25px rgba(255,215,0,0.5);
         }
 
-        /* تأثيرات الجسيمات */
-        .particle {
-            position: fixed;
-            pointer-events: none;
-            animation: particleFloat 1s ease-out forwards;
-            z-index: 1000;
-        }
-
-        @keyframes particleFloat {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-100px) scale(0); opacity: 0; }
-        }
-
-        @media (max-width: 550px) {
-            .dice-5d { width: 80px; height: 80px; }
-            .dice-value { width: 80px; height: 80px; font-size: 2.2rem; }
-            .stat-value { font-size: 22px; }
+        @media (max-width: 600px) {
+            .game-info { padding: 10px 20px; }
+            .target span { font-size: 2rem; }
+            .stat .value { font-size: 1.2rem; }
+            .reset-btn { padding: 8px 18px; font-size: 0.9rem; bottom: 20px; right: 20px; }
+            .message { font-size: 0.9rem; padding: 8px 18px; }
         }
     </style>
 </head>
 <body>
 
-<canvas id="particles-canvas"></canvas>
-
-<div class="game-container">
-    <div class="game-card">
-        <h1>
-            <i class="fas fa-cube"></i>
-            3B | 5D REAL
-            <i class="fas fa-dice-d6"></i>
-        </h1>
-        
-        <div class="target-area">
-            <div style="font-size: 14px; color: #ffd966;">🎯 الرقم المستهدف</div>
-            <div class="target-number" id="targetNum">??</div>
+<div class="ui-panel">
+    <div class="game-info">
+        <div class="target">
+            🎯 الرقم المستهدف: <span id="targetNum">??</span>
         </div>
-
-        <div class="dice-5d-area">
-            <div class="dice-5d" id="dice0" onclick="rollDice3D(0)">
-                <div class="dice-value" id="diceVal0">🎲</div>
-            </div>
-            <div class="dice-5d" id="dice1" onclick="rollDice3D(1)">
-                <div class="dice-value" id="diceVal1">🎲</div>
-            </div>
-            <div class="dice-5d" id="dice2" onclick="rollDice3D(2)">
-                <div class="dice-value" id="diceVal2">🎲</div>
-            </div>
+        <div class="score-board">
+            <div class="stat">📊 المجموع: <span class="value" id="currentSum">0</span></div>
+            <div class="stat">🎲 المحاولات: <span class="value" id="attempts">0</span></div>
+            <div class="stat">🏆 الأفضل: <span class="value" id="bestScore">0</span></div>
         </div>
-
-        <div class="score-stats">
-            <div class="stat-card">
-                <div class="stat-label">المجموع</div>
-                <div class="stat-value" id="currentSum">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">المحاولات</div>
-                <div class="stat-value" id="attempts">0</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">أفضل نتيجة</div>
-                <div class="stat-value" id="bestScore">0</div>
-            </div>
-        </div>
-
-        <div class="result-area" id="resultMsg">
-            🎲 اضغط على النرد 5D لبدء المغامرة
-        </div>
-
-        <button onclick="resetGame5D()">
-            <i class="fas fa-sync-alt"></i> لعبة جديدة
-        </button>
     </div>
 </div>
 
-<script>
-    // تحميل Font Awesome
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css';
-    document.head.appendChild(link);
+<div class="message-area">
+    <div class="message" id="message">🎲 اضغط على النرد لبدء اللعب</div>
+</div>
 
-    // متغيرات اللعبة
+<button class="reset-btn" onclick="resetGame()">
+    <i class="fas fa-sync-alt"></i> لعبة جديدة
+</button>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
+
+    // ========== إعدادات اللعبة ==========
     let targetNumber = 0;
     let diceValues = [0, 0, 0];
     let attempts = 0;
-    let bestScore = localStorage.getItem('bestScore3B_5d') || 0;
+    let bestScore = localStorage.getItem('bestScore3B_3d') || 0;
     let gameActive = true;
-    let rollingCount = 0;
+    let rolling = false;
 
     // عناصر DOM
     const targetSpan = document.getElementById('targetNum');
     const currentSumSpan = document.getElementById('currentSum');
     const attemptsSpan = document.getElementById('attempts');
     const bestScoreSpan = document.getElementById('bestScore');
-    const resultMsg = document.getElementById('resultMsg');
-    const diceVals = [document.getElementById('diceVal0'), document.getElementById('diceVal1'), document.getElementById('diceVal2')];
-    const diceElements = [document.getElementById('dice0'), document.getElementById('dice1'), document.getElementById('dice2')];
+    const messageDiv = document.getElementById('message');
 
-    // نظام الجسيمات 5D
-    const canvas = document.getElementById('particles-canvas');
-    let ctx = canvas.getContext('2d');
+    // ========== إنشاء المشهد ثلاثي الأبعاد ==========
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a2a);
+    scene.fog = new THREE.FogExp2(0x0a0a2a, 0.008);
+
+    // الكاميرا
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(4, 3, 6);
+    camera.lookAt(0, 0, 0);
+
+    // المعالج
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    // التحكم بالكاميرا
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = false;
+    controls.enableZoom = true;
+    controls.enablePan = true;
+    controls.target.set(0, 0, 0);
+
+    // ========== الإضاءة ==========
+    // إضاءة محيطية
+    const ambientLight = new THREE.AmbientLight(0x404060);
+    scene.add(ambientLight);
+    
+    // إضاءة رئيسية
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1);
+    mainLight.position.set(5, 10, 7);
+    mainLight.castShadow = true;
+    mainLight.receiveShadow = true;
+    scene.add(mainLight);
+    
+    // إضاءة خلفية
+    const backLight = new THREE.PointLight(0xffaa33, 0.5);
+    backLight.position.set(-2, 1, -3);
+    scene.add(backLight);
+    
+    // إضاءة ملونة
+    const colorLight = new THREE.PointLight(0xff66cc, 0.3);
+    colorLight.position.set(3, 2, 2);
+    scene.add(colorLight);
+    
+    // إضاءة أرضية
+    const fillLight = new THREE.PointLight(0x33ccff, 0.3);
+    fillLight.position.set(0, -1, 0);
+    scene.add(fillLight);
+
+    // ========== الأرضية ==========
+    const gridHelper = new THREE.GridHelper(20, 20, 0xffd700, 0x336633);
+    gridHelper.position.y = -1.2;
+    scene.add(gridHelper);
+    
+    const floorPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(15, 15),
+        new THREE.MeshStandardMaterial({ color: 0x1a3a1a, roughness: 0.8, metalness: 0.1, transparent: true, opacity: 0.5 })
+    );
+    floorPlane.rotation.x = -Math.PI / 2;
+    floorPlane.position.y = -1.2;
+    floorPlane.receiveShadow = true;
+    scene.add(floorPlane);
+
+    // ========== إنشاء النرد (مكعب مع أرقام) ==========
+    function createDiceTexture(number, color) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        // خلفية
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // إطار ذهبي
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 20;
+        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+        
+        // الرقم
+        ctx.fillStyle = '#ffd700';
+        ctx.font = `Bold ${canvas.width * 0.5}px "Cairo", "Segoe UI"`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(number.toString(), canvas.width / 2, canvas.height / 2);
+        
+        // تأثير ظل
+        ctx.shadowBlur = 0;
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        return texture;
+    }
+
+    function createDice(value, x, z, index) {
+        const size = 0.9;
+        const geometry = new THREE.BoxGeometry(size, size, size);
+        
+        // ألوان مختلفة لكل نرد
+        const colors = ['#ff3366', '#33ff66', '#ffaa33'];
+        const material = new THREE.MeshStandardMaterial({ 
+            map: createDiceTexture(value, colors[index]),
+            roughness: 0.3,
+            metalness: 0.7,
+            emissive: 0x442200,
+            emissiveIntensity: 0.2
+        });
+        
+        const dice = new THREE.Mesh(geometry, material);
+        dice.position.set(x, 0, z);
+        dice.castShadow = true;
+        dice.receiveShadow = true;
+        dice.userData = { value, index };
+        
+        return dice;
+    }
+
+    let diceMeshes = [];
+    const dicePositions = [[-1.5, 0.2, -1], [0, 0.2, -0.5], [1.5, 0.2, -1]];
+
+    function updateDiceValues() {
+        for (let i = 0; i < 3; i++) {
+            if (diceMeshes[i]) {
+                scene.remove(diceMeshes[i]);
+            }
+            const value = diceValues[i] === 0 ? '?' : diceValues[i];
+            const colors = ['#ff3366', '#33ff66', '#ffaa33'];
+            const material = new THREE.MeshStandardMaterial({ 
+                map: createDiceTexture(value, colors[i]),
+                roughness: 0.3,
+                metalness: 0.7,
+                emissive: 0x442200,
+                emissiveIntensity: diceValues[i] > 0 ? 0.5 : 0.1
+            });
+            const geometry = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+            const dice = new THREE.Mesh(geometry, material);
+            dice.position.set(dicePositions[i][0], dicePositions[i][1], dicePositions[i][2]);
+            dice.castShadow = true;
+            dice.userData = { index: i, value: diceValues[i] };
+            scene.add(dice);
+            diceMeshes[i] = dice;
+        }
+    }
+
+    // ========== تأثيرات الجسيمات ==========
     let particles = [];
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleMaterial = new THREE.PointsMaterial({ color: 0xffd700, size: 0.05 });
 
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    class Particle5D {
-        constructor(x, y, color) {
-            this.x = x;
-            this.y = y;
-            this.vx = (Math.random() - 0.5) * 8;
-            this.vy = (Math.random() - 0.5) * 8 - 2;
-            this.size = Math.random() * 8 + 3;
-            this.color = color;
-            this.life = 1;
-            this.decay = 0.02;
+    function createExplosion(x, y, z, color) {
+        const particleCount = 50;
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i*3] = x + (Math.random() - 0.5) * 1.5;
+            positions[i*3+1] = y + (Math.random() - 0.5) * 1.5;
+            positions[i*3+2] = z + (Math.random() - 0.5) * 1.5;
         }
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vy += 0.2;
-            this.life -= this.decay;
-            return this.life > 0;
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const material = new THREE.PointsMaterial({ color: color, size: 0.08 });
+        const points = new THREE.Points(geometry, material);
+        scene.add(points);
+        
+        setTimeout(() => {
+            scene.remove(points);
+        }, 500);
+    }
+
+    // ========== حركة النرد عند الرمي ==========
+    function animateDiceRoll(index, newValue) {
+        const dice = diceMeshes[index];
+        if (!dice) return;
+        
+        const startPos = dice.position.clone();
+        const startRot = dice.rotation.clone();
+        const duration = 500;
+        const startTime = Date.now();
+        
+        function animate() {
+            const elapsed = Date.now() - startTime;
+            const t = Math.min(1, elapsed / duration);
+            const easeOut = 1 - Math.pow(1 - t, 3);
+            
+            // حركة قفز
+            dice.position.y = startPos.y + Math.sin(t * Math.PI) * 1.2;
+            // دوران
+            dice.rotation.x = startRot.x + t * Math.PI * 4;
+            dice.rotation.y = startRot.y + t * Math.PI * 2;
+            dice.rotation.z = startRot.z + t * Math.PI * 3;
+            
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // إنهاء الحركة
+                dice.position.y = startPos.y;
+                dice.rotation.set(0, 0, 0);
+                
+                // تحديث النسيج بالقيمة الجديدة
+                const colors = ['#ff3366', '#33ff66', '#ffaa33'];
+                const material = new THREE.MeshStandardMaterial({ 
+                    map: createDiceTexture(newValue, colors[index]),
+                    roughness: 0.3,
+                    metalness: 0.7,
+                    emissive: 0x442200,
+                    emissiveIntensity: 0.5
+                });
+                dice.material = material;
+                dice.userData.value = newValue;
+                
+                // تأثير انفجار
+                createExplosion(dice.position.x, dice.position.y + 0.5, dice.position.z, '#ffd700');
+                
+                // التحقق من النتيجة بعد الرمي
+                checkGameResult();
+                rolling = false;
+            }
         }
-        draw() {
-            ctx.globalAlpha = this.life;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        
+        animate();
     }
 
-    function addParticles(x, y, color) {
-        for (let i = 0; i < 15; i++) {
-            particles.push(new Particle5D(x, y, color));
-        }
-    }
-
-    function createShockwave(x, y) {
-        const wave = document.createElement('div');
-        wave.className = 'shockwave';
-        wave.style.left = x + 'px';
-        wave.style.top = y + 'px';
-        document.body.appendChild(wave);
-        setTimeout(() => wave.remove(), 500);
-    }
-
-    function animateParticles() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles = particles.filter(p => p.update());
-        particles.forEach(p => p.draw());
-        requestAnimationFrame(animateParticles);
-    }
-    animateParticles();
-
-    // تأثيرات 5D: صوت مرئي + اهتزاز
-    function vibrateIntensity(intensity) {
-        if (navigator.vibrate) {
-            navigator.vibrate(intensity);
-        }
-        // تأثير اهتزاز للعنصر
-        const gameCard = document.querySelector('.game-card');
-        gameCard.style.transform = `translateX(${Math.sin(Date.now() * 0.05) * intensity * 0.5}px)`;
-        setTimeout(() => gameCard.style.transform = '', intensity * 2);
-    }
-
-    function createNumberParticles(value, x, y) {
-        const colors = ['#ffd966', '#ffaa33', '#ff8800', '#ff6600'];
-        for (let i = 0; i < value * 3; i++) {
-            particles.push(new Particle5D(x + (Math.random() - 0.5) * 100, y + (Math.random() - 0.5) * 100, colors[Math.floor(Math.random() * colors.length)]));
-        }
-    }
-
-    // تحديث واجهة اللعبة
+    // ========== منطق اللعبة ==========
     function updateUI() {
         const sum = diceValues.reduce((a, b) => a + b, 0);
         currentSumSpan.textContent = sum;
         attemptsSpan.textContent = attempts;
         bestScoreSpan.textContent = bestScore;
         targetSpan.textContent = targetNumber;
+    }
 
-        for (let i = 0; i < 3; i++) {
-            if (diceValues[i] === 0) {
-                diceVals[i].innerHTML = '🎲';
-                diceVals[i].style.background = 'linear-gradient(145deg, #fff, #f0f0f0)';
-            } else {
-                diceVals[i].innerHTML = diceValues[i];
-                diceVals[i].style.background = 'linear-gradient(145deg, #ffd966, #ffaa33)';
+    function checkGameResult() {
+        const sum = diceValues.reduce((a, b) => a + b, 0);
+        
+        if (sum === targetNumber && diceValues.every(v => v > 0)) {
+            gameActive = false;
+            const pointsEarned = Math.max(1, 12 - attempts);
+            messageDiv.innerHTML = `🎉🎉 فوز مذهل! 🎉🎉<br>✨ حصلت على ${pointsEarned} نقطة ✨`;
+            messageDiv.style.border = '2px solid #2ecc71';
+            
+            // تأثير فوز
+            createExplosion(0, 1, 0, '#2ecc71');
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => createExplosion(0, 1, 0, '#ffd700'), i * 100);
             }
+            
+            if (pointsEarned > bestScore) {
+                bestScore = pointsEarned;
+                localStorage.setItem('bestScore3B_3d', bestScore);
+                bestScoreSpan.textContent = bestScore;
+                messageDiv.innerHTML += `<br>🏆 رقم قياسي جديد! 🏆`;
+            }
+        } 
+        else if (sum > targetNumber && diceValues.every(v => v > 0)) {
+            gameActive = false;
+            messageDiv.innerHTML = `💥 خسارة! تجاوزت الرقم (${sum} > ${targetNumber})`;
+            messageDiv.style.border = '2px solid #e74c3c';
+            createExplosion(0, 1, 0, '#e74c3c');
+        }
+        else if (diceValues.every(v => v > 0)) {
+            messageDiv.innerHTML = `🎲 مجموعك: ${sum} | تحتاج: ${targetNumber - sum} أخرى 🎯`;
+            messageDiv.style.border = '1px solid #ffd700';
         }
     }
 
-    // رمي النرد مع تأثيرات 5D
-    function rollDice3D(index) {
+    function rollDice(index) {
         if (!gameActive) {
-            resultMsg.innerHTML = '⚠️ اللعبة انتهت! اضغط على "لعبة جديدة"';
+            messageDiv.innerHTML = '⚠️ اللعبة انتهت! اضغط على "لعبة جديدة"';
             return;
         }
-        if (rollingCount > 0) return;
-
-        rollingCount++;
-        const diceEl = diceElements[index];
-        const rect = diceEl.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-
-        // تأثير 5D: اهتزاز وموجة صدمة
-        vibrateIntensity(50);
-        createShockwave(centerX, centerY);
-        addParticles(centerX, centerY, '#ffd966');
-
-        // إضافة تأثير الدوران 3D
-        diceEl.classList.add('rolling');
+        if (rolling) return;
+        if (diceValues[index] > 0) {
+            messageDiv.innerHTML = '⚠️ هذا النرد استخدمته بالفعل!';
+            return;
+        }
         
-        // محاكاة الرمي الحقيقي
-        setTimeout(() => {
-            const newValue = Math.floor(Math.random() * 6) + 1;
-            diceValues[index] = newValue;
-            
-            // تأثيرات عند ظهور الرقم
-            createNumberParticles(newValue, centerX, centerY);
-            vibrateIntensity(30);
-            
-            const sum = diceValues.reduce((a, b) => a + b, 0);
-            currentSumSpan.textContent = sum;
-            updateUI();
-            
-            diceEl.classList.remove('rolling');
-            
-            // التحقق من الفوز
-            if (sum === targetNumber) {
-                gameActive = false;
-                const pointsEarned = Math.max(1, 12 - attempts);
-                
-                // تأثير الفوز 5D
-                for (let i = 0; i < 50; i++) {
-                    setTimeout(() => {
-                        addParticles(centerX + (Math.random() - 0.5) * 300, centerY + (Math.random() - 0.5) * 300, '#ffaa33');
-                    }, i * 20);
-                }
-                vibrateIntensity(200);
-                
-                resultMsg.innerHTML = `🎉🎉 فوز مذهل! 🎉🎉<br>✨ حصلت على ${pointsEarned} نقطة خارقة ✨`;
-                resultMsg.style.background = "rgba(46,204,113,0.3)";
-                resultMsg.style.border = "2px solid #2ecc71";
-                
-                if (pointsEarned > bestScore) {
-                    bestScore = pointsEarned;
-                    localStorage.setItem('bestScore3B_5d', bestScore);
-                    bestScoreSpan.textContent = bestScore;
-                    resultMsg.innerHTML += `<br>🏆 رقم قياسي جديد! 🏆`;
-                }
-            } 
-            else if (sum > targetNumber) {
-                gameActive = false;
-                resultMsg.innerHTML = `💥💥 خسارة مذهلة! 💥💥<br>⚠️ تجاوزت الرقم (${sum} > ${targetNumber})`;
-                resultMsg.style.background = "rgba(231,76,60,0.3)";
-                resultMsg.style.border = "2px solid #e74c3c";
-                vibrateIntensity(100);
-                
-                // تأثير انفجار
-                for (let i = 0; i < 30; i++) {
-                    setTimeout(() => addParticles(centerX + (Math.random() - 0.5) * 200, centerY + (Math.random() - 0.5) * 200, '#e74c3c'), i * 15);
-                }
-            }
-            else {
-                resultMsg.innerHTML = `🎲 مجموعك: ${sum} | تحتاج: ${targetNumber - sum} أخرى 🎯`;
-                resultMsg.style.background = "rgba(255,215,0,0.15)";
-                resultMsg.style.border = "1px solid rgba(255,215,0,0.3)";
-            }
-            
-            attempts++;
-            attemptsSpan.textContent = attempts;
-            updateUI();
-            
-            rollingCount--;
-            
-        }, 600);
+        rolling = true;
+        const newValue = Math.floor(Math.random() * 6) + 1;
+        diceValues[index] = newValue;
+        attempts++;
+        
+        animateDiceRoll(index, newValue);
+        updateUI();
     }
 
-    // إعادة تعيين اللعبة مع تأثيرات 5D
-    function resetGame5D() {
+    function resetGame() {
         targetNumber = Math.floor(Math.random() * 13) + 6;
         diceValues = [0, 0, 0];
         attempts = 0;
         gameActive = true;
-        rollingCount = 0;
+        rolling = false;
+        
+        // إعادة تعيين النرد
+        updateDiceValues();
+        
+        messageDiv.innerHTML = `🎯 الرقم الجديد: ${targetNumber} | اضغط على النرد لبدء اللعب 🎲`;
+        messageDiv.style.border = '1px solid #ffd700';
+        updateUI();
         
         // تأثير إعادة الضبط
-        for (let i = 0; i < 100; i++) {
-            setTimeout(() => {
-                const x = Math.random() * window.innerWidth;
-                const y = Math.random() * window.innerHeight;
-                addParticles(x, y, '#ffd966');
-            }, i * 10);
-        }
-        vibrateIntensity(80);
-        
-        resultMsg.innerHTML = `🎯 الرقم الجديد: ${targetNumber} | ابدأ الرمي الحقيقي! 🎲`;
-        resultMsg.style.background = "rgba(255,215,0,0.15)";
-        resultMsg.style.border = "1px solid rgba(255,215,0,0.3)";
-        
-        updateUI();
+        createExplosion(0, 1, 0, '#ffd700');
     }
 
-    // تهيئة
-    bestScoreSpan.textContent = bestScore;
-    resetGame5D();
+    // ========== إضافة النرد إلى المشهد ==========
+    function initDice() {
+        for (let i = 0; i < 3; i++) {
+            const colors = ['#ff3366', '#33ff66', '#ffaa33'];
+            const material = new THREE.MeshStandardMaterial({ 
+                map: createDiceTexture('?', colors[i]),
+                roughness: 0.3,
+                metalness: 0.7
+            });
+            const geometry = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+            const dice = new THREE.Mesh(geometry, material);
+            dice.position.set(dicePositions[i][0], dicePositions[i][1], dicePositions[i][2]);
+            dice.castShadow = true;
+            dice.userData = { index: i, value: 0 };
+            scene.add(dice);
+            diceMeshes[i] = dice;
+        }
+    }
 
-    // تأثيرات حركة الفأرة 5D
-    document.addEventListener('mousemove', (e) => {
-        const x = e.clientX / window.innerWidth;
-        const y = e.clientY / window.innerHeight;
-        const gameCard = document.querySelector('.game-card');
-        const rotateX = (y - 0.5) * 10;
-        const rotateY = (x - 0.5) * 10;
-        gameCard.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-    });
+    // ========== Raycaster للكشف عن النقر على النرد ==========
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onClick(event) {
+        if (rolling) return;
+        
+        mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+        mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(diceMeshes);
+        
+        if (intersects.length > 0) {
+            const hit = intersects[0].object;
+            const index = hit.userData.index;
+            rollDice(index);
+        }
+    }
+
+    // ========== نجمة الخلفية ==========
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 1000;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+        starPositions[i*3] = (Math.random() - 0.5) * 200;
+        starPositions[i*3+1] = (Math.random() - 0.5) * 100;
+        starPositions[i*3+2] = (Math.random() - 0.5) * 100 - 50;
+    }
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    scene.add(stars);
+
+    // ========== حلقة الرسم ==========
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // دوران النجوم ببطء
+        stars.rotation.y += 0.0005;
+        stars.rotation.x += 0.0003;
+        
+        // تحديث الإضاءة الملونة
+        const time = Date.now() * 0.002;
+        colorLight.intensity = 0.3 + Math.sin(time) * 0.2;
+        
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    
+    animate();
+    
+    // ========== تهيئة اللعبة ==========
+    initDice();
+    resetGame();
+    
+    // إضافة مستمع النقر
+    window.addEventListener('click', onClick, false);
+    
+    // تحديث حجم النافذة
+    window.addEventListener('resize', onWindowResize, false);
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    console.log('🎮 لعبة 3B 5D - نرد ثلاثي الأبعاد جاهز!');
 </script>
+
+<!-- إضافة Font Awesome للأيقونات -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </body>
 </html>
