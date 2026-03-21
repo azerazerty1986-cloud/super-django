@@ -3,217 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>لعبة 3B | نرد واحد كبير - 5D</title>
+    <title>لعبة 3B | النرد السريع</title>
     <style>
-        body {
+        * {
             margin: 0;
-            overflow: hidden;
-            font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
         }
 
-        /* لوحة التحكم */
-        .ui-panel {
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        .game-info {
-            display: inline-block;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(15px);
-            padding: 20px 40px;
-            border-radius: 80px;
-            border: 3px solid #ffd700;
-            box-shadow: 0 0 40px rgba(255,215,0,0.4);
-            pointer-events: auto;
-        }
-
-        .target {
-            font-size: 2rem;
-            color: #ffd700;
-            font-weight: bold;
-        }
-
-        .target span {
-            font-size: 3.5rem;
-            text-shadow: 0 0 25px #ffaa33;
-            font-weight: bold;
-        }
-
-        .score-board {
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a2a, #1a1a3a);
             display: flex;
-            gap: 30px;
-            margin-top: 12px;
             justify-content: center;
+            align-items: center;
+            font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+            padding: 20px;
+            overflow: hidden;
         }
 
-        .stat {
-            background: rgba(0,0,0,0.6);
-            padding: 8px 20px;
-            border-radius: 40px;
+        /* حاوية اللعبة */
+        .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 550px;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(20px);
+            border-radius: 70px;
+            padding: 25px;
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 60px rgba(255,215,0,0.3);
+            animation: float 4s ease-in-out infinite;
         }
 
-        .stat .label {
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* شاشة الهدف */
+        .target-screen {
+            background: linear-gradient(135deg, rgba(0,0,0,0.6), rgba(0,0,0,0.4));
+            border-radius: 50px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.5);
+        }
+
+        .target-label {
+            font-size: 16px;
+            color: #ffd700;
+            letter-spacing: 2px;
+        }
+
+        .target-number {
+            font-size: 70px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffaa33, 0 0 40px #ff6600;
+            line-height: 1;
+        }
+
+        /* منطقة النرد */
+        .dice-area {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            perspective: 800px;
+        }
+
+        .dice-3d {
+            width: 220px;
+            height: 220px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.1s;
+        }
+
+        .dice-3d.rolling {
+            animation: superSpin 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+        }
+
+        @keyframes superSpin {
+            0% {
+                transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+            }
+            10% {
+                transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg);
+            }
+            20% {
+                transform: rotateX(720deg) rotateY(360deg) rotateZ(180deg);
+            }
+            30% {
+                transform: rotateX(1080deg) rotateY(540deg) rotateZ(270deg);
+            }
+            40% {
+                transform: rotateX(1440deg) rotateY(720deg) rotateZ(360deg);
+            }
+            50% {
+                transform: rotateX(1800deg) rotateY(900deg) rotateZ(450deg);
+            }
+            60% {
+                transform: rotateX(2160deg) rotateY(1080deg) rotateZ(540deg);
+            }
+            70% {
+                transform: rotateX(2520deg) rotateY(1260deg) rotateZ(630deg);
+            }
+            80% {
+                transform: rotateX(2880deg) rotateY(1440deg) rotateZ(720deg);
+            }
+            90% {
+                transform: rotateX(3240deg) rotateY(1620deg) rotateZ(810deg);
+            }
+            100% {
+                transform: rotateX(3600deg) rotateY(1800deg) rotateZ(900deg);
+            }
+        }
+
+        .dice-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #ff3366, #cc0052);
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 90px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            border: 3px solid #ffd700;
+            backface-visibility: hidden;
+        }
+
+        .dice-value-display {
+            width: 220px;
+            height: 220px;
+            background: linear-gradient(145deg, #ff3366, #cc0052);
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 110px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            border: 4px solid #ffd700;
+            transition: all 0.2s;
+        }
+
+        .dice-3d:hover .dice-value-display {
+            transform: scale(1.03);
+            box-shadow: 0 20px 45px rgba(255,215,0,0.4);
+        }
+
+        /* الإحصائيات */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.5);
+            border-radius: 35px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .stat-label {
             font-size: 12px;
             color: #aaa;
         }
 
-        .stat .value {
-            font-size: 1.8rem;
+        .stat-value {
+            font-size: 28px;
             font-weight: bold;
             color: #ffd700;
         }
 
-        .message-area {
-            position: absolute;
-            bottom: 40px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            z-index: 100;
-            pointer-events: none;
-        }
-
+        /* رسالة */
         .message {
-            display: inline-block;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            padding: 15px 35px;
-            border-radius: 60px;
-            font-size: 1.2rem;
+            background: rgba(0,0,0,0.6);
+            border-radius: 50px;
+            padding: 14px;
+            margin: 15px 0;
+            text-align: center;
+            font-size: 16px;
             font-weight: bold;
             color: #ffd700;
-            border: 2px solid #ffd700;
+            border: 1px solid rgba(255,215,0,0.5);
+            transition: all 0.3s;
         }
 
-        .reset-btn {
-            position: absolute;
-            bottom: 40px;
-            right: 40px;
+        /* أزرار */
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        button {
+            flex: 1;
             background: linear-gradient(135deg, #ffd700, #ffaa33);
             border: none;
-            padding: 15px 30px;
-            border-radius: 60px;
-            font-size: 1.1rem;
+            padding: 14px;
+            border-radius: 50px;
+            font-size: 18px;
             font-weight: bold;
             color: #1e3c2c;
             cursor: pointer;
-            z-index: 100;
-            transition: all 0.3s;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            transition: all 0.2s;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
         }
 
-        .reset-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 30px rgba(255,215,0,0.6);
+        button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(255,215,0,0.5);
+        }
+
+        button:active {
+            transform: scale(0.98);
         }
 
         .roll-btn {
-            position: absolute;
-            bottom: 40px;
-            left: 40px;
             background: linear-gradient(135deg, #ff3366, #cc0052);
-            border: none;
-            padding: 15px 35px;
-            border-radius: 60px;
-            font-size: 1.2rem;
-            font-weight: bold;
             color: white;
-            cursor: pointer;
-            z-index: 100;
-            transition: all 0.3s;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
-        .roll-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 30px rgba(255,51,102,0.5);
-        }
-
-        .roll-btn:disabled {
-            opacity: 0.5;
-            transform: none;
-            cursor: not-allowed;
-        }
-
-        @media (max-width: 700px) {
-            .game-info { padding: 12px 25px; }
-            .target span { font-size: 2.2rem; }
-            .stat .value { font-size: 1.3rem; }
-            .reset-btn, .roll-btn { padding: 10px 20px; font-size: 0.9rem; bottom: 20px; }
-            .reset-btn { right: 20px; }
-            .roll-btn { left: 20px; }
-            .message { font-size: 0.9rem; padding: 10px 20px; bottom: 100px; }
+        @media (max-width: 550px) {
+            .game-wrapper { padding: 20px; }
+            .target-number { font-size: 50px; }
+            .dice-value-display { width: 160px; height: 160px; font-size: 75px; }
+            .stat-value { font-size: 22px; }
+            button { padding: 10px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
-<div class="ui-panel">
-    <div class="game-info">
-        <div class="target">
-            🎯 الرقم المستهدف: <span id="targetNum">??</span>
+<div class="game-wrapper">
+    <!-- الرقم المستهدف -->
+    <div class="target-screen">
+        <div class="target-label">🎯 الرقم المستهدف</div>
+        <div class="target-number" id="targetNum">??</div>
+    </div>
+
+    <!-- النرد الكبير -->
+    <div class="dice-area">
+        <div class="dice-3d" id="dice3d" onclick="rollDice()">
+            <div class="dice-value-display" id="diceValue">🎲</div>
         </div>
-        <div class="score-board">
-            <div class="stat">
-                <div class="label">🎲 القيمة الحالية</div>
-                <div class="value" id="currentValue">0</div>
-            </div>
-            <div class="stat">
-                <div class="label">📊 المحاولات</div>
-                <div class="value" id="attempts">0</div>
-            </div>
-            <div class="stat">
-                <div class="label">🏆 أفضل نتيجة</div>
-                <div class="value" id="bestScore">0</div>
-            </div>
+    </div>
+
+    <!-- الإحصائيات -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-label">🎲 القيمة الحالية</div>
+            <div class="stat-value" id="currentValue">0</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-label">📊 المحاولات</div>
+            <div class="stat-value" id="attempts">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">🏆 أفضل نتيجة</div>
+            <div class="stat-value" id="bestScore">0</div>
+        </div>
+    </div>
+
+    <!-- رسالة الحالة -->
+    <div class="message" id="message">
+        🎲 اضغط على النرد لبدء اللعب
+    </div>
+
+    <!-- أزرار التحكم -->
+    <div class="buttons">
+        <button class="roll-btn" onclick="rollDice()">
+            <i class="fas fa-dice"></i> ارمي النرد
+        </button>
+        <button onclick="resetGame()">
+            <i class="fas fa-sync-alt"></i> لعبة جديدة
+        </button>
     </div>
 </div>
 
-<div class="message-area">
-    <div class="message" id="message">🎲 اضغط على النرد أو زر الرمي</div>
-</div>
+<script>
+    // تحميل Font Awesome
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css';
+    document.head.appendChild(link);
 
-<button class="reset-btn" onclick="resetGame()">
-    <i class="fas fa-sync-alt"></i> لعبة جديدة
-</button>
-
-<button class="roll-btn" id="rollBtn" onclick="rollDice()">
-    <i class="fas fa-dice"></i> ارمي النرد
-</button>
-
-<script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
-        }
-    }
-</script>
-
-<script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js';
-
-    // ========== إعدادات اللعبة ==========
+    // ========== متغيرات اللعبة ==========
     let targetNumber = 0;
     let currentValue = 0;
     let attempts = 0;
-    let bestScore = localStorage.getItem('bestScore3B_single') || 0;
+    let bestScore = localStorage.getItem('bestScore3B_fast') || 0;
     let gameActive = true;
     let isRolling = false;
-    let diceValue = 0;
 
     // عناصر DOM
     const targetSpan = document.getElementById('targetNum');
@@ -221,264 +320,59 @@
     const attemptsSpan = document.getElementById('attempts');
     const bestScoreSpan = document.getElementById('bestScore');
     const messageDiv = document.getElementById('message');
-    const rollBtn = document.getElementById('rollBtn');
+    const diceValueDiv = document.getElementById('diceValue');
+    const dice3d = document.getElementById('dice3d');
 
-    // ========== إنشاء المشهد ثلاثي الأبعاد ==========
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a2a);
-    scene.fog = new THREE.FogExp2(0x0a0a2a, 0.006);
-
-    // الكاميرا
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 2, 6);
-    camera.lookAt(0, 0, 0);
-
-    // المعالج
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.body.appendChild(renderer.domElement);
-
-    // التحكم بالكاميرا
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.autoRotate = false;
-    controls.enableZoom = true;
-    controls.enablePan = true;
-    controls.target.set(0, 0, 0);
-
-    // ========== الإضاءة ==========
-    const ambientLight = new THREE.AmbientLight(0x404060);
-    scene.add(ambientLight);
-    
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1);
-    mainLight.position.set(5, 10, 7);
-    mainLight.castShadow = true;
-    mainLight.receiveShadow = true;
-    scene.add(mainLight);
-    
-    const backLight = new THREE.PointLight(0xffaa33, 0.6);
-    backLight.position.set(-2, 1, -4);
-    scene.add(backLight);
-    
-    const colorLight = new THREE.PointLight(0xff66cc, 0.4);
-    colorLight.position.set(3, 2, 2);
-    scene.add(colorLight);
-    
-    const fillLight = new THREE.PointLight(0x33ccff, 0.3);
-    fillLight.position.set(0, -1, 0);
-    scene.add(fillLight);
-    
-    // إضاءة ديناميكية تحت النرد
-    const underLight = new THREE.PointLight(0xffaa33, 0.5);
-    underLight.position.set(0, -0.5, 0);
-    scene.add(underLight);
-
-    // ========== الأرضية ==========
-    const gridHelper = new THREE.GridHelper(12, 20, 0xffd700, 0x336633);
-    gridHelper.position.y = -1.2;
-    scene.add(gridHelper);
-    
-    const floorPlane = new THREE.Mesh(
-        new THREE.PlaneGeometry(10, 10),
-        new THREE.MeshStandardMaterial({ color: 0x1a3a1a, roughness: 0.7, metalness: 0.2, transparent: true, opacity: 0.4 })
-    );
-    floorPlane.rotation.x = -Math.PI / 2;
-    floorPlane.position.y = -1.2;
-    floorPlane.receiveShadow = true;
-    scene.add(floorPlane);
-    
-    // دائرة ضوئية تحت النرد
-    const ringGeometry = new THREE.RingGeometry(0.8, 1.2, 32);
-    const ringMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0x442200, emissiveIntensity: 0.5, side: THREE.DoubleSide });
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = -0.9;
-    scene.add(ring);
-
-    // ========== إنشاء النرد الكبير ==========
-    function createDiceTexture(number) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 1024;
-        const ctx = canvas.getContext('2d');
+    // تحديث واجهة المستخدم
+    function updateUI() {
+        currentValueSpan.textContent = currentValue;
+        attemptsSpan.textContent = attempts;
+        bestScoreSpan.textContent = bestScore;
+        targetSpan.textContent = targetNumber;
         
-        // خلفية ذهبية مع تدرج
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, '#ff3366');
-        gradient.addColorStop(0.5, '#ff0066');
-        gradient.addColorStop(1, '#cc0052');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // إطار ذهبي لامع
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 30;
-        ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-        
-        // زوايا ذهبية
-        ctx.fillStyle = '#ffd700';
-        for (let i = 0; i < 4; i++) {
-            ctx.fillRect(20 + i * (canvas.width - 80), 20, 20, 20);
-            ctx.fillRect(20 + i * (canvas.width - 80), canvas.height - 40, 20, 20);
-        }
-        
-        // الرقم الكبير
-        ctx.fillStyle = '#ffd700';
-        ctx.font = `Bold ${canvas.width * 0.55}px "Cairo", "Segoe UI"`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 20;
-        ctx.fillText(number.toString(), canvas.width / 2, canvas.height / 2);
-        
-        // تأثير لمعان
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 8;
-        ctx.strokeText(number.toString(), canvas.width / 2, canvas.height / 2);
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        return texture;
-    }
-
-    function updateDiceTexture(value) {
-        if (diceMesh) {
-            const newMaterial = new THREE.MeshStandardMaterial({ 
-                map: createDiceTexture(value),
-                roughness: 0.2,
-                metalness: 0.8,
-                emissive: 0x442200,
-                emissiveIntensity: 0.3
-            });
-            diceMesh.material = newMaterial;
+        if (currentValue === 0) {
+            diceValueDiv.innerHTML = '🎲';
+        } else {
+            diceValueDiv.innerHTML = currentValue;
         }
     }
 
-    const diceSize = 1.6;
-    const diceGeometry = new THREE.BoxGeometry(diceSize, diceSize, diceSize);
-    const diceMaterial = new THREE.MeshStandardMaterial({ 
-        map: createDiceTexture('?'),
-        roughness: 0.2,
-        metalness: 0.8,
-        emissive: 0x442200,
-        emissiveIntensity: 0.3
-    });
-    const diceMesh = new THREE.Mesh(diceGeometry, diceMaterial);
-    diceMesh.castShadow = true;
-    diceMesh.receiveShadow = true;
-    diceMesh.position.set(0, 0.2, 0);
-    scene.add(diceMesh);
-    
-    // جزيئات حول النرد
-    const particleCount = 200;
-    const particleGeometry = new THREE.BufferGeometry();
-    const particlePositions = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount; i++) {
-        particlePositions[i*3] = (Math.random() - 0.5) * 3;
-        particlePositions[i*3+1] = (Math.random() - 0.5) * 2 + 0.5;
-        particlePositions[i*3+2] = (Math.random() - 0.5) * 3;
-    }
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-    const particleMaterial = new THREE.PointsMaterial({ color: 0xffaa33, size: 0.03 });
-    const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
-
-    // ========== تأثيرات الانفجار ==========
-    function createExplosion(x, y, z, color) {
-        const count = 80;
-        const positions = new Float32Array(count * 3);
-        for (let i = 0; i < count; i++) {
-            positions[i*3] = x + (Math.random() - 0.5) * 2;
-            positions[i*3+1] = y + (Math.random() - 0.5) * 2;
-            positions[i*3+2] = z + (Math.random() - 0.5) * 2;
-        }
-        const geom = new THREE.BufferGeometry();
-        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const mat = new THREE.PointsMaterial({ color: color, size: 0.08 });
-        const points = new THREE.Points(geom, mat);
-        scene.add(points);
-        
-        setTimeout(() => scene.remove(points), 500);
-    }
-    
-    function createNumberParticles(value) {
-        const count = value * 15;
-        for (let i = 0; i < count; i++) {
+    // تأثيرات انفجار (جسيمات)
+    function createExplosion() {
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.innerHTML = '✨';
+            particle.style.position = 'fixed';
+            particle.style.left = (window.innerWidth / 2 + (Math.random() - 0.5) * 200) + 'px';
+            particle.style.top = (window.innerHeight / 2 + (Math.random() - 0.5) * 200) + 'px';
+            particle.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            particle.style.pointerEvents = 'none';
+            particle.style.zIndex = '1000';
+            particle.style.opacity = '1';
+            particle.style.transition = 'all 0.5s ease-out';
+            document.body.appendChild(particle);
+            
             setTimeout(() => {
-                const x = (Math.random() - 0.5) * 2;
-                const y = Math.random() * 2;
-                const z = (Math.random() - 0.5) * 2;
-                createExplosion(x, y + 0.5, z, '#ffd700');
-            }, i * 15);
+                particle.style.opacity = '0';
+                particle.style.transform = `translateY(-${Math.random() * 100 + 50}px)`;
+                setTimeout(() => particle.remove(), 500);
+            }, 10);
         }
     }
 
-    // ========== حركة النرد عند الرمي ==========
-    function animateDiceRoll(newValue) {
-        if (isRolling) return;
-        isRolling = true;
-        rollBtn.disabled = true;
-        
-        const startPos = diceMesh.position.clone();
-        const startRot = diceMesh.rotation.clone();
-        const duration = 800;
-        const startTime = Date.now();
-        
-        function animate() {
-            const elapsed = Date.now() - startTime;
-            const t = Math.min(1, elapsed / duration);
-            const easeOut = 1 - Math.pow(1 - t, 3);
-            
-            // حركة قفز عالية
-            diceMesh.position.y = startPos.y + Math.sin(t * Math.PI) * 1.8;
-            // دوران سريع في جميع الاتجاهات
-            diceMesh.rotation.x = startRot.x + t * Math.PI * 6;
-            diceMesh.rotation.y = startRot.y + t * Math.PI * 4;
-            diceMesh.rotation.z = startRot.z + t * Math.PI * 5;
-            
-            // تأثير الإضاءة
-            underLight.intensity = 0.8 + Math.sin(t * Math.PI * 4) * 0.5;
-            
-            if (t < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                // إنهاء الحركة
-                diceMesh.position.y = startPos.y;
-                diceMesh.rotation.set(0, 0, 0);
-                underLight.intensity = 0.5;
-                
-                // تحديث النسيج بالقيمة الجديدة
-                updateDiceTexture(newValue);
-                
-                // تأثير انفجار قوي
-                createExplosion(0, 1, 0, '#ffaa33');
-                createNumberParticles(newValue);
-                
-                // اهتزاز (Vibration API)
-                if (navigator.vibrate) {
-                    navigator.vibrate(100);
-                }
-                
-                // تحديث اللعبة
-                currentValue = newValue;
-                currentValueSpan.textContent = currentValue;
-                
-                // التحقق من النتيجة
-                checkResult();
-                
-                isRolling = false;
-                rollBtn.disabled = false;
-            }
+    // تأثير اهتزاز
+    function vibrate(intensity) {
+        if (navigator.vibrate) {
+            navigator.vibrate(intensity);
         }
-        
-        animate();
+        // تأثير اهتزاز بصري
+        dice3d.style.transform = `translateX(${Math.sin(Date.now() * 0.05) * intensity * 0.3}px)`;
+        setTimeout(() => {
+            dice3d.style.transform = '';
+        }, intensity * 2);
     }
-    
-    // ========== رمي النرد ==========
+
+    // ========== رمي النرد (دوران سريع جداً) ==========
     function rollDice() {
         if (!gameActive) {
             messageDiv.innerHTML = '⚠️ اللعبة انتهت! اضغط على "لعبة جديدة"';
@@ -486,161 +380,110 @@
         }
         if (isRolling) return;
         
-        const newValue = Math.floor(Math.random() * 6) + 1;
-        diceValue = newValue;
-        attempts++;
-        attemptsSpan.textContent = attempts;
+        isRolling = true;
         
-        animateDiceRoll(newValue);
+        // إضافة تأثير الدوران السريع
+        dice3d.classList.add('rolling');
+        
+        // تأثير اهتزاز عند الرمي
+        vibrate(50);
+        
+        // قيمة النرد الجديدة (1-6)
+        const newValue = Math.floor(Math.random() * 6) + 1;
+        
+        // مدة الدوران (0.5 ثانية)
+        setTimeout(() => {
+            // إزالة تأثير الدوران
+            dice3d.classList.remove('rolling');
+            
+            // تحديث القيمة
+            currentValue = newValue;
+            attempts++;
+            
+            // تحديث الواجهة
+            updateUI();
+            
+            // تأثير انفجار عند ظهور الرقم
+            createExplosion();
+            vibrate(30);
+            
+            // التحقق من النتيجة
+            checkResult();
+            
+            isRolling = false;
+            
+        }, 500); // نفس مدة الأنيميشن
     }
-    
-    // ========== التحقق من النتيجة ==========
+
+    // التحقق من الفوز أو الخسارة
     function checkResult() {
         if (currentValue === targetNumber) {
             gameActive = false;
             const pointsEarned = Math.max(1, 12 - attempts);
-            messageDiv.innerHTML = `🎉🎉 فوز مذهل! 🎉🎉<br>✨ حصلت على ${pointsEarned} نقطة ✨`;
-            messageDiv.style.border = '3px solid #2ecc71';
-            messageDiv.style.background = 'rgba(46,204,113,0.2)';
+            
+            messageDiv.innerHTML = `🎉🎉 فوز! 🎉🎉<br>✨ حصلت على ${pointsEarned} نقطة ✨`;
+            messageDiv.style.background = "rgba(46,204,113,0.3)";
+            messageDiv.style.border = "2px solid #2ecc71";
             
             // تأثير فوز كبير
-            for (let i = 0; i < 8; i++) {
-                setTimeout(() => createExplosion(0, 1, 0, '#2ecc71'), i * 100);
-                setTimeout(() => createExplosion(0, 1, 0, '#ffd700'), i * 100 + 50);
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => createExplosion(), i * 100);
             }
-            
-            if (navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
-            }
+            vibrate(200);
             
             if (pointsEarned > bestScore) {
                 bestScore = pointsEarned;
-                localStorage.setItem('bestScore3B_single', bestScore);
+                localStorage.setItem('bestScore3B_fast', bestScore);
                 bestScoreSpan.textContent = bestScore;
                 messageDiv.innerHTML += `<br>🏆 رقم قياسي جديد! 🏆`;
             }
         } 
         else if (currentValue > targetNumber) {
             gameActive = false;
-            messageDiv.innerHTML = `💥 خسارة! القيمة (${currentValue}) أكبر من المستهدف (${targetNumber})`;
-            messageDiv.style.border = '3px solid #e74c3c';
-            messageDiv.style.background = 'rgba(231,76,60,0.2)';
-            createExplosion(0, 1, 0, '#e74c3c');
-            
-            if (navigator.vibrate) {
-                navigator.vibrate([300, 100, 200]);
-            }
+            messageDiv.innerHTML = `💥 خسارة! 💥<br>القيمة (${currentValue}) أكبر من المستهدف (${targetNumber})`;
+            messageDiv.style.background = "rgba(231,76,60,0.3)";
+            messageDiv.style.border = "2px solid #e74c3c";
+            vibrate(150);
         }
         else {
             messageDiv.innerHTML = `🎲 القيمة: ${currentValue} | تحتاج: ${targetNumber - currentValue} أخرى 🎯`;
-            messageDiv.style.border = '2px solid #ffd700';
-            messageDiv.style.background = 'rgba(0,0,0,0.8)';
+            messageDiv.style.background = "rgba(255,215,0,0.15)";
+            messageDiv.style.border = "1px solid rgba(255,215,0,0.5)";
         }
     }
-    
-    // ========== إعادة تعيين اللعبة ==========
+
+    // إعادة تعيين اللعبة
     function resetGame() {
-        targetNumber = Math.floor(Math.random() * 13) + 6;
+        targetNumber = Math.floor(Math.random() * 13) + 6; // 6-18
         currentValue = 0;
         attempts = 0;
         gameActive = true;
         isRolling = false;
-        diceValue = 0;
         
-        currentValueSpan.textContent = '0';
-        attemptsSpan.textContent = '0';
-        targetSpan.textContent = targetNumber;
+        updateUI();
         
-        messageDiv.innerHTML = `🎯 الرقم الجديد: ${targetNumber} | اضغط على النرد أو زر الرمي 🎲`;
-        messageDiv.style.border = '2px solid #ffd700';
-        messageDiv.style.background = 'rgba(0,0,0,0.8)';
-        
-        // إعادة تعيين النرد
-        updateDiceTexture('?');
+        messageDiv.innerHTML = `🎯 الرقم الجديد: ${targetNumber} | اضغط على النرد لبدء اللعب 🎲`;
+        messageDiv.style.background = "rgba(255,215,0,0.15)";
+        messageDiv.style.border = "1px solid rgba(255,215,0,0.5)";
         
         // تأثير إعادة الضبط
-        createExplosion(0, 1, 0, '#ffd700');
+        createExplosion();
+        vibrate(30);
         
-        if (navigator.vibrate) {
-            navigator.vibrate(50);
-        }
-        
-        rollBtn.disabled = false;
+        // إزالة أي تأثير دوران متبقي
+        dice3d.classList.remove('rolling');
     }
-    
-    // ========== نجمة الخلفية ==========
-    const starGeometry = new THREE.BufferGeometry();
-    const starCount = 1500;
-    const starPositions = new Float32Array(starCount * 3);
-    for (let i = 0; i < starCount; i++) {
-        starPositions[i*3] = (Math.random() - 0.5) * 200;
-        starPositions[i*3+1] = (Math.random() - 0.5) * 100;
-        starPositions[i*3+2] = (Math.random() - 0.5) * 100 - 50;
-    }
-    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.08 });
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
-    
-    // ========== النقر على النرد ==========
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    function onClick(event) {
-        if (isRolling) return;
-        
-        mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-        mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
-        
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObject(diceMesh);
-        
-        if (intersects.length > 0) {
-            rollDice();
-        }
-    }
-    
-    // ========== حلقة الرسم ==========
-    function animate() {
-        requestAnimationFrame(animate);
-        
-        // دوران النجوم
-        stars.rotation.y += 0.0005;
-        stars.rotation.x += 0.0003;
-        
-        // دوران الجسيمات حول النرد
-        particles.rotation.y += 0.01;
-        particles.rotation.x += 0.005;
-        
-        // إضاءة ديناميكية
-        const time = Date.now() * 0.003;
-        colorLight.intensity = 0.3 + Math.sin(time) * 0.2;
-        backLight.intensity = 0.5 + Math.sin(time * 1.3) * 0.2;
-        
-        controls.update();
-        renderer.render(scene, camera);
-    }
-    
-    animate();
-    
-    // ========== تهيئة اللعبة ==========
-    resetGame();
-    
-    // إضافة مستمع النقر
-    window.addEventListener('click', onClick, false);
-    
-    // تحديث حجم النافذة
-    window.addEventListener('resize', onWindowResize, false);
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    
-    console.log('🎮 لعبة 3B - نرد واحد كبير جاهز!');
-</script>
 
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    // ========== تهيئة اللعبة ==========
+    bestScoreSpan.textContent = bestScore;
+    resetGame();
+
+    // تأثير حركة الماوس على النرد
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 20;
+        const y = (e.clientY / window.innerHeight - 0.5) * 20;
+        dice3d.style.transform = `rotateX(${y}deg) rotateY(${x}deg)`;
+    });
+</script>
 </body>
 </html>
