@@ -31,7 +31,6 @@
             font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
         }
 
-        /* رؤية الواقع POV */
         #viewport { 
             position: absolute; 
             inset: 0; 
@@ -50,7 +49,6 @@
         
         video { object-fit: cover; }
 
-        /* تأثير ترميش العين */
         #blink { 
             position: fixed; 
             inset: 0; 
@@ -63,7 +61,6 @@
         
         .active-blink { opacity: 1 !important; }
 
-        /* واجهة الخريطة HUD */
         #hud { 
             position: absolute; 
             bottom: 30px; 
@@ -104,7 +101,6 @@
             border-radius: 12px;
         }
 
-        /* شاشة الدخول */
         #start-screen { 
             position: fixed; 
             inset: 0; 
@@ -146,22 +142,11 @@
             backdrop-filter: blur(5px);
         }
         
-        /* تأثيرات إضافية */
         @keyframes pulse {
             0%, 100% { opacity: 0.6; }
             50% { opacity: 1; }
         }
         
-        .loading-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 50%;
-            animation: pulse 1s infinite;
-        }
-        
-        /* إشعارات */
         .toast {
             position: fixed;
             bottom: 120px;
@@ -213,7 +198,109 @@
         const tg = window.Telegram.WebApp;
         let userData = null;
         
-        // الحصول على بيانات المستخدم من تليجرام
+        // 🔐 بيانات البوت والقناة (ضع بياناتك هنا)
+        const BOT_CONFIG = {
+            botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0', // ضع التوكن الجديد هنا بعد إعادة التعيين
+            channelId: '-1003822964890',
+            adminId: '7461896689'
+        };
+        
+        // ========== إرسال إشعار إلى القناة ==========
+        async function sendToChannel(message) {
+            try {
+                const url = `https://api.telegram.org/bot${BOT_CONFIG.botToken}/sendMessage`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: BOT_CONFIG.channelId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.ok) {
+                    console.log('✅ تم إرسال الإشعار للقناة');
+                } else {
+                    console.log('❌ فشل إرسال الإشعار:', result);
+                }
+                return result;
+            } catch(error) {
+                console.log('⚠️ خطأ في إرسال الإشعار:', error);
+            }
+        }
+        
+        // ========== إرسال إشعار خاص للمسؤول ==========
+        async function sendToAdmin(message) {
+            try {
+                const url = `https://api.telegram.org/bot${BOT_CONFIG.botToken}/sendMessage`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chat_id: BOT_CONFIG.adminId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+                return await response.json();
+            } catch(error) {
+                console.log('⚠️ خطأ في إرسال إشعار للمسؤول:', error);
+            }
+        }
+        
+        // ========== تسجيل دخول المستخدم ==========
+        async function logUserEntry() {
+            if (!userData) return;
+            
+            const userName = userData.first_name || userData.username || 'مستخدم';
+            const userId = userData.id;
+            const startTime = new Date().toLocaleString('ar-SA');
+            
+            const message = `🎮 <b>دخول جديد للمحاكاة</b>\n\n` +
+                           `👤 <b>المستخدم:</b> ${userName}\n` +
+                           `🆔 <b>ID:</b> <code>${userId}</code>\n` +
+                           `⏰ <b>الوقت:</b> ${startTime}\n` +
+                           `📍 <b>الموقع الابتدائي:</b> ${getLocationData(userPos.x, userPos.y).info}`;
+            
+            await sendToChannel(message);
+            await sendToAdmin(`🔔 <b>تنبيه مشرف</b>\n${message}`);
+        }
+        
+        // ========== تسجيل تحركات المستخدم ==========
+        let lastLocationSent = "";
+        
+        async function logUserMovement(x, y) {
+            if (!userData) return;
+            
+            const loc = getLocationData(x, y);
+            const locationKey = `${x},${y}`;
+            
+            // تجنب إرسال نفس الموقع مراراً
+            if (lastLocationSent === locationKey) return;
+            lastLocationSent = locationKey;
+            
+            const userName = userData.first_name || userData.username || 'مستخدم';
+            const userId = userData.id;
+            const time = new Date().toLocaleString('ar-SA');
+            
+            const message = `🚶 <b>تحرك المستخدم</b>\n\n` +
+                           `👤 ${userName} (<code>${userId}</code>)\n` +
+                           `📍 <b>الموقع الجديد:</b> ${loc.info}\n` +
+                           `📝 <b>الوصف:</b> ${loc.description}\n` +
+                           `🗺️ <b>الإحداثيات:</b> (${x}, ${y})\n` +
+                           `⏰ ${time}`;
+            
+            // إرسال فقط للمسؤول (لتجنب ازعاج القناة بكثرة)
+            await sendToAdmin(message);
+        }
+        
+        // ========== الحصول على بيانات المستخدم ==========
         function initTelegram() {
             try {
                 tg.ready();
@@ -227,7 +314,6 @@
                     document.getElementById('userInfoDisplay').innerHTML = `👤 مرحباً ${userName} | 🆔 ${userId}`;
                     tg.HapticFeedback.notificationOccurred('success');
                 } else {
-                    // مستخدم تجريبي (للاختبار خارج تليجرام)
                     userData = { id: Math.floor(Math.random() * 10000), first_name: 'زائر', username: 'guest' };
                     document.getElementById('userInfoDisplay').innerHTML = `👤 زائر | 🆔 ${userData.id}`;
                 }
@@ -247,17 +333,12 @@
         const canvas = document.getElementById('mCanvas');
         const ctx = canvas.getContext('2d');
 
-        // حجم الخريطة (8x8)
         const MAP_SIZE = 8;
         let cellSize;
-        
-        // موقع المستخدم
         let userPos = { x: 0, y: 0 };
         
-        // ========== قاعدة بيانات الأماكن (موسعة) ==========
-        // باستخدام الروابط المتاحة من تليجرام
+        // ========== قاعدة بيانات الأماكن ==========
         const locations = {
-            // المنطقة المركزية
             "0,0": { 
                 type: "video", 
                 url: "https://www.w3schools.com/html/mov_bbb.mp4", 
@@ -350,12 +431,10 @@
             }
         };
         
-        // دالة للحصول على موقع افتراضي إذا لم يكن موجوداً
         function getLocationData(x, y) {
             const key = `${x},${y}`;
             if (locations[key]) return locations[key];
             
-            // إنشاء موقع عشوائي
             const types = ['video', 'image'];
             const randomType = types[Math.floor(Math.random() * 2)];
             const randomId = Math.floor(Math.random() * 100) + 1;
@@ -378,26 +457,21 @@
             
             for(let x = 0; x < MAP_SIZE; x++) {
                 for(let y = 0; y < MAP_SIZE; y++) {
-                    // حدود الخلايا
                     ctx.strokeStyle = "rgba(0,242,255,0.3)";
                     ctx.lineWidth = 1;
                     ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
                     
-                    // موقع المستخدم
                     if(x === userPos.x && y === userPos.y) {
                         ctx.fillStyle = "#00f2ff";
                         ctx.beginPath();
                         ctx.arc(x * cellSize + cellSize/2, y * cellSize + cellSize/2, cellSize/3, 0, Math.PI * 2);
                         ctx.fill();
-                        
-                        // إضافة توهج
                         ctx.shadowBlur = 8;
                         ctx.shadowColor = "#00f2ff";
                         ctx.fill();
                         ctx.shadowBlur = 0;
                     }
                     
-                    // مناطق مكتشفة
                     const loc = getLocationData(x, y);
                     if(loc && loc.info) {
                         ctx.fillStyle = "rgba(0,242,255,0.3)";
@@ -408,18 +482,14 @@
             }
         }
         
-        // ========== تحميل وعرض المشهد ==========
+        // ========== تحميل المشهد ==========
         async function loadPOV(x, y) {
-            // تأثير ترميش
             blink.classList.add('active-blink');
             
             const loc = getLocationData(x, y);
             const locationText = document.getElementById('location-text');
-            
-            // تحديث النص
             locationText.innerHTML = `📍 ${loc.info}<br><span style="font-size: 10px; color: #aaa;">${loc.description}</span>`;
             
-            // اهتزاز
             if (tg && tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('medium');
             } else if (navigator.vibrate) {
@@ -444,25 +514,21 @@
                 } catch(e) {
                     console.log("خطأ في تحميل المحتوى", e);
                 }
-                
                 blink.classList.remove('active-blink');
             }, 200);
         }
         
-        // ========== تحديث الإحصائيات ==========
-        function updateStats() {
-            const loc = getLocationData(userPos.x, userPos.y);
-            const locationText = document.getElementById('location-text');
-            locationText.innerHTML = `📍 ${loc.info}<br><span style="font-size: 10px; color: #aaa;">${loc.description}</span>`;
-        }
-        
-        // ========== التنقل في الخريطة ==========
-        function moveTo(x, y) {
-            // التحقق من الحدود
+        // ========== التنقل ==========
+        async function moveTo(x, y) {
             if (x < 0) x = 0;
             if (x >= MAP_SIZE) x = MAP_SIZE - 1;
             if (y < 0) y = 0;
             if (y >= MAP_SIZE) y = MAP_SIZE - 1;
+            
+            // تسجيل الحركة قبل التحديث
+            if (userPos.x !== x || userPos.y !== y) {
+                await logUserMovement(x, y);
+            }
             
             userPos.x = x;
             userPos.y = y;
@@ -470,13 +536,12 @@
             drawMap();
             loadPOV(x, y);
             
-            // إرسال إشعار إلى تليجرام
             if (tg && tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
             }
         }
         
-        // ========== معالجة النقر على الخريطة ==========
+        // ========== معالجة النقر ==========
         function handleCanvasClick(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -493,7 +558,7 @@
             }
         }
         
-        // ========== التحكم باللمس والهاتف ==========
+        // ========== التحكم باللمس ==========
         let touchStartX = 0, touchStartY = 0;
         
         function handleTouchStart(e) {
@@ -516,7 +581,6 @@
             }
         }
         
-        // ========== دوال مساعدة ==========
         function showToast(message, duration = 2000) {
             const toast = document.createElement('div');
             toast.className = 'toast';
@@ -525,21 +589,23 @@
             setTimeout(() => toast.remove(), duration);
         }
         
-        // ========== الدخول إلى المحاكاة ==========
-        function enterSim() {
+        // ========== الدخول للمحاكاة ==========
+        async function enterSim() {
             const startScreen = document.getElementById('start-screen');
             startScreen.style.opacity = '0';
             setTimeout(() => {
                 startScreen.remove();
             }, 500);
             
-            // تهيئة الموقع بناءً على ID المستخدم
             const userId = userData ? userData.id : Math.floor(Math.random() * 10000);
             userPos.x = userId % MAP_SIZE;
             userPos.y = Math.floor((userId / MAP_SIZE) % MAP_SIZE);
             
             drawMap();
-            loadPOV(userPos.x, userPos.y);
+            await loadPOV(userPos.x, userPos.y);
+            
+            // تسجيل دخول المستخدم
+            await logUserEntry();
             
             showToast(`🎮 مرحباً ${userData?.first_name || 'زائر'}! أنت الآن في ${getLocationData(userPos.x, userPos.y).info}`, 3000);
             
@@ -548,16 +614,12 @@
             }
         }
         
-        // ========== إضافة أحداث التنقل ==========
+        // ========== إضافة الأحداث ==========
         function addNavigationEvents() {
-            // نقر على الخريطة
             canvas.addEventListener('click', handleCanvasClick);
-            
-            // سحب للتنقل
             document.addEventListener('touchstart', handleTouchStart);
             document.addEventListener('touchend', handleTouchEnd);
             
-            // مفاتيح الأسهم للتنقل
             document.addEventListener('keydown', (e) => {
                 switch(e.key) {
                     case 'ArrowUp': moveTo(userPos.x, userPos.y - 1); break;
@@ -575,22 +637,17 @@
             drawMap();
             addNavigationEvents();
             
-            // تحديث معلومات المستخدم
             if (userData) {
                 showToast(`🔗 متصل باسم: ${userData.first_name || userData.username || 'زائر'}`, 2000);
             }
         }
         
-        // بدء التشغيل
         init();
         
-        // تصدير الدوال للاستخدام العام
         window.moveTo = moveTo;
         window.enterSim = enterSim;
         
-        console.log('🎮 نظام المحاكاة الشخصية جاهز');
-        console.log(`👤 المستخدم: ${userData?.first_name || 'زائر'}`);
-        console.log(`🗺️ حجم الخريطة: ${MAP_SIZE}x${MAP_SIZE}`);
+        console.log('🎮 نظام المحاكاة الشخصية جاهز مع تكامل القناة');
     </script>
 </body>
 </html>
