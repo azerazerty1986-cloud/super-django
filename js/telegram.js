@@ -6,7 +6,7 @@
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
-    botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
+    botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
     channelId: '-1003822964890',
     adminId: '7461896689',
     apiUrl: 'https://api.telegram.org/bot'
