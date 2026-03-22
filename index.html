@@ -19,6 +19,80 @@
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
+    
+    <style>
+        /* إضافات CSS للريلز */
+        .add-reel-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ffd700, #ffb347);
+            padding: 8px 18px;
+            border-radius: 30px;
+            color: #1a1a2e;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-family: 'Cairo', sans-serif;
+        }
+        .add-reel-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.4);
+        }
+        .reels-video-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .no-reels-message {
+            text-align: center;
+            padding: 60px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+        }
+        .no-reels-message i {
+            font-size: 4rem;
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+        .no-reels-message p {
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        .loading-reels {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+        .add-first-reel {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ffd700, #ffb347);
+            padding: 10px 20px;
+            border-radius: 30px;
+            color: #1a1a2e;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .reel-video-placeholder {
+            transition: transform 0.3s;
+        }
+        .reel-video-card:hover .reel-video-placeholder {
+            transform: scale(1.02);
+        }
+    </style>
 </head>
 <body>
     <!-- خلفية متحركة -->
@@ -106,6 +180,7 @@
                 <h2>ناردو برو ريلز</h2>
             </div>
             <div class="header-buttons">
+                <!-- زر إضافة ريلز - يظهر فقط للمدير azer -->
                 <a href="add-reel.html" class="add-reel-btn" id="addReelBtn" style="display: none;">
                     <i class="fas fa-plus-circle"></i>
                     <span>إضافة ريلز</span>
@@ -118,7 +193,6 @@
         </div>
         
         <div class="reels-video-container" id="reelsVideoContainer">
-            <!-- سيتم عرض فيديوهات المدير azer هنا -->
             <div class="loading-reels">
                 <i class="fas fa-spinner fa-spin"></i>
                 <p>جاري تحميل الريلز...</p>
@@ -135,7 +209,7 @@
             </div>
             <div class="marquee-item">
                 <i class="fas fa-gem"></i>
-                <span></span>عروض حصرية</span>
+                <span>عروض حصرية</span>
             </div>
             <div class="marquee-item">
                 <i class="fas fa-clock"></i>
@@ -445,12 +519,12 @@
         }, 1000);
     </script>
     
-    <!-- ===== كود عرض فيديوهات المدير azer فقط ===== -->
+    <!-- ===== كود إدارة الريلز للمدير azer ===== -->
     <script>
-    // ========== جلب وعرض فيديوهات المدير azer ==========
+    // ========== إدارة فيديوهات المدير azer ==========
     let azerReels = [];
     
-    // تحميل فيديوهات azer من التخزين
+    // تحميل فيديوهات azer من localStorage
     function loadAzerReels() {
         const saved = localStorage.getItem('azer_reels_list');
         if (saved) {
@@ -485,7 +559,7 @@
                 try {
                     const user = JSON.parse(currentUser);
                     if (user.email === 'azer' || user.username === 'azer' || user.name === 'azer') {
-                        hintDiv.innerHTML = '<a href="add-reel.html" class="add-first-reel" style="display:inline-flex; background:gold; color:black; padding:10px 20px; border-radius:30px; text-decoration:none;"><i class="fas fa-plus-circle"></i> أضف أول ريلز</a>';
+                        hintDiv.innerHTML = '<a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف أول ريلز</a>';
                     }
                 } catch(e) {}
             }
@@ -535,7 +609,7 @@
             reel.views = (reel.views || 0) + 1;
             localStorage.setItem('azer_reels_list', JSON.stringify(azerReels));
             
-            // رابط الفيديو من تليجرام
+            // رابط الفيديو
             const videoUrl = reel.videoUrl || `https://t.me/c/3822964890/${reel.telegramId}`;
             
             // عرض نافذة التشغيل
@@ -607,12 +681,14 @@
                     console.log('👑 مرحباً أيها المدير azer، زر الإضافة ظاهر');
                 } else {
                     addReelBtn.style.display = 'none';
+                    console.log('👤 مستخدم عادي، زر الإضافة مخفي');
                 }
             } catch(e) {
                 addReelBtn.style.display = 'none';
             }
         } else {
             addReelBtn.style.display = 'none';
+            console.log('🔒 غير مسجل دخول، زر الإضافة مخفي');
         }
     }
     
@@ -640,16 +716,42 @@
         }
     }
     
+    // ========== تحديث زر الإضافة عند تغير المستخدم ==========
+    function updateUIForUser() {
+        checkAzerAdmin();
+        const currentUser = localStorage.getItem('nardo_current_user');
+        const userBtn = document.getElementById('userBtn');
+        if (currentUser && userBtn) {
+            try {
+                const user = JSON.parse(currentUser);
+                if (user.email === 'azer' || user.username === 'azer') {
+                    userBtn.innerHTML = '<i class="fas fa-crown"></i>';
+                    userBtn.title = 'المدير azer';
+                } else {
+                    userBtn.innerHTML = '<i class="fas fa-user-check"></i>';
+                    userBtn.title = user.name;
+                }
+            } catch(e) {}
+        }
+    }
+    
     // ========== تهيئة الصفحة ==========
     document.addEventListener('DOMContentLoaded', function() {
         createAzerAdmin();
         checkAzerAdmin();
-        loadAzerReels();
+        updateUIForUser();
+        setTimeout(() => {
+            loadAzerReels();
+        }, 500);
         
         // الاستماع للتحديثات
         window.addEventListener('storage', function(e) {
             if (e.key === 'azer_reels_updated') {
                 loadAzerReels();
+            }
+            if (e.key === 'nardo_current_user') {
+                checkAzerAdmin();
+                updateUIForUser();
             }
         });
     });
