@@ -32,7 +32,6 @@
             margin: 0 auto;
         }
         
-        /* بطاقة إضافة الريلز */
         .reel-card {
             background: white;
             border-radius: 30px;
@@ -52,7 +51,6 @@
             }
         }
         
-        /* الهيدر */
         .reel-header {
             background: linear-gradient(135deg, #ffd700, #ffb347);
             padding: 30px;
@@ -89,7 +87,6 @@
             transform: translateX(-5px);
         }
         
-        /* المحتوى */
         .reel-content {
             padding: 30px;
         }
@@ -126,7 +123,6 @@
             box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
         }
         
-        /* منطقة رفع الفيديو */
         .video-upload-area {
             border: 3px dashed #ffd700;
             border-radius: 20px;
@@ -162,7 +158,6 @@
             margin-top: 5px;
         }
         
-        /* معاينة الفيديو */
         .video-preview-container {
             margin-top: 20px;
             position: relative;
@@ -194,7 +189,6 @@
             background: red;
         }
         
-        /* منطقة رفع الصورة */
         .image-upload-area {
             border: 2px dashed #ddd;
             border-radius: 12px;
@@ -215,7 +209,6 @@
             color: #ffd700;
         }
         
-        /* معاينة الصورة */
         .poster-preview-container {
             margin-top: 15px;
             position: relative;
@@ -243,7 +236,6 @@
             cursor: pointer;
         }
         
-        /* معلومات الملف */
         .file-info {
             margin-top: 10px;
             padding: 10px;
@@ -255,7 +247,6 @@
             gap: 10px;
         }
         
-        /* شريط التقدم */
         .progress-bar {
             width: 100%;
             height: 4px;
@@ -272,7 +263,6 @@
             transition: width 0.3s ease;
         }
         
-        /* زر الحفظ */
         .save-btn {
             width: 100%;
             background: linear-gradient(135deg, #ffd700, #ffb347);
@@ -297,7 +287,12 @@
             box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
         }
         
-        /* رسائل التنبيه */
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .toast-message {
             position: fixed;
             bottom: 20px;
@@ -370,13 +365,11 @@
             
             <div class="reel-content">
                 <form id="addReelForm">
-                    <!-- عنوان الريلز -->
                     <div class="form-group">
                         <label><i class="fas fa-tag"></i> عنوان الريلز</label>
                         <input type="text" class="form-control" id="reelTitle" required placeholder="مثال: وصفة زعتر فلسطيني أصلية">
                     </div>
                     
-                    <!-- رفع الفيديو -->
                     <div class="form-group">
                         <label><i class="fas fa-video"></i> فيديو الريلز <span style="color: red;">*</span></label>
                         <div class="video-upload-area" onclick="document.getElementById('reelVideo').click()">
@@ -393,7 +386,6 @@
                         </div>
                     </div>
                     
-                    <!-- صورة الغلاف -->
                     <div class="form-group">
                         <label><i class="fas fa-image"></i> صورة الغلاف <span style="color: #999;">(اختياري)</span></label>
                         <div class="image-upload-area" onclick="document.getElementById('reelPoster').click()">
@@ -404,8 +396,7 @@
                         <div id="posterPreview" style="display:none;"></div>
                     </div>
                     
-                    <!-- زر الحفظ -->
-                    <button type="button" class="save-btn" onclick="saveReel()">
+                    <button type="button" class="save-btn" id="saveBtn" onclick="saveReel()">
                         <i class="fas fa-save"></i> نشر الريلز
                     </button>
                 </form>
@@ -421,19 +412,32 @@
         let posterData = null;
         let videoFileName = '';
         let videoFileSize = 0;
+        let isSaving = false;
+        
+        // اختبار localStorage
+        try {
+            localStorage.setItem('test', 'test');
+            localStorage.removeItem('test');
+            console.log('✅ localStorage يعمل بشكل صحيح');
+        } catch (e) {
+            console.error('❌ localStorage لا يعمل:', e);
+            showToast('⚠️ المتصفح لا يدعم التخزين المحلي', 'error');
+        }
         
         // ========== معالجة الفيديو ==========
         function handleVideoUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             
+            console.log('📹 جاري رفع الفيديو:', file.name, file.size);
+            
             if (!file.type.startsWith('video/')) {
-                showToast('الرجاء اختيار ملف فيديو صالح', 'error');
+                showToast('❌ الرجاء اختيار ملف فيديو صالح', 'error');
                 return;
             }
             
             if (file.size > 50 * 1024 * 1024) {
-                showToast('حجم الفيديو كبير جداً. الحد الأقصى 50 ميجابايت', 'error');
+                showToast('❌ حجم الفيديو كبير جداً. الحد الأقصى 50 ميجابايت', 'error');
                 return;
             }
             
@@ -443,12 +447,14 @@
             const progressBar = document.getElementById('progressBar');
             const progressFill = document.getElementById('progressFill');
             progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
             
             const reader = new FileReader();
             reader.onprogress = (e) => {
                 if (e.lengthComputable) {
                     const percent = (e.loaded / e.total) * 100;
                     progressFill.style.width = percent + '%';
+                    console.log(`📊 تقدم الرفع: ${percent.toFixed(1)}%`);
                 }
             };
             
@@ -461,12 +467,14 @@
                 
                 displayVideoPreview(videoData);
                 displayFileInfo(videoFileName, videoFileSize);
-                showToast('تم رفع الفيديو بنجاح', 'success');
+                showToast('✅ تم رفع الفيديو بنجاح', 'success');
+                console.log('✅ تم رفع الفيديو بنجاح، الحجم:', videoData.length);
             };
             
             reader.onerror = function() {
-                showToast('حدث خطأ أثناء رفع الفيديو', 'error');
+                showToast('❌ حدث خطأ أثناء رفع الفيديو', 'error');
                 progressBar.style.display = 'none';
+                console.error('❌ خطأ في قراءة الفيديو');
             };
             
             reader.readAsDataURL(file);
@@ -478,6 +486,7 @@
                 <div class="video-preview-container">
                     <video controls>
                         <source src="${videoUrl}" type="video/mp4">
+                        متصفحك لا يدعم تشغيل الفيديو
                     </video>
                     <button class="remove-video-btn" onclick="removeVideo()">
                         <i class="fas fa-trash"></i>
@@ -505,7 +514,8 @@
             document.getElementById('videoPreview').style.display = 'none';
             document.getElementById('videoFileInfo').style.display = 'none';
             document.getElementById('reelVideo').value = '';
-            showToast('تم إزالة الفيديو', 'info');
+            showToast('🗑️ تم إزالة الفيديو', 'info');
+            console.log('🗑️ تم إزالة الفيديو');
         }
         
         // ========== معالجة الصورة ==========
@@ -513,8 +523,10 @@
             const file = event.target.files[0];
             if (!file) return;
             
+            console.log('🖼️ جاري رفع الصورة:', file.name);
+            
             if (!file.type.startsWith('image/')) {
-                showToast('الرجاء اختيار صورة صالحة', 'error');
+                showToast('❌ الرجاء اختيار صورة صالحة', 'error');
                 return;
             }
             
@@ -522,7 +534,11 @@
             reader.onload = function(e) {
                 posterData = e.target.result;
                 displayPosterPreview(posterData);
-                showToast('تم رفع صورة الغلاف', 'success');
+                showToast('✅ تم رفع صورة الغلاف', 'success');
+                console.log('✅ تم رفع الصورة بنجاح');
+            };
+            reader.onerror = function() {
+                showToast('❌ حدث خطأ في رفع الصورة', 'error');
             };
             reader.readAsDataURL(file);
         }
@@ -544,22 +560,35 @@
             posterData = null;
             document.getElementById('posterPreview').style.display = 'none';
             document.getElementById('reelPoster').value = '';
-            showToast('تم إزالة صورة الغلاف', 'info');
+            showToast('🗑️ تم إزالة صورة الغلاف', 'info');
         }
         
         // ========== حفظ الريلز ==========
         function saveReel() {
+            if (isSaving) {
+                showToast('⚠️ جاري الحفظ، انتظر قليلاً', 'info');
+                return;
+            }
+            
             const title = document.getElementById('reelTitle').value.trim();
             
             if (!title) {
-                showToast('الرجاء إدخال عنوان للريلز', 'error');
+                showToast('❌ الرجاء إدخال عنوان للريلز', 'error');
+                document.getElementById('reelTitle').focus();
                 return;
             }
             
             if (!videoData) {
-                showToast('الرجاء رفع فيديو للريلز', 'error');
+                showToast('❌ الرجاء رفع فيديو للريلز', 'error');
                 return;
             }
+            
+            isSaving = true;
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري النشر...';
+            
+            console.log('💾 بدء حفظ الريلز:', { title, hasVideo: !!videoData, hasPoster: !!posterData });
             
             const newReel = {
                 id: Date.now(),
@@ -568,8 +597,10 @@
                 posterUrl: posterData || null,
                 views: 0,
                 date: new Date().toISOString(),
+                dateFormatted: new Date().toLocaleDateString('ar'),
                 fileName: videoFileName,
-                size: videoFileSize
+                size: videoFileSize,
+                sizeMB: (videoFileSize / (1024 * 1024)).toFixed(2)
             };
             
             saveReelToStorage(newReel);
@@ -577,33 +608,69 @@
         
         function saveReelToStorage(reel) {
             try {
+                // جلب الريلز الموجودة
                 let reels = localStorage.getItem('nardo_reels');
-                reels = reels ? JSON.parse(reels) : [];
+                console.log('📦 البيانات الموجودة:', reels ? 'موجودة' : 'فارغة');
+                
+                if (reels) {
+                    try {
+                        reels = JSON.parse(reels);
+                        if (!Array.isArray(reels)) {
+                            console.warn('⚠️ البيانات ليست مصفوفة، سيتم إنشاء مصفوفة جديدة');
+                            reels = [];
+                        }
+                    } catch (e) {
+                        console.error('❌ خطأ في قراءة البيانات:', e);
+                        reels = [];
+                    }
+                } else {
+                    reels = [];
+                }
+                
+                // إضافة الريلز الجديد
                 reels.unshift(reel);
-                localStorage.setItem('nardo_reels', JSON.stringify(reels));
+                console.log(`✅ تمت إضافة الريلز، العدد الكلي: ${reels.length}`);
                 
-                // إشعار الصفحة الرئيسية
-                window.dispatchEvent(new StorageEvent('storage', {
-                    key: 'nardo_reels',
-                    newValue: JSON.stringify(reels)
-                }));
+                // حفظ في localStorage
+                const jsonData = JSON.stringify(reels);
+                localStorage.setItem('nardo_reels', jsonData);
                 
-                showToast('✅ تم نشر الريلز بنجاح!', 'success');
-                
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1500);
+                // التحقق من الحفظ
+                const saved = localStorage.getItem('nardo_reels');
+                if (saved) {
+                    console.log('✅ تم حفظ الريلز بنجاح في localStorage');
+                    
+                    // إشعار الصفحات الأخرى
+                    window.dispatchEvent(new StorageEvent('storage', {
+                        key: 'nardo_reels',
+                        newValue: jsonData
+                    }));
+                    
+                    showToast('✅ تم نشر الريلز بنجاح!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    throw new Error('فشل في حفظ البيانات');
+                }
                 
             } catch (error) {
-                console.error('خطأ:', error);
-                showToast('حدث خطأ أثناء حفظ الريلز', 'error');
+                console.error('❌ خطأ في حفظ الريلز:', error);
+                showToast('❌ حدث خطأ أثناء حفظ الريلز: ' + error.message, 'error');
+                
+                // إعادة تمكين الزر
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> نشر الريلز';
+                isSaving = false;
             }
         }
         
         // ========== دوال مساعدة ==========
         function goBack() {
             if (videoData || document.getElementById('reelTitle').value.trim()) {
-                if (confirm('لديك بيانات غير محفوظة. هل تريد المغادرة؟')) {
+                if (confirm('⚠️ لديك بيانات غير محفوظة. هل تريد المغادرة؟')) {
                     window.location.href = 'index.html';
                 }
             } else {
@@ -615,14 +682,24 @@
             const toastContainer = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = `toast-message toast-${type}`;
-            toast.innerHTML = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
-            toast.innerHTML += ` ${message}`;
+            
+            let icon = '';
+            if (type === 'success') icon = '✅';
+            else if (type === 'error') icon = '❌';
+            else icon = 'ℹ️';
+            
+            toast.innerHTML = `${icon} ${message}`;
             toastContainer.appendChild(toast);
             
             setTimeout(() => {
-                toast.remove();
+                toast.style.animation = 'slideInRight 0.3s reverse';
+                setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+        
+        // فتح console للمساعدة في التصحيح
+        console.log('🎬 صفحة إضافة الريلز جاهزة');
+        console.log('📌 استخدم F12 لفتح أدوات المطور لمتابعة الأخطاء');
     </script>
 </body>
 </html>
