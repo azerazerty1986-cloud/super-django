@@ -1,11 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نكهة وجمال | ناردو برو - المنصة المتكاملة</title>
-    
     
     <!-- الخطوط -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,167 +13,228 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- ملفات CSS الخارجية -->
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        
+        /* رسائل التنبيه */
+        #toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }
+        .toast-message { background: #333; color: white; padding: 12px 24px; border-radius: 50px; display: flex; align-items: center; gap: 10px; margin-top: 10px; animation: slideInRight 0.3s ease; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-success { background: #10b981; }
+        .toast-error { background: #ef4444; }
+        .toast-info { background: #3b82f6; }
+        
+        /* محمل التحميل */
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 10000; transition: opacity 0.5s; }
+        .loader-content { text-align: center; color: #ffd700; }
+        .loader-icon { font-size: 4rem; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        
+        /* الشريط العلوي */
+        .top-bar { background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); padding: 10px 0; border-bottom: 1px solid rgba(255,215,0,0.3); }
+        .top-bar .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .top-bar-left { display: flex; gap: 20px; flex-wrap: wrap; }
+        .top-bar-item { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 0.85rem; }
+        .top-bar-item i { color: #ffd700; }
+        .header-actions { display: flex; gap: 10px; }
+        .action-btn { background: rgba(255,255,255,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; color: white; cursor: pointer; position: relative; transition: all 0.3s; }
+        .action-btn:hover { background: rgba(255,215,0,0.3); transform: scale(1.05); }
+        .cart-count { position: absolute; top: -5px; right: -5px; background: #ffd700; color: #1a1a2e; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
+        .top-bar-right .theme-toggle { display: flex; align-items: center; gap: 8px; color: white; cursor: pointer; padding: 5px 10px; border-radius: 20px; background: rgba(255,255,255,0.1); }
+        
+        /* قسم الريلز */
+        .reels-video-section { padding: 40px 0; }
+        .reels-video-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .header-title { display: flex; align-items: center; gap: 10px; }
+        .header-title i { font-size: 1.8rem; color: #ffd700; }
+        .header-title h2 { color: white; font-size: 1.5rem; }
+        .header-buttons { display: flex; gap: 12px; }
+        .add-reel-btn { background: linear-gradient(135deg, #ffd700, #ffb347); padding: 8px 18px; border-radius: 30px; color: #1a1a2e; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; }
+        .add-reel-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,215,0,0.4); }
+        .view-all-link { background: rgba(255,215,0,0.1); padding: 8px 16px; border-radius: 30px; color: #ffd700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s; }
+        .view-all-link:hover { background: #ffd700; color: #1a1a2e; }
+        
+        /* حاوية الريلز */
+        .reels-video-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .reel-video-card { position: relative; border-radius: 15px; overflow: hidden; cursor: pointer; transition: transform 0.3s; }
+        .reel-video-card:hover { transform: translateY(-5px); }
+        .reel-video-placeholder { height: 250px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; position: relative; }
+        .reel-video-placeholder i { font-size: 4rem; color: #ffd700; }
+        .reel-video-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 15px; opacity: 0; transition: opacity 0.3s; }
+        .reel-video-card:hover .reel-video-overlay { opacity: 1; }
+        .reel-video-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3rem; color: #ffd700; opacity: 0; transition: opacity 0.3s; }
+        .reel-video-card:hover .reel-video-play { opacity: 1; }
+        .reel-video-info { display: flex; justify-content: space-between; align-items: center; color: white; }
+        .reel-video-title { font-weight: bold; font-size: 0.9rem; }
+        .reel-video-views { font-size: 0.8rem; opacity: 0.8; }
+        
+        /* رسالة عدم وجود ريلز */
+        .no-reels-message { text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.05); border-radius: 20px; }
+        .no-reels-message i { font-size: 4rem; color: #ffd700; margin-bottom: 15px; }
+        .no-reels-message p { font-size: 1.1rem; margin-bottom: 20px; color: #ddd; }
+        .add-first-reel { background: linear-gradient(135deg, #ffd700, #ffb347); border: none; padding: 12px 25px; border-radius: 25px; color: #1a1a2e; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; transition: all 0.3s; }
+        .add-first-reel:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,215,0,0.3); }
+        .loading-reels { text-align: center; padding: 40px; background: rgba(255,255,255,0.05); border-radius: 20px; color: white; }
+        
+        /* شريط العروض */
+        .marquee-bar { background: rgba(0,0,0,0.5); padding: 10px 0; overflow: hidden; }
+        .marquee-content { display: flex; animation: marquee 20s linear infinite; gap: 40px; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+        .marquee-item { display: flex; align-items: center; gap: 8px; color: #ffd700; }
+        
+        /* البحث */
+        .search-wrapper { max-width: 500px; margin: 20px auto; }
+        .search-box { display: flex; gap: 10px; background: white; border-radius: 50px; padding: 5px; }
+        .search-box input { flex: 1; border: none; padding: 12px 20px; border-radius: 50px; font-family: 'Cairo', sans-serif; outline: none; }
+        .search-box button { background: #ffd700; border: none; width: 45px; border-radius: 50%; cursor: pointer; transition: all 0.3s; }
+        .search-box button:hover { transform: scale(1.05); }
+        
+        /* الهيدر */
+        .main-header { padding: 20px 0; }
+        .header-content { display: flex; justify-content: center; }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo-icon { width: 50px; height: 50px; background: #ffd700; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .logo-icon i { font-size: 1.5rem; color: #1a1a2e; }
+        .logo-text h1 { color: white; font-size: 1.8rem; }
+        .logo-text span { color: #ffd700; font-size: 0.9rem; }
+        
+        /* القائمة */
+        .nav-menu { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin: 20px 0; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 50px; backdrop-filter: blur(10px); }
+        .nav-link { color: white; text-decoration: none; padding: 8px 20px; border-radius: 25px; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .nav-link:hover, .nav-link.active { background: #ffd700; color: #1a1a2e; }
+        
+        /* المنتجات */
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; margin: 30px 0; }
+        .product-card { background: white; border-radius: 15px; overflow: hidden; transition: transform 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .product-card:hover { transform: translateY(-5px); }
+        
+        /* بانر إعلاني */
+        .promo-banner { background: linear-gradient(135deg, #ffd700, #ffb347); border-radius: 20px; padding: 40px; margin: 40px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+        .banner-content h3 { font-size: 1.8rem; color: #1a1a2e; }
+        .banner-content p { color: #1a1a2e; margin: 10px 0; }
+        .btn-gold { background: #1a1a2e; color: #ffd700; border: none; padding: 12px 30px; border-radius: 30px; cursor: pointer; font-weight: bold; }
+        .banner-image i { font-size: 5rem; color: #1a1a2e; }
+        
+        /* الفوتر */
+        .footer { background: rgba(0,0,0,0.8); padding: 40px 0 20px; margin-top: 50px; }
+        .footer-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; }
+        .footer-col h3 { color: #ffd700; margin-bottom: 15px; }
+        .footer-col p { color: #ccc; margin: 8px 0; }
+        .footer-col a { color: #ccc; text-decoration: none; }
+        .copyright { text-align: center; color: #666; padding-top: 20px; margin-top: 20px; border-top: 1px solid #333; }
+        
+        /* الأيقونات الثابتة */
+        .fixed-cart { position: fixed; bottom: 80px; left: 20px; background: #ffd700; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 999; }
+        .fixed-cart i { font-size: 1.5rem; color: #1a1a2e; }
+        .fixed-cart-count { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
+        .fixed-whatsapp { position: fixed; bottom: 20px; left: 20px; background: #25d366; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 999; }
+        .fixed-whatsapp i { font-size: 1.8rem; }
+        .fixed-reels { position: fixed; bottom: 20px; right: 20px; background: linear-gradient(135deg, #ffd700, #ffb347); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1a1a2e; text-decoration: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 999; }
+        .reels-notification { position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
+        
+        /* نافذة منبثقة */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-content { background: white; border-radius: 20px; max-width: 500px; width: 90%; max-height: 90%; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #eee; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        .form-group { margin-bottom: 15px; padding: 0 20px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-family: 'Cairo', sans-serif; }
+        .btn-gold { background: linear-gradient(135deg, #ffd700, #ffb347); border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 20px; width: calc(100% - 40px); }
+        
+        .quick-top-btn { position: fixed; bottom: 140px; right: 20px; background: #ffd700; width: 40px; height: 40px; border-radius: 50%; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 999; }
+        
+        @media (max-width: 768px) {
+            .top-bar-left { display: none; }
+            .reels-video-container { grid-template-columns: 1fr; }
+            .products-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
-    <!-- خلفية متحركة -->
     <div class="animated-bg"></div>
-
-    <!-- ===== شريط الإشعارات ===== -->
     <div id="toastContainer"></div>
-
-    <!-- ===== محمل التحميل ===== -->
+    
     <div id="loader">
         <div class="loader-content">
             <i class="fas fa-crown loader-icon"></i>
-            <h2 class="loader-text">ناردو برو</h2>
+            <h2>ناردو برو</h2>
         </div>
     </div>
-
-    <!-- ===== سلة التسوق الجانبية ===== -->
-    <div class="cart-sidebar" id="cartSidebar">
-        <div class="cart-header">
-            <h3><i class="fas fa-shopping-cart"></i> سلة التسوق</h3>
-            <i class="fas fa-times close-cart" onclick="toggleCart()"></i>
-        </div>
-        <div class="cart-items" id="cartItems"></div>
-        <div class="cart-footer">
-            <div class="cart-total">
-                <span>المجموع:</span>
-                <span id="cartTotal">0 دج</span>
-            </div>
-            <button class="checkout-btn" onclick="checkoutCart()">
-                <i class="fab fa-whatsapp"></i> إتمام الطلب
-            </button>
-        </div>
-    </div>
-
-    <!-- ===== الشريط العلوي ===== -->
+    
+    <!-- الشريط العلوي -->
     <div class="top-bar">
         <div class="container">
             <div class="top-bar-left">
-                <div class="top-bar-item">
-                    <i class="fas fa-truck-fast"></i>
-                    <span>شحن مجاني للطلبات فوق 5000 دج</span>
-                </div>
-                <div class="top-bar-item">
-                    <i class="fas fa-headset"></i>
-                    <span>دعم VIP 24/7</span>
-                </div>
-                <div class="top-bar-item">
-                    <i class="fas fa-gem"></i>
-                    <span>منتجات أصلية 100%</span>
-                </div>
+                <div class="top-bar-item"><i class="fas fa-truck-fast"></i><span>شحن مجاني للطلبات فوق 5000 دج</span></div>
+                <div class="top-bar-item"><i class="fas fa-headset"></i><span>دعم VIP 24/7</span></div>
+                <div class="top-bar-item"><i class="fas fa-gem"></i><span>منتجات أصلية 100%</span></div>
             </div>
-               
-   <!-- ===== المدير الاحصاء  ===== -->
-         
             <div class="header-actions">
-                <button class="action-btn" onclick="openLoginModal()" id="userBtn">
-                    <i class="far fa-user"></i>
-                </button>
-                <button class="action-btn" onclick="toggleCart()">
-                    <i class="fas fa-shopping-cart"></i>
-                    <span class="cart-count" id="cartCounter">0</span>
-                </button>
-                <button class="action-btn" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
-                    <i class="fas fa-chart-line"></i>
-                </button>
+                <button class="action-btn" onclick="openLoginModal()" id="userBtn"><i class="far fa-user"></i></button>
+                <button class="action-btn" onclick="toggleCart()"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCounter">0</span></button>
+            </div>
+            <div class="top-bar-right">
+                <div class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i><span>ليلي</span></div>
             </div>
         </div>
-            
-            <div class="top-bar-right">
-                <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle">
-                    <i class="fas fa-moon"></i>
-                    <span>ليلي</span>
+    </div>
+    
+    <!-- قسم الريلز -->
+    <div class="reels-video-section">
+        <div class="container">
+            <div class="reels-video-header">
+                <div class="header-title">
+                    <i class="fas fa-film"></i>
+                    <h2>ناردو برو ريلز</h2>
+                </div>
+                <div class="header-buttons">
+                    <a href="add-reel.html" class="add-reel-btn" id="addReelBtn" style="display: none;">
+                        <i class="fas fa-plus-circle"></i> إضافة ريلز
+                    </a>
+                    <a href="#" class="view-all-link" onclick="viewAllReels()">
+                        <span>جميع الريلز</span> <i class="fas fa-arrow-left"></i>
+                    </a>
                 </div>
             </div>
-        </div>
-    </div>
-    
-        
-<!-- ===== قسم ريلز الفيديو في الأعلى مع أيقونة ===== -->
-<!-- ===== قسم ريلز الفيديو في الأعلى مع أيقونة ===== -->
-<div class="reels-video-section">
-    <div class="container">
-        <div class="reels-video-header">
-            <div class="header-title">
-                <i class="fas fa-film reel-section-icon"></i>
-                <h2>ناردو برو ريلز</h2>
-            </div>
-            <div class="header-buttons">
-                <!-- ✅ هذا هو زر إضافة الريلز - تم ربطه بملف add-reel.html -->
-                <a href="add-reel.html" class="add-reel-btn">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>إضافة ريلز</span>
-                </a>
-                <a href="reels.html" class="view-all-link">
-                    <span>جميع الريلز</span>
-                    <i class="fas fa-arrow-left"></i>
-                </a>
-            </div>
-        </div>
-        
-        <div class="reels-video-container" id="reelsVideoContainer">
-            <!-- سيتم عرض الريلز هنا ديناميكياً -->
-            <div class="loading-reels">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>جاري تحميل الريلز...</p>
+            <div class="reels-video-container" id="reelsVideoContainer">
+                <div class="loading-reels"><i class="fas fa-spinner fa-spin"></i><p>جاري تحميل الريلز...</p></div>
             </div>
         </div>
     </div>
-</div>
     
-<!-- ===== شريط العروض المتحرك ===== -->
+    <!-- شريط العروض -->
     <div class="marquee-bar">
         <div class="marquee-content">
-            <div class="marquee-item">
-                <i class="fas fa-fire"></i>
-                <span>تخفيضات تصل 50%</span>
-            </div>
-            <div class="marquee-item">
-                <i class="fas fa-gem"></i>
-                <span></span>عروض حصرية</span>
-            </div>
-            <div class="marquee-item">
-                <i class="fas fa-clock"></i>
-                <span>الوقت: <span id="marqueeHours">12</span>:<span id="marqueeMinutes">30</span>:<span id="marqueeSeconds">45</span></span>
-            </div>
+            <div class="marquee-item"><i class="fas fa-fire"></i><span>تخفيضات تصل 50%</span></div>
+            <div class="marquee-item"><i class="fas fa-gem"></i><span>عروض حصرية</span></div>
+            <div class="marquee-item"><i class="fas fa-clock"></i><span>الوقت: <span id="marqueeHours">12</span>:<span id="marqueeMinutes">30</span>:<span id="marqueeSeconds">45</span></span></div>
         </div>
     </div>
-
     
-    <!-- ===== لوحة التاجر ===== -->
-    <div class="container" id="merchantPanelContainer" style="display: none;"></div>
-        <i class="fas fa-film"></i>
-
     <!-- البحث -->
     <div class="search-wrapper">
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
-                    <button onclick="searchProducts()"><i class="fas fa-search"></i></button>
-                </div>
-            </div>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="ابحث عن منتج..." onkeyup="searchProducts()">
+            <button onclick="searchProducts()"><i class="fas fa-search"></i></button>
+        </div>
+    </div>
     
-    <!-- ===== الهيدر الرئيسي ===== -->
+    <!-- الهيدر -->
     <header class="main-header">
         <div class="container header-content">
             <div class="logo">
                 <div class="logo-icon"><i class="fas fa-crown"></i></div>
-                <div class="logo-text">
-                    <h1>نكهة وجمال</h1>
-                    <span>ناردو برو 2026</span>
-                </div>
+                <div class="logo-text"><h1>نكهة وجمال</h1><span>ناردو برو 2026</span></div>
             </div>
+        </div>
     </header>
-            
-    <!-- ===== القائمة الرئيسية ===== -->
+    
+    <!-- القائمة -->
     <div class="container">
-        <nav class="nav-menu" id="mainNav">
+        <nav class="nav-menu">
             <a class="nav-link active" onclick="filterProducts('all')"><i class="fas fa-home"></i> الرئيسية</a>
             <a class="nav-link" onclick="filterProducts('promo')"><i class="fas fa-fire"></i> برموسيو</a>
             <a class="nav-link" onclick="filterProducts('spices')"><i class="fas fa-mortar-pestle"></i> توابل</a>
@@ -184,58 +243,24 @@
         </nav>
     </div>
     
-    <!-- ===== المنتجات ===== -->
+    <!-- المنتجات -->
     <div class="container">
         <div class="products-grid" id="productsContainer"></div>
     </div>
     
-    <!-- ===== [01] لوحة التحكم الرئيسية ===== -->
-<div class="container dashboard-section" id="dashboardSection" style="display: none;">
-    <div class="dashboard-tabs">
-        <button class="dashboard-tab active" onclick="App.switchDashboardTab('overview')">نظرة عامة</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('orders')">الطلبات</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('products')">المنتجات</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('merchants')">التجار</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('users')">المستخدمين</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('requests')">طلبات الأدوار</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('apps')">التطبيقات</button>
-        <button class="dashboard-tab" onclick="App.switchDashboardTab('delivery')">التوصيل</button>
-    </div>
-    <div class="dashboard-content" id="dashboardContent"></div>
-</div>
-
-<!-- ===== [02] الناشرون ===== -->
-<div class="container">
-    <div class="publishers-section" id="publishersSection">
-        <h3><i class="fas fa-users"></i> الناشرون النشطون</h3>
-        <div class="publishers-grid" id="publishersGrid"></div>
-    </div>
-</div>
-
-<!-- ===== [03] Banner إعلاني ===== -->
-<div class="container">
-    <div class="promo-banner">
-        <div class="banner-content">
-            <h3>تخفيضات رمضان</h3>
-            <p>خصم يصل إلى 50% على جميع المنتجات</p>
-            <button class="btn-gold" onclick="App.filterProducts('promo')">تسوق الآن</button>
-        </div>
-        <div class="banner-image">
-            <i class="fas fa-moon"></i>
+    <!-- بانر إعلاني -->
+    <div class="container">
+        <div class="promo-banner">
+            <div class="banner-content">
+                <h3>تخفيضات رمضان</h3>
+                <p>خصم يصل إلى 50% على جميع المنتجات</p>
+                <button class="btn-gold" onclick="filterProducts('promo')">تسوق الآن</button>
+            </div>
+            <div class="banner-image"><i class="fas fa-moon"></i></div>
         </div>
     </div>
-</div>
-
-    <!-- ===== لوحة التحكم الرئيسية ===== -->
-    <div class="container dashboard-section" id="dashboardSection" style="display: none;">
-        <div class="dashboard-tabs">
-            <button class="dashboard-tab active" onclick="showDashboardOverview()">نظرة عامة</button>
-            <button class="dashboard-tab" onclick="showDashboardMerchants()">التجار</button>
-        </div>
-        <div class="dashboard-content" id="dashboardContent"></div>
-    </div>
-
-    <!-- ===== الفوتر ===== -->
+    
+    <!-- الفوتر -->
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
@@ -249,14 +274,6 @@
                     <p><a href="#" onclick="filterProducts('all')">الرئيسية</a></p>
                     <p><a href="#" onclick="filterProducts('promo')">برموسيو</a></p>
                     <p><a href="#" onclick="filterProducts('spices')">توابل</a></p>
-                    <p><a href="#" onclick="filterProducts('cosmetic')">كوسمتيك</a></p>
-                </div>
-                <div class="footer-col">
-                    <h3>مساعدة</h3>
-                    <p>سياسة الخصوصية</p>
-                    <p>شروط الاستخدام</p>
-                    <p>طرق الدفع</p>
-                    <p>الشحن والتوصيل</p>
                 </div>
                 <div class="footer-col">
                     <h3>اتصل بنا</h3>
@@ -264,192 +281,208 @@
                     <p><i class="fas fa-envelope"></i> info@nardoo.com</p>
                 </div>
             </div>
-            <div class="copyright">
-                © 2026 ناردو برو | جميع الحقوق محفوظة
-            </div>
+            <div class="copyright">© 2026 ناردو برو | جميع الحقوق محفوظة</div>
         </div>
     </footer>
-
-    <!-- ===== الأيقونات الثابتة ===== -->
     
-    <div class="fixed-cart" onclick="toggleCart()" id="fixedCart">
-        <i class="fas fa-shopping-cart"></i>
-        <span class="fixed-cart-count" id="fixedCartCounter">0</span>
-    </div>
-
-    <a href="https://wa.me/2135622448" target="_blank" class="fixed-whatsapp" title="تواصل معنا">
-        <i class="fab fa-whatsapp"></i>
-    </a>
-    <!-- ===== أيقونة الريلز الثابتة ===== -->
-<a href="reels.html" class="fixed-reels" title="ناردو ريلز">
-    <i class="fas fa-film"></i>
-    <span class="reels-notification">جديد</span>
-</a>
-
-    <!-- ===== أزرار التنقل ===== -->
-    <div class="navigation-buttons">
-        <button class="nav-btn up-btn" onclick="scrollToTop()" title="الأعلى">
-            <i class="fas fa-arrow-up"></i>
-        </button>
-        <button class="nav-btn down-btn" onclick="scrollToBottom()" title="الأسفل">
-            <i class="fas fa-arrow-down"></i>
-        </button>
-    </div>
-
-    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn" title="الأعلى">
-        <i class="fas fa-chevron-up"></i>
-    </button>
-
-    <!-- ===== نافذة تسجيل الدخول ===== -->
+    <!-- أيقونات ثابتة -->
+    <div class="fixed-cart" onclick="toggleCart()"><i class="fas fa-shopping-cart"></i><span class="fixed-cart-count" id="fixedCartCounter">0</span></div>
+    <a href="https://wa.me/2135622448" target="_blank" class="fixed-whatsapp"><i class="fab fa-whatsapp"></i></a>
+    <a href="#" class="fixed-reels" onclick="viewAllReels()"><i class="fas fa-film"></i><span class="reels-notification">جديد</span></a>
+    <button class="quick-top-btn" onclick="scrollToTop()" id="quickTopBtn"><i class="fas fa-chevron-up"></i></button>
+    
+    <!-- نافذة تسجيل الدخول -->
     <div class="modal" id="loginModal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
-                <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+            <div class="modal-header"><h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2><button class="close-btn" onclick="closeModal('loginModal')">&times;</button></div>
+            <div class="auth-tabs" style="display: flex; gap: 10px; padding: 20px;">
+                <button class="btn-gold" style="margin:0; flex:1" onclick="switchAuthTab('login')">دخول</button>
+                <button class="btn-gold" style="margin:0; flex:1; background:#eee; color:#333" onclick="switchAuthTab('register')">تسجيل</button>
             </div>
-            
-            <div class="auth-tabs">
-                <button class="btn-gold" onclick="switchAuthTab('login')">دخول</button>
-                <button class="btn-outline-gold" onclick="switchAuthTab('register')">تسجيل</button>
-            </div>
-
-            <!-- نموذج تسجيل الدخول -->
             <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
-                <div class="form-group">
-                    <label>👤 اسم المستخدم</label>
-                    <input type="text" class="form-control" id="loginEmail" required placeholder="أدخل اسم المستخدم">
-                </div>
-                <div class="form-group">
-                    <label>🔑 كلمة المرور</label>
-                    <input type="password" class="form-control" id="loginPassword" required placeholder="********">
-                </div>
-                <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
+                <div class="form-group"><label>👤 اسم المستخدم</label><input type="text" class="form-control" id="loginEmail" required placeholder="أدخل اسم المستخدم"></div>
+                <div class="form-group"><label>🔑 كلمة المرور</label><input type="password" class="form-control" id="loginPassword" required placeholder="********"></div>
+                <button type="submit" class="btn-gold">دخول</button>
             </form>
-
-            <!-- نموذج التسجيل -->
             <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); handleRegister();">
-                <div class="form-group">
-                    <label>👤 الاسم الكامل</label>
-                    <input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري">
-                </div>
-                <div class="form-group">
-                    <label>📧 البريد الإلكتروني</label>
-                    <input type="email" class="form-control" id="regEmail" required placeholder="example@email.com">
-                </div>
-                <div class="form-group">
-                    <label>🔑 كلمة المرور</label>
-                    <input type="password" class="form-control" id="regPassword" required placeholder="******">
-                </div>
-                <div class="form-group">
-                    <label>📱 رقم الهاتف</label>
-                    <input type="tel" class="form-control" id="regPhone" placeholder="05XXXXXXXX">
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()">
-                        <span>تسجيل كتاجر</span>
-                    </label>
-                </div>
-                
-                <!-- حقول التاجر -->
-                <div id="merchantFields" style="display:none;">
-                    <div class="form-group">
-                        <label>🏪 اسم المتجر</label>
-                        <input type="text" class="form-control" id="storeName" placeholder="اسم المتجر">
-                    </div>
-                    <div class="form-group">
-                        <label>📊 المستوى</label>
-                        <select class="form-control" id="merchantLevel">
-                            <option value="1">مبتدئ</option>
-                            <option value="2">متوسط</option>
-                            <option value="3">متقدم</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>📝 وصف المتجر</label>
-                        <textarea class="form-control" id="merchantDesc" rows="2" placeholder="وصف المتجر..."></textarea>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn-gold" style="width:100%;">تسجيل</button>
+                <div class="form-group"><label>👤 الاسم الكامل</label><input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري"></div>
+                <div class="form-group"><label>📧 البريد الإلكتروني</label><input type="email" class="form-control" id="regEmail" required placeholder="example@email.com"></div>
+                <div class="form-group"><label>🔑 كلمة المرور</label><input type="password" class="form-control" id="regPassword" required placeholder="******"></div>
+                <div class="form-group"><label>📱 رقم الهاتف</label><input type="tel" class="form-control" id="regPhone" placeholder="05XXXXXXXX"></div>
+                <button type="submit" class="btn-gold">تسجيل</button>
             </form>
         </div>
     </div>
-
-    <!-- ===== نافذة إضافة منتج ===== -->
-    <div class="modal" id="productModal">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
-                <button class="close-btn" onclick="closeModal('productModal')">&times;</button>
-            </div>
-            
-            <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
-            <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
-                <div class="form-group">
-                    <label>📦 اسم المنتج</label>
-                    <input type="text" class="form-control" id="productName" required placeholder="زعتر فلسطيني">
-                </div>
-                <div class="form-group">
-                    <label>🏷️ القسم</label>
-                    <select class="form-control" id="productCategory" required>
-                        <option value="promo">برموسيو</option>
-                        <option value="spices">توابل</option>
-                        <option value="cosmetic">كوسمتيك</option>
-                        <option value="other">منتوجات أخرى</option>
-                    </select>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label>💰 السعر (دج)</label>
-                        <input type="number" class="form-control" id="productPrice" required min="0" placeholder="500">
-                    </div>
-                    <div class="form-group">
-                        <label>📊 الكمية</label>
-                        <input type="number" class="form-control" id="productStock" required min="0" placeholder="50">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>📝 وصف المنتج</label>
-                    <textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea>
-                </div>
-                
-                <!-- ✅ تم التعديل: استخدام handleImageUpload بدلاً من App.handleImageUpload -->
-                <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p>اضغط لرفع صور</p>
-                </div>
-                <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="handleImageUpload(event)">
-                <div class="image-preview" id="imagePreview"></div>
-                
-                <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
-                <button type="submit" class="btn-gold">حفظ المنتج</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- ===== نافذة تفاصيل المنتج ===== -->
-    <div class="modal" id="productDetailModal">
-        <div class="modal-content modal-lg" id="productDetailContent"></div>
-    </div>
-
-    <!-- ===== ملفات JavaScript (بالترتيب الصحيح) ===== -->
-    <script src="js/core.js"></script>      <!-- المتغيرات العامة أولاً -->
-    <script src="js/auth.js"></script>      <!-- نظام المستخدمين -->
-    <script src="js/telegram.js"></script>  <!-- دوال تلغرام -->
-    <script src="js/shop.js"></script>      <!-- دوال المتجر -->
-    <script src="js/app.js"></script>       <!-- الكود الرئيسي آخراً -->
-
+    
     <script>
-        // ===== كود التشخيص =====
-        setTimeout(() => {
-            console.log('🔍 === تشخيص النظام ===');
-            console.log('✅ productModal:', document.getElementById('productModal') ? 'موجود' : '❌ غير موجود');
-            console.log('✅ productForm:', document.getElementById('productForm') ? 'موجود' : '❌ غير موجود');
-            console.log('✅ saveProduct:', typeof saveProduct === 'function' ? 'موجود' : '❌ غير موجود');
-            console.log('✅ handleImageUpload:', typeof handleImageUpload === 'function' ? 'موجود' : '❌ غير موجود');
-            console.log('🔍 === انتهى التشخيص ===');
-        }, 1000);
+        // ========== إدارة الريلز من IndexedDB ==========
+        let db = null;
+        
+        function openReelsDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('NardoReelsDB', 1);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => { db = request.result; resolve(db); };
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('reels')) db.createObjectStore('reels', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('videos')) db.createObjectStore('videos', { keyPath: 'id' });
+                };
+            });
+        }
+        
+        async function loadReelsFromDB() {
+            const container = document.getElementById('reelsVideoContainer');
+            if (!container) return;
+            try {
+                if (!db) await openReelsDatabase();
+                const reels = await new Promise((resolve) => {
+                    const transaction = db.transaction(['reels'], 'readonly');
+                    const store = transaction.objectStore('reels');
+                    const index = store.index('date');
+                    const list = [];
+                    index.openCursor(null, 'prev').onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) { list.push(cursor.value); cursor.continue(); }
+                        else resolve(list);
+                    };
+                });
+                if (reels.length === 0) {
+                    container.innerHTML = `<div class="no-reels-message"><i class="fas fa-film"></i><p>✨ لا توجد ريلز حالياً ✨</p><a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف أول ريلز</a></div>`;
+                    return;
+                }
+                let html = '';
+                for (let i = 0; i < Math.min(4, reels.length); i++) {
+                    const reel = reels[i];
+                    html += `<div class="reel-video-card" onclick="playReelFromDB(${reel.id})">
+                        <div class="reel-video-placeholder"><i class="fas fa-play-circle"></i><div style="position:absolute; bottom:15px; right:15px; left:15px;"><span style="color:white; font-weight:bold;">${escapeHtml(reel.title)}</span></div></div>
+                        <div class="reel-video-overlay"><div class="reel-video-play"><i class="fas fa-play-circle"></i></div><div class="reel-video-info"><span class="reel-video-title">${escapeHtml(reel.title)}</span><span class="reel-video-views"><i class="fas fa-eye"></i> ${reel.views || 0} مشاهدة</span></div></div>
+                    </div>`;
+                }
+                container.innerHTML = html;
+            } catch (error) {
+                console.error(error);
+                container.innerHTML = `<div class="no-reels-message"><p>حدث خطأ في تحميل الريلز</p></div>`;
+            }
+        }
+        
+        async function playReelFromDB(reelId) {
+            try {
+                if (!db) await openReelsDatabase();
+                const reel = await new Promise((resolve) => {
+                    const transaction = db.transaction(['reels'], 'readonly');
+                    transaction.objectStore('reels').get(reelId).onsuccess = (e) => resolve(e.target.result);
+                });
+                if (!reel) return;
+                const videoData = await new Promise((resolve) => {
+                    const transaction = db.transaction(['videos'], 'readonly');
+                    transaction.objectStore('videos').get(reel.videoId).onsuccess = (e) => resolve(e.target.result);
+                });
+                if (!videoData) return;
+                const videoUrl = URL.createObjectURL(videoData.data);
+                reel.views = (reel.views || 0) + 1;
+                const updateTransaction = db.transaction(['reels'], 'readwrite');
+                updateTransaction.objectStore('reels').put(reel);
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.style.display = 'flex';
+                modal.innerHTML = `<div style="background:white; border-radius:20px; max-width:90%; width:700px;"><div style="background:#1a1a2e; padding:15px; border-radius:20px 20px 0 0; display:flex; justify-content:space-between;"><h3 style="color:#ffd700;">${escapeHtml(reel.title)}</h3><button onclick="this.closest('.modal').remove()" style="background:none; border:none; color:white; font-size:24px;">&times;</button></div><video controls autoplay style="width:100%; max-height:60vh;"><source src="${videoUrl}" type="video/mp4"></video></div>`;
+                document.body.appendChild(modal);
+                modal.onclick = (e) => { if (e.target === modal) { URL.revokeObjectURL(videoUrl); modal.remove(); } };
+            } catch (error) { console.error(error); }
+        }
+        
+        function escapeHtml(text) { if (!text) return ''; return text.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+        
+        // ========== صلاحيات المدير ==========
+        function checkAdminAndShowButton() {
+            const currentUser = localStorage.getItem('nardo_current_user');
+            const addReelBtn = document.getElementById('addReelBtn');
+            if (!addReelBtn) return;
+            if (currentUser) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    if (user.role === 'admin') addReelBtn.style.display = 'inline-flex';
+                    else addReelBtn.style.display = 'none';
+                } catch(e) { addReelBtn.style.display = 'none'; }
+            } else { addReelBtn.style.display = 'none'; }
+        }
+        
+        function createDefaultAdmin() {
+            let users = localStorage.getItem('nardo_users');
+            users = users ? JSON.parse(users) : [];
+            if (!users.some(u => u.role === 'admin')) {
+                users.push({ id: Date.now(), name: 'مدير النظام', email: 'admin@nardo.com', password: 'admin123', role: 'admin', phone: '0555555555', createdAt: new Date().toISOString() });
+                localStorage.setItem('nardo_users', JSON.stringify(users));
+                console.log('✅ تم إنشاء حساب مدير: admin@nardo.com / admin123');
+            }
+        }
+        
+        // ========== دوال عامة ==========
+        function showToast(message, type) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast-message toast-${type}`;
+            toast.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        function openLoginModal() { document.getElementById('loginModal').style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function toggleCart() { showToast('قريباً', 'info'); }
+        function filterProducts(cat) { showToast(`تصفية: ${cat}`, 'info'); }
+        function searchProducts() { showToast('جاري البحث...', 'info'); }
+        function toggleTheme() { showToast('قريباً', 'info'); }
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function viewAllReels() { showToast('جميع الريلز قريباً', 'info'); }
+        
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            if (tab === 'login') { loginForm.style.display = 'block'; registerForm.style.display = 'none'; }
+            else { loginForm.style.display = 'none'; registerForm.style.display = 'block'; }
+        }
+        
+        function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const users = JSON.parse(localStorage.getItem('nardo_users') || '[]');
+            const user = users.find(u => u.email === email && u.password === password);
+            if (user) {
+                localStorage.setItem('nardo_current_user', JSON.stringify(user));
+                showToast(`✅ مرحباً ${user.name}`, 'success');
+                closeModal('loginModal');
+                checkAdminAndShowButton();
+                setTimeout(() => location.reload(), 1000);
+            } else { showToast('❌ بيانات غير صحيحة', 'error'); }
+        }
+        
+        function handleRegister() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const phone = document.getElementById('regPhone').value;
+            if (!name || !email || !password) { showToast('❌ الرجاء ملء جميع الحقول', 'error'); return; }
+            let users = JSON.parse(localStorage.getItem('nardo_users') || '[]');
+            if (users.find(u => u.email === email)) { showToast('❌ البريد موجود مسبقاً', 'error'); return; }
+            const newUser = { id: Date.now(), name, email, password, role: 'user', phone, createdAt: new Date().toISOString() };
+            users.push(newUser);
+            localStorage.setItem('nardo_users', JSON.stringify(users));
+            showToast('✅ تم التسجيل بنجاح', 'success');
+            switchAuthTab('login');
+        }
+        
+        // ========== تهيئة الصفحة ==========
+        window.addEventListener('load', () => {
+            setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => document.getElementById('loader').style.display = 'none', 500); }, 1000);
+            createDefaultAdmin();
+            checkAdminAndShowButton();
+            setTimeout(() => loadReelsFromDB(), 500);
+            window.addEventListener('scroll', () => { const btn = document.getElementById('quickTopBtn'); if (window.scrollY > 300) btn.style.display = 'flex'; else btn.style.display = 'none'; });
+        });
+        
+        window.addEventListener('storage', (e) => { if (e.key === 'nardo_current_user') checkAdminAndShowButton(); if (e.key === 'nardo_reels_updated') loadReelsFromDB(); });
     </script>
 </body>
 </html>
