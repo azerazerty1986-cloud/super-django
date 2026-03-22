@@ -66,6 +66,55 @@
             padding: 40px;
             color: white;
         }
+        .reels-video-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .reel-video-card {
+            cursor: pointer;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .reel-video-card:hover {
+            transform: translateY(-5px);
+        }
+        .reel-video-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            padding: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .reel-video-card:hover .reel-video-overlay {
+            opacity: 1;
+        }
+        .reel-video-play {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: #ffd700;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .reel-video-card:hover .reel-video-play {
+            opacity: 1;
+        }
+        .reel-video-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+        .reel-video-title {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -150,7 +199,7 @@
                     <h2>ناردو برو ريلز</h2>
                 </div>
                 <div class="header-buttons">
-                    <a href="add-reel.html" class="add-reel-btn" id="addReelBtn" style="display: none;">
+                    <a href="add-reel.html" class="add-reel-btn" id="addReelBtn">
                         <i class="fas fa-plus-circle"></i>
                         <span>إضافة ريلز</span>
                     </a>
@@ -520,7 +569,7 @@
                 if (saved) {
                     displayReels(JSON.parse(saved));
                 } else {
-                    container.innerHTML = `<div class="no-reels-message"><i class="fas fa-film"></i><p>✨ لا توجد ريلز حالياً ✨</p></div>`;
+                    container.innerHTML = `<div class="no-reels-message"><i class="fas fa-film"></i><p>✨ لا توجد ريلز حالياً ✨</p><p>اضغط على زر "إضافة ريلز" لإضافة أول ريلز</p></div>`;
                 }
             }
         } catch (error) {
@@ -536,7 +585,7 @@
     function displayReels(reels) {
         const container = document.getElementById('reelsVideoContainer');
         if (!container || !reels || reels.length === 0) {
-            container.innerHTML = `<div class="no-reels-message"><i class="fas fa-film"></i><p>✨ لا توجد ريلز حالياً ✨</p></div>`;
+            container.innerHTML = `<div class="no-reels-message"><i class="fas fa-film"></i><p>✨ لا توجد ريلز حالياً ✨</p><p>اضغط على زر "إضافة ريلز" لإضافة أول ريلز</p></div>`;
             return;
         }
         
@@ -597,30 +646,10 @@
         }
     }
     
-    function checkAdminButton() {
-        const currentUser = localStorage.getItem('nardo_current_user');
-        const addBtn = document.getElementById('addReelBtn');
-        if (!addBtn) return;
-        
-        if (currentUser) {
-            try {
-                const user = JSON.parse(currentUser);
-                if (user.name === 'azer' || user.username === 'azer' || user.email === 'azer') {
-                    addBtn.style.display = 'inline-flex';
-                } else {
-                    addBtn.style.display = 'none';
-                }
-            } catch(e) { addBtn.style.display = 'none'; }
-        } else { addBtn.style.display = 'none'; }
-    }
-    
+    // تحميل الريلز عند بدء الصفحة
     document.addEventListener('DOMContentLoaded', function() {
-        checkAdminButton();
         loadReels();
         setInterval(loadReels, 30000);
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'nardo_current_user') checkAdminButton();
-        });
     });
     </script>
 </body>
