@@ -19,78 +19,6 @@
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/responsive.css">
-    
-    <style>
-        /* إضافات CSS للريلز الجديد */
-        .add-reel-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, #ffd700, #ffb347);
-            padding: 8px 18px;
-            border-radius: 30px;
-            color: #1a1a2e;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-            font-family: 'Cairo', sans-serif;
-            margin-left: 10px;
-        }
-        
-        .add-reel-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
-        }
-        
-        .reels-video-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .header-buttons {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .no-reels-message {
-            text-align: center;
-            padding: 40px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            color: white;
-        }
-        
-        .no-reels-message i {
-            font-size: 3rem;
-            color: #ffd700;
-            margin-bottom: 15px;
-        }
-        
-        .add-first-reel {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, #ffd700, #ffb347);
-            padding: 10px 20px;
-            border-radius: 30px;
-            color: #1a1a2e;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 15px;
-            transition: all 0.3s;
-        }
-        
-        .add-first-reel:hover {
-            transform: translateY(-2px);
-        }
-    </style>
 </head>
 <body>
     <!-- خلفية متحركة -->
@@ -178,7 +106,6 @@
                 <h2>ناردو برو ريلز</h2>
             </div>
             <div class="header-buttons">
-                <!-- زر إضافة ريلز - يظهر فقط للمدير -->
                 <a href="add-reel.html" class="add-reel-btn" id="addReelBtn" style="display: none;">
                     <i class="fas fa-plus-circle"></i>
                     <span>إضافة ريلز</span>
@@ -191,7 +118,7 @@
         </div>
         
         <div class="reels-video-container" id="reelsVideoContainer">
-            <!-- سيتم عرض الريلز من المدير فقط هنا -->
+            <!-- سيتم عرض فيديوهات المدير azer هنا -->
             <div class="loading-reels">
                 <i class="fas fa-spinner fa-spin"></i>
                 <p>جاري تحميل الريلز...</p>
@@ -453,7 +380,6 @@
                 <button class="close-btn" onclick="closeModal('productModal')">&times;</button>
             </div>
             
-            <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
             <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
                 <div class="form-group">
                     <label>📦 اسم المنتج</label>
@@ -483,7 +409,6 @@
                     <textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea>
                 </div>
                 
-                <!-- ✅ تم التعديل: استخدام handleImageUpload بدلاً من App.handleImageUpload -->
                 <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
                     <p>اضغط لرفع صور</p>
@@ -491,7 +416,6 @@
                 <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="handleImageUpload(event)">
                 <div class="image-preview" id="imagePreview"></div>
                 
-                <!-- ✅ تم التعديل: استخدام saveProduct() بدلاً من App.saveProduct() -->
                 <button type="submit" class="btn-gold">حفظ المنتج</button>
             </form>
         </div>
@@ -503,11 +427,11 @@
     </div>
 
     <!-- ===== ملفات JavaScript (بالترتيب الصحيح) ===== -->
-    <script src="js/core.js"></script>      <!-- المتغيرات العامة أولاً -->
-    <script src="js/auth.js"></script>      <!-- نظام المستخدمين -->
-    <script src="js/telegram.js"></script>  <!-- دوال تلغرام -->
-    <script src="js/shop.js"></script>      <!-- دوال المتجر -->
-    <script src="js/app.js"></script>       <!-- الكود الرئيسي آخراً -->
+    <script src="js/core.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/telegram.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/app.js"></script>
 
     <script>
         // ===== كود التشخيص =====
@@ -521,148 +445,98 @@
         }, 1000);
     </script>
     
-    <!-- ===== كود عرض الريلز من IndexedDB مع صلاحيات المدير ===== -->
+    <!-- ===== كود عرض فيديوهات المدير azer فقط ===== -->
     <script>
-    // ========== إدارة الريلز - فقط المدير يضيف والفيديوهات تظهر لوحدها ==========
-    let db = null;
+    // ========== جلب وعرض فيديوهات المدير azer ==========
+    let azerReels = [];
     
-    // فتح قاعدة البيانات
-    function openReelsDatabase() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open('NardoReelsDB', 1);
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => { db = request.result; resolve(db); };
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('reels')) {
-                    const store = db.createObjectStore('reels', { keyPath: 'id' });
-                    store.createIndex('date', 'date', { unique: false });
-                }
-                if (!db.objectStoreNames.contains('videos')) {
-                    db.createObjectStore('videos', { keyPath: 'id' });
-                }
-            };
-        });
+    // تحميل فيديوهات azer من التخزين
+    function loadAzerReels() {
+        const saved = localStorage.getItem('azer_reels_list');
+        if (saved) {
+            azerReels = JSON.parse(saved);
+            console.log(`✅ تم تحميل ${azerReels.length} فيديو للمدير azer`);
+        } else {
+            azerReels = [];
+            console.log('📭 لا توجد فيديوهات للمدير azer');
+        }
+        displayAzerReels();
     }
     
-    // تحميل وعرض الريلز (فقط الفيديوهات التي أضافها المدير)
-    async function loadReelsFromDB() {
+    // عرض فيديوهات azer في شريط الريلز
+    function displayAzerReels() {
         const container = document.getElementById('reelsVideoContainer');
         if (!container) return;
         
-        try {
-            if (!db) await openReelsDatabase();
+        if (azerReels.length === 0) {
+            container.innerHTML = `
+                <div class="no-reels-message">
+                    <i class="fas fa-film"></i>
+                    <p>✨ لا توجد ريلز حالياً ✨</p>
+                    <p>المدير <strong style="color:gold">azer</strong> سيضيف فيديوهات قريباً</p>
+                    <div id="adminAddHint" style="margin-top:15px;"></div>
+                </div>
+            `;
             
-            // جلب جميع الريلز من قاعدة البيانات
-            const reels = await new Promise((resolve) => {
-                const transaction = db.transaction(['reels'], 'readonly');
-                const store = transaction.objectStore('reels');
-                const index = store.index('date');
-                const list = [];
-                index.openCursor(null, 'prev').onsuccess = (e) => {
-                    const cursor = e.target.result;
-                    if (cursor) { list.push(cursor.value); cursor.continue(); }
-                    else resolve(list);
-                };
-            });
-            
-            // إذا لم توجد ريلز مضافة
-            if (reels.length === 0) {
-                container.innerHTML = `
-                    <div class="no-reels-message">
-                        <i class="fas fa-film"></i>
-                        <p>✨ لا توجد ريلز حالياً ✨</p>
-                        <p>سيتم عرض فيديوهات المدير هنا</p>
-                        <a href="add-reel.html" class="add-first-reel" id="firstReelBtn" style="display: none;">
-                            <i class="fas fa-plus-circle"></i> أضف أول ريلز
-                        </a>
-                    </div>
-                `;
-                // التحقق من صلاحيات المدير لعرض زر الإضافة
-                checkAdminForFirstReel();
-                return;
-            }
-            
-            // عرض الريلز المضافة من المدير فقط
-            let html = '';
-            for (let i = 0; i < reels.length; i++) {
-                const reel = reels[i];
-                html += `
-                    <div class="reel-video-card" onclick="playReelFromDB(${reel.id})">
-                        <div class="reel-video-placeholder" style="background: linear-gradient(135deg, #667eea, #764ba2); height: 250px; display: flex; align-items: center; justify-content: center; border-radius: 15px; position: relative;">
-                            <i class="fas fa-play-circle" style="font-size: 4rem; color: #ffd700;"></i>
-                            <div style="position: absolute; bottom: 15px; right: 15px; left: 15px;">
-                                <span style="color: white; font-weight: bold; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 20px;">${escapeHtml(reel.title)}</span>
-                            </div>
-                        </div>
-                        <div class="reel-video-overlay">
-                            <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
-                            <div class="reel-video-info">
-                                <span class="reel-video-title">${escapeHtml(reel.title)}</span>
-                                <span class="reel-video-views"><i class="fas fa-eye"></i> ${reel.views || 0} مشاهدة</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            container.innerHTML = html;
-            
-        } catch (error) {
-            console.error('خطأ في تحميل الريلز:', error);
-            container.innerHTML = `<div class="no-reels-message"><p>حدث خطأ في تحميل الريلز</p></div>`;
-        }
-    }
-    
-    // التحقق من صلاحيات المدير لعرض زر الإضافة في الرسالة
-    function checkAdminForFirstReel() {
-        const currentUser = localStorage.getItem('nardo_current_user');
-        const firstReelBtn = document.getElementById('firstReelBtn');
-        if (firstReelBtn) {
+            // التحقق من عرض زر الإضافة للمدير
+            const currentUser = localStorage.getItem('nardo_current_user');
+            const hintDiv = document.getElementById('adminAddHint');
             if (currentUser) {
                 try {
                     const user = JSON.parse(currentUser);
-                    if (user.role === 'admin') {
-                        firstReelBtn.style.display = 'inline-flex';
+                    if (user.email === 'azer' || user.username === 'azer' || user.name === 'azer') {
+                        hintDiv.innerHTML = '<a href="add-reel.html" class="add-first-reel" style="display:inline-flex; background:gold; color:black; padding:10px 20px; border-radius:30px; text-decoration:none;"><i class="fas fa-plus-circle"></i> أضف أول ريلز</a>';
                     }
                 } catch(e) {}
             }
+            return;
         }
+        
+        // عرض فيديوهات azer فقط (مرتبة من الأحدث للأقدم)
+        const sortedReels = [...azerReels].reverse();
+        
+        let html = '';
+        for (let i = 0; i < sortedReels.length; i++) {
+            const reel = sortedReels[i];
+            html += `
+                <div class="reel-video-card" onclick="playAzerReel('${reel.id}')">
+                    <div class="reel-video-placeholder" style="background: linear-gradient(135deg, #1a472a, #0a2a1a); height: 250px; display: flex; align-items: center; justify-content: center; border-radius: 15px; position: relative;">
+                        <i class="fas fa-play-circle" style="font-size: 4rem; color: gold;"></i>
+                        <div style="position: absolute; bottom: 15px; right: 15px; left: 15px;">
+                            <span style="color: white; font-weight: bold; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px;">
+                                🆔 ${reel.id} | ${escapeHtml(reel.title)}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="reel-video-overlay">
+                        <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
+                        <div class="reel-video-info">
+                            <span class="reel-video-title">${escapeHtml(reel.title)}</span>
+                            <span class="reel-video-views"><i class="fas fa-eye"></i> ${formatViews(reel.views || 0)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
     }
     
-    // تشغيل الريلز
-    async function playReelFromDB(reelId) {
+    // تشغيل فيديو azer
+    async function playAzerReel(reelId) {
+        const reel = azerReels.find(r => r.id === reelId);
+        if (!reel) {
+            showToastMessage('الريلز غير موجود', 'error');
+            return;
+        }
+        
         try {
-            if (!db) await openReelsDatabase();
-            
-            // جلب بيانات الريلز
-            const reel = await new Promise((resolve) => {
-                const transaction = db.transaction(['reels'], 'readonly');
-                transaction.objectStore('reels').get(reelId).onsuccess = (e) => resolve(e.target.result);
-            });
-            
-            if (!reel) {
-                showToastMessage('الريلز غير موجود', 'error');
-                return;
-            }
-            
-            // جلب الفيديو
-            const videoData = await new Promise((resolve) => {
-                const transaction = db.transaction(['videos'], 'readonly');
-                transaction.objectStore('videos').get(reel.videoId).onsuccess = (e) => resolve(e.target.result);
-            });
-            
-            if (!videoData || !videoData.data) {
-                showToastMessage('فيديو غير موجود', 'error');
-                return;
-            }
-            
-            const videoUrl = URL.createObjectURL(videoData.data);
-            
             // زيادة عدد المشاهدات
             reel.views = (reel.views || 0) + 1;
-            const updateTransaction = db.transaction(['reels'], 'readwrite');
-            updateTransaction.objectStore('reels').put(reel);
+            localStorage.setItem('azer_reels_list', JSON.stringify(azerReels));
+            
+            // رابط الفيديو من تليجرام
+            const videoUrl = reel.videoUrl || `https://t.me/c/3822964890/${reel.telegramId}`;
             
             // عرض نافذة التشغيل
             const modal = document.createElement('div');
@@ -670,31 +544,57 @@
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; z-index: 10000;';
             modal.innerHTML = `
                 <div style="max-width: 90%; width: 800px; background: #1a1a2e; border-radius: 20px; overflow: hidden;">
-                    <div style="padding: 15px 20px; background: linear-gradient(135deg, #ffd700, #ffb347); display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="color: #1a1a2e; margin: 0;"><i class="fas fa-film"></i> ${escapeHtml(reel.title)}</h3>
+                    <div style="padding: 15px 20px; background: linear-gradient(135deg, gold, #ffd700); display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="color: #1a1a2e; margin: 0;"><i class="fas fa-crown"></i> 🆔 ${reel.id} | ${escapeHtml(reel.title)}</h3>
                         <button onclick="this.closest('.modal').remove()" style="background: none; border: none; color: #1a1a2e; font-size: 28px; cursor: pointer;">&times;</button>
                     </div>
                     <video controls autoplay style="width: 100%; max-height: 70vh; background: #000;">
                         <source src="${videoUrl}" type="video/mp4">
+                        متصفحك لا يدعم تشغيل الفيديو<br>
+                        <a href="${videoUrl}" target="_blank">اضغط هنا للمشاهدة</a>
                     </video>
                     <div style="padding: 10px 20px; background: #1a1a2e; color: #999; display: flex; justify-content: space-between;">
-                        <span><i class="fas fa-calendar"></i> ${reel.dateFormatted || new Date(reel.date).toLocaleDateString('ar')}</span>
+                        <span><i class="fas fa-calendar"></i> ${new Date(reel.date).toLocaleDateString('ar')}</span>
                         <span><i class="fas fa-eye"></i> ${reel.views} مشاهدة</span>
+                        <span><i class="fas fa-fingerprint"></i> ${reel.id}</span>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
             
-            modal.onclick = (e) => { if (e.target === modal) { URL.revokeObjectURL(videoUrl); modal.remove(); } };
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
             
         } catch (error) {
-            console.error('خطأ:', error);
+            console.error(error);
             showToastMessage('حدث خطأ في تشغيل الفيديو', 'error');
         }
     }
     
-    // التحكم في ظهور زر الإضافة للمدير فقط
-    function checkAdminAndShowButton() {
+    function formatViews(views) {
+        if (!views) return '0';
+        if (views >= 1000) return (views / 1000).toFixed(1) + 'K';
+        return views.toString();
+    }
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function showToastMessage(message, type) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast-message toast-${type}`;
+        toast.innerHTML = `${type === 'success' ? '✅' : '❌'} ${message}`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+    
+    // ========== التحكم في ظهور زر الإضافة للمدير azer فقط ==========
+    function checkAzerAdmin() {
         const currentUser = localStorage.getItem('nardo_current_user');
         const addReelBtn = document.getElementById('addReelBtn');
         if (!addReelBtn) return;
@@ -702,9 +602,9 @@
         if (currentUser) {
             try {
                 const user = JSON.parse(currentUser);
-                if (user.role === 'admin') {
+                if (user.email === 'azer' || user.username === 'azer' || user.name === 'azer') {
                     addReelBtn.style.display = 'inline-flex';
-                    console.log('👑 مرحباً أيها المدير، زر الإضافة ظاهر');
+                    console.log('👑 مرحباً أيها المدير azer، زر الإضافة ظاهر');
                 } else {
                     addReelBtn.style.display = 'none';
                 }
@@ -716,64 +616,42 @@
         }
     }
     
-    // إنشاء حساب مدير افتراضي
-    function createDefaultAdmin() {
+    // ========== إنشاء حساب المدير azer ==========
+    function createAzerAdmin() {
         let users = localStorage.getItem('nardo_users');
         users = users ? JSON.parse(users) : [];
         
-        if (!users.some(u => u.role === 'admin')) {
+        const azerExists = users.some(u => u.email === 'azer' || u.username === 'azer');
+        
+        if (!azerExists) {
             users.push({
                 id: Date.now(),
-                name: 'مدير النظام',
-                email: 'admin@nardo.com',
-                password: 'admin123',
+                name: 'المدير azer',
+                email: 'azer',
+                username: 'azer',
+                password: '123456',
                 role: 'admin',
                 phone: '0555555555',
                 createdAt: new Date().toISOString()
             });
             localStorage.setItem('nardo_users', JSON.stringify(users));
-            console.log('✅ تم إنشاء حساب مدير: admin@nardo.com / admin123');
+            console.log('✅ تم إنشاء حساب المدير azer');
+            console.log('🔑 للدخول: azer / 123456');
         }
     }
     
-    // عرض رسالة
-    function showToastMessage(message, type) {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-        const toast = document.createElement('div');
-        toast.className = `toast-message toast-${type}`;
-        toast.innerHTML = `${type === 'success' ? '✅' : '❌'} ${message}`;
-        container.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-    
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
-    // تهيئة الصفحة
+    // ========== تهيئة الصفحة ==========
     document.addEventListener('DOMContentLoaded', function() {
-        createDefaultAdmin();
-        checkAdminAndShowButton();
-        setTimeout(() => {
-            loadReelsFromDB();
-        }, 1000);
-    });
-    
-    // الاستماع للتحديثات
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'nardo_reels_updated') {
-            loadReelsFromDB();
-        }
-        if (e.key === 'nardo_current_user') {
-            checkAdminAndShowButton();
-        }
+        createAzerAdmin();
+        checkAzerAdmin();
+        loadAzerReels();
+        
+        // الاستماع للتحديثات
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'azer_reels_updated') {
+                loadAzerReels();
+            }
+        });
     });
     </script>
 </body>
