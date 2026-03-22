@@ -1,5 +1,3 @@
-ريلز كامل 10/10
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -334,6 +332,24 @@
         .action-btn-side.liked {
             background: #ff0066;
             border-color: #ff0066;
+        }
+
+        /* زر رفع خاص للمدير */
+        .admin-repost-btn {
+            background: linear-gradient(135deg, #ff0066, #cc0052);
+            border: 2px solid gold;
+        }
+
+        .admin-repost-btn i {
+            color: gold;
+        }
+
+        .admin-repost-btn:hover {
+            background: gold;
+        }
+
+        .admin-repost-btn:hover i {
+            color: #ff0066;
         }
 
         /* زر الرفع */
@@ -721,6 +737,7 @@
         let userLikes = {};
         let isLoading = false;
         let lastUpdateId = 0;
+        let currentVideoElement = null; // للتعامل مع الفيديو الحالي
 
         // ========== 3. تحميل المستخدمين ==========
         function loadUsers() {
@@ -752,7 +769,97 @@
             localStorage.setItem(`nardoo_likes_${userId}`, JSON.stringify(userLikes));
         }
 
-        // ========== 5. جلب جميع الريلز من قناة تليجرام (المصدر الرئيسي للجميع) ==========
+        // ========== 5. الحصول على الرقم التسلسلي التالي لمعرف azer ==========
+        function getNextAzerSerial() {
+            let lastSerial = localStorage.getItem('azer_last_serial');
+            if (!lastSerial) {
+                lastSerial = 0;
+            } else {
+                lastSerial = parseInt(lastSerial);
+            }
+            const nextSerial = lastSerial + 1;
+            localStorage.setItem('azer_last_serial', nextSerial.toString());
+            return nextSerial;
+        }
+
+        // ========== 6. إعادة إرسال الفيديو الحالي بقناة التلغرام مع معرف azer ==========
+        async function repostCurrentVideo() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                showNotification('❌ هذه الخاصية متاحة للمدير فقط', 'error');
+                return;
+            }
+
+            // الحصول على الفيديو الحالي المعروض
+            const slides = document.querySelectorAll('.reel-slide');
+            let currentSlide = null;
+            
+            for (let slide of slides) {
+                const rect = slide.getBoundingClientRect();
+                const isVisible = rect.top >= 0 && rect.top <= window.innerHeight * 0.7;
+                if (isVisible) {
+                    currentSlide = slide;
+                    break;
+                }
+            }
+
+            if (!currentSlide) {
+                showNotification('❌ لم يتم العثور على الريلز الحالي', 'error');
+                return;
+            }
+
+            const reelId = parseInt(currentSlide.dataset.reelId);
+            const reel = reelsCache.find(r => r.id === reelId);
+            
+            if (!reel) {
+                showNotification('❌ لم يتم العثور على بيانات الريلز', 'error');
+                return;
+            }
+
+            // جلب الفيديو الفعلي من الرابط
+            showLoadingOverlay(true, "🔄 جاري تحضير الفيديو لإعادة الإرسال...");
+            
+            try {
+                // تحميل الفيديو من الرابط
+                const response = await fetch(reel.videoUrl);
+                const blob = await response.blob();
+                const file = new File([blob], `reel_${reelId}.mp4`, { type: blob.type });
+                
+                const serial = getNextAzerSerial();
+                const azerId = `azer${serial}`;
+                
+                // إرسال الفيديو إلى القناة مع المعرف الجديد
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM.channelId);
+                formData.append('video', file);
+                formData.append('caption', `🎬 ${reel.title}\n👤 ${reel.publisher}\n🏷️ المعرف الخاص: ${azerId}\n🔄 تمت إعادة الإرسال بواسطة المدير\n📅 ${new Date().toLocaleString('ar-EG')}\n\n✅ تم الرفع عبر ناردو ريلز (إعادة إرسال)`);
+                
+                const uploadResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await uploadResponse.json();
+                
+                if (data.ok) {
+                    showNotification(`✅ تم إعادة إرسال الفيديو بنجاح! المعرف الخاص: ${azerId}`, 'success');
+                    
+                    // إعادة تحميل الريلز بعد 3 ثواني
+                    setTimeout(() => {
+                        loadReelsFromTelegram();
+                    }, 3000);
+                } else {
+                    throw new Error(data.description || 'فشل إعادة الإرسال');
+                }
+                
+            } catch (error) {
+                console.error('❌ خطأ في إعادة الإرسال:', error);
+                showNotification('❌ فشل إعادة الإرسال: ' + error.message, 'error');
+            } finally {
+                showLoadingOverlay(false);
+            }
+        }
+
+        // ========== 7. جلب جميع الريلز من قناة تليجرام (المصدر الرئيسي للجميع) ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
@@ -789,6 +896,11 @@
                             const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
                             if (publisherMatch) publisher = publisherMatch[1];
                             
+                            // استخراج المعرف الخاص azer إن وجد
+                            let specialId = null;
+                            const azerMatch = caption.match(/🏷️ المعرف الخاص: (azer\d+)/);
+                            if (azerMatch) specialId = azerMatch[1];
+                            
                             // الحصول على رابط الفيديو الدائم
                             const fileId = post.video.file_id;
                             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
@@ -806,7 +918,8 @@
                                     views: 0,
                                     likes: 0,
                                     createdAt: new Date(post.date * 1000).toISOString(),
-                                    telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${messageId}`
+                                    telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${messageId}`,
+                                    specialId: specialId
                                 });
                                 
                                 // تحديث آخر معرف تم معالجته
@@ -858,7 +971,7 @@
             }
         }
 
-        // ========== 6. عرض جميع الريلز (نفس المحتوى لجميع المستخدمين) ==========
+        // ========== 8. عرض جميع الريلز (نفس المحتوى لجميع المستخدمين) ==========
         function displayAllReels() {
             const container = document.getElementById('reelsPlayer');
             
@@ -884,11 +997,13 @@
                 const viewsText = formatNumber(reel.views || 0);
                 const likesText = formatNumber(reel.likes || 0);
                 const timeAgo = getTimeAgo(reel.createdAt);
+                const displayId = reel.specialId || `ID: ${reel.id}`;
+                const isAdmin = currentUser && currentUser.role === 'admin';
                 
                 return `
                     <div class="reel-slide" data-reel-id="${reel.id}">
                         <div class="reel-id-badge">
-                            <i class="fas fa-fingerprint"></i> ID: ${reel.id}
+                            <i class="fas fa-fingerprint"></i> ${displayId}
                         </div>
                         <div class="reel-video-container">
                             <video src="${reel.videoUrl}" preload="metadata" playsinline webkit-playsinline loop></video>
@@ -897,11 +1012,17 @@
                                     <i class="fas fa-heart"></i>
                                     <span>${likesText}</span>
                                 </div>
+                                ${isAdmin ? `
+                                <div class="action-btn-side admin-repost-btn" onclick="repostCurrentVideo()">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span>إعادة رفع</span>
+                                </div>
+                                ` : ''}
                                 <div class="action-btn-side" onclick="shareReel('${reel.videoUrl}', '${reel.title}', event)">
                                     <i class="fas fa-share-alt"></i>
                                     <span>مشاركة</span>
                                 </div>
-                                <div class="action-btn-side" onclick="copyReelId(${reel.id}, event)">
+                                <div class="action-btn-side" onclick="copyReelId('${reel.specialId || reel.id}', event)">
                                     <i class="fas fa-copy"></i>
                                     <span>نسخ ID</span>
                                 </div>
@@ -951,7 +1072,7 @@
             }, 150);
         }
 
-        // ========== 7. رفع ريلز جديد إلى تليجرام ==========
+        // ========== 9. رفع ريلز جديد إلى تليجرام ==========
         async function uploadReelToTelegram() {
             if (!selectedVideoFile) {
                 showNotification('❌ اختر فيديو أولاً', 'error');
@@ -1006,7 +1127,7 @@
             }
         }
 
-        // ========== 8. الإعجاب ==========
+        // ========== 10. الإعجاب ==========
         function likeReel(reelId, event) {
             event.stopPropagation();
             const reel = reelsCache.find(r => r.id === reelId);
@@ -1024,7 +1145,7 @@
             }
         }
 
-        // ========== 9. مشاركة الريلز ==========
+        // ========== 11. مشاركة الريلز ==========
         function shareReel(videoUrl, title, event) {
             event.stopPropagation();
             const shareText = `🎬 ${title}\n📹 ناردو ريلز\n🔗 ${videoUrl}`;
@@ -1044,9 +1165,9 @@
             }
         }
 
-        // ========== 10. نسخ معرف الريلز ==========
+        // ========== 12. نسخ معرف الريلز ==========
         function copyReelId(reelId, event) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             copyToClipboard(reelId.toString());
             showNotification(`📋 تم نسخ المعرف: ${reelId}`, 'success');
         }
@@ -1055,7 +1176,7 @@
             navigator.clipboard.writeText(text);
         }
 
-        // ========== 11. تحديث الإحصائيات ==========
+        // ========== 13. تحديث الإحصائيات ==========
         function updateStats() {
             const totalReels = reelsCache.length;
             const totalViews = reelsCache.reduce((sum, r) => sum + (r.views || 0), 0);
@@ -1067,7 +1188,7 @@
             if (viewsSpan) viewsSpan.innerText = formatNumber(totalViews);
         }
 
-        // ========== 12. دوال مساعدة ==========
+        // ========== 14. دوال مساعدة ==========
         function handleVideoSelect(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -1163,7 +1284,7 @@
             setTimeout(() => div.remove(), 3500);
         }
 
-        // ========== 13. تسجيل الدخول والخروج ==========
+        // ========== 15. تسجيل الدخول والخروج ==========
         function login() {
             const username = document.getElementById('loginUsername').value.trim();
             if (!username) {
@@ -1205,14 +1326,14 @@
             showNotification('👋 تم تسجيل الخروج', 'info');
         }
 
-        // ========== 14. التحديث التلقائي كل دقيقة ==========
+        // ========== 16. التحديث التلقائي كل دقيقة ==========
         setInterval(() => {
             if (currentUser) {
                 loadReelsFromTelegram();
             }
         }, 60000); // كل 60 ثانية
 
-        // ========== 15. تهيئة الصفحة ==========
+        // ========== 17. تهيئة الصفحة ==========
         loadUsers();
         
         const savedUser = localStorage.getItem('current_user');
@@ -1238,6 +1359,7 @@
         console.log('🎬 نظام ناردو ريلز الشامل جاهز');
         console.log('📹 جميع المستخدمين يرون نفس الريلز من قناة تليجرام');
         console.log('💾 تخزين دائم في تليجرام + عرض فوري');
+        console.log('👑 المدير لديه زر خاص لإعادة إرسال الفيديو الحالي مع معرف azer');
     </script>
 </body>
 </html>
