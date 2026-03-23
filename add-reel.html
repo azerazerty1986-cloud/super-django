@@ -464,12 +464,9 @@
         function saveReelToLocalStorage(reelData) {
             try {
                 let reelsList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
-                reelsList.unshift(reelData); // إضافة في البداية
-                // الاحتفاظ بآخر 50 ريلز فقط
+                reelsList.unshift(reelData);
                 if (reelsList.length > 50) reelsList = reelsList.slice(0, 50);
                 localStorage.setItem('nardo_reels_list', JSON.stringify(reelsList));
-                
-                // إرسال إشعار للتحديث
                 localStorage.setItem('nardo_reels_updated', Date.now().toString());
                 window.dispatchEvent(new StorageEvent('storage', {
                     key: 'nardo_reels_updated',
@@ -507,7 +504,6 @@
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', selectedVideoFile);
                 
-                // الكابشن مع @azerg والرقم التسلسلي NARD-
                 const caption = `🎬 ${title}\n\n👤 الناشر: ${publisherName}\n📅 ${new Date().toLocaleString('ar-EG')}\n🔢 الرقم التسلسلي: ${serialNumber}\n🔗 @${TELEGRAM.channelUsername}\n\n✅ تم الرفع عبر ناردو برو | طلبات ناردو`;
                 formData.append('caption', caption);
                 
@@ -527,36 +523,46 @@
                 
                 if (data.ok) {
                     const messageId = data.result.message_id;
-                    const videoUrl = URL.createObjectURL(selectedVideoFile);
-                    // حفظ في quick_reels للظهور الفوري
-let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
-quickReels.unshift({
-    id: messageId,
-    serialNumber: serialNumber,
-    title: title,
-    publisher: publisherName,
-    videoUrl: videoUrl,
-    timestamp: Date.now(),
-    hasAzerg: true
-});
-if (quickReels.length > 10) quickReels = quickReels.slice(0, 10);
-localStorage.setItem('quick_reels', JSON.stringify(quickReels));
-
-// إشعار فوري للصفحة الرئيسية
-localStorage.setItem('reels_just_uploaded', Date.now().toString());
-localStorage.setItem('nardo_reels_updated', Date.now().toString());
                     
-                    // حفظ بيانات الريلز للعرض في الشريط العلوي
+                    // الحصول على رابط دائم من تليجرام
+                    const fileId = data.result.video.file_id;
+                    const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                    const fileData = await fileRes.json();
+                    
+                    let permanentVideoUrl = URL.createObjectURL(selectedVideoFile);
+                    if (fileData.ok) {
+                        permanentVideoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                    }
+                    
+                    // حفظ في quick_reels للظهور الفوري
+                    let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+                    quickReels.unshift({
+                        id: messageId,
+                        serialNumber: serialNumber,
+                        title: title,
+                        publisher: publisherName,
+                        videoUrl: permanentVideoUrl,
+                        timestamp: Date.now(),
+                        hasAzerg: true
+                    });
+                    if (quickReels.length > 10) quickReels = quickReels.slice(0, 10);
+                    localStorage.setItem('quick_reels', JSON.stringify(quickReels));
+                    
+                    // إشعار فوري للصفحة الرئيسية
+                    localStorage.setItem('reels_just_uploaded', Date.now().toString());
+                    localStorage.setItem('nardo_reels_updated', Date.now().toString());
+                    
+                    // حفظ بيانات الريلز
                     const reelData = {
                         id: messageId,
                         serialNumber: serialNumber,
                         title: title,
                         publisher: publisherName,
-                        videoUrl: videoUrl,
+                        videoUrl: permanentVideoUrl,
                         posterUrl: posterData || null,
                         timestamp: Date.now(),
                         channelUsername: TELEGRAM.channelUsername,
-                        hasAzerg: true // شرط العرض في الشريط العلوي
+                        hasAzerg: true
                     };
                     
                     saveReelToLocalStorage(reelData);
@@ -591,7 +597,7 @@ localStorage.setItem('nardo_reels_updated', Date.now().toString());
                         <div style="margin-top: 8px;"><i class="fas fa-fingerprint"></i> <strong>${serialNumber}</strong></div>
                     </div>
                     <p style="color: #10b981; font-size: 0.9rem;">
-                        ✨ سيظهر الريلز في شريط القصص العلوي ✨
+                        ✨ سيظهر الريلز فوراً في الصفحة الرئيسية ✨
                     </p>
                     <div class="confirm-buttons">
                         <button class="confirm-btn confirm-yes" onclick="redirectToHome()">
