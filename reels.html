@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو ريلز | تخزين تليجرام + عرض موحد</title>
+    <title>ناردو ريلز | عرض ومشاركة الريلز</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -652,7 +652,7 @@
     <!-- ========== مشغل الريلز ========== -->
     <div id="reelsPlayer" class="reels-player" style="display: none;"></div>
 
-    <!-- ========== زر رفع ريلز (نافذة منبثقة فقط) ========== -->
+    <!-- ========== زر رفع ريلز ========== -->
     <div id="fabButtons" style="display: none;">
         <div class="upload-fab" onclick="openUploadModal()">
             <i class="fas fa-plus"></i>
@@ -707,7 +707,6 @@
         let selectedVideoFile = null;
         let userLikes = {};
         let isLoading = false;
-        let lastUpdateId = 0;
 
         // ========== 3. تحميل المستخدمين ==========
         function loadUsers() {
@@ -736,7 +735,42 @@
             localStorage.setItem(`nardoo_likes_${userId}`, JSON.stringify(userLikes));
         }
 
-        // ========== 5. جلب جميع الريلز من تليجرام ==========
+        // ========== 5. دمج الريلز من جميع المصادر ==========
+        function mergeAllReels() {
+            let merged = [...reelsCache];
+            
+            // إضافة من quick_reels
+            const quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+            for (const quick of quickReels) {
+                if (!merged.find(r => r.id === quick.id)) {
+                    merged.unshift(quick);
+                }
+            }
+            
+            // إضافة من nardo_reels_list
+            const nardoList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+            for (const reel of nardoList) {
+                if (!merged.find(r => r.id === reel.id)) {
+                    merged.unshift(reel);
+                }
+            }
+            
+            // إزالة التكرارات
+            const uniqueMap = new Map();
+            for (const reel of merged) {
+                if (!uniqueMap.has(reel.id)) {
+                    uniqueMap.set(reel.id, reel);
+                }
+            }
+            merged = Array.from(uniqueMap.values());
+            
+            // ترتيب حسب التاريخ
+            merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            
+            return merged;
+        }
+
+        // ========== 6. جلب جميع الريلز من تليجرام ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
@@ -769,6 +803,8 @@
                             const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
                             if (publisherMatch) publisher = publisherMatch[1];
                             
+                            const hasAzerg = caption.includes('@azerg') || caption.includes('azerg');
+                            
                             const fileId = post.video.file_id;
                             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                             const fileData = await fileRes.json();
@@ -782,9 +818,11 @@
                                     title: title,
                                     videoUrl: videoUrl,
                                     publisher: publisher,
+                                    hasAzerg: hasAzerg,
                                     views: 0,
                                     likes: 0,
-                                    createdAt: new Date(post.date * 1000).toISOString()
+                                    createdAt: new Date(post.date * 1000).toISOString(),
+                                    timestamp: post.date * 1000
                                 });
                             }
                         }
@@ -826,11 +864,14 @@
             }
         }
 
-        // ========== 6. عرض جميع الريلز ==========
+        // ========== 7. عرض جميع الريلز ==========
         function displayAllReels() {
             const container = document.getElementById('reelsPlayer');
             
-            if (!reelsCache || reelsCache.length === 0) {
+            // دمج جميع المصادر
+            const allReels = mergeAllReels();
+            
+            if (!allReels || allReels.length === 0) {
                 container.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; text-align: center; padding: 30px;">
                         <i class="fas fa-film" style="font-size: 90px; color: gold; opacity: 0.6; margin-bottom: 25px;"></i>
@@ -844,12 +885,12 @@
                 return;
             }
             
-            const sorted = [...reelsCache].reverse();
-            
-            container.innerHTML = sorted.map(reel => {
+            container.innerHTML = allReels.map(reel => {
                 const isLiked = userLikes[reel.id] === true;
                 const likesText = formatNumber(reel.likes || 0);
                 const timeAgo = getTimeAgo(reel.createdAt);
+                let videoSrc = reel.videoUrl || '';
+                const isValidUrl = videoSrc && !videoSrc.startsWith('blob:') && videoSrc !== 'null' && videoSrc !== '';
                 
                 return `
                     <div class="reel-slide" data-reel-id="${reel.id}">
@@ -857,13 +898,26 @@
                             <i class="fas fa-fingerprint"></i> ID: ${reel.id}
                         </div>
                         <div class="reel-video-container">
-                            <video src="${reel.videoUrl}" preload="metadata" playsinline webkit-playsinline loop></video>
+                            ${isValidUrl ? `
+                                <video src="${videoSrc}" preload="metadata" playsinline webkit-playsinline loop
+                                       onerror="this.style.display='none'; this.parentElement.querySelector('.video-fallback').style.display='flex';">
+                                </video>
+                                <div class="video-fallback" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298);">
+                                    <i class="fas fa-video-slash" style="font-size: 3rem; color: gold; margin-bottom: 15px;"></i>
+                                    <span style="color: white;">فيديو قيد المعالجة</span>
+                                </div>
+                            ` : `
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298);">
+                                    <i class="fas fa-spinner fa-pulse" style="font-size: 3rem; color: gold; margin-bottom: 15px;"></i>
+                                    <span style="color: white;">جاري التحميل...</span>
+                                </div>
+                            `}
                             <div class="action-sidebar">
                                 <div class="action-btn-side ${isLiked ? 'liked' : ''}" onclick="likeReel(${reel.id}, event)">
                                     <i class="fas fa-heart"></i>
                                     <span>${likesText}</span>
                                 </div>
-                                <div class="action-btn-side" onclick="shareReel('${reel.videoUrl}', '${reel.title}', event)">
+                                <div class="action-btn-side" onclick="shareReel('${reel.videoUrl}', '${escapeHtml(reel.title)}', event)">
                                     <i class="fas fa-share-alt"></i>
                                     <span>مشاركة</span>
                                 </div>
@@ -880,6 +934,7 @@
                                     <div class="reel-publisher">
                                         <i class="fas fa-user-circle"></i> ${escapeHtml(reel.publisher)}
                                         <span style="font-size: 11px; color: #888;"><i class="far fa-clock"></i> ${timeAgo}</span>
+                                        ${reel.hasAzerg ? '<span style="color: #10b981; margin-right: 10px;"><i class="fas fa-check-circle"></i> معتمد</span>' : ''}
                                     </div>
                                     <div class="reel-stats">
                                         <span><i class="fas fa-heart"></i> ${likesText}</span>
@@ -897,9 +952,9 @@
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         const video = entry.target.querySelector('video');
-                        if (entry.isIntersecting) {
+                        if (video && entry.isIntersecting) {
                             video.play().catch(e => console.log);
-                        } else {
+                        } else if (video) {
                             video.pause();
                         }
                     });
@@ -908,7 +963,7 @@
             }, 150);
         }
 
-        // ========== 7. رفع ريلز إلى تليجرام ==========
+        // ========== 8. رفع ريلز إلى تليجرام ==========
         async function uploadReelToTelegram() {
             if (!selectedVideoFile) {
                 showNotification('❌ اختر فيديو أولاً', 'error');
@@ -928,7 +983,7 @@
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', selectedVideoFile);
-                formData.append('caption', `🎬 ${title}\n👤 ${currentUser.name}\n📅 ${new Date().toLocaleString('ar-EG')}\n\n✅ تم الرفع عبر ناردو ريلز`);
+                formData.append('caption', `🎬 ${title}\n👤 ${currentUser.name}\n📅 ${new Date().toLocaleString('ar-EG')}\n🔗 @azerg\n\n✅ تم الرفع عبر ناردو ريلز`);
                 
                 const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, {
                     method: 'POST',
@@ -938,10 +993,41 @@
                 const data = await response.json();
                 
                 if (data.ok) {
+                    const messageId = data.result.message_id;
+                    
+                    // الحصول على رابط دائم
+                    const fileId = data.result.video.file_id;
+                    const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                    const fileData = await fileRes.json();
+                    
+                    let permanentVideoUrl = URL.createObjectURL(selectedVideoFile);
+                    if (fileData.ok) {
+                        permanentVideoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                    }
+                    
+                    // حفظ في quick_reels للظهور الفوري
+                    let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+                    quickReels.unshift({
+                        id: messageId,
+                        title: title,
+                        publisher: currentUser.name,
+                        videoUrl: permanentVideoUrl,
+                        timestamp: Date.now(),
+                        hasAzerg: true,
+                        views: 0,
+                        likes: 0
+                    });
+                    if (quickReels.length > 10) quickReels = quickReels.slice(0, 10);
+                    localStorage.setItem('quick_reels', JSON.stringify(quickReels));
+                    
+                    // إشعار فوري
+                    localStorage.setItem('reels_just_uploaded', Date.now().toString());
+                    localStorage.setItem('nardo_reels_updated', Date.now().toString());
+                    
                     showNotification(`✅ تم الرفع بنجاح!`, 'success');
                     setTimeout(() => {
                         loadReelsFromTelegram();
-                    }, 3000);
+                    }, 2000);
                     closeUploadModal();
                     removeSelectedVideo();
                 } else {
@@ -957,10 +1043,11 @@
             }
         }
 
-        // ========== 8. الإعجاب ==========
+        // ========== 9. الإعجاب ==========
         function likeReel(reelId, event) {
             event.stopPropagation();
-            const reel = reelsCache.find(r => r.id === reelId);
+            const allReels = mergeAllReels();
+            const reel = allReels.find(r => r.id === reelId);
             if (reel) {
                 if (userLikes[reelId]) {
                     reel.likes = Math.max(0, (reel.likes || 0) - 1);
@@ -975,7 +1062,7 @@
             }
         }
 
-        // ========== 9. مشاركة ==========
+        // ========== 10. مشاركة ==========
         function shareReel(videoUrl, title, event) {
             event.stopPropagation();
             const shareText = `🎬 ${title}\n📹 ناردو ريلز\n🔗 ${videoUrl}`;
@@ -1006,8 +1093,9 @@
         }
 
         function updateStats() {
-            const totalReels = reelsCache.length;
-            const totalViews = reelsCache.reduce((sum, r) => sum + (r.views || 0), 0);
+            const allReels = mergeAllReels();
+            const totalReels = allReels.length;
+            const totalViews = allReels.reduce((sum, r) => sum + (r.views || 0), 0);
             
             const countSpan = document.getElementById('totalReelsCount');
             const viewsSpan = document.getElementById('totalViewsCount');
@@ -1153,12 +1241,33 @@
             showNotification('👋 تم تسجيل الخروج', 'info');
         }
 
-        // تحديث تلقائي كل دقيقة
+        // تنظيف الريلز القديمة
+        function cleanOldQuickReels() {
+            const oneHourAgo = Date.now() - (60 * 60 * 1000);
+            let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+            const filtered = quickReels.filter(reel => (reel.timestamp || 0) > oneHourAgo);
+            if (filtered.length !== quickReels.length) {
+                localStorage.setItem('quick_reels', JSON.stringify(filtered));
+            }
+        }
+
+        // تحديث تلقائي
         setInterval(() => {
-            if (currentUser) {
+            if (currentUser && document.visibilityState === 'visible') {
                 loadReelsFromTelegram();
             }
         }, 60000);
+        
+        setInterval(cleanOldQuickReels, 60 * 60 * 1000);
+        
+        // الاستماع لتحديثات الريلز
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'nardo_reels_updated' || e.key === 'reels_just_uploaded') {
+                if (currentUser) {
+                    setTimeout(() => loadReelsFromTelegram(), 1000);
+                }
+            }
+        });
 
         // تهيئة
         loadUsers();
