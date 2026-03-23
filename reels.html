@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -25,7 +24,6 @@
             color: white;
         }
         
-        /* رأس الصفحة */
         .reels-header {
             background: linear-gradient(135deg, #ffd700, #ffb347);
             padding: 20px;
@@ -58,7 +56,6 @@
             font-family: 'Cairo', sans-serif;
         }
         
-        /* شبكة الريلز */
         .reels-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -81,7 +78,6 @@
         .reel-card:hover {
             transform: translateY(-5px);
             border-color: #ffd700;
-            box-shadow: 0 10px 30px rgba(255,215,0,0.2);
         }
         
         .reel-video-wrapper {
@@ -138,7 +134,6 @@
             font-size: 0.7rem;
         }
         
-        /* حالة التحميل */
         .loading-state, .empty-state {
             text-align: center;
             padding: 80px 20px;
@@ -158,7 +153,6 @@
             to { transform: rotate(360deg); }
         }
         
-        /* نافذة عرض الريلز */
         .reel-modal {
             position: fixed;
             top: 0;
@@ -170,7 +164,6 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            animation: fadeIn 0.3s ease;
         }
         
         .reel-modal-content {
@@ -192,7 +185,6 @@
             border-radius: 50%;
             color: white;
             cursor: pointer;
-            font-size: 1.2rem;
         }
         
         .reel-modal-video video {
@@ -205,9 +197,36 @@
             background: linear-gradient(to top, #000, transparent);
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .navigation-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .nav-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffd700, #ffb347);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-btn i {
+            font-size: 1.2rem;
+            color: #1a1a2e;
+        }
+        
+        .nav-btn:hover {
+            transform: scale(1.1);
         }
         
         @media (max-width: 768px) {
@@ -218,6 +237,10 @@
             }
             .reel-video-wrapper {
                 height: 200px;
+            }
+            .navigation-buttons {
+                right: 15px;
+                bottom: 15px;
             }
         }
     </style>
@@ -239,8 +262,16 @@
         </div>
     </div>
     
+    <div class="navigation-buttons">
+        <button class="nav-btn up-btn" onclick="scrollToTop()" title="الأعلى">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button class="nav-btn down-btn" onclick="scrollToBottom()" title="الأسفل">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+    </div>
+    
     <script>
-        // ========== إعدادات تليجرام ==========
         const TELEGRAM = {
             botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
             channelId: '-1003822964890',
@@ -249,7 +280,6 @@
         
         let allReels = [];
         
-        // ========== جلب الريلز ==========
         async function fetchAllReels() {
             const container = document.getElementById('reelsContainer');
             
@@ -270,7 +300,6 @@
                     const caption = post.caption || '';
                     const messageId = post.message_id;
                     
-                    // استخراج البيانات
                     let title = '🎬 ريلز';
                     const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
                     if (titleMatch) title = titleMatch[1];
@@ -286,7 +315,6 @@
                     const hasAzerg = caption.includes('@azerg');
                     const isVerified = (hasAzerg && serialNumber && serialNumber.startsWith('NARD-'));
                     
-                    // رابط الفيديو
                     const fileId = post.video.file_id;
                     const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                     const fileData = await fileRes.json();
@@ -321,7 +349,6 @@
             }
         }
         
-        // ========== عرض الريلز ==========
         function displayReels() {
             const container = document.getElementById('reelsContainer');
             
@@ -354,7 +381,6 @@
             `).join('');
         }
         
-        // ========== فتح الريلز ==========
         function openReel(reelId) {
             const reel = allReels.find(r => r.id === reelId);
             if (!reel) return;
@@ -384,7 +410,30 @@
             });
         }
         
-        // ========== دوال مساعدة ==========
+        function refreshVideoUrls() {
+            document.querySelectorAll('.reel-card video').forEach(video => {
+                const card = video.closest('.reel-card');
+                if (card && card.getAttribute('onclick')) {
+                    const reelId = parseInt(card.getAttribute('onclick').match(/\d+/)?.[0]);
+                    if (reelId) {
+                        const reel = allReels.find(r => r.id === reelId);
+                        if (reel && reel.videoUrl && video.src !== reel.videoUrl) {
+                            video.src = reel.videoUrl;
+                            video.load();
+                        }
+                    }
+                }
+            });
+        }
+        
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function scrollToBottom() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+        
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -406,21 +455,13 @@
             return date.toLocaleDateString('ar-EG');
         }
         
-        // ========== تحديث تلقائي ==========
-        let refreshInterval;
-        
-        function startAutoRefresh() {
-            if (refreshInterval) clearInterval(refreshInterval);
-            refreshInterval = setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    fetchAllReels();
-                }
-            }, 60000);
-        }
-        
-        // ========== بدء التحميل ==========
         fetchAllReels();
-        startAutoRefresh();
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetchAllReels();
+            }
+        }, 60000);
+        setInterval(refreshVideoUrls, 180000);
     </script>
 </body>
 </html>
