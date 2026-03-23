@@ -1020,4 +1020,96 @@
         });
     </script>
 </body>
+<script>
+// ========== حل سريع لظهور الريلز فوراً ==========
+(function() {
+    console.log('🔥 تفعيل حل ظهور الريلز السريع...');
+    
+    // 1. عرض الريلز المحلية فوراً إن وجدت
+    function showLocalReels() {
+        const quickReels = localStorage.getItem('quick_reels');
+        if (quickReels) {
+            const reels = JSON.parse(quickReels);
+            if (reels.length > 0 && document.getElementById('reelsVideoContainer')) {
+                const container = document.getElementById('reelsVideoContainer');
+                const emptyState = container.querySelector('.reels-empty-state');
+                if (emptyState || reels.length > 0) {
+                    container.innerHTML = reels.slice(0, 10).map(reel => `
+                        <div class="reel-item" onclick="openReelDetail && openReelDetail(${reel.id})">
+                            <div class="reel-video-wrapper">
+                                <video src="${reel.videoUrl}" preload="metadata" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"></video>
+                                <div class="reel-play-icon"><i class="fas fa-play-circle"></i></div>
+                                <div class="reel-overlay-info">
+                                    <div class="reel-title-preview">
+                                        <h4>${escapeHtmlSafe(reel.title)}</h4>
+                                        <span><i class="fas fa-user"></i> ${escapeHtmlSafe(reel.publisher)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="reel-stats-preview">
+                                <span><i class="fas fa-clock"></i> جديد</span>
+                                <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    console.log('✅ تم عرض', reels.length, 'ريلز محلية');
+                }
+            }
+        }
+    }
+    
+    function escapeHtmlSafe(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    // 2. الاستماع لتحديثات الريلز من صفحة الإضافة
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'reels_just_uploaded' || e.key === 'nardo_reels_updated') {
+            console.log('🔄 تم اكتشاف ريلز جديد!');
+            // مسح الكاش وإعادة التحميل
+            localStorage.removeItem('nardo_reels_list');
+            setTimeout(function() {
+                if (typeof fetchReelsFromTelegram === 'function') {
+                    fetchReelsFromTelegram();
+                } else if (typeof loadReelsFromTelegram === 'function') {
+                    loadReelsFromTelegram();
+                } else {
+                    location.reload();
+                }
+            }, 1000);
+        }
+    });
+    
+    // 3. التحقق من وجود ريلز مرفوع حديثاً عند التحميل
+    if (localStorage.getItem('reels_just_uploaded')) {
+        console.log('📹 يوجد ريلز جديد، جاري التحديث...');
+        localStorage.removeItem('reels_just_uploaded');
+        setTimeout(function() {
+            if (typeof fetchReelsFromTelegram === 'function') {
+                fetchReelsFromTelegram();
+            } else if (typeof loadReelsFromTelegram === 'function') {
+                loadReelsFromTelegram();
+            }
+        }, 500);
+    }
+    
+    // 4. عرض الريلز المحلية فوراً
+    setTimeout(showLocalReels, 100);
+    
+    // 5. تحديث تلقائي كل 30 ثانية
+    setInterval(function() {
+        if (document.visibilityState === 'visible' && (typeof fetchReelsFromTelegram === 'function' || typeof loadReelsFromTelegram === 'function')) {
+            console.log('🔄 تحديث تلقائي...');
+            if (typeof fetchReelsFromTelegram === 'function') fetchReelsFromTelegram();
+            else if (typeof loadReelsFromTelegram === 'function') loadReelsFromTelegram();
+        }
+    }, 30000);
+})();
+</script>    
 </html>
