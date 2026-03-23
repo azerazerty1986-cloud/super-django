@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو ريلز | عرض ومشاركة الريلز</title>
+    <title>ناردو ريلز | إعجابات - تعليقات - مشاركة</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -261,6 +261,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            cursor: pointer;
         }
 
         .reel-id-badge {
@@ -493,6 +494,140 @@
             cursor: not-allowed;
         }
 
+        /* نافذة التعليقات */
+        .comments-modal {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            z-index: 10001;
+            max-height: 70vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+            border-top: 3px solid gold;
+        }
+
+        .comments-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+            position: sticky;
+            top: 0;
+            background: #1a1a2e;
+            border-radius: 30px 30px 0 0;
+        }
+
+        .comments-header h3 {
+            color: gold;
+            font-size: 20px;
+        }
+
+        .comments-list {
+            padding: 15px;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+
+        .comment-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .comment-avatar {
+            width: 40px;
+            height: 40px;
+            background: gold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: black;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .comment-content {
+            flex: 1;
+        }
+
+        .comment-name {
+            font-weight: bold;
+            color: gold;
+            font-size: 14px;
+        }
+
+        .comment-text {
+            font-size: 14px;
+            margin-top: 5px;
+            word-break: break-word;
+        }
+
+        .comment-time {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        .comment-input-area {
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid rgba(255,215,0,0.3);
+            background: #1a1a2e;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid gold;
+            border-radius: 50px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .comment-input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .comment-send-btn {
+            background: gold;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            color: black;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .comment-send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .close-comments {
+            position: absolute;
+            left: 20px;
+            top: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
         .notification {
             position: fixed;
             bottom: 100px;
@@ -594,12 +729,6 @@
                 bottom: 20px;
                 left: 15px;
             }
-            .reel-id-badge {
-                font-size: 9px;
-                top: 12px;
-                left: 12px;
-                padding: 4px 10px;
-            }
         }
     </style>
 </head>
@@ -610,14 +739,11 @@
         <div class="login-box">
             <i class="fas fa-film" style="font-size: 65px; color: gold; margin-bottom: 20px;"></i>
             <h2>🎬 ناردو ريلز</h2>
-            <p>منصة لعرض ومشاركة الريلز مع تخزين دائم في تليجرام</p>
+            <p>إعجابات - تعليقات - مشاركة - تخزين في تلجرام</p>
             <input type="text" id="loginUsername" placeholder="اسم المستخدم" autocomplete="off">
             <button class="login-btn" onclick="login()">
                 <i class="fas fa-sign-in-alt"></i> دخول
             </button>
-            <div style="margin-top: 20px; font-size: 12px; color: #aaa;">
-                <i class="fas fa-info-circle"></i> أدخل أي اسم للدخول كمستخدم
-            </div>
         </div>
     </div>
 
@@ -659,33 +785,43 @@
         </div>
     </div>
 
-    <!-- ========== نافذة رفع ريلز المنبثقة ========== -->
+    <!-- ========== نافذة التعليقات ========== -->
+    <div class="comments-modal" id="commentsModal">
+        <div class="comments-header">
+            <button class="close-comments" onclick="closeCommentsModal()">✕</button>
+            <h3><i class="fas fa-comments"></i> التعليقات</h3>
+        </div>
+        <div class="comments-list" id="commentsList">
+            <div style="text-align: center; padding: 30px; color: #aaa;">لا توجد تعليقات بعد</div>
+        </div>
+        <div class="comment-input-area">
+            <input type="text" class="comment-input" id="commentInput" placeholder="اكتب تعليقاً...">
+            <button class="comment-send-btn" onclick="addComment()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== نافذة رفع ريلز ========== -->
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <button class="close-modal" onclick="closeUploadModal()">&times;</button>
             <h2 style="color: gold; text-align: center; margin-bottom: 10px;">
                 <i class="fas fa-upload"></i> رفع ريلز جديد
             </h2>
-            <p style="text-align: center; font-size: 13px; color: #aaa;">
-                سيتم التخزين الدائم في تليجرام وسيظهر لجميع المستخدمين
-            </p>
-            
             <div class="upload-area" onclick="document.getElementById('videoInput').click()">
                 <i class="fas fa-cloud-upload-alt"></i>
                 <h3>اضغط لرفع فيديو</h3>
                 <p>MP4, MOV - الحد الأقصى 50MB</p>
             </div>
             <input type="file" id="videoInput" accept="video/*" style="display: none;" onchange="handleVideoSelect(this)">
-            
             <div class="video-preview" id="videoPreviewDiv">
                 <video id="previewVideo" controls></video>
                 <button onclick="removeSelectedVideo()" style="margin-top: 12px; background: rgba(244,67,54,0.7); border: none; padding: 8px 20px; border-radius: 30px; color: white; cursor: pointer; width: 100%;">
                     <i class="fas fa-trash"></i> إزالة الفيديو
                 </button>
             </div>
-            
             <input type="text" class="form-control" id="reelTitleInput" placeholder="عنوان الريلز" value="ريلز رائع">
-            
             <button class="send-btn" id="uploadBtn" onclick="uploadReelToTelegram()">
                 <i class="fab fa-telegram"></i> رفع وتخزين دائم
             </button>
@@ -693,22 +829,24 @@
     </div>
 
     <script>
-        // ========== 1. إعدادات تليجرام ==========
+        // ========== إعدادات تليجرام ==========
         const TELEGRAM = {
             botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
             channelId: '-1003822964890',
             apiUrl: 'https://api.telegram.org/bot'
         };
 
-        // ========== 2. المتغيرات العامة ==========
+        // ========== المتغيرات العامة ==========
         let reelsCache = [];
         let users = [];
         let currentUser = null;
         let selectedVideoFile = null;
         let userLikes = {};
+        let userComments = {}; // { reelId: [comments] }
         let isLoading = false;
+        let currentReelForComments = null;
 
-        // ========== 3. تحميل المستخدمين ==========
+        // ========== تحميل البيانات ==========
         function loadUsers() {
             const saved = localStorage.getItem('nardoo_users');
             if (saved) {
@@ -719,7 +857,6 @@
             }
         }
 
-        // ========== 4. تحميل الإعجابات ==========
         function loadLikes() {
             const userId = currentUser?.id || 'guest';
             const saved = localStorage.getItem(`nardoo_likes_${userId}`);
@@ -735,27 +872,33 @@
             localStorage.setItem(`nardoo_likes_${userId}`, JSON.stringify(userLikes));
         }
 
-        // ========== 5. دمج الريلز من جميع المصادر ==========
+        function loadComments() {
+            const saved = localStorage.getItem('nardoo_comments');
+            if (saved) {
+                userComments = JSON.parse(saved);
+            } else {
+                userComments = {};
+            }
+        }
+
+        function saveComments() {
+            localStorage.setItem('nardoo_comments', JSON.stringify(userComments));
+        }
+
         function mergeAllReels() {
             let merged = [...reelsCache];
-            
-            // إضافة من quick_reels
             const quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
             for (const quick of quickReels) {
                 if (!merged.find(r => r.id === quick.id)) {
                     merged.unshift(quick);
                 }
             }
-            
-            // إضافة من nardo_reels_list
             const nardoList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
             for (const reel of nardoList) {
                 if (!merged.find(r => r.id === reel.id)) {
                     merged.unshift(reel);
                 }
             }
-            
-            // إزالة التكرارات
             const uniqueMap = new Map();
             for (const reel of merged) {
                 if (!uniqueMap.has(reel.id)) {
@@ -763,55 +906,39 @@
                 }
             }
             merged = Array.from(uniqueMap.values());
-            
-            // ترتيب حسب التاريخ
             merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-            
             return merged;
         }
 
-        // ========== 6. جلب جميع الريلز من تليجرام ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
-            
-            showLoadingOverlay(true, "🔄 جاري تحميل الريلز من تليجرام...");
-            
+            showLoadingOverlay(true, "🔄 جاري تحميل الريلز...");
             try {
                 const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
                 const response = await fetch(url);
                 const data = await response.json();
-                
                 const reels = [];
-                
                 if (data.ok && data.result) {
                     const updates = [...data.result].reverse();
-                    
                     for (const update of updates) {
                         const post = update.channel_post || update.message;
                         if (!post) continue;
-                        
                         if (post.video) {
                             const messageId = post.message_id;
                             const caption = post.caption || '';
-                            
                             let title = '🎬 ريلز';
                             const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
                             if (titleMatch) title = titleMatch[1];
-                            
                             let publisher = 'مستخدم';
                             const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
                             if (publisherMatch) publisher = publisherMatch[1];
-                            
                             const hasAzerg = caption.includes('@azerg') || caption.includes('azerg');
-                            
                             const fileId = post.video.file_id;
                             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                             const fileData = await fileRes.json();
-                            
                             if (fileData.ok) {
                                 const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                                
                                 reels.push({
                                     id: messageId,
                                     telegramId: messageId,
@@ -820,7 +947,7 @@
                                     publisher: publisher,
                                     hasAzerg: hasAzerg,
                                     views: 0,
-                                    likes: 0,
+                                    likes: userLikes[messageId] ? (reelsCache.find(r => r.id === messageId)?.likes || 0) : 0,
                                     createdAt: new Date(post.date * 1000).toISOString(),
                                     timestamp: post.date * 1000
                                 });
@@ -828,7 +955,6 @@
                         }
                     }
                 }
-                
                 if (reels.length > 0) {
                     reelsCache = reels;
                     localStorage.setItem('nardoo_reels_cache', JSON.stringify(reels));
@@ -838,15 +964,10 @@
                     if (cached && JSON.parse(cached).length > 0) {
                         reelsCache = JSON.parse(cached);
                         showNotification(`📦 عرض ${reelsCache.length} ريلز من الذاكرة`, 'info');
-                    } else {
-                        reelsCache = [];
-                        showNotification('📹 لا توجد ريلز، قم برفع أول ريلز', 'info');
                     }
                 }
-                
                 displayAllReels();
                 updateStats();
-                
             } catch (error) {
                 console.error('❌ خطأ:', error);
                 const cached = localStorage.getItem('nardoo_reels_cache');
@@ -855,8 +976,6 @@
                     displayAllReels();
                     updateStats();
                     showNotification('⚠️ فشل الاتصال، تم عرض الريلز المخزنة', 'warning');
-                } else {
-                    showNotification('❌ فشل الاتصال بتليجرام', 'error');
                 }
             } finally {
                 isLoading = false;
@@ -864,81 +983,51 @@
             }
         }
 
-        // ========== 7. عرض جميع الريلز ==========
         function displayAllReels() {
             const container = document.getElementById('reelsPlayer');
-            
-            // دمج جميع المصادر
             const allReels = mergeAllReels();
-            
             if (!allReels || allReels.length === 0) {
-                container.innerHTML = `
-                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; text-align: center; padding: 30px;">
-                        <i class="fas fa-film" style="font-size: 90px; color: gold; opacity: 0.6; margin-bottom: 25px;"></i>
-                        <h2 style="color: gold; margin-bottom: 15px;">لا توجد ريلز</h2>
-                        <p style="color: #aaa; margin-bottom: 25px;">كن أول من يرفع ريلز وسيظهر للجميع!</p>
-                        <button class="action-btn" onclick="openUploadModal()" style="padding: 12px 30px; font-size: 16px;">
-                            <i class="fas fa-plus"></i> رفع أول ريلز
-                        </button>
-                    </div>
-                `;
+                container.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; text-align: center;">
+                    <i class="fas fa-film" style="font-size: 90px; color: gold; margin-bottom: 25px;"></i>
+                    <h2 style="color: gold;">لا توجد ريلز</h2>
+                    <button class="action-btn" onclick="openUploadModal()" style="margin-top: 20px;">➕ رفع أول ريلز</button>
+                </div>`;
                 return;
             }
-            
             container.innerHTML = allReels.map(reel => {
                 const isLiked = userLikes[reel.id] === true;
-                const likesText = formatNumber(reel.likes || 0);
-                const timeAgo = getTimeAgo(reel.createdAt);
-                let videoSrc = reel.videoUrl || '';
-                const isValidUrl = videoSrc && !videoSrc.startsWith('blob:') && videoSrc !== 'null' && videoSrc !== '';
-                
+                const likesCount = (reel.likes || 0) + (isLiked && !reel.likes ? 1 : 0);
+                const commentsCount = (userComments[reel.id] || []).length;
                 return `
                     <div class="reel-slide" data-reel-id="${reel.id}">
-                        <div class="reel-id-badge">
-                            <i class="fas fa-fingerprint"></i> ID: ${reel.id}
-                        </div>
+                        <div class="reel-id-badge">ID: ${reel.id}</div>
                         <div class="reel-video-container">
-                            ${isValidUrl ? `
-                                <video src="${videoSrc}" preload="metadata" playsinline webkit-playsinline loop
-                                       onerror="this.style.display='none'; this.parentElement.querySelector('.video-fallback').style.display='flex';">
-                                </video>
-                                <div class="video-fallback" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298);">
-                                    <i class="fas fa-video-slash" style="font-size: 3rem; color: gold; margin-bottom: 15px;"></i>
-                                    <span style="color: white;">فيديو قيد المعالجة</span>
-                                </div>
-                            ` : `
-                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298);">
-                                    <i class="fas fa-spinner fa-pulse" style="font-size: 3rem; color: gold; margin-bottom: 15px;"></i>
-                                    <span style="color: white;">جاري التحميل...</span>
-                                </div>
-                            `}
+                            <video src="${reel.videoUrl}" preload="metadata" playsinline webkit-playsinline loop></video>
                             <div class="action-sidebar">
                                 <div class="action-btn-side ${isLiked ? 'liked' : ''}" onclick="likeReel(${reel.id}, event)">
                                     <i class="fas fa-heart"></i>
-                                    <span>${likesText}</span>
+                                    <span id="likes-${reel.id}">${formatNumber(likesCount)}</span>
+                                </div>
+                                <div class="action-btn-side" onclick="openCommentsModal(${reel.id}, event)">
+                                    <i class="fas fa-comment"></i>
+                                    <span>${formatNumber(commentsCount)}</span>
                                 </div>
                                 <div class="action-btn-side" onclick="shareReel('${reel.videoUrl}', '${escapeHtml(reel.title)}', event)">
                                     <i class="fas fa-share-alt"></i>
                                     <span>مشاركة</span>
                                 </div>
-                                <div class="action-btn-side" onclick="copyReelId(${reel.id}, event)">
-                                    <i class="fas fa-copy"></i>
-                                    <span>نسخ ID</span>
-                                </div>
                             </div>
                             <div class="reel-overlay">
                                 <div class="reel-info">
-                                    <div class="reel-title">
-                                        <i class="fas fa-play-circle" style="color: gold;"></i> ${escapeHtml(reel.title)}
-                                    </div>
+                                    <div class="reel-title">🎬 ${escapeHtml(reel.title)}</div>
                                     <div class="reel-publisher">
                                         <i class="fas fa-user-circle"></i> ${escapeHtml(reel.publisher)}
-                                        <span style="font-size: 11px; color: #888;"><i class="far fa-clock"></i> ${timeAgo}</span>
-                                        ${reel.hasAzerg ? '<span style="color: #10b981; margin-right: 10px;"><i class="fas fa-check-circle"></i> معتمد</span>' : ''}
+                                        <span style="font-size: 11px;">${getTimeAgo(reel.createdAt)}</span>
                                     </div>
                                     <div class="reel-stats">
-                                        <span><i class="fas fa-heart"></i> ${likesText}</span>
-                                        <span><i class="fab fa-telegram"></i> مخزن في تليجرام</span>
+                                        <span onclick="likeReel(${reel.id}, event)"><i class="fas fa-heart"></i> ${formatNumber(likesCount)}</span>
+                                        <span onclick="openCommentsModal(${reel.id}, event)"><i class="fas fa-comment"></i> ${formatNumber(commentsCount)}</span>
+                                        <span><i class="fab fa-telegram"></i> تلجرام</span>
                                     </div>
                                 </div>
                             </div>
@@ -946,106 +1035,23 @@
                     </div>
                 `;
             }).join('');
-            
             setTimeout(() => {
-                const slides = document.querySelectorAll('.reel-slide');
+                document.querySelectorAll('.reel-slide video').forEach(video => {
+                    video.addEventListener('click', () => video.paused ? video.play() : video.pause());
+                });
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         const video = entry.target.querySelector('video');
-                        if (video && entry.isIntersecting) {
-                            video.play().catch(e => console.log);
-                        } else if (video) {
-                            video.pause();
-                        }
+                        if (video && entry.isIntersecting) video.play().catch(e => console.log);
+                        else if (video) video.pause();
                     });
                 }, { threshold: 0.6 });
-                slides.forEach(slide => observer.observe(slide));
-            }, 150);
+                document.querySelectorAll('.reel-slide').forEach(slide => observer.observe(slide));
+            }, 100);
         }
 
-        // ========== 8. رفع ريلز إلى تليجرام ==========
-        async function uploadReelToTelegram() {
-            if (!selectedVideoFile) {
-                showNotification('❌ اختر فيديو أولاً', 'error');
-                return;
-            }
-            if (!currentUser) {
-                showNotification('❌ يرجى تسجيل الدخول', 'error');
-                return;
-            }
-            
-            const title = document.getElementById('reelTitleInput').value.trim() || 'ريلز رائع';
-            const btn = document.getElementById('uploadBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري الرفع...';
-            
-            try {
-                const formData = new FormData();
-                formData.append('chat_id', TELEGRAM.channelId);
-                formData.append('video', selectedVideoFile);
-                formData.append('caption', `🎬 ${title}\n👤 ${currentUser.name}\n📅 ${new Date().toLocaleString('ar-EG')}\n🔗 @azerg\n\n✅ تم الرفع عبر ناردو ريلز`);
-                
-                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (data.ok) {
-                    const messageId = data.result.message_id;
-                    
-                    // الحصول على رابط دائم
-                    const fileId = data.result.video.file_id;
-                    const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                    const fileData = await fileRes.json();
-                    
-                    let permanentVideoUrl = URL.createObjectURL(selectedVideoFile);
-                    if (fileData.ok) {
-                        permanentVideoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                    }
-                    
-                    // حفظ في quick_reels للظهور الفوري
-                    let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
-                    quickReels.unshift({
-                        id: messageId,
-                        title: title,
-                        publisher: currentUser.name,
-                        videoUrl: permanentVideoUrl,
-                        timestamp: Date.now(),
-                        hasAzerg: true,
-                        views: 0,
-                        likes: 0
-                    });
-                    if (quickReels.length > 10) quickReels = quickReels.slice(0, 10);
-                    localStorage.setItem('quick_reels', JSON.stringify(quickReels));
-                    
-                    // إشعار فوري
-                    localStorage.setItem('reels_just_uploaded', Date.now().toString());
-                    localStorage.setItem('nardo_reels_updated', Date.now().toString());
-                    
-                    showNotification(`✅ تم الرفع بنجاح!`, 'success');
-                    setTimeout(() => {
-                        loadReelsFromTelegram();
-                    }, 2000);
-                    closeUploadModal();
-                    removeSelectedVideo();
-                } else {
-                    throw new Error(data.description || 'فشل الرفع');
-                }
-                
-            } catch (error) {
-                console.error('❌ خطأ:', error);
-                showNotification('❌ فشل الرفع: ' + error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع وتخزين دائم';
-            }
-        }
-
-        // ========== 9. الإعجاب ==========
         function likeReel(reelId, event) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             const allReels = mergeAllReels();
             const reel = allReels.find(r => r.id === reelId);
             if (reel) {
@@ -1062,63 +1068,117 @@
             }
         }
 
-        // ========== 10. مشاركة ==========
-        function shareReel(videoUrl, title, event) {
-            event.stopPropagation();
-            const shareText = `🎬 ${title}\n📹 ناردو ريلز\n🔗 ${videoUrl}`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    text: shareText,
-                    url: videoUrl
-                }).catch(() => {
-                    copyToClipboard(shareText);
-                    showNotification('🔗 تم نسخ الرابط', 'success');
-                });
+        function openCommentsModal(reelId, event) {
+            if (event) event.stopPropagation();
+            currentReelForComments = reelId;
+            const comments = userComments[reelId] || [];
+            const commentsList = document.getElementById('commentsList');
+            if (comments.length === 0) {
+                commentsList.innerHTML = '<div style="text-align: center; padding: 30px; color: #aaa;">💬 لا توجد تعليقات، كن أول من يعلق!</div>';
             } else {
-                copyToClipboard(shareText);
-                showNotification('🔗 تم نسخ الرابط', 'success');
+                commentsList.innerHTML = comments.map(comment => `
+                    <div class="comment-item">
+                        <div class="comment-avatar">${comment.userName.charAt(0).toUpperCase()}</div>
+                        <div class="comment-content">
+                            <div class="comment-name">${escapeHtml(comment.userName)}</div>
+                            <div class="comment-text">${escapeHtml(comment.text)}</div>
+                            <div class="comment-time">${getTimeAgo(comment.timestamp)}</div>
+                        </div>
+                    </div>
+                `).join('');
             }
+            document.getElementById('commentsModal').style.display = 'block';
+            document.getElementById('commentInput').value = '';
         }
 
-        function copyReelId(reelId, event) {
-            event.stopPropagation();
-            copyToClipboard(reelId.toString());
-            showNotification(`📋 تم نسخ المعرف: ${reelId}`, 'success');
+        function closeCommentsModal() {
+            document.getElementById('commentsModal').style.display = 'none';
+            currentReelForComments = null;
+        }
+
+        function addComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text) {
+                showNotification('✏️ اكتب تعليقاً أولاً', 'warning');
+                return;
+            }
+            if (!currentReelForComments) return;
+            if (!userComments[currentReelForComments]) userComments[currentReelForComments] = [];
+            userComments[currentReelForComments].unshift({
+                userName: currentUser.name,
+                text: text,
+                timestamp: new Date().toISOString(),
+                userId: currentUser.id
+            });
+            saveComments();
+            input.value = '';
+            openCommentsModal(currentReelForComments, null);
+            displayAllReels();
+            showNotification('✅ تم إضافة تعليقك', 'success');
+        }
+
+        function shareReel(videoUrl, title, event) {
+            if (event) event.stopPropagation();
+            const shareText = `🎬 ${title}\n📱 ناردو ريلز\n🔗 ${videoUrl}`;
+            if (navigator.share) {
+                navigator.share({ title: title, text: shareText, url: videoUrl }).catch(() => copyToClipboard(shareText));
+            } else {
+                copyToClipboard(shareText);
+                showNotification('🔗 تم نسخ رابط المشاركة', 'success');
+            }
         }
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text);
+            showNotification('📋 تم النسخ', 'success');
         }
 
-        function updateStats() {
-            const allReels = mergeAllReels();
-            const totalReels = allReels.length;
-            const totalViews = allReels.reduce((sum, r) => sum + (r.views || 0), 0);
-            
-            const countSpan = document.getElementById('totalReelsCount');
-            const viewsSpan = document.getElementById('totalViewsCount');
-            
-            if (countSpan) countSpan.innerText = totalReels;
-            if (viewsSpan) viewsSpan.innerText = formatNumber(totalViews);
+        async function uploadReelToTelegram() {
+            if (!selectedVideoFile) { showNotification('❌ اختر فيديو أولاً', 'error'); return; }
+            if (!currentUser) { showNotification('❌ يرجى تسجيل الدخول', 'error'); return; }
+            const title = document.getElementById('reelTitleInput').value.trim() || 'ريلز رائع';
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري الرفع...';
+            try {
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM.channelId);
+                formData.append('video', selectedVideoFile);
+                formData.append('caption', `🎬 ${title}\n👤 ${currentUser.name}\n📅 ${new Date().toLocaleString('ar-EG')}\n🔗 @azerg\n✅ تم الرفع عبر ناردو ريلز`);
+                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.ok) {
+                    const messageId = data.result.message_id;
+                    const fileId = data.result.video.file_id;
+                    const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                    const fileData = await fileRes.json();
+                    let permanentVideoUrl = URL.createObjectURL(selectedVideoFile);
+                    if (fileData.ok) permanentVideoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                    let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+                    quickReels.unshift({ id: messageId, title: title, publisher: currentUser.name, videoUrl: permanentVideoUrl, timestamp: Date.now(), hasAzerg: true, views: 0, likes: 0 });
+                    if (quickReels.length > 10) quickReels = quickReels.slice(0, 10);
+                    localStorage.setItem('quick_reels', JSON.stringify(quickReels));
+                    showNotification(`✅ تم الرفع بنجاح!`, 'success');
+                    setTimeout(() => loadReelsFromTelegram(), 2000);
+                    closeUploadModal();
+                    removeSelectedVideo();
+                } else throw new Error(data.description || 'فشل الرفع');
+            } catch (error) {
+                showNotification('❌ فشل الرفع: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع وتخزين دائم';
+            }
         }
 
-        // ========== دوال مساعدة ==========
         function handleVideoSelect(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
-                if (file.size > 50 * 1024 * 1024) {
-                    showNotification('حجم الفيديو كبير جداً (الحد الأقصى 50MB)', 'error');
-                    return;
-                }
-                if (!file.type.startsWith('video/')) {
-                    showNotification('الرجاء اختيار ملف فيديو صالح', 'error');
-                    return;
-                }
+                if (file.size > 50 * 1024 * 1024) { showNotification('حجم الفيديو كبير جداً (الحد الأقصى 50MB)', 'error'); return; }
+                if (!file.type.startsWith('video/')) { showNotification('الرجاء اختيار ملف فيديو صالح', 'error'); return; }
                 selectedVideoFile = file;
-                const url = URL.createObjectURL(file);
-                document.getElementById('previewVideo').src = url;
+                document.getElementById('previewVideo').src = URL.createObjectURL(file);
                 document.getElementById('videoPreviewDiv').classList.add('show');
                 showNotification('✅ تم اختيار الفيديو', 'success');
             }
@@ -1132,10 +1192,7 @@
         }
 
         function openUploadModal() {
-            if (!currentUser) {
-                showNotification('يجب تسجيل الدخول أولاً', 'warning');
-                return;
-            }
+            if (!currentUser) { showNotification('يجب تسجيل الدخول أولاً', 'warning'); return; }
             document.getElementById('uploadModal').style.display = 'flex';
         }
 
@@ -1144,88 +1201,48 @@
             removeSelectedVideo();
         }
 
-        function showLoadingOverlay(show, message = "جاري التحميل...") {
-            let overlay = document.getElementById('loadingOverlay');
-            if (show && !overlay) {
-                overlay = document.createElement('div');
-                overlay.id = 'loadingOverlay';
-                overlay.className = 'loading-overlay';
-                overlay.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <p style="color: gold;">${message}</p>
-                `;
-                document.body.appendChild(overlay);
-            } else if (show && overlay) {
-                overlay.style.display = 'flex';
-                overlay.querySelector('p').innerText = message;
-            } else if (!show && overlay) {
-                overlay.remove();
-            }
+        function updateStats() {
+            const allReels = mergeAllReels();
+            document.getElementById('totalReelsCount').innerText = allReels.length;
         }
 
-        function formatNumber(num) {
-            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-            return num || 0;
-        }
-
+        function formatNumber(num) { return num >= 1000 ? (num / 1000).toFixed(1) + 'K' : (num || 0); }
         function getTimeAgo(dateString) {
             if (!dateString) return '';
-            const now = new Date();
-            const past = new Date(dateString);
-            const diffInSeconds = Math.floor((now - past) / 1000);
-            
-            if (diffInSeconds < 60) return 'الآن';
-            if (diffInSeconds < 3600) return `منذ ${Math.floor(diffInSeconds / 60)} دقيقة`;
-            if (diffInSeconds < 86400) return `منذ ${Math.floor(diffInSeconds / 3600)} ساعة`;
-            if (diffInSeconds < 604800) return `منذ ${Math.floor(diffInSeconds / 86400)} يوم`;
-            return 'منذ وقت';
+            const diff = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+            if (diff < 60) return 'الآن';
+            if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
+            if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
+            return `منذ ${Math.floor(diff / 86400)} يوم`;
+        }
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+        function showNotification(msg, type) {
+            const div = document.createElement('div'); div.className = 'notification'; div.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} ${msg}`;
+            document.body.appendChild(div); setTimeout(() => div.remove(), 3500);
+        }
+        function showLoadingOverlay(show, message) {
+            let overlay = document.getElementById('loadingOverlay');
+            if (show && !overlay) {
+                overlay = document.createElement('div'); overlay.id = 'loadingOverlay'; overlay.className = 'loading-overlay';
+                overlay.innerHTML = `<div class="loading-spinner"></div><p style="color: gold;">${message}</p>`;
+                document.body.appendChild(overlay);
+            } else if (show && overlay) overlay.style.display = 'flex';
+            else if (!show && overlay) overlay.remove();
         }
 
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        function showNotification(msg, type = 'info') {
-            const div = document.createElement('div');
-            div.className = 'notification';
-            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-            div.innerHTML = `${icon} ${msg}`;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 3500);
-        }
-
-        // ========== تسجيل الدخول والخروج ==========
         function login() {
             const username = document.getElementById('loginUsername').value.trim();
-            if (!username) {
-                showNotification('❌ أدخل اسم المستخدم', 'error');
-                return;
-            }
-            
+            if (!username) { showNotification('❌ أدخل اسم المستخدم', 'error'); return; }
             let user = users.find(u => u.username === username || u.name === username);
-            if (!user) {
-                user = { id: Date.now(), name: username, username: username, role: 'user', points: 100, avatar: '👤' };
-                users.push(user);
-                localStorage.setItem('nardoo_users', JSON.stringify(users));
-            }
-            
+            if (!user) { user = { id: Date.now(), name: username, username: username, role: 'user' }; users.push(user); localStorage.setItem('nardoo_users', JSON.stringify(users)); }
             currentUser = user;
             localStorage.setItem('current_user', JSON.stringify(user));
-            loadLikes();
-            
+            loadLikes(); loadComments();
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('topBar').style.display = 'block';
             document.getElementById('fabButtons').style.display = 'block';
             document.getElementById('reelsPlayer').style.display = 'block';
             document.getElementById('userNameDisplay').innerText = currentUser.name;
-            
             loadReelsFromTelegram();
             showNotification(`👋 مرحباً ${user.name}`, 'success');
         }
@@ -1237,59 +1254,22 @@
             document.getElementById('topBar').style.display = 'none';
             document.getElementById('fabButtons').style.display = 'none';
             document.getElementById('reelsPlayer').style.display = 'none';
-            reelsCache = [];
             showNotification('👋 تم تسجيل الخروج', 'info');
         }
 
-        // تنظيف الريلز القديمة
-        function cleanOldQuickReels() {
-            const oneHourAgo = Date.now() - (60 * 60 * 1000);
-            let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
-            const filtered = quickReels.filter(reel => (reel.timestamp || 0) > oneHourAgo);
-            if (filtered.length !== quickReels.length) {
-                localStorage.setItem('quick_reels', JSON.stringify(filtered));
-            }
-        }
-
-        // تحديث تلقائي
-        setInterval(() => {
-            if (currentUser && document.visibilityState === 'visible') {
-                loadReelsFromTelegram();
-            }
-        }, 60000);
-        
-        setInterval(cleanOldQuickReels, 60 * 60 * 1000);
-        
-        // الاستماع لتحديثات الريلز
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'nardo_reels_updated' || e.key === 'reels_just_uploaded') {
-                if (currentUser) {
-                    setTimeout(() => loadReelsFromTelegram(), 1000);
-                }
-            }
-        });
-
-        // تهيئة
         loadUsers();
-        
         const savedUser = localStorage.getItem('current_user');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
-            if (currentUser) {
-                loadLikes();
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('topBar').style.display = 'block';
-                document.getElementById('fabButtons').style.display = 'block';
-                document.getElementById('reelsPlayer').style.display = 'block';
-                document.getElementById('userNameDisplay').innerText = currentUser.name;
-                loadReelsFromTelegram();
-            }
+            loadLikes(); loadComments();
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('topBar').style.display = 'block';
+            document.getElementById('fabButtons').style.display = 'block';
+            document.getElementById('reelsPlayer').style.display = 'block';
+            document.getElementById('userNameDisplay').innerText = currentUser.name;
+            loadReelsFromTelegram();
         }
-
-        window.onclick = function(e) {
-            const modal = document.getElementById('uploadModal');
-            if (e.target === modal) closeUploadModal();
-        };
+        window.onclick = e => { if (e.target === document.getElementById('uploadModal')) closeUploadModal(); if (e.target === document.getElementById('commentsModal')) closeCommentsModal(); };
     </script>
 </body>
 </html>
