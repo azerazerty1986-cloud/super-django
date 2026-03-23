@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نكهة وجمال | ناردو برو - المنصة المتكاملة</title>
     
+    <!-- ===== شريط الإشعارات ===== -->
+    <div id="toastContainer"></div>
+    
     <!-- الخطوط -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,8 +23,8 @@
     <link rel="stylesheet" href="css/responsive.css">
     
     <style>
-        /* ستايلات الريلز في الصفحة الرئيسية */
-        .reels-section {
+        /* ===== ستايلات الريلز المضافة مع الحفاظ على الهيكل ===== */
+        .reels-video-section {
             margin: 30px 0;
             background: white;
             border-radius: 25px;
@@ -29,11 +32,11 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         
-        body.dark-mode .reels-section {
+        body.dark-mode .reels-video-section {
             background: rgba(255,255,255,0.05);
         }
         
-        .reels-header-custom {
+        .reels-video-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -42,28 +45,28 @@
             gap: 15px;
         }
         
-        .reels-title {
+        .header-title {
             display: flex;
             align-items: center;
             gap: 12px;
         }
         
-        .reels-title i {
+        .reel-section-icon {
             font-size: 2rem;
             color: #ffd700;
         }
         
-        .reels-title h2 {
+        .header-title h2 {
             font-size: 1.5rem;
             margin: 0;
         }
         
-        .reels-buttons {
+        .header-buttons {
             display: flex;
             gap: 12px;
         }
         
-        .reels-btn {
+        .view-all-link {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -74,16 +77,21 @@
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s ease;
-            border: none;
             cursor: pointer;
+            border: none;
         }
         
-        .reels-btn-add {
+        .view-all-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        }
+        
+        .add-reel-link {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
         }
         
-        .reels-container {
+        .reels-video-container {
             display: flex;
             gap: 20px;
             overflow-x: auto;
@@ -91,22 +99,22 @@
             scrollbar-width: thin;
         }
         
-        .reels-container::-webkit-scrollbar {
+        .reels-video-container::-webkit-scrollbar {
             height: 5px;
         }
         
-        .reels-container::-webkit-scrollbar-track {
+        .reels-video-container::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
         }
         
-        .reels-container::-webkit-scrollbar-thumb {
+        .reels-video-container::-webkit-scrollbar-thumb {
             background: #ffd700;
             border-radius: 10px;
         }
         
-        .reel-preview {
-            flex: 0 0 200px;
+        .reel-item {
+            flex: 0 0 220px;
             cursor: pointer;
             transition: all 0.3s ease;
             border-radius: 15px;
@@ -115,58 +123,182 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
-        body.dark-mode .reel-preview {
+        body.dark-mode .reel-item {
             background: #1e1e2e;
         }
         
-        .reel-preview:hover {
+        .reel-item:hover {
             transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
         
-        .reel-preview-video {
+        .reel-video-wrapper {
             position: relative;
             width: 100%;
-            height: 250px;
+            height: 280px;
             overflow: hidden;
             background: #000;
         }
         
-        .reel-preview-video video {
+        .reel-video-wrapper video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.3s ease;
         }
         
-        .reel-preview-info {
-            padding: 10px;
+        .reel-item:hover .reel-video-wrapper video {
+            transform: scale(1.05);
         }
         
-        .reel-preview-title {
-            font-size: 0.85rem;
-            font-weight: bold;
+        .reel-overlay-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: 15px 10px 10px;
+            color: white;
+        }
+        
+        .reel-play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(255,215,0,0.9);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .reel-item:hover .reel-play-icon {
+            opacity: 1;
+        }
+        
+        .reel-title-preview h4 {
+            font-size: 0.9rem;
+            margin: 0 0 5px 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
-        .reel-preview-publisher {
+        .reel-title-preview span {
             font-size: 0.7rem;
-            color: #888;
+            opacity: 0.8;
         }
         
-        .reel-preview-badge {
-            display: inline-block;
+        .reel-stats-preview {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: white;
+            font-size: 0.75rem;
+            color: #666;
+        }
+        
+        body.dark-mode .reel-stats-preview {
+            background: #1e1e2e;
+            color: #aaa;
+        }
+        
+        .reel-stats-preview span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .telegram-badge-mini {
+            color: #0088cc;
+        }
+        
+        .verified-badge {
             background: #10b981;
             color: white;
-            font-size: 0.6rem;
             padding: 2px 6px;
             border-radius: 20px;
-            margin-top: 5px;
+            font-size: 0.6rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
         }
         
-        .reels-empty {
+        .reels-empty-state {
             text-align: center;
             padding: 40px;
+            background: white;
+            border-radius: 20px;
+        }
+        
+        body.dark-mode .reels-empty-state {
+            background: #1e1e2e;
+        }
+        
+        /* نافذة عرض الريلز */
+        .reel-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .reel-modal-content {
+            background: #000;
+            border-radius: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .reel-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 1.2rem;
+        }
+        
+        .reel-modal-video video {
+            max-width: 100%;
+            max-height: 80vh;
+        }
+        
+        .reel-modal-info {
+            padding: 20px;
+            background: linear-gradient(to top, #000, transparent);
+            color: white;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        
+        .reel-serial {
+            font-size: 0.7rem;
+            color: #ffd700;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         /* مؤشر التحميل */
@@ -290,29 +422,29 @@
         </div>
     </div>
 
-    <!-- ===== قسم الريلز في الصفحة الرئيسية (يعرض فقط الريلز المعتمدة) ===== -->
-    <div class="container">
-        <div class="reels-section">
-            <div class="reels-header-custom">
-                <div class="reels-title">
-                    <i class="fas fa-film"></i>
+    <!-- ===== قسم ريلز الفيديو في الأعلى (يعرض فقط الريلز المعتمدة) ===== -->
+    <div class="reels-video-section">
+        <div class="container">
+            <div class="reels-video-header">
+                <div class="header-title">
+                    <i class="fas fa-film reel-section-icon"></i>
                     <h2>ناردو برو ريلز</h2>
                 </div>
-                <div class="reels-buttons">
-                    <a href="add-reel.html" class="reels-btn reels-btn-add">
+                <div class="header-buttons">
+                    <a href="add-reel.html" class="view-all-link add-reel-link">
                         <i class="fas fa-plus-circle"></i>
                         <span>إضافة ريلز</span>
                     </a>
-                    <a href="reels.html" class="reels-btn">
+                    <a href="reels.html" class="view-all-link">
                         <span>جميع الريلز</span>
                         <i class="fas fa-arrow-left"></i>
                     </a>
                 </div>
             </div>
             
-            <div class="reels-container" id="homeReelsContainer">
-                <div class="reels-empty">
-                    <i class="fas fa-film" style="font-size: 2rem; color: #ffd700;"></i>
+            <div class="reels-video-container" id="reelsVideoContainer">
+                <div class="reels-empty-state">
+                    <i class="fas fa-film" style="font-size: 3rem; color: #ffd700; margin-bottom: 15px;"></i>
                     <p>جاري تحميل الريلز...</p>
                 </div>
             </div>
@@ -384,12 +516,14 @@
                     <p><a href="#" onclick="filterProducts('all')">الرئيسية</a></p>
                     <p><a href="#" onclick="filterProducts('promo')">برموسيو</a></p>
                     <p><a href="#" onclick="filterProducts('spices')">توابل</a></p>
+                    <p><a href="#" onclick="filterProducts('cosmetic')">كوسمتيك</a></p>
                 </div>
                 <div class="footer-col">
                     <h3>مساعدة</h3>
                     <p>سياسة الخصوصية</p>
                     <p>شروط الاستخدام</p>
                     <p>طرق الدفع</p>
+                    <p>الشحن والتوصيل</p>
                 </div>
                 <div class="footer-col">
                     <h3>اتصل بنا</h3>
@@ -425,6 +559,12 @@
                 <h2><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</h2>
                 <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
             </div>
+            
+            <div class="auth-tabs">
+                <button class="btn-gold" onclick="switchAuthTab('login')">دخول</button>
+                <button class="btn-outline-gold" onclick="switchAuthTab('register')">تسجيل</button>
+            </div>
+
             <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
                 <div class="form-group">
                     <label>👤 اسم المستخدم</label>
@@ -436,11 +576,108 @@
                 </div>
                 <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
             </form>
+
+            <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); handleRegister();">
+                <div class="form-group">
+                    <label>👤 الاسم الكامل</label>
+                    <input type="text" class="form-control" id="regName" required placeholder="محمد الجزائري">
+                </div>
+                <div class="form-group">
+                    <label>📧 البريد الإلكتروني</label>
+                    <input type="email" class="form-control" id="regEmail" required placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label>🔑 كلمة المرور</label>
+                    <input type="password" class="form-control" id="regPassword" required placeholder="******">
+                </div>
+                <div class="form-group">
+                    <label>📱 رقم الهاتف</label>
+                    <input type="tel" class="form-control" id="regPhone" placeholder="05XXXXXXXX">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()">
+                        <span>تسجيل كتاجر</span>
+                    </label>
+                </div>
+                
+                <div id="merchantFields" style="display:none;">
+                    <div class="form-group">
+                        <label>🏪 اسم المتجر</label>
+                        <input type="text" class="form-control" id="storeName" placeholder="اسم المتجر">
+                    </div>
+                    <div class="form-group">
+                        <label>📊 المستوى</label>
+                        <select class="form-control" id="merchantLevel">
+                            <option value="1">مبتدئ</option>
+                            <option value="2">متوسط</option>
+                            <option value="3">متقدم</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>📝 وصف المتجر</label>
+                        <textarea class="form-control" id="merchantDesc" rows="2" placeholder="وصف المتجر..."></textarea>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-gold" style="width:100%;">تسجيل</button>
+            </form>
         </div>
     </div>
 
-    <!-- ===== شريط الإشعارات ===== -->
-    <div id="toastContainer"></div>
+    <!-- ===== نافذة إضافة منتج ===== -->
+    <div class="modal" id="productModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> إضافة منتج جديد</h2>
+                <button class="close-btn" onclick="closeModal('productModal')">&times;</button>
+            </div>
+            
+            <form id="productForm" onsubmit="event.preventDefault(); saveProduct();">
+                <div class="form-group">
+                    <label>📦 اسم المنتج</label>
+                    <input type="text" class="form-control" id="productName" required placeholder="زعتر فلسطيني">
+                </div>
+                <div class="form-group">
+                    <label>🏷️ القسم</label>
+                    <select class="form-control" id="productCategory" required>
+                        <option value="promo">برموسيو</option>
+                        <option value="spices">توابل</option>
+                        <option value="cosmetic">كوسمتيك</option>
+                        <option value="other">منتوجات أخرى</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>💰 السعر (دج)</label>
+                        <input type="number" class="form-control" id="productPrice" required min="0" placeholder="500">
+                    </div>
+                    <div class="form-group">
+                        <label>📊 الكمية</label>
+                        <input type="number" class="form-control" id="productStock" required min="0" placeholder="50">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>📝 وصف المنتج</label>
+                    <textarea class="form-control" id="productDescription" rows="3" placeholder="وصف المنتج..."></textarea>
+                </div>
+                
+                <div class="image-upload-area" onclick="document.getElementById('productImages').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>اضغط لرفع صور</p>
+                </div>
+                <input type="file" id="productImages" accept="image/*" style="display:none;" multiple onchange="handleImageUpload(event)">
+                <div class="image-preview" id="imagePreview"></div>
+                
+                <button type="submit" class="btn-gold">حفظ المنتج</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== نافذة تفاصيل المنتج ===== -->
+    <div class="modal" id="productDetailModal">
+        <div class="modal-content modal-lg" id="productDetailContent"></div>
+    </div>
 
     <!-- ===== ملفات JavaScript ===== -->
     <script src="js/core.js"></script>      
@@ -449,27 +686,28 @@
     <script src="js/shop.js"></script>      
     <script src="js/app.js"></script>       
     
-    <!-- ===== كود الريلز للصفحة الرئيسية ===== -->
+    <!-- ===== كود الريلز للصفحة الرئيسية (يعرض المعتمدة فقط) ===== -->
     <script>
         // إعدادات تليجرام
-        const TELEGRAM_HOME = {
+        const TELEGRAM_REELS = {
             botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
             channelId: '-1003822964890',
+            channelUsername: 'azerg',
             apiUrl: 'https://api.telegram.org/bot'
         };
         
         let verifiedReels = [];
-        let isLoading = false;
+        let isLoadingReels = false;
         
-        // جلب الريلز المعتمدة فقط
+        // جلب الريلز المعتمدة فقط (التي تحوي @azerg + رقم تسلسلي NARD-)
         async function fetchVerifiedReels() {
-            if (isLoading) return;
-            isLoading = true;
+            if (isLoadingReels) return;
+            isLoadingReels = true;
             
-            const container = document.getElementById('homeReelsContainer');
+            const container = document.getElementById('reelsVideoContainer');
             
             try {
-                const url = `${TELEGRAM_HOME.apiUrl}${TELEGRAM_HOME.botToken}/getUpdates?limit=100`;
+                const url = `${TELEGRAM_REELS.apiUrl}${TELEGRAM_REELS.botToken}/getUpdates?limit=100`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
@@ -485,30 +723,35 @@
                     const caption = post.caption || '';
                     const messageId = post.message_id;
                     
-                    // استخراج البيانات
-                    let title = 'ريلز';
+                    // استخراج العنوان
+                    let title = '🎬 ريلز';
                     const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
                     if (titleMatch) title = titleMatch[1];
                     
+                    // استخراج الناشر
                     let publisher = 'ناردو برو';
                     const publisherMatch = caption.match(/👤 الناشر: (.+?)(?:\n|$)/);
                     if (publisherMatch) publisher = publisherMatch[1];
                     
+                    // استخراج الرقم التسلسلي (يجب أن يبدأ بـ NARD-)
                     let serialNumber = '';
                     const serialMatch = caption.match(/🔢 الرقم التسلسلي: (NARD-[^\n]+)/);
                     if (serialMatch) serialNumber = serialMatch[1];
                     
-                    const hasAzerg = caption.includes('@azerg');
+                    // التحقق من وجود معرف @azerg
+                    const hasAzerg = caption.includes('@azerg') || caption.includes('azerg');
+                    
+                    // فقط الريلز المعتمدة (تحوي @azerg + رقم تسلسلي NARD-)
                     const isVerified = (hasAzerg && serialNumber && serialNumber.startsWith('NARD-'));
                     
-                    // فقط الريلز المعتمدة تظهر في الشريط العلوي
                     if (isVerified) {
+                        // الحصول على رابط الفيديو
                         const fileId = post.video.file_id;
-                        const fileRes = await fetch(`${TELEGRAM_HOME.apiUrl}${TELEGRAM_HOME.botToken}/getFile?file_id=${fileId}`);
+                        const fileRes = await fetch(`${TELEGRAM_REELS.apiUrl}${TELEGRAM_REELS.botToken}/getFile?file_id=${fileId}`);
                         const fileData = await fileRes.json();
                         
                         if (fileData.ok) {
-                            const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM_HOME.botToken}/${fileData.result.file_path}`;
+                            const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM_REELS.botToken}/${fileData.result.file_path}`;
                             
                             reels.push({
                                 id: messageId,
@@ -516,57 +759,143 @@
                                 videoUrl: videoUrl,
                                 publisher: publisher,
                                 serialNumber: serialNumber,
-                                date: new Date(post.date * 1000).toISOString()
+                                date: new Date(post.date * 1000).toISOString(),
+                                views: 0,
+                                likes: 0
                             });
                         }
                     }
                 }
                 
                 verifiedReels = reels;
-                displayHomeReels();
+                console.log(`✅ تم تحميل ${verifiedReels.length} ريلز معتمدة`);
+                displayVerifiedReels();
                 
-            } catch (error) {
-                console.error('خطأ:', error);
-                container.innerHTML = `<div class="reels-empty"><p>⚠️ فشل التحميل</p></div>`;
-            } finally {
-                isLoading = false;
                 // إخفاء شاشة التحميل
                 const loader = document.getElementById('loader');
                 if (loader) loader.style.display = 'none';
+                
+            } catch (error) {
+                console.error('❌ خطأ في جلب الريلز:', error);
+                container.innerHTML = `
+                    <div class="reels-empty-state">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ff9800;"></i>
+                        <p>فشل الاتصال بتليجرام</p>
+                        <button onclick="fetchVerifiedReels()" style="margin-top: 10px; padding: 8px 20px; background: #ffd700; border: none; border-radius: 25px; cursor: pointer;">إعادة المحاولة</button>
+                    </div>
+                `;
+                const loader = document.getElementById('loader');
+                if (loader) loader.style.display = 'none';
+            } finally {
+                isLoadingReels = false;
             }
         }
         
-        // عرض الريلز في الصفحة الرئيسية
-        function displayHomeReels() {
-            const container = document.getElementById('homeReelsContainer');
+        // عرض الريلز المعتمدة في الشريط العلوي
+        function displayVerifiedReels() {
+            const container = document.getElementById('reelsVideoContainer');
             
             if (!verifiedReels || verifiedReels.length === 0) {
                 container.innerHTML = `
-                    <div class="reels-empty">
-                        <i class="fas fa-film" style="font-size: 2rem; color: #ffd700;"></i>
+                    <div class="reels-empty-state">
+                        <i class="fas fa-film" style="font-size: 3rem; color: #ffd700; margin-bottom: 15px;"></i>
                         <p>لا توجد ريلز معتمدة حالياً</p>
-                        <p style="font-size: 0.8rem;">الريلز التي تحوي @azerg ورقم تسلسلي NARD- تظهر هنا</p>
-                        <a href="add-reel.html" style="display: inline-block; margin-top: 10px; padding: 6px 15px; background: #ffd700; border-radius: 20px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a>
+                        <p style="font-size: 0.85rem; color: #888;">الريلز التي تحوي @azerg ورقم تسلسلي NARD- تظهر هنا</p>
+                        <a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 8px 20px; background: #ffd700; border-radius: 25px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a>
                     </div>
                 `;
                 return;
             }
             
-            // عرض آخر 8 ريلز معتمدة
-            const recentReels = verifiedReels.slice(0, 8);
+            // عرض آخر 10 ريلز معتمدة
+            const recentReels = verifiedReels.slice(0, 10);
             
             container.innerHTML = recentReels.map(reel => `
-                <div class="reel-preview" onclick="window.location.href='reels.html'">
-                    <div class="reel-preview-video">
-                        <video src="${reel.videoUrl}" preload="metadata" muted loop onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"></video>
+                <div class="reel-item" onclick="openReelDetail(${reel.id})">
+                    <div class="reel-video-wrapper">
+                        <video 
+                            src="${reel.videoUrl}" 
+                            preload="metadata"
+                            onmouseenter="this.play()"
+                            onmouseleave="this.pause(); this.currentTime=0;"
+                            muted
+                            loop
+                            playsinline
+                        ></video>
+                        <div class="reel-play-icon">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="reel-overlay-info">
+                            <div class="reel-title-preview">
+                                <h4>${escapeHtml(reel.title)}</h4>
+                                <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="reel-preview-info">
-                        <div class="reel-preview-title">${escapeHtml(reel.title)}</div>
-                        <div class="reel-preview-publisher"><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</div>
-                        <span class="reel-preview-badge"><i class="fas fa-check-circle"></i> معتمد</span>
+                    <div class="reel-stats-preview">
+                        <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
+                        <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
+                        <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
+                        <span class="telegram-badge-mini"><i class="fab fa-telegram"></i></span>
                     </div>
                 </div>
             `).join('');
+        }
+        
+        // عرض تفاصيل الريلز في نافذة
+        function openReelDetail(reelId) {
+            const reel = verifiedReels.find(r => r.id === reelId);
+            if (!reel) return;
+            
+            const modal = document.createElement('div');
+            modal.className = 'reel-modal';
+            modal.innerHTML = `
+                <div class="reel-modal-content">
+                    <button class="reel-modal-close" onclick="this.closest('.reel-modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="reel-modal-video">
+                        <video controls autoplay src="${reel.videoUrl}"></video>
+                    </div>
+                    <div class="reel-modal-info">
+                        <h3>${escapeHtml(reel.title)}</h3>
+                        <p><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</p>
+                        <div class="reel-modal-stats">
+                            <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
+                            <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
+                            <span><i class="fab fa-telegram"></i> @${TELEGRAM_REELS.channelUsername}</span>
+                        </div>
+                        ${reel.serialNumber ? `<div class="reel-serial"><i class="fas fa-fingerprint"></i> ${reel.serialNumber}</div>` : ''}
+                        <div class="reel-serial" style="color: #10b981;"><i class="fas fa-check-circle"></i> ريلز معتمد</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // زيادة المشاهدات
+            reel.views = (reel.views || 0) + 1;
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+        
+        // الاستماع لتحديثات الريلز
+        function listenForReelsUpdate() {
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'nardo_reels_updated') {
+                    fetchVerifiedReels();
+                }
+            });
+        }
+        
+        // تحديث تلقائي كل 30 ثانية
+        function startAutoRefresh() {
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    fetchVerifiedReels();
+                }
+            }, 30000);
         }
         
         // دوال مساعدة
@@ -580,34 +909,15 @@
             });
         }
         
-        // الاستماع لتحديثات الريلز
-        function listenForUpdates() {
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'nardo_reels_updated') {
-                    fetchVerifiedReels();
-                }
-            });
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num || 0;
         }
         
-        // تحديث تلقائي كل دقيقة
-        function startAutoUpdate() {
-            setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    fetchVerifiedReels();
-                }
-            }, 60000);
-        }
+        // ===== دوال المتجر الأساسية (للتوافق) =====
+        let cart = [];
         
-        // بدء التحميل
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                fetchVerifiedReels();
-                listenForUpdates();
-                startAutoUpdate();
-            }, 500);
-        });
-        
-        // دوال عامة (للتكامل مع الملفات الأخرى)
         function toggleCart() {
             document.getElementById('cartSidebar')?.classList.toggle('open');
         }
@@ -625,25 +935,83 @@
             closeModal('loginModal');
         }
         
+        function handleRegister() {
+            alert('تم التسجيل بنجاح');
+            closeModal('loginModal');
+        }
+        
         function filterProducts(category) {
             console.log('تصفية المنتجات:', category);
+            // تحديث القائمة النشطة
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.closest('.nav-link').classList.add('active');
         }
         
         function searchProducts() {
-            console.log('بحث عن منتجات');
+            const searchTerm = document.getElementById('searchInput')?.value;
+            console.log('البحث عن:', searchTerm);
         }
         
         function checkoutCart() {
-            alert('سيتم توجيهك إلى واتساب');
+            alert('سيتم توجيهك إلى واتساب لإتمام الطلب');
         }
         
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
+            const toggle = document.getElementById('themeToggle');
+            if (document.body.classList.contains('dark-mode')) {
+                toggle.innerHTML = '<i class="fas fa-sun"></i><span>نهاري</span>';
+            } else {
+                toggle.innerHTML = '<i class="fas fa-moon"></i><span>ليلي</span>';
+            }
         }
         
         function openDashboard() {
             console.log('فتح لوحة التحكم');
         }
+        
+        function saveProduct() {
+            alert('تم حفظ المنتج');
+            closeModal('productModal');
+        }
+        
+        function handleImageUpload(event) {
+            console.log('تم رفع الصور');
+        }
+        
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+            }
+        }
+        
+        function toggleMerchantFields() {
+            const merchantFields = document.getElementById('merchantFields');
+            if (merchantFields) {
+                merchantFields.style.display = document.getElementById('isMerchant')?.checked ? 'block' : 'none';
+            }
+        }
+        
+        // ===== تهيئة الصفحة =====
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎬 ناردو برو - نظام الريلز المتكامل');
+            console.log('📡 الشريط العلوي: يعرض فقط الريلز المعتمدة (azerg + رقم تسلسلي)');
+            console.log('🎥 صفحة reels.html تعرض جميع الريلز');
+            
+            setTimeout(() => {
+                fetchVerifiedReels();
+                listenForReelsUpdate();
+                startAutoRefresh();
+            }, 500);
+        });
     </script>
 </body>
 </html>
