@@ -373,6 +373,19 @@
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
+        
+        .toast-message {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            z-index: 10001;
+            animation: fadeIn 0.3s ease;
+        }
     </style>
 </head>
 <body>
@@ -757,16 +770,16 @@
     <!-- ===== شريط الإشعارات ===== -->
     <div id="toastContainer"></div>
 
-    <!-- ===== ملفات JavaScript (بالترتيب الصحيح) ===== -->
+    <!-- ===== ملفات JavaScript ===== -->
     <script src="js/core.js"></script>      
     <script src="js/auth.js"></script>      
     <script src="js/telegram.js"></script>  
     <script src="js/shop.js"></script>      
     <script src="js/app.js"></script>       
     
-    <!-- ===== كود الريلز للتكامل مع تليجرام ===== -->
+    <!-- ===== كود الريلز المتكامل مع حل التضارب ===== -->
     <script>
-        // ========== إعدادات تليجرام (نفس المستخدمة في الكود الثاني والثالث) ==========
+        // ========== إعدادات تليجرام ==========
         const TELEGRAM_REELS = {
             botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
             channelId: '-1003822964890',
@@ -776,193 +789,6 @@
         
         let allReels = [];
         let verifiedReels = [];
-        
-        // ========== جلب الريلز من تليجرام ==========
-        async function fetchReelsFromTelegram() {
-            try {
-                const url = `${TELEGRAM_REELS.apiUrl}${TELEGRAM_REELS.botToken}/getUpdates?limit=100`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (!data.ok) throw new Error(data.description);
-                
-                const reels = [];
-                const updates = [...(data.result || [])].reverse();
-                
-                for (const update of updates) {
-                    const post = update.channel_post || update.message;
-                    if (!post || !post.video) continue;
-                    
-                    const caption = post.caption || '';
-                    const messageId = post.message_id;
-                    
-                    // استخراج العنوان
-                    let title = '🎬 ريلز';
-                    const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
-                    if (titleMatch) title = titleMatch[1];
-                    
-                    // استخراج الناشر
-                    let publisher = 'ناردو برو';
-                    const publisherMatch = caption.match(/👤 الناشر: (.+?)(?:\n|$)/);
-                    if (publisherMatch) publisher = publisherMatch[1];
-                    
-                    // استخراج الرقم التسلسلي
-                    let serialNumber = '';
-                    const serialMatch = caption.match(/🔢 الرقم التسلسلي: (NARD-[^\n]+)/);
-                    if (serialMatch) serialNumber = serialMatch[1];
-                    
-                    // التحقق من وجود @azerg (شرط العرض في الشريط العلوي)
-                    const hasAzerg = caption.includes('@azerg') || caption.includes('azerg');
-                    
-                    // الحصول على رابط الفيديو
-                    const fileId = post.video.file_id;
-                    const fileRes = await fetch(`${TELEGRAM_REELS.apiUrl}${TELEGRAM_REELS.botToken}/getFile?file_id=${fileId}`);
-                    const fileData = await fileRes.json();
-                    
-                    if (fileData.ok) {
-                        const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM_REELS.botToken}/${fileData.result.file_path}`;
-                        
-                        reels.push({
-                            id: messageId,
-                            title: title,
-                            videoUrl: videoUrl,
-                            publisher: publisher,
-                            serialNumber: serialNumber,
-                            hasAzerg: hasAzerg,
-                            isVerified: hasAzerg, // الريلز المعتمدة هي التي تحوي @azerg
-                            date: new Date(post.date * 1000).toISOString(),
-                            views: 0,
-                            likes: 0
-                        });
-                    }
-                }
-                
-                allReels = reels;
-                verifiedReels = reels.filter(r => r.hasAzerg === true);
-                
-                console.log(`✅ تم تحميل ${allReels.length} ريلز من القناة`);
-                console.log(`✨ الريلز المعتمدة (التي تحوي @azerg): ${verifiedReels.length}`);
-                
-                updateTopReelsBar();
-                
-                // إخفاء شاشة التحميل
-                const loader = document.getElementById('loader');
-                if (loader) loader.style.display = 'none';
-                
-            } catch (error) {
-                console.error('❌ خطأ:', error);
-                const container = document.getElementById('reelsVideoContainer');
-                if (container) {
-                    container.innerHTML = `<div class="reels-empty-state"><p>⚠️ فشل الاتصال بتليجرام</p><button onclick="fetchReelsFromTelegram()" style="margin-top:15px; padding:8px 20px; background:#ffd700; border:none; border-radius:25px; cursor:pointer;">إعادة المحاولة</button></div>`;
-                }
-                const loader = document.getElementById('loader');
-                if (loader) loader.style.display = 'none';
-            }
-        }
-        
-        // ========== تحديث شريط الريلز العلوي ==========
-        function updateTopReelsBar() {
-            const container = document.getElementById('reelsVideoContainer');
-            if (!container) return;
-            
-            if (!verifiedReels || verifiedReels.length === 0) {
-                container.innerHTML = `
-                    <div class="reels-empty-state">
-                        <i class="fas fa-film" style="font-size: 3rem; color: #ffd700;"></i>
-                        <p>لا توجد ريلز معتمدة</p>
-                        <p style="font-size: 0.85rem;">الريلز التي تحوي @azerg تظهر هنا</p>
-                        <a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 8px 20px; background: #ffd700; border-radius: 25px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a>
-                    </div>
-                `;
-                return;
-            }
-            
-            const recentVerified = verifiedReels.slice(0, 10);
-            
-            container.innerHTML = recentVerified.map(reel => `
-                <div class="reel-item" onclick="openReelDetail(${reel.id})">
-                    <div class="reel-video-wrapper">
-                        <video src="${reel.videoUrl}" preload="metadata" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"></video>
-                        <div class="reel-play-icon"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-overlay-info">
-                            <div class="reel-title-preview">
-                                <h4>${escapeHtml(reel.title)}</h4>
-                                <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="reel-stats-preview">
-                        <span><i class="fas fa-eye"></i> ${formatNumber(reel.views)}</span>
-                        <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes)}</span>
-                        <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // ========== فتح نافذة جميع الريلز ==========
-        function openAllReelsModal() {
-            if (!allReels || allReels.length === 0) {
-                showToast('لا توجد ريلز لعرضها', 'info');
-                return;
-            }
-            
-            // إنشاء نافذة منبثقة لعرض جميع الريلز
-            const modalDiv = document.createElement('div');
-            modalDiv.className = 'all-reels-modal';
-            modalDiv.innerHTML = `
-                <div class="all-reels-header">
-                    <h2><i class="fas fa-film"></i> جميع الريلز (${allReels.length})</h2>
-                    <button class="close-all-reels" onclick="this.closest('.all-reels-modal').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="all-reels-container">
-                    <div class="reels-grid">
-                        ${allReels.map(reel => `
-                            <div class="reel-item" onclick="openReelDetail(${reel.id}); document.querySelector('.all-reels-modal')?.remove();">
-                                <div class="reel-video-wrapper" style="height: 200px;">
-                                    <video src="${reel.videoUrl}" preload="metadata" muted style="width:100%;height:100%;object-fit:cover;"></video>
-                                    <div class="reel-overlay-info">
-                                        <h4 style="font-size:0.85rem;">${escapeHtml(reel.title)}</h4>
-                                    </div>
-                                </div>
-                                <div class="reel-stats-preview">
-                                    ${reel.hasAzerg ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>' : '<span class="verified-badge" style="background:#888;"><i class="fas fa-clock"></i> قيد المراجعة</span>'}
-                                    <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modalDiv);
-        }
-        
-        // ========== عرض تفاصيل الريلز في نافذة منبثقة ==========
-        function openReelDetail(reelId) {
-            const reel = [...allReels, ...verifiedReels].find(r => r.id === reelId);
-            if (!reel) return;
-            
-            const modal = document.createElement('div');
-            modal.className = 'reel-modal';
-            modal.innerHTML = `
-                <div class="reel-modal-content">
-                    <button class="reel-modal-close" onclick="this.closest('.reel-modal').remove()"><i class="fas fa-times"></i></button>
-                    <div class="reel-modal-video"><video controls autoplay src="${reel.videoUrl}"></video></div>
-                    <div class="reel-modal-info">
-                        <h3>${escapeHtml(reel.title)}</h3>
-                        <p><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</p>
-                        ${reel.serialNumber ? `<div class="reel-serial"><i class="fas fa-fingerprint"></i> ${reel.serialNumber}</div>` : ''}
-                        ${reel.hasAzerg ? '<div class="reel-serial" style="color:#10b981;"><i class="fas fa-check-circle"></i> ريلز معتمد @azerg</div>' : '<div class="reel-serial" style="color:#ff9800;"><i class="fas fa-clock"></i> قيد المراجعة</div>'}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            // زيادة عدد المشاهدات
-            reel.views = (reel.views || 0) + 1;
-        }
         
         // ========== دوال مساعدة ==========
         function escapeHtml(str) {
@@ -992,26 +818,301 @@
             setTimeout(() => toast.remove(), 3000);
         }
         
+        // ========== دمج الريلز من المصادر المختلفة ==========
+        function mergeAllReels() {
+            // 1. جلب الريلز من تليجرام
+            let merged = [...verifiedReels];
+            
+            // 2. إضافة الريلز السريعة (المرفوعة حديثاً)
+            const quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+            for (const quick of quickReels) {
+                if (!merged.find(r => r.id === quick.id)) {
+                    merged.unshift(quick);
+                }
+            }
+            
+            // 3. إضافة من nardo_reels_list
+            const nardoList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+            for (const reel of nardoList) {
+                if (!merged.find(r => r.id === reel.id)) {
+                    merged.unshift(reel);
+                }
+            }
+            
+            // 4. إزالة التكرارات حسب id
+            const uniqueMap = new Map();
+            for (const reel of merged) {
+                if (!uniqueMap.has(reel.id)) {
+                    uniqueMap.set(reel.id, reel);
+                }
+            }
+            merged = Array.from(uniqueMap.values());
+            
+            // 5. ترتيب حسب التاريخ (الأحدث أولاً)
+            merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            
+            // 6. تصفية المعتمدة فقط للعرض
+            verifiedReels = merged.filter(r => r.hasAzerg === true);
+            allReels = merged;
+            
+            return { verifiedReels, allReels };
+        }
+        
+        // ========== عرض الريلز في الشريط العلوي ==========
+        function updateTopReelsBar() {
+            const container = document.getElementById('reelsVideoContainer');
+            if (!container) return;
+            
+            // دمج جميع المصادر
+            const merged = mergeAllReels();
+            const displayReels = merged.verifiedReels.slice(0, 10);
+            
+            if (!displayReels || displayReels.length === 0) {
+                container.innerHTML = `
+                    <div class="reels-empty-state">
+                        <i class="fas fa-film" style="font-size: 3rem; color: #ffd700;"></i>
+                        <p>لا توجد ريلز معتمدة</p>
+                        <p style="font-size: 0.85rem;">الريلز التي تحوي @azerg تظهر هنا</p>
+                        <a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 8px 20px; background: #ffd700; border-radius: 25px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = displayReels.map(reel => `
+                <div class="reel-item" onclick="openReelDetail(${reel.id})">
+                    <div class="reel-video-wrapper">
+                        <video src="${reel.videoUrl}" preload="metadata" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"></video>
+                        <div class="reel-play-icon"><i class="fas fa-play-circle"></i></div>
+                        <div class="reel-overlay-info">
+                            <div class="reel-title-preview">
+                                <h4>${escapeHtml(reel.title)}</h4>
+                                <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="reel-stats-preview">
+                        <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
+                        <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
+                        <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // ========== جلب الريلز من تليجرام ==========
+        async function fetchReelsFromTelegram() {
+            try {
+                const url = `${TELEGRAM_REELS.apiUrl}${TELEGRAM_REELS.botToken}/getUpdates?limit=100`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (!data.ok) throw new Error(data.description);
+                
+                const reels = [];
+                const updates = [...(data.result || [])].reverse();
+                
+                for (const update of updates) {
+                    const post = update.channel_post || update.message;
+                    if (!post || !post.video) continue;
+                    
+                    const caption = post.caption || '';
+                    const messageId = post.message_id;
+                    
+                    let title = '🎬 ريلز';
+                    const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
+                    if (titleMatch) title = titleMatch[1];
+                    
+                    let publisher = 'ناردو برو';
+                    const publisherMatch = caption.match(/👤 الناشر: (.+?)(?:\n|$)/);
+                    if (publisherMatch) publisher = publisherMatch[1];
+                    
+                    let serialNumber = '';
+                    const serialMatch = caption.match(/🔢 الرقم التسلسلي: (NARD-[^\n]+)/);
+                    if (serialMatch) serialNumber = serialMatch[1];
+                    
+                    const hasAzerg = caption.includes('@azerg') || caption.includes('azerg');
+                    
+                    const fileId = post.video.file_id;
+                    const fileRes = await fetch(`${TELEGRAM_REELS.apiUrl}${TELEGRAM_REELS.botToken}/getFile?file_id=${fileId}`);
+                    const fileData = await fileRes.json();
+                    
+                    if (fileData.ok) {
+                        const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM_REELS.botToken}/${fileData.result.file_path}`;
+                        
+                        reels.push({
+                            id: messageId,
+                            title: title,
+                            videoUrl: videoUrl,
+                            publisher: publisher,
+                            serialNumber: serialNumber,
+                            hasAzerg: hasAzerg,
+                            timestamp: post.date * 1000,
+                            views: 0,
+                            likes: 0
+                        });
+                    }
+                }
+                
+                allReels = reels;
+                verifiedReels = reels.filter(r => r.hasAzerg === true);
+                
+                // دمج مع الريلز المحلية
+                mergeAllReels();
+                updateTopReelsBar();
+                
+                // حفظ في localStorage للاستخدام السريع
+                localStorage.setItem('nardo_reels_cache', JSON.stringify(reels));
+                
+                console.log(`✅ تم تحميل ${allReels.length} ريلز من القناة`);
+                console.log(`✨ الريلز المعتمدة: ${verifiedReels.length}`);
+                
+                // إخفاء شاشة التحميل
+                const loader = document.getElementById('loader');
+                if (loader) loader.style.display = 'none';
+                
+            } catch (error) {
+                console.error('❌ خطأ:', error);
+                
+                // محاولة عرض الريلز المخزنة
+                const cached = localStorage.getItem('nardo_reels_cache');
+                if (cached) {
+                    const cachedReels = JSON.parse(cached);
+                    allReels = cachedReels;
+                    verifiedReels = cachedReels.filter(r => r.hasAzerg === true);
+                    mergeAllReels();
+                    updateTopReelsBar();
+                    showToast('⚠️ تم عرض الريلز المخزنة مؤقتاً', 'info');
+                } else {
+                    const container = document.getElementById('reelsVideoContainer');
+                    if (container) {
+                        container.innerHTML = `<div class="reels-empty-state"><p>⚠️ فشل الاتصال بتليجرام</p><button onclick="fetchReelsFromTelegram()" style="margin-top:15px; padding:8px 20px; background:#ffd700; border:none; border-radius:25px; cursor:pointer;">إعادة المحاولة</button></div>`;
+                    }
+                }
+                const loader = document.getElementById('loader');
+                if (loader) loader.style.display = 'none';
+            }
+        }
+        
+        // ========== فتح نافذة جميع الريلز ==========
+        function openAllReelsModal() {
+            const merged = mergeAllReels();
+            const allReelsList = merged.allReels;
+            
+            if (!allReelsList || allReelsList.length === 0) {
+                showToast('لا توجد ريلز لعرضها', 'info');
+                return;
+            }
+            
+            const modalDiv = document.createElement('div');
+            modalDiv.className = 'all-reels-modal';
+            modalDiv.innerHTML = `
+                <div class="all-reels-header">
+                    <h2><i class="fas fa-film"></i> جميع الريلز (${allReelsList.length})</h2>
+                    <button class="close-all-reels" onclick="this.closest('.all-reels-modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="all-reels-container">
+                    <div class="reels-grid">
+                        ${allReelsList.map(reel => `
+                            <div class="reel-item" onclick="openReelDetail(${reel.id}); document.querySelector('.all-reels-modal')?.remove();">
+                                <div class="reel-video-wrapper" style="height: 200px;">
+                                    <video src="${reel.videoUrl}" preload="metadata" muted style="width:100%;height:100%;object-fit:cover;"></video>
+                                    <div class="reel-overlay-info">
+                                        <h4 style="font-size:0.85rem;">${escapeHtml(reel.title)}</h4>
+                                    </div>
+                                </div>
+                                <div class="reel-stats-preview">
+                                    ${reel.hasAzerg ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>' : '<span class="verified-badge" style="background:#888;"><i class="fas fa-clock"></i> قيد المراجعة</span>'}
+                                    <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalDiv);
+        }
+        
+        // ========== عرض تفاصيل الريلز ==========
+        function openReelDetail(reelId) {
+            const merged = mergeAllReels();
+            const reel = merged.allReels.find(r => r.id === reelId);
+            if (!reel) return;
+            
+            const modal = document.createElement('div');
+            modal.className = 'reel-modal';
+            modal.innerHTML = `
+                <div class="reel-modal-content">
+                    <button class="reel-modal-close" onclick="this.closest('.reel-modal').remove()"><i class="fas fa-times"></i></button>
+                    <div class="reel-modal-video"><video controls autoplay src="${reel.videoUrl}"></video></div>
+                    <div class="reel-modal-info">
+                        <h3>${escapeHtml(reel.title)}</h3>
+                        <p><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</p>
+                        ${reel.serialNumber ? `<div class="reel-serial"><i class="fas fa-fingerprint"></i> ${reel.serialNumber}</div>` : ''}
+                        ${reel.hasAzerg ? '<div class="reel-serial" style="color:#10b981;"><i class="fas fa-check-circle"></i> ريلز معتمد @azerg</div>' : '<div class="reel-serial" style="color:#ff9800;"><i class="fas fa-clock"></i> قيد المراجعة</div>'}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // زيادة عدد المشاهدات
+            reel.views = (reel.views || 0) + 1;
+        }
+        
+        // ========== تنظيف الريلز القديمة ==========
+        function cleanOldQuickReels() {
+            const oneHourAgo = Date.now() - (60 * 60 * 1000);
+            let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+            const filtered = quickReels.filter(reel => (reel.timestamp || 0) > oneHourAgo);
+            if (filtered.length !== quickReels.length) {
+                localStorage.setItem('quick_reels', JSON.stringify(filtered));
+                console.log('🧹 تم تنظيف', quickReels.length - filtered.length, 'ريلز قديمة');
+            }
+        }
+        
         // ========== الاستماع لتحديثات الريلز ==========
         function listenForReelsUpdate() {
             window.addEventListener('storage', (e) => {
-                if (e.key === 'nardo_reels_updated') {
-                    fetchReelsFromTelegram();
+                if (e.key === 'nardo_reels_updated' || e.key === 'reels_just_uploaded') {
+                    console.log('🔄 تم اكتشاف ريلز جديد، جاري التحديث...');
+                    setTimeout(() => {
+                        fetchReelsFromTelegram();
+                    }, 1000);
                 }
             });
         }
         
-        // ========== تحديث تلقائي كل دقيقة ==========
+        // ========== تحديث تلقائي ==========
         function startAutoRefresh() {
             setInterval(() => {
                 if (document.visibilityState === 'visible') {
                     fetchReelsFromTelegram();
                 }
             }, 60000);
+            
+            // تنظيف كل ساعة
+            setInterval(cleanOldQuickReels, 60 * 60 * 1000);
         }
         
         // ========== تهيئة الصفحة ==========
         document.addEventListener('DOMContentLoaded', () => {
+            // التحقق من وجود ريلز مرفوع حديثاً
+            const justUploaded = localStorage.getItem('reels_just_uploaded');
+            if (justUploaded) {
+                console.log('📹 يوجد ريلز مرفوع حديثاً');
+                localStorage.removeItem('reels_just_uploaded');
+            }
+            
+            // عرض الريلز المحلية فوراً
+            const quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+            if (quickReels.length > 0) {
+                verifiedReels = quickReels.filter(r => r.hasAzerg === true);
+                allReels = quickReels;
+                updateTopReelsBar();
+            }
+            
             setTimeout(() => {
                 fetchReelsFromTelegram();
                 listenForReelsUpdate();
@@ -1020,96 +1121,4 @@
         });
     </script>
 </body>
-<script>
-// ========== حل سريع لظهور الريلز فوراً ==========
-(function() {
-    console.log('🔥 تفعيل حل ظهور الريلز السريع...');
-    
-    // 1. عرض الريلز المحلية فوراً إن وجدت
-    function showLocalReels() {
-        const quickReels = localStorage.getItem('quick_reels');
-        if (quickReels) {
-            const reels = JSON.parse(quickReels);
-            if (reels.length > 0 && document.getElementById('reelsVideoContainer')) {
-                const container = document.getElementById('reelsVideoContainer');
-                const emptyState = container.querySelector('.reels-empty-state');
-                if (emptyState || reels.length > 0) {
-                    container.innerHTML = reels.slice(0, 10).map(reel => `
-                        <div class="reel-item" onclick="openReelDetail && openReelDetail(${reel.id})">
-                            <div class="reel-video-wrapper">
-                                <video src="${reel.videoUrl}" preload="metadata" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"></video>
-                                <div class="reel-play-icon"><i class="fas fa-play-circle"></i></div>
-                                <div class="reel-overlay-info">
-                                    <div class="reel-title-preview">
-                                        <h4>${escapeHtmlSafe(reel.title)}</h4>
-                                        <span><i class="fas fa-user"></i> ${escapeHtmlSafe(reel.publisher)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="reel-stats-preview">
-                                <span><i class="fas fa-clock"></i> جديد</span>
-                                <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
-                            </div>
-                        </div>
-                    `).join('');
-                    console.log('✅ تم عرض', reels.length, 'ريلز محلية');
-                }
-            }
-        }
-    }
-    
-    function escapeHtmlSafe(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-    
-    // 2. الاستماع لتحديثات الريلز من صفحة الإضافة
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'reels_just_uploaded' || e.key === 'nardo_reels_updated') {
-            console.log('🔄 تم اكتشاف ريلز جديد!');
-            // مسح الكاش وإعادة التحميل
-            localStorage.removeItem('nardo_reels_list');
-            setTimeout(function() {
-                if (typeof fetchReelsFromTelegram === 'function') {
-                    fetchReelsFromTelegram();
-                } else if (typeof loadReelsFromTelegram === 'function') {
-                    loadReelsFromTelegram();
-                } else {
-                    location.reload();
-                }
-            }, 1000);
-        }
-    });
-    
-    // 3. التحقق من وجود ريلز مرفوع حديثاً عند التحميل
-    if (localStorage.getItem('reels_just_uploaded')) {
-        console.log('📹 يوجد ريلز جديد، جاري التحديث...');
-        localStorage.removeItem('reels_just_uploaded');
-        setTimeout(function() {
-            if (typeof fetchReelsFromTelegram === 'function') {
-                fetchReelsFromTelegram();
-            } else if (typeof loadReelsFromTelegram === 'function') {
-                loadReelsFromTelegram();
-            }
-        }, 500);
-    }
-    
-    // 4. عرض الريلز المحلية فوراً
-    setTimeout(showLocalReels, 100);
-    
-    // 5. تحديث تلقائي كل 30 ثانية
-    setInterval(function() {
-        if (document.visibilityState === 'visible' && (typeof fetchReelsFromTelegram === 'function' || typeof loadReelsFromTelegram === 'function')) {
-            console.log('🔄 تحديث تلقائي...');
-            if (typeof fetchReelsFromTelegram === 'function') fetchReelsFromTelegram();
-            else if (typeof loadReelsFromTelegram === 'function') loadReelsFromTelegram();
-        }
-    }, 30000);
-})();
-</script>    
 </html>
