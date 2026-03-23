@@ -777,7 +777,7 @@
     <script src="js/shop.js"></script>      
     <script src="js/app.js"></script>       
     
-    <!-- ===== كود الريلز المتكامل مع حل التضارب ===== -->
+    <!-- ===== كود الريلز ===== -->
     <script>
         // ========== إعدادات تليجرام ==========
         const TELEGRAM_REELS = {
@@ -818,28 +818,21 @@
             setTimeout(() => toast.remove(), 3000);
         }
         
-        // ========== دمج الريلز من المصادر المختلفة ==========
+        // ========== دمج الريلز ==========
         function mergeAllReels() {
-            // 1. جلب الريلز من تليجرام
             let merged = [...verifiedReels];
-            
-            // 2. إضافة الريلز السريعة (المرفوعة حديثاً)
             const quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
             for (const quick of quickReels) {
                 if (!merged.find(r => r.id === quick.id)) {
                     merged.unshift(quick);
                 }
             }
-            
-            // 3. إضافة من nardo_reels_list
             const nardoList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
             for (const reel of nardoList) {
                 if (!merged.find(r => r.id === reel.id)) {
                     merged.unshift(reel);
                 }
             }
-            
-            // 4. إزالة التكرارات حسب id
             const uniqueMap = new Map();
             for (const reel of merged) {
                 if (!uniqueMap.has(reel.id)) {
@@ -847,57 +840,65 @@
                 }
             }
             merged = Array.from(uniqueMap.values());
-            
-            // 5. ترتيب حسب التاريخ (الأحدث أولاً)
             merged.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-            
-            // 6. تصفية المعتمدة فقط للعرض
             verifiedReels = merged.filter(r => r.hasAzerg === true);
             allReels = merged;
-            
             return { verifiedReels, allReels };
         }
         
-        // ========== عرض الريلز في الشريط العلوي ==========
+        // ========== عرض الريلز ==========
         function updateTopReelsBar() {
             const container = document.getElementById('reelsVideoContainer');
             if (!container) return;
             
-            // دمج جميع المصادر
             const merged = mergeAllReels();
             const displayReels = merged.verifiedReels.slice(0, 10);
             
             if (!displayReels || displayReels.length === 0) {
-                container.innerHTML = `
-                    <div class="reels-empty-state">
-                        <i class="fas fa-film" style="font-size: 3rem; color: #ffd700;"></i>
-                        <p>لا توجد ريلز معتمدة</p>
-                        <p style="font-size: 0.85rem;">الريلز التي تحوي @azerg تظهر هنا</p>
-                        <a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 8px 20px; background: #ffd700; border-radius: 25px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a>
-                    </div>
-                `;
+                container.innerHTML = `<div class="reels-empty-state"><i class="fas fa-film" style="font-size: 3rem; color: #ffd700;"></i><p>لا توجد ريلز معتمدة</p><p style="font-size: 0.85rem;">الريلز التي تحوي @azerg تظهر هنا</p><a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 8px 20px; background: #ffd700; border-radius: 25px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a></div>`;
                 return;
             }
             
-            container.innerHTML = displayReels.map(reel => `
-                <div class="reel-item" onclick="openReelDetail(${reel.id})">
-                    <div class="reel-video-wrapper">
-                        <video src="${reel.videoUrl}" preload="metadata" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"></video>
-                        <div class="reel-play-icon"><i class="fas fa-play-circle"></i></div>
-                        <div class="reel-overlay-info">
-                            <div class="reel-title-preview">
-                                <h4>${escapeHtml(reel.title)}</h4>
-                                <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
+            container.innerHTML = displayReels.map(reel => {
+                let videoSrc = reel.videoUrl || '';
+                const isValidUrl = videoSrc && !videoSrc.startsWith('blob:') && videoSrc !== 'null' && videoSrc !== '';
+                
+                return `
+                    <div class="reel-item" onclick="openReelDetail(${reel.id})">
+                        <div class="reel-video-wrapper">
+                            ${isValidUrl ? `
+                                <video src="${videoSrc}" preload="metadata" muted loop playsinline 
+                                       onmouseenter="this.play()" 
+                                       onmouseleave="this.pause(); this.currentTime=0;"
+                                       onerror="this.style.display='none'; this.parentElement.querySelector('.video-fallback').style.display='flex';">
+                                </video>
+                                <div class="video-fallback" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298);">
+                                    <i class="fas fa-video-slash" style="font-size: 2rem; color: #ffd700; margin-bottom: 10px;"></i>
+                                    <span style="font-size: 0.7rem; color: white;">فيديو قيد المعالجة</span>
+                                    <span style="font-size: 0.6rem; color: #aaa; margin-top: 5px;">سيعمل قريباً</span>
+                                </div>
+                            ` : `
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #1e3c72, #2a5298);">
+                                    <i class="fas fa-spinner fa-pulse" style="font-size: 2rem; color: #ffd700; margin-bottom: 10px;"></i>
+                                    <span style="font-size: 0.7rem; color: white;">جاري التحميل...</span>
+                                </div>
+                            `}
+                            <div class="reel-play-icon"><i class="fas fa-play-circle"></i></div>
+                            <div class="reel-overlay-info">
+                                <div class="reel-title-preview">
+                                    <h4>${escapeHtml(reel.title || 'ريلز')}</h4>
+                                    <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher || 'ناردو برو')}</span>
+                                </div>
                             </div>
                         </div>
+                        <div class="reel-stats-preview">
+                            <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
+                            <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
+                            <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
+                        </div>
                     </div>
-                    <div class="reel-stats-preview">
-                        <span><i class="fas fa-eye"></i> ${formatNumber(reel.views || 0)}</span>
-                        <span><i class="fas fa-heart"></i> ${formatNumber(reel.likes || 0)}</span>
-                        <span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // ========== جلب الريلز من تليجرام ==========
@@ -956,25 +957,17 @@
                 
                 allReels = reels;
                 verifiedReels = reels.filter(r => r.hasAzerg === true);
-                
-                // دمج مع الريلز المحلية
                 mergeAllReels();
                 updateTopReelsBar();
-                
-                // حفظ في localStorage للاستخدام السريع
                 localStorage.setItem('nardo_reels_cache', JSON.stringify(reels));
                 
                 console.log(`✅ تم تحميل ${allReels.length} ريلز من القناة`);
-                console.log(`✨ الريلز المعتمدة: ${verifiedReels.length}`);
                 
-                // إخفاء شاشة التحميل
                 const loader = document.getElementById('loader');
                 if (loader) loader.style.display = 'none';
                 
             } catch (error) {
                 console.error('❌ خطأ:', error);
-                
-                // محاولة عرض الريلز المخزنة
                 const cached = localStorage.getItem('nardo_reels_cache');
                 if (cached) {
                     const cachedReels = JSON.parse(cached);
@@ -994,7 +987,7 @@
             }
         }
         
-        // ========== فتح نافذة جميع الريلز ==========
+        // ========== فتح جميع الريلز ==========
         function openAllReelsModal() {
             const merged = mergeAllReels();
             const allReelsList = merged.allReels;
@@ -1057,55 +1050,42 @@
             `;
             document.body.appendChild(modal);
             
-            // زيادة عدد المشاهدات
             reel.views = (reel.views || 0) + 1;
         }
         
-        // ========== تنظيف الريلز القديمة ==========
-        function cleanOldQuickReels() {
-            const oneHourAgo = Date.now() - (60 * 60 * 1000);
-            let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
-            const filtered = quickReels.filter(reel => (reel.timestamp || 0) > oneHourAgo);
-            if (filtered.length !== quickReels.length) {
-                localStorage.setItem('quick_reels', JSON.stringify(filtered));
-                console.log('🧹 تم تنظيف', quickReels.length - filtered.length, 'ريلز قديمة');
-            }
-        }
-        
-        // ========== الاستماع لتحديثات الريلز ==========
+        // ========== الاستماع للتحديثات ==========
         function listenForReelsUpdate() {
             window.addEventListener('storage', (e) => {
                 if (e.key === 'nardo_reels_updated' || e.key === 'reels_just_uploaded') {
                     console.log('🔄 تم اكتشاف ريلز جديد، جاري التحديث...');
-                    setTimeout(() => {
-                        fetchReelsFromTelegram();
-                    }, 1000);
+                    setTimeout(() => fetchReelsFromTelegram(), 1000);
                 }
             });
         }
         
-        // ========== تحديث تلقائي ==========
         function startAutoRefresh() {
             setInterval(() => {
                 if (document.visibilityState === 'visible') {
                     fetchReelsFromTelegram();
                 }
             }, 60000);
-            
-            // تنظيف كل ساعة
-            setInterval(cleanOldQuickReels, 60 * 60 * 1000);
         }
         
-        // ========== تهيئة الصفحة ==========
+        function cleanOldQuickReels() {
+            const oneHourAgo = Date.now() - (60 * 60 * 1000);
+            let quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
+            const filtered = quickReels.filter(reel => (reel.timestamp || 0) > oneHourAgo);
+            if (filtered.length !== quickReels.length) {
+                localStorage.setItem('quick_reels', JSON.stringify(filtered));
+            }
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
-            // التحقق من وجود ريلز مرفوع حديثاً
             const justUploaded = localStorage.getItem('reels_just_uploaded');
             if (justUploaded) {
-                console.log('📹 يوجد ريلز مرفوع حديثاً');
                 localStorage.removeItem('reels_just_uploaded');
             }
             
-            // عرض الريلز المحلية فوراً
             const quickReels = JSON.parse(localStorage.getItem('quick_reels') || '[]');
             if (quickReels.length > 0) {
                 verifiedReels = quickReels.filter(r => r.hasAzerg === true);
@@ -1117,8 +1097,10 @@
                 fetchReelsFromTelegram();
                 listenForReelsUpdate();
                 startAutoRefresh();
+                setInterval(cleanOldQuickReels, 60 * 60 * 1000);
             }, 500);
         });
     </script>
+    
 </body>
 </html>
