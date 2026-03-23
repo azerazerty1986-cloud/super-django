@@ -1,11 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو ريلز | النظام الشامل - تخزين في تليجرام + عرض موحد للجميع</title>
+    <title>ناردو ريلز | تخزين تليجرام + عرض موحد</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -184,7 +182,7 @@
             color: white;
         }
 
-        /* ========== مشغل الفيديوهات (تيك توك ستايل) ========== */
+        /* ========== مشغل الفيديوهات ========== */
         .reels-player {
             position: fixed;
             top: 70px;
@@ -220,7 +218,6 @@
             background: #000;
         }
 
-        /* معلومات الريلز */
         .reel-overlay {
             position: absolute;
             bottom: 0;
@@ -266,7 +263,6 @@
             gap: 6px;
         }
 
-        /* بصمة الريلز */
         .reel-id-badge {
             position: absolute;
             top: 20px;
@@ -362,7 +358,7 @@
             box-shadow: 0 8px 30px rgba(212,175,55,0.8);
         }
 
-        /* نافذة رفع الريلز */
+        /* نافذة رفع الريلز المنبثقة */
         .modal {
             display: none;
             position: fixed;
@@ -497,7 +493,6 @@
             cursor: not-allowed;
         }
 
-        /* الإشعارات */
         .notification {
             position: fixed;
             bottom: 100px;
@@ -515,7 +510,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
         }
 
-        /* مؤشر التحميل */
         .loading-overlay {
             position: fixed;
             top: 70px;
@@ -555,7 +549,6 @@
             }
         }
 
-        /* استجابة للشاشات الصغيرة */
         @media (max-width: 600px) {
             .user-bar {
                 padding: 10px 15px;
@@ -623,8 +616,7 @@
                 <i class="fas fa-sign-in-alt"></i> دخول
             </button>
             <div style="margin-top: 20px; font-size: 12px; color: #aaa;">
-                <i class="fas fa-info-circle"></i> أدخل أي اسم للدخول كمستخدم<br>
-                <i class="fas fa-crown"></i> admin - للدخول كمدير
+                <i class="fas fa-info-circle"></i> أدخل أي اسم للدخول كمستخدم
             </div>
         </div>
     </div>
@@ -660,14 +652,14 @@
     <!-- ========== مشغل الريلز ========== -->
     <div id="reelsPlayer" class="reels-player" style="display: none;"></div>
 
-    <!-- ========== زر رفع ريلز ========== -->
+    <!-- ========== زر رفع ريلز (نافذة منبثقة فقط) ========== -->
     <div id="fabButtons" style="display: none;">
         <div class="upload-fab" onclick="openUploadModal()">
             <i class="fas fa-plus"></i>
         </div>
     </div>
 
-    <!-- ========== نافذة رفع ريلز ========== -->
+    <!-- ========== نافذة رفع ريلز المنبثقة ========== -->
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <button class="close-modal" onclick="closeUploadModal()">&times;</button>
@@ -681,7 +673,7 @@
             <div class="upload-area" onclick="document.getElementById('videoInput').click()">
                 <i class="fas fa-cloud-upload-alt"></i>
                 <h3>اضغط لرفع فيديو</h3>
-                <p>MP4, MOV, AVI - الحد الأقصى 50MB</p>
+                <p>MP4, MOV - الحد الأقصى 50MB</p>
             </div>
             <input type="file" id="videoInput" accept="video/*" style="display: none;" onchange="handleVideoSelect(this)">
             
@@ -693,11 +685,6 @@
             </div>
             
             <input type="text" class="form-control" id="reelTitleInput" placeholder="عنوان الريلز" value="ريلز رائع">
-            
-            <div style="background: rgba(255,215,0,0.1); padding: 12px 15px; border-radius: 20px; margin: 15px 0; text-align: center;">
-                <i class="fas fa-fingerprint" style="color: gold;"></i>
-                <span style="font-size: 13px;">سيتم إنشاء معرف فريد وسيظهر للجميع فوراً</span>
-            </div>
             
             <button class="send-btn" id="uploadBtn" onclick="uploadReelToTelegram()">
                 <i class="fab fa-telegram"></i> رفع وتخزين دائم
@@ -714,7 +701,7 @@
         };
 
         // ========== 2. المتغيرات العامة ==========
-        let reelsCache = [];           // مصدر الريلز (يتم جلبها من تليجرام)
+        let reelsCache = [];
         let users = [];
         let currentUser = null;
         let selectedVideoFile = null;
@@ -728,15 +715,12 @@
             if (saved) {
                 users = JSON.parse(saved);
             } else {
-                users = [
-                    { id: 1, name: 'المدير', username: 'admin', role: 'admin', points: 1000, avatar: '👑' },
-                    { id: 2, name: 'مستخدم تجريبي', username: 'user', role: 'user', points: 100, avatar: '👤' }
-                ];
+                users = [];
                 localStorage.setItem('nardoo_users', JSON.stringify(users));
             }
         }
 
-        // ========== 4. تحميل الإعجابات الخاصة بالمستخدم ==========
+        // ========== 4. تحميل الإعجابات ==========
         function loadLikes() {
             const userId = currentUser?.id || 'guest';
             const saved = localStorage.getItem(`nardoo_likes_${userId}`);
@@ -752,7 +736,7 @@
             localStorage.setItem(`nardoo_likes_${userId}`, JSON.stringify(userLikes));
         }
 
-        // ========== 5. جلب جميع الريلز من قناة تليجرام (المصدر الرئيسي للجميع) ==========
+        // ========== 5. جلب جميع الريلز من تليجرام ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
@@ -760,7 +744,6 @@
             showLoadingOverlay(true, "🔄 جاري تحميل الريلز من تليجرام...");
             
             try {
-                // جلب آخر التحديثات من القناة
                 const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
                 const response = await fetch(url);
                 const data = await response.json();
@@ -774,22 +757,18 @@
                         const post = update.channel_post || update.message;
                         if (!post) continue;
                         
-                        // التحقق من وجود فيديو
                         if (post.video) {
                             const messageId = post.message_id;
                             const caption = post.caption || '';
                             
-                            // استخراج العنوان من الكابشن
                             let title = '🎬 ريلز';
                             const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
                             if (titleMatch) title = titleMatch[1];
                             
-                            // استخراج الناشر
                             let publisher = 'مستخدم';
                             const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
                             if (publisherMatch) publisher = publisherMatch[1];
                             
-                            // الحصول على رابط الفيديو الدائم
                             const fileId = post.video.file_id;
                             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                             const fileData = await fileRes.json();
@@ -805,14 +784,8 @@
                                     publisher: publisher,
                                     views: 0,
                                     likes: 0,
-                                    createdAt: new Date(post.date * 1000).toISOString(),
-                                    telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${messageId}`
+                                    createdAt: new Date(post.date * 1000).toISOString()
                                 });
-                                
-                                // تحديث آخر معرف تم معالجته
-                                if (update.update_id > lastUpdateId) {
-                                    lastUpdateId = update.update_id;
-                                }
                             }
                         }
                     }
@@ -820,20 +793,16 @@
                 
                 if (reels.length > 0) {
                     reelsCache = reels;
-                    // حفظ في localStorage كنسخة مؤقتة
                     localStorage.setItem('nardoo_reels_cache', JSON.stringify(reels));
-                    console.log(`✅ تم تحميل ${reels.length} ريلز من تليجرام`);
-                    showNotification(`📹 تم تحميل ${reels.length} ريلز`, 'success');
+                    showNotification(`✅ تم تحميل ${reels.length} ريلز`, 'success');
                 } else {
-                    // إذا لم يتم العثور على فيديوهات، استخدم الكاش
                     const cached = localStorage.getItem('nardoo_reels_cache');
                     if (cached && JSON.parse(cached).length > 0) {
                         reelsCache = JSON.parse(cached);
-                        console.log(`📦 تم تحميل ${reelsCache.length} ريلز من الكاش`);
                         showNotification(`📦 عرض ${reelsCache.length} ريلز من الذاكرة`, 'info');
                     } else {
                         reelsCache = [];
-                        showNotification('📹 لا توجد ريلز في القناة، قم برفع أول ريلز', 'info');
+                        showNotification('📹 لا توجد ريلز، قم برفع أول ريلز', 'info');
                     }
                 }
                 
@@ -841,8 +810,7 @@
                 updateStats();
                 
             } catch (error) {
-                console.error('❌ خطأ في جلب الريلز:', error);
-                // استخدام الكاش عند فشل الاتصال
+                console.error('❌ خطأ:', error);
                 const cached = localStorage.getItem('nardoo_reels_cache');
                 if (cached && JSON.parse(cached).length > 0) {
                     reelsCache = JSON.parse(cached);
@@ -858,7 +826,7 @@
             }
         }
 
-        // ========== 6. عرض جميع الريلز (نفس المحتوى لجميع المستخدمين) ==========
+        // ========== 6. عرض جميع الريلز ==========
         function displayAllReels() {
             const container = document.getElementById('reelsPlayer');
             
@@ -876,12 +844,10 @@
                 return;
             }
             
-            // ترتيب من الأحدث للأقدم
             const sorted = [...reelsCache].reverse();
             
             container.innerHTML = sorted.map(reel => {
                 const isLiked = userLikes[reel.id] === true;
-                const viewsText = formatNumber(reel.views || 0);
                 const likesText = formatNumber(reel.likes || 0);
                 const timeAgo = getTimeAgo(reel.createdAt);
                 
@@ -916,9 +882,8 @@
                                         <span style="font-size: 11px; color: #888;"><i class="far fa-clock"></i> ${timeAgo}</span>
                                     </div>
                                     <div class="reel-stats">
-                                        <span><i class="fas fa-eye"></i> ${viewsText}</span>
                                         <span><i class="fas fa-heart"></i> ${likesText}</span>
-                                        <span><i class="fab fa-telegram"></i> مخزن</span>
+                                        <span><i class="fab fa-telegram"></i> مخزن في تليجرام</span>
                                     </div>
                                 </div>
                             </div>
@@ -927,7 +892,6 @@
                 `;
             }).join('');
             
-            // تفعيل التشغيل التلقائي عند التمرير
             setTimeout(() => {
                 const slides = document.querySelectorAll('.reel-slide');
                 const observer = new IntersectionObserver((entries) => {
@@ -935,13 +899,6 @@
                         const video = entry.target.querySelector('video');
                         if (entry.isIntersecting) {
                             video.play().catch(e => console.log);
-                            const reelId = parseInt(entry.target.dataset.reelId);
-                            const reel = reelsCache.find(r => r.id === reelId);
-                            if (reel && !reel.viewRecorded) {
-                                reel.views = (reel.views || 0) + 1;
-                                reel.viewRecorded = true;
-                                updateStats();
-                            }
                         } else {
                             video.pause();
                         }
@@ -951,7 +908,7 @@
             }, 150);
         }
 
-        // ========== 7. رفع ريلز جديد إلى تليجرام ==========
+        // ========== 7. رفع ريلز إلى تليجرام ==========
         async function uploadReelToTelegram() {
             if (!selectedVideoFile) {
                 showNotification('❌ اختر فيديو أولاً', 'error');
@@ -968,7 +925,6 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري الرفع...';
             
             try {
-                // رفع الفيديو إلى قناة تليجرام
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', selectedVideoFile);
@@ -982,17 +938,12 @@
                 const data = await response.json();
                 
                 if (data.ok) {
-                    const messageId = data.result.message_id;
-                    showNotification(`✅ تم الرفع بنجاح! المعرف: ${messageId}`, 'success');
-                    
-                    // إعادة تحميل الريلز بعد ثانيتين
+                    showNotification(`✅ تم الرفع بنجاح!`, 'success');
                     setTimeout(() => {
                         loadReelsFromTelegram();
                     }, 3000);
-                    
                     closeUploadModal();
                     removeSelectedVideo();
-                    
                 } else {
                     throw new Error(data.description || 'فشل الرفع');
                 }
@@ -1024,7 +975,7 @@
             }
         }
 
-        // ========== 9. مشاركة الريلز ==========
+        // ========== 9. مشاركة ==========
         function shareReel(videoUrl, title, event) {
             event.stopPropagation();
             const shareText = `🎬 ${title}\n📹 ناردو ريلز\n🔗 ${videoUrl}`;
@@ -1044,7 +995,6 @@
             }
         }
 
-        // ========== 10. نسخ معرف الريلز ==========
         function copyReelId(reelId, event) {
             event.stopPropagation();
             copyToClipboard(reelId.toString());
@@ -1055,7 +1005,6 @@
             navigator.clipboard.writeText(text);
         }
 
-        // ========== 11. تحديث الإحصائيات ==========
         function updateStats() {
             const totalReels = reelsCache.length;
             const totalViews = reelsCache.reduce((sum, r) => sum + (r.views || 0), 0);
@@ -1067,7 +1016,7 @@
             if (viewsSpan) viewsSpan.innerText = formatNumber(totalViews);
         }
 
-        // ========== 12. دوال مساعدة ==========
+        // ========== دوال مساعدة ==========
         function handleVideoSelect(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -1104,6 +1053,7 @@
 
         function closeUploadModal() {
             document.getElementById('uploadModal').style.display = 'none';
+            removeSelectedVideo();
         }
 
         function showLoadingOverlay(show, message = "جاري التحميل...") {
@@ -1163,7 +1113,7 @@
             setTimeout(() => div.remove(), 3500);
         }
 
-        // ========== 13. تسجيل الدخول والخروج ==========
+        // ========== تسجيل الدخول والخروج ==========
         function login() {
             const username = document.getElementById('loginUsername').value.trim();
             if (!username) {
@@ -1188,9 +1138,7 @@
             document.getElementById('reelsPlayer').style.display = 'block';
             document.getElementById('userNameDisplay').innerText = currentUser.name;
             
-            // تحميل الريلز من تليجرام
             loadReelsFromTelegram();
-            
             showNotification(`👋 مرحباً ${user.name}`, 'success');
         }
 
@@ -1205,14 +1153,14 @@
             showNotification('👋 تم تسجيل الخروج', 'info');
         }
 
-        // ========== 14. التحديث التلقائي كل دقيقة ==========
+        // تحديث تلقائي كل دقيقة
         setInterval(() => {
             if (currentUser) {
                 loadReelsFromTelegram();
             }
-        }, 60000); // كل 60 ثانية
+        }, 60000);
 
-        // ========== 15. تهيئة الصفحة ==========
+        // تهيئة
         loadUsers();
         
         const savedUser = localStorage.getItem('current_user');
@@ -1229,15 +1177,10 @@
             }
         }
 
-        // إغلاق النافذة عند الضغط خارجها
         window.onclick = function(e) {
             const modal = document.getElementById('uploadModal');
             if (e.target === modal) closeUploadModal();
         };
-
-        console.log('🎬 نظام ناردو ريلز الشامل جاهز');
-        console.log('📹 جميع المستخدمين يرون نفس الريلز من قناة تليجرام');
-        console.log('💾 تخزين دائم في تليجرام + عرض فوري');
     </script>
 </body>
 </html>
