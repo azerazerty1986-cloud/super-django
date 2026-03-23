@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="css/responsive.css">
     
     <style>
-        /* ستايلات إضافية مؤقتة للريلز */
+        /* ستايلات إضافية للريلز */
         .reels-video-section {
             margin: 30px 0;
             background: white;
@@ -211,10 +211,6 @@
             gap: 3px;
         }
         
-        .telegram-badge-mini {
-            color: #0088cc;
-        }
-        
         .reels-empty-state {
             text-align: center;
             padding: 40px;
@@ -226,7 +222,7 @@
             background: #1e1e2e;
         }
         
-        /* نافذة الريلز */
+        /* نافذة الريلز المنبثقة */
         .reel-modal {
             position: fixed;
             top: 0;
@@ -324,6 +320,58 @@
         .loader-text {
             color: white;
             margin-top: 15px;
+        }
+        
+        /* نافذة عرض جميع الريلز */
+        .all-reels-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10001;
+            overflow-y: auto;
+        }
+        
+        .all-reels-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 20px 40px;
+        }
+        
+        .all-reels-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #ffd700, #ffb347);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10002;
+        }
+        
+        .all-reels-header h2 {
+            color: #1a1a2e;
+            margin: 0;
+        }
+        
+        .close-all-reels {
+            background: rgba(0,0,0,0.2);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        
+        .reels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
         }
     </style>
 </head>
@@ -716,9 +764,9 @@
     <script src="js/shop.js"></script>      
     <script src="js/app.js"></script>       
     
-    <!-- ===== كود الريلز الإضافي (للتكامل مع تليجرام) ===== -->
+    <!-- ===== كود الريلز للتكامل مع تليجرام ===== -->
     <script>
-        // ========== إعدادات تليجرام ==========
+        // ========== إعدادات تليجرام (نفس المستخدمة في الكود الثاني والثالث) ==========
         const TELEGRAM_REELS = {
             botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
             channelId: '-1003822964890',
@@ -763,7 +811,7 @@
                     const serialMatch = caption.match(/🔢 الرقم التسلسلي: (NARD-[^\n]+)/);
                     if (serialMatch) serialNumber = serialMatch[1];
                     
-                    // التحقق من وجود @azerg
+                    // التحقق من وجود @azerg (شرط العرض في الشريط العلوي)
                     const hasAzerg = caption.includes('@azerg') || caption.includes('azerg');
                     
                     // الحصول على رابط الفيديو
@@ -781,7 +829,7 @@
                             publisher: publisher,
                             serialNumber: serialNumber,
                             hasAzerg: hasAzerg,
-                            isVerified: (hasAzerg && serialNumber && serialNumber.startsWith('NARD-')),
+                            isVerified: hasAzerg, // الريلز المعتمدة هي التي تحوي @azerg
                             date: new Date(post.date * 1000).toISOString(),
                             views: 0,
                             likes: 0
@@ -790,10 +838,10 @@
                 }
                 
                 allReels = reels;
-                verifiedReels = reels.filter(r => r.isVerified === true);
+                verifiedReels = reels.filter(r => r.hasAzerg === true);
                 
                 console.log(`✅ تم تحميل ${allReels.length} ريلز من القناة`);
-                console.log(`✨ الريلز المعتمدة: ${verifiedReels.length}`);
+                console.log(`✨ الريلز المعتمدة (التي تحوي @azerg): ${verifiedReels.length}`);
                 
                 updateTopReelsBar();
                 
@@ -805,7 +853,7 @@
                 console.error('❌ خطأ:', error);
                 const container = document.getElementById('reelsVideoContainer');
                 if (container) {
-                    container.innerHTML = `<div class="reels-empty-state"><p>⚠️ فشل الاتصال بتليجرام</p><button onclick="fetchReelsFromTelegram()">إعادة المحاولة</button></div>`;
+                    container.innerHTML = `<div class="reels-empty-state"><p>⚠️ فشل الاتصال بتليجرام</p><button onclick="fetchReelsFromTelegram()" style="margin-top:15px; padding:8px 20px; background:#ffd700; border:none; border-radius:25px; cursor:pointer;">إعادة المحاولة</button></div>`;
                 }
                 const loader = document.getElementById('loader');
                 if (loader) loader.style.display = 'none';
@@ -822,7 +870,7 @@
                     <div class="reels-empty-state">
                         <i class="fas fa-film" style="font-size: 3rem; color: #ffd700;"></i>
                         <p>لا توجد ريلز معتمدة</p>
-                        <p style="font-size: 0.85rem;">الريلز التي تحوي @azerg ورقم تسلسلي NARD- تظهر هنا</p>
+                        <p style="font-size: 0.85rem;">الريلز التي تحوي @azerg تظهر هنا</p>
                         <a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 8px 20px; background: #ffd700; border-radius: 25px; text-decoration: none; color: #1a1a2e;">➕ إضافة ريلز</a>
                     </div>
                 `;
@@ -854,17 +902,25 @@
         
         // ========== فتح نافذة جميع الريلز ==========
         function openAllReelsModal() {
-            const modal = document.createElement('div');
-            modal.className = 'reel-modal';
-            
-            let content = '';
             if (!allReels || allReels.length === 0) {
-                content = `<div style="text-align: center; padding: 50px;"><i class="fas fa-film" style="font-size: 4rem; color: #ffd700;"></i><p>لا توجد ريلز</p></div>`;
-            } else {
-                content = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px; max-height: 80vh; overflow-y: auto;">
+                showToast('لا توجد ريلز لعرضها', 'info');
+                return;
+            }
+            
+            // إنشاء نافذة منبثقة لعرض جميع الريلز
+            const modalDiv = document.createElement('div');
+            modalDiv.className = 'all-reels-modal';
+            modalDiv.innerHTML = `
+                <div class="all-reels-header">
+                    <h2><i class="fas fa-film"></i> جميع الريلز (${allReels.length})</h2>
+                    <button class="close-all-reels" onclick="this.closest('.all-reels-modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="all-reels-container">
+                    <div class="reels-grid">
                         ${allReels.map(reel => `
-                            <div class="reel-item" onclick="openReelDetail(${reel.id})">
+                            <div class="reel-item" onclick="openReelDetail(${reel.id}); document.querySelector('.all-reels-modal')?.remove();">
                                 <div class="reel-video-wrapper" style="height: 200px;">
                                     <video src="${reel.videoUrl}" preload="metadata" muted style="width:100%;height:100%;object-fit:cover;"></video>
                                     <div class="reel-overlay-info">
@@ -872,31 +928,18 @@
                                     </div>
                                 </div>
                                 <div class="reel-stats-preview">
-                                    ${reel.isVerified ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>' : '<span class="verified-badge" style="background:#888;"><i class="fas fa-clock"></i> قيد المراجعة</span>'}
+                                    ${reel.hasAzerg ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> معتمد</span>' : '<span class="verified-badge" style="background:#888;"><i class="fas fa-clock"></i> قيد المراجعة</span>'}
+                                    <span><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</span>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                `;
-            }
-            
-            modal.innerHTML = `
-                <div class="reel-modal-content" style="background: white; width: 90%; max-width: 1200px; border-radius: 25px; overflow: hidden;">
-                    <button class="reel-modal-close" onclick="this.closest('.reel-modal').remove()" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <div style="background: linear-gradient(135deg, #ffd700, #ffb347); padding: 20px; text-align: center;">
-                        <h2><i class="fas fa-film"></i> جميع الريلز</h2>
-                        <p>${allReels.length} ريلز في القناة</p>
-                    </div>
-                    ${content}
                 </div>
             `;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modalDiv);
         }
         
-        // ========== عرض تفاصيل الريلز ==========
+        // ========== عرض تفاصيل الريلز في نافذة منبثقة ==========
         function openReelDetail(reelId) {
             const reel = [...allReels, ...verifiedReels].find(r => r.id === reelId);
             if (!reel) return;
@@ -911,11 +954,13 @@
                         <h3>${escapeHtml(reel.title)}</h3>
                         <p><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</p>
                         ${reel.serialNumber ? `<div class="reel-serial"><i class="fas fa-fingerprint"></i> ${reel.serialNumber}</div>` : ''}
-                        ${reel.isVerified ? '<div class="reel-serial" style="color:#10b981;"><i class="fas fa-check-circle"></i> ريلز معتمد</div>' : '<div class="reel-serial" style="color:#ff9800;"><i class="fas fa-clock"></i> قيد المراجعة</div>'}
+                        ${reel.hasAzerg ? '<div class="reel-serial" style="color:#10b981;"><i class="fas fa-check-circle"></i> ريلز معتمد @azerg</div>' : '<div class="reel-serial" style="color:#ff9800;"><i class="fas fa-clock"></i> قيد المراجعة</div>'}
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
+            
+            // زيادة عدد المشاهدات
             reel.views = (reel.views || 0) + 1;
         }
         
@@ -936,6 +981,17 @@
             return num || 0;
         }
         
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast-message';
+            toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:12px 25px;border-radius:50px;z-index:10001;';
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
         // ========== الاستماع لتحديثات الريلز ==========
         function listenForReelsUpdate() {
             window.addEventListener('storage', (e) => {
@@ -945,7 +1001,7 @@
             });
         }
         
-        // ========== تحديث تلقائي ==========
+        // ========== تحديث تلقائي كل دقيقة ==========
         function startAutoRefresh() {
             setInterval(() => {
                 if (document.visibilityState === 'visible') {
@@ -965,4 +1021,3 @@
     </script>
 </body>
 </html>
-
