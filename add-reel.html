@@ -71,6 +71,7 @@
         
         .back-btn:hover {
             background: rgba(0, 0, 0, 0.4);
+            transform: translateX(-5px);
         }
         
         .reel-content { padding: 35px; }
@@ -227,9 +228,9 @@
         }
         
         @keyframes pulse {
-            0% { border-color: rgba(255,215,0,0.3); }
-            50% { border-color: rgba(255,215,0,0.8); }
-            100% { border-color: rgba(255,215,0,0.3); }
+            0% { border-color: rgba(255,215,0,0.3); box-shadow: 0 0 0 0 rgba(255,215,0,0.1); }
+            50% { border-color: rgba(255,215,0,0.8); box-shadow: 0 0 10px 2px rgba(255,215,0,0.3); }
+            100% { border-color: rgba(255,215,0,0.3); box-shadow: 0 0 0 0 rgba(255,215,0,0.1); }
         }
         
         .serial-info i {
@@ -365,6 +366,16 @@
             margin-top: 10px;
         }
         
+        .admin-warning {
+            background: rgba(255,0,102,0.2);
+            border: 1px solid #ff0066;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ff99cc;
+        }
+        
         @media (max-width: 768px) {
             .reel-content { padding: 25px; }
             .reel-header h1 { font-size: 1.5rem; }
@@ -385,6 +396,10 @@
             </div>
             
             <div class="reel-content">
+                <div id="adminWarning" class="admin-warning" style="display: none;">
+                    <i class="fas fa-lock"></i> ⚠️ فقط المدير يمكنه رفع الريلز
+                </div>
+                
                 <form id="addReelForm">
                     <div class="form-group">
                         <label><i class="fas fa-tag"></i> عنوان الريلز <span style="color: red;">*</span></label>
@@ -475,18 +490,31 @@
                 }
             } catch(e) {}
             
-            // إذا لم يوجد مستخدم، استخدم مدير افتراضي
+            // إذا لم يوجد مستخدم، استخدم مدير افتراضي (للتجربة)
             if (!currentUser) {
                 currentUser = { id: 1, name: 'المدير', role: 'admin' };
                 document.getElementById('publisherName').value = 'المدير';
             }
             
             // التحقق من الصلاحية (فقط المدير يمكنه الرفع)
+            const adminWarning = document.getElementById('adminWarning');
+            const saveBtn = document.getElementById('saveBtn');
+            
             if (currentUser.role !== 'admin') {
+                if (adminWarning) adminWarning.style.display = 'block';
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.style.opacity = '0.5';
+                    saveBtn.style.cursor = 'not-allowed';
+                }
                 showToast('⛔ فقط المدير يمكنه رفع الريلز', 'error');
-                document.getElementById('saveBtn').disabled = true;
-                document.getElementById('saveBtn').style.opacity = '0.5';
-                document.getElementById('saveBtn').style.cursor = 'not-allowed';
+            } else {
+                if (adminWarning) adminWarning.style.display = 'none';
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.style.opacity = '1';
+                    saveBtn.style.cursor = 'pointer';
+                }
             }
         }
         
@@ -525,8 +553,8 @@
             serialInfo.style.display = 'block';
             
             try {
-                // إنشاء الكابشن مع المعرف الخاص (مهم للفلترة)
-                const caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${barSerial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز - مخصص للشريط العلوي\n\n#ناردو_ريلز #شريط_علوي #NARD`;
+                // إنشاء الكابشن مع المعرف الخاص (مهم للفلترة في الشريط)
+                const caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${barSerial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز - مخصص للشريط العلوي فقط\n\n#ناردو_ريلز #شريط_علوي #NARD`;
                 
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
@@ -772,6 +800,7 @@
         console.log('🔑 سيتم إنشاء معرف خاص بالشريط العلوي (NARD-YYYYMMDD-HHMMSS-RANDOM)');
         console.log('📡 التخزين في قناة تليجرام');
         console.log('✅ فقط الريلز التي تحمل هذا المعرف ستظهر في الشريط العلوي');
+        console.log('👑 فقط المدير يمكنه رفع الريلز');
     </script>
 </body>
 </html>
