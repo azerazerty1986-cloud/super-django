@@ -66,12 +66,6 @@
             cursor: pointer;
             font-family: 'Cairo', sans-serif;
             font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .back-btn:hover {
-            background: rgba(0, 0, 0, 0.4);
-            transform: translateX(-5px);
         }
         
         .reel-content { padding: 35px; }
@@ -154,12 +148,6 @@
             width: 40px;
             height: 40px;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .remove-video-btn:hover {
-            transform: scale(1.1);
-            background: red;
         }
         
         .image-upload-area {
@@ -202,11 +190,6 @@
             width: 30px;
             height: 30px;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .remove-poster-btn:hover {
-            transform: scale(1.1);
         }
         
         .file-info {
@@ -224,13 +207,6 @@
             margin: 20px 0;
             text-align: center;
             border: 1px solid rgba(255,215,0,0.3);
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { border-color: rgba(255,215,0,0.3); box-shadow: 0 0 0 0 rgba(255,215,0,0.1); }
-            50% { border-color: rgba(255,215,0,0.8); box-shadow: 0 0 10px 2px rgba(255,215,0,0.3); }
-            100% { border-color: rgba(255,215,0,0.3); box-shadow: 0 0 0 0 rgba(255,215,0,0.1); }
         }
         
         .serial-info i {
@@ -245,11 +221,10 @@
             font-weight: bold;
             color: gold;
             background: rgba(0,0,0,0.5);
-            padding: 8px 15px;
+            padding: 5px 12px;
             border-radius: 20px;
             display: inline-block;
             margin-top: 8px;
-            letter-spacing: 1px;
         }
         
         .save-btn {
@@ -305,7 +280,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -313,12 +288,12 @@
         }
         
         .confirm-content {
-            background: linear-gradient(135deg, #1a2a2a, #0f1a1a);
+            background: #1a1a2e;
             border-radius: 25px;
             padding: 30px;
             max-width: 400px;
             text-align: center;
-            border: 2px solid #ffd700;
+            border: 1px solid #ffd700;
         }
         
         .success-checkmark {
@@ -330,12 +305,6 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            animation: scaleIn 0.5s ease;
-        }
-        
-        @keyframes scaleIn {
-            from { transform: scale(0); }
-            to { transform: scale(1); }
         }
         
         .success-checkmark i { font-size: 3rem; color: white; }
@@ -350,36 +319,14 @@
             cursor: pointer;
             font-weight: bold;
             font-family: 'Cairo', sans-serif;
-            transition: all 0.3s;
         }
         
         .confirm-yes { background: #ffd700; color: #1a1a2e; }
         .confirm-no { background: #333; color: white; }
         
-        .confirm-yes:hover, .confirm-no:hover {
-            transform: translateY(-2px);
-        }
-        
-        .info-text {
-            font-size: 12px;
-            color: #aaa;
-            margin-top: 10px;
-        }
-        
-        .admin-warning {
-            background: rgba(255,0,102,0.2);
-            border: 1px solid #ff0066;
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-            margin-bottom: 20px;
-            color: #ff99cc;
-        }
-        
         @media (max-width: 768px) {
             .reel-content { padding: 25px; }
             .reel-header h1 { font-size: 1.5rem; }
-            .serial-number { font-size: 12px; }
         }
     </style>
 </head>
@@ -396,10 +343,6 @@
             </div>
             
             <div class="reel-content">
-                <div id="adminWarning" class="admin-warning" style="display: none;">
-                    <i class="fas fa-lock"></i> ⚠️ فقط المدير يمكنه رفع الريلز
-                </div>
-                
                 <form id="addReelForm">
                     <div class="form-group">
                         <label><i class="fas fa-tag"></i> عنوان الريلز <span style="color: red;">*</span></label>
@@ -438,7 +381,7 @@
                         <i class="fas fa-fingerprint"></i>
                         <span>المعرف الخاص للشريط العلوي:</span>
                         <div class="serial-number" id="displaySerial">NARD-XXXXXXXX-XXXX</div>
-                        <small class="info-text">✅ هذا المعرف سيسمح للشريط العلوي بعرض هذا الريلز فقط</small>
+                        <small style="color: #aaa;">هذا المعرف سيسمح للشريط العلوي بعرض هذا الريلز فقط</small>
                     </div>
                     
                     <button type="button" class="save-btn" id="saveBtn" onclick="uploadReelToTelegram()">
@@ -490,31 +433,17 @@
                 }
             } catch(e) {}
             
-            // إذا لم يوجد مستخدم، استخدم مدير افتراضي (للتجربة)
+            // إذا لم يوجد مستخدم، استخدم مدير افتراضي
             if (!currentUser) {
                 currentUser = { id: 1, name: 'المدير', role: 'admin' };
                 document.getElementById('publisherName').value = 'المدير';
             }
             
             // التحقق من الصلاحية (فقط المدير يمكنه الرفع)
-            const adminWarning = document.getElementById('adminWarning');
-            const saveBtn = document.getElementById('saveBtn');
-            
             if (currentUser.role !== 'admin') {
-                if (adminWarning) adminWarning.style.display = 'block';
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.style.opacity = '0.5';
-                    saveBtn.style.cursor = 'not-allowed';
-                }
                 showToast('⛔ فقط المدير يمكنه رفع الريلز', 'error');
-            } else {
-                if (adminWarning) adminWarning.style.display = 'none';
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.style.opacity = '1';
-                    saveBtn.style.cursor = 'pointer';
-                }
+                document.getElementById('saveBtn').disabled = true;
+                document.getElementById('saveBtn').style.opacity = '0.5';
             }
         }
         
@@ -553,20 +482,13 @@
             serialInfo.style.display = 'block';
             
             try {
-                // إنشاء الكابشن مع المعرف الخاص (مهم للفلترة في الشريط)
-                const caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${barSerial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز - مخصص للشريط العلوي فقط\n\n#ناردو_ريلز #شريط_علوي #NARD`;
+                // إنشاء الكابشن مع المعرف الخاص
+                const caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${barSerial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز - مخصص للشريط العلوي\n\n#ناردو_ريلز #شريط_علوي`;
                 
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', selectedVideoFile);
                 formData.append('caption', caption);
-                
-                // إذا وجدت صورة غلاف، أضفها كصورة مصغرة
-                if (posterData) {
-                    // تحويل base64 إلى blob
-                    const posterBlob = await fetch(posterData).then(res => res.blob());
-                    formData.append('thumb', posterBlob);
-                }
                 
                 const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, {
                     method: 'POST',
@@ -586,8 +508,7 @@
                         title: title,
                         publisher: publisher,
                         timestamp: Date.now(),
-                        telegramId: messageId,
-                        posterUrl: posterData || null
+                        telegramId: messageId
                     };
                     
                     let uploadedReels = JSON.parse(localStorage.getItem('nardo_uploaded_reels') || '[]');
@@ -620,16 +541,16 @@
                     <h2 style="color: #ffd700;">تم النشر بنجاح! 🎉</h2>
                     <p style="color: white;">تم رفع الريلز إلى تليجرام</p>
                     <div style="background: rgba(255,215,0,0.2); padding: 12px; border-radius: 12px; margin: 15px 0;">
-                        <div style="color: white;"><i class="fas fa-tag"></i> <strong>${escapeHtml(reel.title)}</strong></div>
-                        <div style="color: #ffd700; margin-top: 8px; font-family: monospace;">
+                        <div style="color: white;"><i class="fas fa-tag"></i> <strong>${reel.title}</strong></div>
+                        <div style="color: #ffd700; margin-top: 8px;">
                             <i class="fas fa-fingerprint"></i> المعرف الخاص: <strong>${reel.serialNumber}</strong>
                         </div>
                         <div style="color: #aaa; font-size: 11px; margin-top: 5px;">
                             <i class="fab fa-telegram"></i> تم التخزين في قناة تليجرام
                         </div>
                     </div>
-                    <p style="color: #10b981; font-size: 14px;">
-                        ✨ سيظهر هذا الريلز في الشريط العلوي فقط لأنه يحمل المعرف NARD- ✨
+                    <p style="color: #10b981;">
+                        ✨ سيظهر هذا الريلز في الشريط العلوي فقط لأنه يحمل المعرف الخاص ✨
                     </p>
                     <div class="confirm-buttons">
                         <button class="confirm-btn confirm-yes" onclick="redirectToHome()">
@@ -667,7 +588,6 @@
             currentSerialNumber = '';
             document.getElementById('saveBtn').disabled = false;
             document.getElementById('saveBtn').innerHTML = '<i class="fab fa-telegram"></i> رفع وتخزين في تليجرام <i class="fas fa-arrow-left"></i>';
-            document.getElementById('saveBtn').style.opacity = '1';
             
             // إعادة التحقق من الصلاحية
             if (currentUser && currentUser.role !== 'admin') {
@@ -775,13 +695,6 @@
         function leavePage() { window.location.href = 'index.html'; }
         function closeConfirm() { document.querySelector('.confirm-modal')?.remove(); }
         
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -797,10 +710,8 @@
         // ========== تهيئة الصفحة ==========
         loadCurrentUser();
         console.log('🎬 صفحة إضافة الريلز - ناردو برو');
-        console.log('🔑 سيتم إنشاء معرف خاص بالشريط العلوي (NARD-YYYYMMDD-HHMMSS-RANDOM)');
+        console.log('🔑 سيتم إنشاء معرف خاص بالشريط العلوي (NARD-XXXXXXXX-XXXX)');
         console.log('📡 التخزين في قناة تليجرام');
-        console.log('✅ فقط الريلز التي تحمل هذا المعرف ستظهر في الشريط العلوي');
-        console.log('👑 فقط المدير يمكنه رفع الريلز');
     </script>
 </body>
 </html>
