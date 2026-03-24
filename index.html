@@ -652,8 +652,29 @@
             reelsList = JSON.parse(saved);
             console.log(`✅ تم تحميل ${reelsList.length} ريلز`);
         } else {
-            reelsList = [];
-            console.log('📭 لا توجد ريلز');
+            // ريلز تجريبية افتراضية
+            reelsList = [
+                {
+                    id: Date.now(),
+                    title: "🎬 ريلز تجريبي 1",
+                    videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
+                    publisher: "ناردو برو",
+                    views: 1234,
+                    likes: 56,
+                    timestamp: Date.now()
+                },
+                {
+                    id: Date.now() + 1,
+                    title: "🎥 محتوى حصري",
+                    videoUrl: "https://www.w3schools.com/html/movie.mp4",
+                    publisher: "ناردو برو",
+                    views: 567,
+                    likes: 23,
+                    timestamp: Date.now() - 3600000
+                }
+            ];
+            localStorage.setItem('nardo_reels_list', JSON.stringify(reelsList));
+            console.log('📀 تم إنشاء ريلز تجريبية');
         }
         displayReels();
     }
@@ -723,7 +744,8 @@
         // جلب جميع الريلز
         let allReels = [];
         try {
-            allReels = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+            const saved = localStorage.getItem('nardo_reels_list');
+            allReels = saved ? JSON.parse(saved) : reelsList;
         } catch(e) {}
         
         if (allReels.length === 0) {
@@ -800,7 +822,7 @@
                 <div class="full-reel-actions">
                     <div class="full-reel-action" onclick="likeFullReel('${r.id}')">
                         <i class="far fa-heart"></i>
-                        <span class="like-count-${r.id.replace(/[^a-zA-Z0-9]/g, '_')}">${likes}</span>
+                        <span class="like-count-${r.id.toString().replace(/[^a-zA-Z0-9]/g, '_')}">${likes}</span>
                     </div>
                     <div class="full-reel-action" onclick="shareFullReel('${videoUrl}', '${escapeHtml(title)}')">
                         <i class="fas fa-share-alt"></i>
@@ -887,7 +909,7 @@
             reelsData[reelIndex].likes = (reelsData[reelIndex].likes || 0) + 1;
             localStorage.setItem('nardo_reels_list', JSON.stringify(reelsData));
             
-            const likeSpan = document.querySelector(`.like-count-${reelId.replace(/[^a-zA-Z0-9]/g, '_')}`);
+            const likeSpan = document.querySelector(`.like-count-${reelId.toString().replace(/[^a-zA-Z0-9]/g, '_')}`);
             if (likeSpan) {
                 const currentLikes = parseInt(likeSpan.textContent) || 0;
                 likeSpan.textContent = currentLikes + 1;
