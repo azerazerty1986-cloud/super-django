@@ -21,25 +21,6 @@
     
     <style>
         /* إضافات CSS للريلز */
-        .add-reel-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, #ffd700, #ffb347);
-            padding: 8px 18px;
-            border-radius: 30px;
-            color: #1a1a2e;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: none;
-            font-family: 'Cairo', sans-serif;
-        }
-        .add-reel-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255,215,0,0.4);
-        }
         .reels-video-header {
             display: flex;
             justify-content: space-between;
@@ -47,11 +28,6 @@
             flex-wrap: wrap;
             gap: 15px;
             margin-bottom: 20px;
-        }
-        .header-buttons {
-            display: flex;
-            gap: 10px;
-            align-items: center;
         }
         .no-reels-message {
             text-align: center;
@@ -94,6 +70,50 @@
         }
         .reel-video-card {
             cursor: pointer;
+        }
+        
+        /* شريط الريلز الأفقي */
+        .reels-video-container {
+            display: flex;
+            flex-direction: row;
+            overflow-x: auto;
+            gap: 20px;
+            padding: 10px 5px;
+            scroll-behavior: smooth;
+        }
+        .reels-video-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        .reels-video-container::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .reels-video-container::-webkit-scrollbar-thumb {
+            background: #ffd700;
+            border-radius: 10px;
+        }
+        .reel-video-card {
+            flex: 0 0 auto;
+            width: 280px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+        .reel-video-placeholder {
+            height: 280px;
+            position: relative;
+        }
+        .reel-video-overlay {
+            padding: 10px;
+            background: rgba(0,0,0,0.7);
+        }
+        .reel-video-title {
+            color: white;
+            font-size: 14px;
+        }
+        .reel-video-views {
+            color: #ffd700;
+            font-size: 12px;
         }
         
         /* ستايل المشغل الكامل العمودي */
@@ -213,50 +233,8 @@
         @media (max-width: 768px) {
             .full-reel-title { font-size: 16px; }
             .full-reel-action i { font-size: 24px; }
-        }
-        
-        /* شريط الريلز الأفقي */
-        .reels-video-container {
-            display: flex;
-            flex-direction: row;
-            overflow-x: auto;
-            gap: 20px;
-            padding: 10px 5px;
-            scroll-behavior: smooth;
-        }
-        .reels-video-container::-webkit-scrollbar {
-            height: 6px;
-        }
-        .reels-video-container::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-        }
-        .reels-video-container::-webkit-scrollbar-thumb {
-            background: #ffd700;
-            border-radius: 10px;
-        }
-        .reel-video-card {
-            flex: 0 0 auto;
-            width: 280px;
-            border-radius: 15px;
-            overflow: hidden;
-            background: #1a1a2e;
-        }
-        .reel-video-placeholder {
-            height: 280px;
-            position: relative;
-        }
-        .reel-video-overlay {
-            padding: 10px;
-            background: rgba(0,0,0,0.7);
-        }
-        .reel-video-title {
-            color: white;
-            font-size: 14px;
-        }
-        .reel-video-views {
-            color: #ffd700;
-            font-size: 12px;
+            .reel-video-card { width: 220px; }
+            .reel-video-placeholder { height: 220px; }
         }
     </style>
 </head>
@@ -340,19 +318,12 @@
         <div class="reels-video-header">
             <div class="header-title">
                 <i class="fas fa-film reel-section-icon"></i>
-                <h2>ناردو برو ريلز</h2>
+                <h2>ناردو ريلز</h2>
             </div>
-            <div class="header-buttons">
-                <!-- زر إضافة ريلز - يظهر فقط للمدير azer -->
-                <a href="add-reel.html" class="add-reel-btn" id="addReelBtn" style="display: none;">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>إضافة ريلز</span>
-                </a>
-                <a href="07-reels.html" class="view-all-link">
-                    <span>جميع الريلز</span>
-                    <i class="fas fa-arrow-left"></i>
-                </a>
-            </div>
+            <a href="add-reel.html" class="view-all-link">
+                <span>إضافة مقطع</span>
+                <i class="fas fa-arrow-left"></i>
+            </a>
         </div>
         
         <div class="reels-video-container" id="reelsVideoContainer">
@@ -669,72 +640,72 @@
         }, 1000);
     </script>
     
-    <!-- ===== كود إدارة الريلز للمدير azer ===== -->
+    <!-- ===== كود إدارة الريلز ===== -->
     <script>
-    // ========== إدارة فيديوهات المدير azer ==========
-    let azerReels = [];
+    // ========== إدارة فيديوهات الريلز ==========
+    let reelsList = [];
     
-    // تحميل فيديوهات azer
-    function loadAzerReels() {
-        const saved = localStorage.getItem('azer_reels_list');
+    // تحميل الريلز
+    function loadReels() {
+        const saved = localStorage.getItem('nardo_reels_list');
         if (saved) {
-            azerReels = JSON.parse(saved);
-            console.log(`✅ تم تحميل ${azerReels.length} فيديو للمدير azer`);
+            reelsList = JSON.parse(saved);
+            console.log(`✅ تم تحميل ${reelsList.length} ريلز`);
         } else {
-            azerReels = [];
-            console.log('📭 لا توجد فيديوهات للمدير azer');
+            reelsList = [];
+            console.log('📭 لا توجد ريلز');
         }
-        displayAzerReels();
+        displayReels();
     }
     
-    // عرض فيديوهات azer في شريط الريلز (أفقي)
-    function displayAzerReels() {
+    // عرض الريلز في الشريط (أفقي)
+    function displayReels() {
         const container = document.getElementById('reelsVideoContainer');
         if (!container) return;
         
-        if (azerReels.length === 0) {
+        if (reelsList.length === 0) {
             container.innerHTML = `
                 <div class="no-reels-message" style="width: 100%;">
                     <i class="fas fa-film"></i>
                     <p>✨ لا توجد ريلز حالياً ✨</p>
-                    <p>المدير <strong style="color:gold">azer</strong> سيضيف فيديوهات قريباً</p>
-                    <div id="adminAddHint" style="margin-top:15px;"></div>
+                    <p>كن أول من يضيف ريلز</p>
+                    <a href="add-reel.html" class="add-first-reel">
+                        <i class="fas fa-plus-circle"></i> أضف ريلز الآن
+                    </a>
                 </div>
             `;
-            
-            const currentUser = localStorage.getItem('nardo_current_user');
-            const hintDiv = document.getElementById('adminAddHint');
-            if (currentUser) {
-                try {
-                    const user = JSON.parse(currentUser);
-                    if (user.email === 'azer' || user.username === 'azer' || user.name === 'azer') {
-                        hintDiv.innerHTML = '<a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف أول ريلز</a>';
-                    }
-                } catch(e) {}
-            }
             return;
         }
         
         // ترتيب من الأحدث إلى الأقدم
-        const sortedReels = [...azerReels].reverse();
+        const sortedReels = [...reelsList].reverse();
         
         let html = '';
         for (let i = 0; i < sortedReels.length; i++) {
             const reel = sortedReels[i];
+            const videoUrl = reel.videoUrl || '';
+            const posterUrl = reel.posterUrl || '';
+            const title = reel.title || 'بدون عنوان';
+            const views = reel.views || 0;
+            const publisher = reel.publisher || 'ناردو برو';
+            
             html += `
                 <div class="reel-video-card" onclick="openFullReelPlayer('${reel.id}')">
                     <div class="reel-video-placeholder" style="background: linear-gradient(135deg, #1a472a, #0a2a1a); height: 280px; display: flex; align-items: center; justify-content: center; border-radius: 15px; position: relative;">
                         <i class="fas fa-play-circle" style="font-size: 4rem; color: gold;"></i>
                         <div style="position: absolute; bottom: 15px; right: 15px; left: 15px;">
                             <span style="color: white; font-weight: bold; background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 20px; display: block; text-align: center;">
-                                🎬 ${escapeHtml(reel.title)}
+                                🎬 ${escapeHtml(title)}
                             </span>
                         </div>
                     </div>
                     <div class="reel-video-overlay">
-                        <div class="reel-video-info">
-                            <span class="reel-video-title">${escapeHtml(reel.title)}</span>
-                            <span class="reel-video-views"><i class="fas fa-eye"></i> ${formatViews(reel.views || 0)}</span>
+                        <div class="reel-video-info" style="display: flex; justify-content: space-between;">
+                            <span class="reel-video-title">${escapeHtml(title)}</span>
+                            <span class="reel-video-views"><i class="fas fa-eye"></i> ${formatViews(views)}</span>
+                        </div>
+                        <div class="reel-video-publisher" style="font-size: 11px; color: #aaa; margin-top: 5px;">
+                            <i class="fas fa-user"></i> ${escapeHtml(publisher)}
                         </div>
                     </div>
                 </div>
@@ -749,14 +720,14 @@
     let currentPlayingVideoInFull = null;
     
     function openFullReelPlayer(startReelId) {
-        // جلب جميع ريلز المدير azer
+        // جلب جميع الريلز
         let allReels = [];
         try {
-            allReels = JSON.parse(localStorage.getItem('azer_reels_list') || '[]');
+            allReels = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
         } catch(e) {}
         
         if (allReels.length === 0) {
-            showToastMessageFull('لا توجد ريلز للعرض', 'error');
+            showToastMessage('لا توجد ريلز للعرض', 'error');
             return;
         }
         
@@ -771,7 +742,9 @@
         const reel = currentFullReels[startIndex];
         if (reel) {
             reel.views = (reel.views || 0) + 1;
-            localStorage.setItem('azer_reels_list', JSON.stringify(currentFullReels));
+            localStorage.setItem('nardo_reels_list', JSON.stringify(currentFullReels));
+            // تحديث العرض
+            displayReels();
         }
         
         // إنشاء المودال
@@ -799,6 +772,7 @@
             const title = r.title || 'بدون عنوان';
             const views = r.views || 0;
             const likes = r.likes || 0;
+            const publisher = r.publisher || 'ناردو برو';
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'full-reel-item';
@@ -817,7 +791,7 @@
                 <div class="full-reel-info">
                     <div class="full-reel-title">${escapeHtml(title)}</div>
                     <div class="full-reel-publisher">
-                        <i class="fas fa-crown"></i> المدير azer 👑
+                        <i class="fas fa-user"></i> ${escapeHtml(publisher)}
                     </div>
                     <div class="full-reel-views">
                         <i class="fas fa-eye"></i> ${views} مشاهدة
@@ -903,22 +877,24 @@
     }
     
     function likeFullReel(reelId) {
-        let azerReelsData = [];
+        let reelsData = [];
         try {
-            azerReelsData = JSON.parse(localStorage.getItem('azer_reels_list') || '[]');
+            reelsData = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
         } catch(e) {}
         
-        const reelIndex = azerReelsData.findIndex(r => r.id == reelId);
+        const reelIndex = reelsData.findIndex(r => r.id == reelId);
         if (reelIndex !== -1) {
-            azerReelsData[reelIndex].likes = (azerReelsData[reelIndex].likes || 0) + 1;
-            localStorage.setItem('azer_reels_list', JSON.stringify(azerReelsData));
+            reelsData[reelIndex].likes = (reelsData[reelIndex].likes || 0) + 1;
+            localStorage.setItem('nardo_reels_list', JSON.stringify(reelsData));
             
             const likeSpan = document.querySelector(`.like-count-${reelId.replace(/[^a-zA-Z0-9]/g, '_')}`);
             if (likeSpan) {
                 const currentLikes = parseInt(likeSpan.textContent) || 0;
                 likeSpan.textContent = currentLikes + 1;
             }
-            showToastMessageFull('❤️ تم الإعجاب بالريلز', 'success');
+            showToastMessage('❤️ تم الإعجاب بالريلز', 'success');
+            // تحديث العرض
+            displayReels();
         }
     }
     
@@ -938,10 +914,10 @@
     
     function copyToClipboardFull(text, title) {
         navigator.clipboard.writeText(text);
-        showToastMessageFull(`📎 تم نسخ رابط الريلز: ${title}`, 'success');
+        showToastMessage(`📎 تم نسخ رابط الريلز: ${title}`, 'success');
     }
     
-    function showToastMessageFull(message, type) {
+    function showToastMessage(message, type) {
         const toast = document.createElement('div');
         toast.style.cssText = `
             position: fixed;
@@ -973,70 +949,6 @@
         return div.innerHTML;
     }
     
-    // التحكم في ظهور زر الإضافة للمدير azer فقط
-    function checkAzerAdmin() {
-        const currentUser = localStorage.getItem('nardo_current_user');
-        const addReelBtn = document.getElementById('addReelBtn');
-        if (!addReelBtn) return;
-        
-        if (currentUser) {
-            try {
-                const user = JSON.parse(currentUser);
-                if (user.email === 'azer' || user.username === 'azer' || user.name === 'azer') {
-                    addReelBtn.style.display = 'inline-flex';
-                    console.log('👑 مرحباً أيها المدير azer، زر الإضافة ظاهر');
-                } else {
-                    addReelBtn.style.display = 'none';
-                }
-            } catch(e) {
-                addReelBtn.style.display = 'none';
-            }
-        } else {
-            addReelBtn.style.display = 'none';
-        }
-    }
-    
-    // إنشاء حساب المدير azer
-    function createAzerAdmin() {
-        let users = localStorage.getItem('nardo_users');
-        users = users ? JSON.parse(users) : [];
-        
-        const azerExists = users.some(u => u.email === 'azer' || u.username === 'azer');
-        
-        if (!azerExists) {
-            users.push({
-                id: Date.now(),
-                name: 'المدير azer',
-                email: 'azer',
-                username: 'azer',
-                password: '123456',
-                role: 'admin',
-                phone: '0555555555',
-                createdAt: new Date().toISOString()
-            });
-            localStorage.setItem('nardo_users', JSON.stringify(users));
-            console.log('✅ تم إنشاء حساب المدير azer (البريد: azer، كلمة المرور: 123456)');
-        }
-    }
-    
-    function updateUIForUser() {
-        checkAzerAdmin();
-        const currentUser = localStorage.getItem('nardo_current_user');
-        const userBtn = document.getElementById('userBtn');
-        if (currentUser && userBtn) {
-            try {
-                const user = JSON.parse(currentUser);
-                if (user.email === 'azer' || user.username === 'azer') {
-                    userBtn.innerHTML = '<i class="fas fa-crown"></i>';
-                    userBtn.title = 'المدير azer';
-                } else {
-                    userBtn.innerHTML = '<i class="fas fa-user-check"></i>';
-                    userBtn.title = user.name;
-                }
-            } catch(e) {}
-        }
-    }
-    
     // إضافة أنيميشن للتوست
     const styleToast = document.createElement('style');
     styleToast.textContent = `
@@ -1051,20 +963,11 @@
     
     // تهيئة الصفحة
     document.addEventListener('DOMContentLoaded', function() {
-        createAzerAdmin();
-        checkAzerAdmin();
-        updateUIForUser();
-        setTimeout(() => {
-            loadAzerReels();
-        }, 500);
+        loadReels();
         
         window.addEventListener('storage', function(e) {
-            if (e.key === 'azer_reels_updated' || e.key === 'azer_reels_list') {
-                loadAzerReels();
-            }
-            if (e.key === 'nardo_current_user') {
-                checkAzerAdmin();
-                updateUIForUser();
+            if (e.key === 'nardo_reels_updated' || e.key === 'nardo_reels_list') {
+                loadReels();
             }
         });
     });
