@@ -647,6 +647,244 @@
         document.addEventListener('DOMContentLoaded', hideAddReelForNormalUsers);
         window.addEventListener('storage', hideAddReelForNormalUsers);
     </script>
+    <script>
+    // ========================================
+    // شريط الريلز العمودي (مثل تيك توك)
+    // ========================================
+    
+    let currentVideo = null;
+    let scrollTimeout = null;
+    
+    function loadVerticalReels() {
+        const container = document.getElementById('reelsVideoContainer');
+        if (!container) {
+            console.log('❌ container not found');
+            return;
+        }
+        
+        let reelsList = [];
+        try {
+            reelsList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+            console.log('📹 عدد الريلز:', reelsList.length);
+        } catch(e) {
+            console.error('خطأ في قراءة الريلز:', e);
+        }
+        
+        if (reelsList.length === 0) {
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 600px; color: white; text-align: center; flex-direction: column; background: #111;">
+                    <i class="fas fa-film" style="font-size: 60px; color: #ffd700; margin-bottom: 20px;"></i>
+                    <h3 style="margin-bottom: 10px;">لا توجد ريلز حالياً</h3>
+                    <p style="margin-bottom: 20px; opacity: 0.7;">كن أول من يضيف ريلز</p>
+                    <a href="add-reel.html" style="display: inline-block; padding: 12px 25px; background: #ffd700; color: #1a1a2e; border-radius: 30px; text-decoration: none; font-weight: bold;">
+                        <i class="fas fa-plus"></i> أضف أول ريل
+                    </a>
+                </div>
+            `;
+            return;
+        }
+        
+        // عرض جميع الريلز بشكل عمودي
+        container.innerHTML = reelsList.map((reel, index) => `
+            <div class="reel-video-card" data-id="${reel.id}" data-index="${index}">
+                <video 
+                    src="${reel.videoUrl}" 
+                    poster="${reel.posterUrl || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400'}" 
+                    muted 
+                    loop 
+                    playsinline
+                    preload="auto"
+                ></video>
+                
+                <div class="reel-video-overlay">
+                    <div class="reel-video-info">
+                        <div>
+                            <div class="reel-video-title">${escapeHtml(reel.title)}</div>
+                            <div class="reel-video-publisher">
+                                <i class="fas fa-user-circle"></i> ${escapeHtml(reel.publisher) || 'ناردو برو'}
+                            </div>
+                        </div>
+                        <div class="reel-video-views">
+                            <i class="fas fa-eye"></i> ${reel.views || 0}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="reel-side-actions">
+                    <div class="reel-action-btn" onclick="likeReel(${reel.id})">
+                        <i class="far fa-heart"></i>
+                        <span>${reel.likes || 0}</span>
+                    </div>
+                    <div class="reel-action-btn" onclick="shareReel('${reel.videoUrl}', '${escapeHtml(reel.title)}')">
+                        <i class="fas fa-share-alt"></i>
+                        <span>مشاركة</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // إضافة مستمع التمرير
+        container.removeEventListener('scroll', onReelScroll);
+        container.addEventListener('scroll', onReelScroll);
+        
+        // تشغيل الفيديو الأول بعد قليل
+        setTimeout(() => {
+            playCurrentReel();
+        }, 500);
+    }
+    
+    function onReelScroll() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            playCurrentReel();
+        }, 150);
+    }
+    
+    function playCurrentReel() {
+        const container = document.getElementById('reelsVideoContainer');
+        const cards = document.querySelectorAll('.reel-video-card');
+        
+        if (!cards.length) return;
+        
+        const containerRect = container.getBoundingClientRect();
+        const containerCenter = containerRect.top + (containerRect.height / 2);
+        
+        let activeCard = null;
+        let minDistance = Infinity;
+        
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const cardCenter = rect.top + (rect.height / 2);
+            const distance = Math.abs(cardCenter - containerCenter);
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                activeCard = card;
+            }
+        });
+        
+        if (activeCard) {
+            const video = activeCard.querySelector('video');
+            if (video) {
+                // إيقاف الفيديو السابق
+                if (currentVideo && currentVideo !== video) {
+                    currentVideo.pause();
+                }
+                
+                // تشغيل الفيديو الجديد
+                if (video.paused) {
+                    video.play().catch(e => console.log('Auto-play error:', e));
+                }
+                currentVideo = video;
+                
+                // تحديث الفيديو النشط
+                cards.forEach(c => c.classList.remove('active'));
+                activeCard.classList.add('active');
+                
+                // تحديث عدد المشاهدات
+                const reelId = activeCard.getAttribute('data-id');
+                if (reelId) {
+                    updateViews(reelId);
+                }
+            }
+        }
+    }
+    
+    function updateViews(reelId) {
+        let reelsList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+        const reelIndex = reelsList.findIndex(r => r.id == reelId);
+        if (reelIndex !== -1) {
+            reelsList[reelIndex].views = (reelsList[reelIndex].views || 0) + 1;
+            localStorage.setItem('nardo_reels_list', JSON.stringify(reelsList));
+        }
+    }
+    
+    function likeReel(reelId) {
+        let reelsList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+        const reelIndex = reelsList.findIndex(r => r.id == reelId);
+        if (reelIndex !== -1) {
+            reelsList[reelIndex].likes = (reelsList[reelIndex].likes || 0) + 1;
+            localStorage.setItem('nardo_reels_list', JSON.stringify(reelsList));
+            loadVerticalReels(); // إعادة تحميل للتحديث
+            showToast('❤️ تم الإعجاب بالريلز', 'success');
+        }
+    }
+    
+    function shareReel(videoUrl, title) {
+        const shareText = `🎬 ${title}\n📹 شاهد هذا الريلز على ناردو برو`;
+        if (navigator.share) {
+            navigator.share({
+                title: title,
+                text: shareText,
+                url: videoUrl
+            }).catch(() => {
+                copyToClipboard(videoUrl, title);
+            });
+        } else {
+            copyToClipboard(videoUrl, title);
+        }
+    }
+    
+    function copyToClipboard(text, title) {
+        navigator.clipboard.writeText(text);
+        showToast(`📎 تم نسخ رابط الريلز: ${title}`, 'success');
+    }
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            background: ${type === 'success' ? '#10b981' : '#ef4444'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            z-index: 10001;
+            font-size: 14px;
+            animation: fadeInOut 2s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        `;
+        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // إضافة أنيميشن للتوست
+    const styleToast = document.createElement('style');
+    styleToast.textContent = `
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(50px); }
+            15% { opacity: 1; transform: translateX(0); }
+            85% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(50px); }
+        }
+    `;
+    document.head.appendChild(styleToast);
+    
+    // الاستماع لتحديثات الريلز
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'nardo_reels_updated' || e.key === 'nardo_reels_list') {
+            console.log('🔄 تحديث الريلز، إعادة تحميل...');
+            loadVerticalReels();
+        }
+    });
+    
+    // تحميل الريلز عند بدء الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 تحميل شريط الريلز العمودي...');
+        loadVerticalReels();
+    });
+    
+    console.log('✅ نظام الريلز العمودي جاهز');
+</script>
 </body>
 </html>
     
