@@ -456,6 +456,81 @@
             console.log('🔍 === انتهى التشخيص ===');
         }, 1000);
     </script>
+    <script>
+    // ===== عرض الريلز في الشريط العلوي =====
+    function loadReelsToTopBar() {
+        const container = document.getElementById('reelsVideoContainer');
+        if (!container) return;
+        
+        let reelsList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+        
+        if (reelsList.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: rgba(0,0,0,0.5); border-radius: 20px; color: white; grid-column: 1/-1;">
+                    <i class="fas fa-film" style="font-size: 48px; margin-bottom: 15px; color: #ffd700;"></i>
+                    <p>لا توجد ريلز حالياً</p>
+                    <a href="add-reel.html" style="display: inline-block; margin-top: 15px; padding: 10px 20px; background: #ffd700; color: #1a1a2e; border-radius: 30px; text-decoration: none;">أضف أول ريل</a>
+                </div>
+            `;
+            return;
+        }
+        
+        const displayReels = reelsList.slice(0, 4);
+        
+        container.innerHTML = displayReels.map(reel => `
+            <div class="reel-video-card" onclick="playReel(${reel.id})">
+                <video src="${reel.videoUrl}" poster="${reel.posterUrl || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400'}" loop muted></video>
+                <div class="reel-video-overlay">
+                    <div class="reel-video-play"><i class="fas fa-play-circle"></i></div>
+                    <div class="reel-video-info">
+                        <span class="reel-video-title">${escapeHtml(reel.title)}</span>
+                        <span class="reel-video-views">${reel.publisher || 'ناردو'}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function playReel(reelId) {
+        let reelsList = JSON.parse(localStorage.getItem('nardo_reels_list') || '[]');
+        const reel = reelsList.find(r => r.id == reelId);
+        if (reel && reel.videoUrl) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:10000;display:flex;align-items:center;justify-content:center;flex-direction:column;`;
+            modal.innerHTML = `
+                <div style="position:relative;width:90%;max-width:400px;">
+                    <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:-40px;left:0;background:none;border:none;color:white;font-size:30px;cursor:pointer;">✕</button>
+                    <video controls autoplay style="width:100%;border-radius:20px;" src="${reel.videoUrl}"></video>
+                    <div style="color:white;text-align:center;margin-top:15px;">
+                        <h3>${escapeHtml(reel.title)}</h3>
+                        <p>👤 ${reel.publisher || 'ناردو برو'}</p>
+                        <p>🔢 ${reel.serialNumber || ''}</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    }
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'nardo_reels_updated' || e.key === 'nardo_reels_list') {
+            loadReelsToTopBar();
+        }
+    });
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadReelsToTopBar();
+    });
+    
+    setInterval(loadReelsToTopBar, 3000);
+</script>
 </body>
 </html>
 
