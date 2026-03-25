@@ -31,6 +31,7 @@
             border-radius: 25px;
             padding: 25px;
             border: 1px solid rgba(255,215,0,0.3);
+            backdrop-filter: blur(10px);
         }
 
         h1 {
@@ -57,6 +58,7 @@
         .upload-area:hover {
             border-color: gold;
             background: rgba(255,215,0,0.1);
+            transform: scale(1.02);
         }
 
         .upload-area i {
@@ -71,11 +73,26 @@
             background: #000;
             border-radius: 15px;
             overflow: hidden;
+            position: relative;
         }
 
         .video-preview video {
             width: 100%;
             max-height: 300px;
+        }
+
+        .remove-video {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,0,0,0.7);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
         }
 
         .input-group {
@@ -84,25 +101,32 @@
 
         .input-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             color: gold;
             font-weight: 600;
         }
 
         input, textarea {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,215,0,0.3);
             border-radius: 10px;
             color: white;
             font-family: 'Cairo', sans-serif;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: gold;
+            background: rgba(255,255,255,0.15);
         }
 
         .btn {
             width: 100%;
             padding: 12px;
-            background: gold;
+            background: linear-gradient(135deg, gold, #ffb347);
             color: black;
             border: none;
             border-radius: 25px;
@@ -118,34 +142,34 @@
             box-shadow: 0 5px 15px rgba(255,215,0,0.4);
         }
 
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid gold;
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .serial-info {
-            background: rgba(255,215,0,0.1);
-            padding: 10px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+            padding: 15px;
             border-radius: 10px;
             margin: 15px 0;
             text-align: center;
             font-family: monospace;
             font-size: 12px;
             direction: ltr;
+            border: 1px solid rgba(255,215,0,0.3);
+            transition: all 0.3s;
         }
 
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: gold;
-            color: black;
-            padding: 10px 20px;
-            border-radius: 50px;
-            z-index: 2000;
-            font-weight: bold;
+        .serial-info i {
+            color: gold;
+            margin-left: 8px;
+        }
+
+        .serial-info.success {
+            background: rgba(0,255,0,0.2);
+            border-color: green;
+            color: #90ff90;
         }
 
         .back-link {
@@ -155,6 +179,86 @@
             text-decoration: none;
             text-align: center;
             width: 100%;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: gold;
+            color: black;
+            padding: 12px 24px;
+            border-radius: 50px;
+            z-index: 2000;
+            font-weight: bold;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,215,0,0.3);
+            border-top-color: gold;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            width: 80%;
+            max-width: 300px;
+            height: 4px;
+            background: rgba(255,215,0,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: gold;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .card { padding: 20px; }
         }
     </style>
 </head>
@@ -177,46 +281,68 @@
             <!-- معاينة الفيديو -->
             <div id="videoPreview" class="video-preview">
                 <video id="previewVideo" controls></video>
+                <button class="remove-video" onclick="removeVideo()">✕</button>
             </div>
 
             <!-- معلومات الفيديو -->
             <div class="input-group">
-                <label><i class="fas fa-heading"></i> عنوان الريلز</label>
-                <input type="text" id="videoTitle" placeholder="عنوان الفيديو..." value="ريلز رائع">
+                <label><i class="fas fa-heading"></i> عنوان الريلز *</label>
+                <input type="text" id="videoTitle" placeholder="أدخل عنوان الريلز..." value="ريلز رائع">
             </div>
 
             <div class="input-group">
-                <label><i class="fas fa-user"></i> اسم الناشر</label>
-                <input type="text" id="videoPublisher" placeholder="اسمك..." value="ناردو برو">
+                <label><i class="fas fa-user"></i> اسم الناشر *</label>
+                <input type="text" id="videoPublisher" placeholder="اسم الناشر..." value="ناردو برو">
             </div>
 
             <div class="input-group">
                 <label><i class="fas fa-tag"></i> هاشتاجات (اختياري)</label>
-                <textarea id="videoHashtags" placeholder="#ريلز #ناردو ..."></textarea>
+                <textarea id="videoHashtags" placeholder="#ريلز #ناردو #تيك_توك" rows="2"></textarea>
             </div>
 
             <!-- عرض المعرف الذي سيتم إنشاؤه -->
             <div class="serial-info" id="serialInfo">
-                <i class="fas fa-fingerprint"></i> سيتم إنشاء معرف خاص تلقائياً عند الرفع
+                <i class="fas fa-fingerprint"></i> 
+                🔐 سيتم إنشاء معرف سري تلقائياً عند الرفع<br>
+                <small style="color: #aaa;">الصيغة: NARD-YYYYMMDD-HHMMSS-XXXX</small>
             </div>
 
             <!-- أزرار الإجراءات -->
             <button class="btn" id="uploadBtn" onclick="uploadVideo()">
-                <i class="fab fa-telegram"></i> رفع وتخزين في تليجرام
+                <i class="fab fa-telegram"></i> رفع ونشر للجميع
             </button>
             <a href="index.html" class="back-link">← العودة للرئيسية</a>
         </div>
     </div>
 
     <script>
-        // ========== إعدادات تليجرام ==========
+        // ========== إعدادات تليجرام (متوافقة مع index.html) ==========
         const BOT_TOKEN = '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4';
         const CHANNEL_ID = '-1003822964890';
         const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
         let selectedFile = null;
+        let currentUser = null;
 
-        // دالة إنشاء معرف فريد بصيغة NARD-YYYYMMDD-HHMMSS-XXXX
+        // ========== تحميل المستخدم الحالي ==========
+        function loadCurrentUser() {
+            try {
+                const savedUser = localStorage.getItem('current_user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    const publisherInput = document.getElementById('videoPublisher');
+                    if (currentUser.name && currentUser.name !== 'زائر') {
+                        publisherInput.value = currentUser.name;
+                    }
+                } else {
+                    currentUser = { id: 0, name: 'زائر', role: 'guest' };
+                }
+            } catch(e) {
+                currentUser = { id: 0, name: 'زائر', role: 'guest' };
+            }
+        }
+
+        // ========== دالة إنشاء معرف فريد بصيغة NARD-YYYYMMDD-HHMMSS-XXXX ==========
         function generateSerialNumber() {
             const now = new Date();
             const year = now.getFullYear();
@@ -229,17 +355,21 @@
             return `NARD-${year}${month}${day}-${hours}${minutes}${seconds}-${random}`;
         }
 
-        // عرض المعاينة
+        // ========== عرض المعاينة ==========
         function previewVideo(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
+                
+                // التحقق من الحجم
                 if (file.size > 50 * 1024 * 1024) {
-                    showToast("❌ حجم الفيديو كبير جداً (حد 50MB)");
+                    showToast("❌ حجم الفيديو كبير جداً (الحد الأقصى 50MB)");
                     input.value = '';
                     return;
                 }
+                
+                // التحقق من النوع
                 if (!file.type.startsWith('video/')) {
-                    showToast("❌ اختر ملف فيديو صالح");
+                    showToast("❌ يرجى اختيار ملف فيديو صالح (MP4)");
                     input.value = '';
                     return;
                 }
@@ -250,29 +380,95 @@
                 const previewVideo = document.getElementById('previewVideo');
                 previewVideo.src = url;
                 preview.style.display = 'block';
+                
+                // تحديث معلومات المعرف
+                const serial = generateSerialNumber();
+                document.getElementById('serialInfo').innerHTML = `
+                    <i class="fas fa-fingerprint"></i> 
+                    🔐 المعرف السري الذي سيتم إنشاؤه:<br>
+                    <strong style="color: gold; font-size: 14px;">${serial}</strong>
+                `;
             }
         }
 
-        // رفع الفيديو إلى تلغرام مع تضمين المعرف الخاص
+        // ========== إزالة الفيديو ==========
+        function removeVideo() {
+            selectedFile = null;
+            document.getElementById('videoPreview').style.display = 'none';
+            document.getElementById('videoFile').value = '';
+            document.getElementById('previewVideo').src = '';
+            document.getElementById('serialInfo').innerHTML = `
+                <i class="fas fa-fingerprint"></i> 
+                🔐 سيتم إنشاء معرف سري تلقائياً عند الرفع<br>
+                <small style="color: #aaa;">الصيغة: NARD-YYYYMMDD-HHMMSS-XXXX</small>
+            `;
+        }
+
+        // ========== عرض مؤشر التحميل ==========
+        function showLoading(message) {
+            const overlay = document.createElement('div');
+            overlay.id = 'loadingOverlay';
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p>${message}</p>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function updateProgress(percent) {
+            const fill = document.getElementById('progressFill');
+            if (fill) fill.style.width = percent + '%';
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.remove();
+        }
+
+        // ========== رفع الفيديو إلى تلغرام ==========
         async function uploadVideo() {
+            // التحقق من وجود فيديو
             if (!selectedFile) {
-                showToast("❌ اختر فيديو أولاً");
+                showToast("❌ يرجى اختيار فيديو أولاً");
                 return;
             }
 
-            const title = document.getElementById('videoTitle').value.trim() || 'ريلز';
-            const publisher = document.getElementById('videoPublisher').value.trim() || 'ناردو برو';
+            // التحقق من تسجيل الدخول
+            if (!currentUser || currentUser.name === 'زائر') {
+                showToast("❌ يرجى تسجيل الدخول أولاً لإضافة ريلز");
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+                return;
+            }
+
+            const title = document.getElementById('videoTitle').value.trim();
+            if (!title) {
+                showToast("❌ يرجى إدخال عنوان الريلز");
+                return;
+            }
+
+            const publisher = document.getElementById('videoPublisher').value.trim() || currentUser.name || 'ناردو برو';
             const hashtags = document.getElementById('videoHashtags').value.trim();
 
-            // إنشاء المعرف الخاص
+            // إنشاء المعرف الخاص (NARD-SERIAL)
             const serial = generateSerialNumber();
 
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري الرفع...';
+            
+            showLoading("جاري رفع الفيديو إلى تلغرام...");
+            updateProgress(30);
 
             // بناء الكابشن بالصيغة المطلوبة ليتعرف عليها index.html
+            // الصيغة: 🎬 العنوان\n👤 الناشر\n🔑 NARD-SERIAL: المعرف\n📅 التاريخ
             let caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${serial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز`;
+            
             if (hashtags) {
                 caption += `\n\n${hashtags}`;
             }
@@ -281,44 +477,65 @@
             formData.append('chat_id', CHANNEL_ID);
             formData.append('video', selectedFile);
             formData.append('caption', caption);
+            formData.append('supports_streaming', 'true');
 
             try {
+                updateProgress(60);
+                
                 const response = await fetch(`${API_URL}/sendVideo`, {
                     method: 'POST',
                     body: formData
                 });
 
+                updateProgress(90);
+                
                 const data = await response.json();
 
                 if (data.ok) {
+                    updateProgress(100);
                     showToast(`✅ تم الرفع بنجاح! المعرف: ${serial}`);
+                    
+                    // عرض رسالة نجاح مع المعرف
+                    const serialInfo = document.getElementById('serialInfo');
+                    serialInfo.className = 'serial-info success';
+                    serialInfo.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 
+                        ✅ تم الرفع بنجاح!<br>
+                        🔑 المعرف السري: <strong style="color: gold; font-size: 14px;">${serial}</strong><br>
+                        📢 سيظهر الريلز في القسم المميز خلال 30 ثانية
+                    `;
+                    
                     // إعادة تعيين النموذج
                     selectedFile = null;
                     document.getElementById('videoPreview').style.display = 'none';
                     document.getElementById('videoFile').value = '';
                     document.getElementById('videoTitle').value = 'ريلز رائع';
-                    document.getElementById('videoPublisher').value = 'ناردو برو';
                     document.getElementById('videoHashtags').value = '';
-                    // عرض رسالة نجاح مع المعرف
-                    const serialInfo = document.getElementById('serialInfo');
-                    serialInfo.innerHTML = `<i class="fas fa-check-circle"></i> تم الرفع بنجاح! المعرف: ${serial}`;
-                    serialInfo.style.background = "rgba(0,255,0,0.2)";
+                    
+                    // توجيه المستخدم للصفحة الرئيسية بعد 3 ثواني
                     setTimeout(() => {
-                        serialInfo.innerHTML = '<i class="fas fa-fingerprint"></i> سيتم إنشاء معرف خاص تلقائياً عند الرفع';
-                        serialInfo.style.background = "rgba(255,215,0,0.1)";
-                    }, 5000);
+                        window.location.href = 'index.html';
+                    }, 3000);
+                    
                 } else {
-                    throw new Error(data.description);
+                    throw new Error(data.description || 'فشل الرفع');
                 }
             } catch (error) {
-                console.error(error);
+                console.error('❌ خطأ:', error);
                 showToast("❌ فشل الرفع: " + error.message);
+                document.getElementById('serialInfo').innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    ❌ فشل الرفع: ${error.message}<br>
+                    <small>يرجى المحاولة مرة أخرى</small>
+                `;
             } finally {
+                hideLoading();
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع وتخزين في تليجرام';
+                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع ونشر للجميع';
             }
         }
 
+        // ========== عرض الإشعارات ==========
         function showToast(msg) {
             const toast = document.createElement('div');
             toast.className = 'toast';
@@ -326,6 +543,18 @@
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
+
+        // ========== تهيئة الصفحة ==========
+        loadCurrentUser();
+        
+        // إذا كان المستخدم زائر، عرض رسالة
+        if (!currentUser || currentUser.name === 'زائر') {
+            setTimeout(() => {
+                showToast("⚠️ يرجى تسجيل الدخول لإضافة ريلز");
+            }, 1000);
+        }
+        
+        console.log('🎬 صفحة إضافة الريلز جاهزة - المعرف السري NARD- يتم إنشاؤه تلقائياً');
     </script>
 </body>
 </html>
