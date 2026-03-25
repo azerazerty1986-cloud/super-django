@@ -14,6 +14,9 @@ const App = {
         await this.loadProducts();
         Auth.updateUI();
         
+        // تحديث الواجهة حسب الدور
+        this.updateUIByRole();
+        
         this.startTypingEffect();
         this.startClock();
         this.setupEventListeners();
@@ -39,6 +42,14 @@ const App = {
     setupEventListeners() {
         window.addEventListener('scroll', this.handleScroll.bind(this));
         window.addEventListener('click', this.handleClick.bind(this));
+        
+        // مراقبة تغيير المستخدم
+        setInterval(() => {
+            if (Auth.currentUser && this.lastUser !== Auth.currentUser.userId) {
+                this.lastUser = Auth.currentUser.userId;
+                this.updateUIByRole();
+            }
+        }, 1000);
     },
     
     handleScroll() {
@@ -49,6 +60,7 @@ const App = {
     handleClick(event) {
         if (event.target.classList.contains('modal')) {
             event.target.classList.remove('show');
+            event.target.style.display = 'none';
         }
     },
     
@@ -61,8 +73,10 @@ const App = {
     },
     
     switchAuthTab(tab) {
-        document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
-        document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        if (loginForm) loginForm.style.display = tab === 'login' ? 'block' : 'none';
+        if (registerForm) registerForm.style.display = tab === 'register' ? 'block' : 'none';
     },
     
     toggleRoleFields() {
@@ -80,7 +94,14 @@ const App = {
         if (result.success) {
             this.closeModal('loginModal');
             Auth.updateUI();
+            this.updateUIByRole();
             Utils.showNotification(`مرحباً ${result.user.name} - معرفك: ${result.user.userId}`);
+            
+            // إنشاء مستودع للتاجر
+            if (result.user.role === 'merchant' && window.Inventory) {
+                Inventory.createWarehouse(result.user);
+            }
+            
             setTimeout(() => location.reload(), 500);
         } else {
             Utils.showNotification(result.message, 'error');
@@ -141,11 +162,15 @@ const App = {
         this.displayProducts(filtered);
         
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        event.target.classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
     },
     
     searchProducts() {
-        const term = document.getElementById('searchInput').value;
+        const term = document.getElementById('searchInput')?.value;
+        if (!term) {
+            this.displayProducts();
+            return;
+        }
         const filtered = this.products.filter(p => 
             p.name.toLowerCase().includes(term.toLowerCase())
         );
@@ -153,15 +178,18 @@ const App = {
     },
     
     showProductDetail(productId) {
-        const product = this.products.find(p => p.id === productId || p.productId === productId);
+        const product = this.products.find(p => p.id == productId || p.productId == productId);
         if (!product) return;
         
-        const ownerId = product.productId ? product.productId.split('_PRD_')[0] : 'غير معروف';
+        const ownerId = product.productId ? product.productId.split('_PRD_')[0] : (product.merchantId || 'غير معروف');
         
-        document.getElementById('productDetailContent').innerHTML = `
+        const content = document.getElementById('productDetailContent');
+        if (!content) return;
+        
+        content.innerHTML = `
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
                 <div>
-                    <img src="${product.image}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
+                    <img src="${product.image || CONFIG.defaultImage}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
                 </div>
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -183,7 +211,7 @@ const App = {
                         ${product.price} دج
                     </div>
                     
-                    <button class="btn-gold" onclick="App.addToCart('${product.id}'); App.closeModal('productDetailModal');">
+                    <button class="btn-gold" onclick="App.addToCart('${product.productId || product.id}'); App.closeModal('productDetailModal');">
                         أضف للسلة
                     </button>
                 </div>
@@ -193,7 +221,6 @@ const App = {
         Utils.openModal('productDetailModal');
     },
     
-    // ===== [معدل] فتح نافذة إضافة منتج (للنافذة القديمة) =====
     openAddProductModal() {
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -212,6 +239,8 @@ const App = {
     
     handleImageUpload(event) {
         const preview = document.getElementById('imagePreview');
+        if (!preview) return;
+        
         preview.innerHTML = '';
         
         for (let file of event.target.files) {
@@ -223,7 +252,6 @@ const App = {
         }
     },
     
-    // ===== [معدل] حفظ المنتج - المنتج يأخذ معرف صاحبه + رقم تسلسلي =====
     async saveProduct() {
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -255,7 +283,6 @@ const App = {
 
         Utils.showNotification('جاري رفع المنتج...', 'info');
 
-        // المنتج يأخذ معرف صاحبه + رقم تسلسلي
         const productId = `${Auth.currentUser.userId}_PRD_${Date.now().toString().slice(-6)}`;
         
         const product = {
@@ -284,6 +311,16 @@ const App = {
                 
                 this.products.push(newProduct);
                 Utils.save('products', this.products);
+                
+                // إضافة المنتج للمخزون
+                if (window.Inventory) {
+                    const merchantId = Auth.currentUser.userId || Auth.currentUser.id;
+                    if (!Inventory.warehouses[merchantId]) {
+                        Inventory.createWarehouse(Auth.currentUser);
+                    }
+                    Inventory.addProduct(merchantId, newProduct);
+                }
+                
                 this.displayProducts();
                 
                 Utils.showNotification(`✅ تم إضافة المنتج - المعرف: ${productId}`, 'success');
@@ -295,9 +332,6 @@ const App = {
         }
     },
     
-    // ===== [جديد] دوال أيقونة إضافة المنتج (للأيقونة الخضراء) =====
-    
-    // فتح نافذة إضافة منتج من الأيقونة
     openAddProductForm() {
         console.log('📝 محاولة فتح نافذة إضافة منتج من الأيقونة');
         
@@ -331,7 +365,6 @@ const App = {
         }
     },
     
-    // إغلاق نافذة إضافة منتج من الأيقونة
     closeAddProductForm() {
         const modal = document.getElementById('addProductModal');
         if (modal) {
@@ -340,7 +373,6 @@ const App = {
         }
     },
     
-    // رفع الصور للنموذج الجديد
     handleNewImageUpload(event) {
         const preview = document.getElementById('newImagePreview');
         if (!preview) return;
@@ -355,7 +387,6 @@ const App = {
         }
     },
     
-    // حفظ المنتج الجديد (للأيقونة)
     async saveNewProduct() {
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -445,12 +476,15 @@ const App = {
                     🆔 ${shortId}
                 </div>
                 <div class="product-gallery">
-                    <img src="${p.image}" alt="${p.name}">
+                    <img src="${p.image || CONFIG.defaultImage}" alt="${p.name}">
                 </div>
                 <div class="product-info">
                     <h3 class="product-title">${p.name}</h3>
                     <div class="product-price">${p.price} دج</div>
-                    <button class="add-to-cart" onclick="event.stopPropagation(); App.addToCart('${p.productId || p.id}')">
+                    <div class="product-stock ${p.stock <= 0 ? 'out-of-stock' : p.stock < 5 ? 'low-stock' : 'in-stock'}">
+                        ${p.stock <= 0 ? 'غير متوفر' : p.stock < 5 ? `كمية محدودة (${p.stock})` : `متوفر (${p.stock})`}
+                    </div>
+                    <button class="add-to-cart" onclick="event.stopPropagation(); App.addToCart('${p.productId || p.id}')" ${p.stock <= 0 ? 'disabled' : ''}>
                         أضف للسلة
                     </button>
                 </div>
@@ -459,15 +493,35 @@ const App = {
     },
     
     addToCart(productId) {
-        Utils.showNotification('تمت الإضافة للسلة');
+        const product = this.products.find(p => (p.productId || p.id) == productId);
+        if (!product) {
+            Utils.showNotification('المنتج غير موجود', 'error');
+            return;
+        }
+        
+        if (product.stock <= 0) {
+            Utils.showNotification('المنتج غير متوفر', 'error');
+            return;
+        }
+        
+        Cart.addItem(product);
+        Utils.showNotification(`✅ تم إضافة ${product.name} للسلة`, 'success');
     },
     
     toggleCart() {
-        document.getElementById('cartSidebar').classList.toggle('open');
+        const sidebar = document.getElementById('cartSidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('open');
+            if (window.Cart) Cart.display();
+        }
     },
     
     checkout() {
-        alert('تم التوجيه إلى واتساب');
+        if (window.Cart) {
+            Cart.checkout();
+        } else {
+            alert('تم التوجيه إلى واتساب');
+        }
     },
     
     openDashboard() {
@@ -476,6 +530,80 @@ const App = {
             return;
         }
         document.getElementById('dashboardSection').style.display = 'block';
+    },
+    
+    // ===== دوال إدارة المخزون والأدوار =====
+    
+    // عرض لوحة المخزون
+    showInventory() {
+        if (!Auth.currentUser) {
+            Utils.showNotification('الرجاء تسجيل الدخول أولاً', 'error');
+            this.openLoginModal();
+            return;
+        }
+        
+        if (window.Roles && !Roles.hasPermission(Auth.currentUser, 'manage_inventory')) {
+            Utils.showNotification('غير مصرح لك بإدارة المخزون', 'error');
+            return;
+        }
+        
+        if (window.Inventory) {
+            Inventory.showMerchantInventory();
+        } else {
+            Utils.showNotification('نظام المخزون غير متاح', 'error');
+        }
+    },
+    
+    // عرض لوحة التحكم حسب الدور
+    showRoleDashboard() {
+        if (!Auth.currentUser) {
+            Utils.showNotification('الرجاء تسجيل الدخول أولاً', 'error');
+            this.openLoginModal();
+            return;
+        }
+        
+        if (window.Roles) {
+            const dashboard = Roles.getDashboardByRole(Auth.currentUser);
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2><i class="fas fa-tachometer-alt"></i> لوحة التحكم</h2>
+                        <button class="close-btn" onclick="this.closest('.modal').remove()">&times;</button>
+                    </div>
+                    <div style="padding: 20px;">
+                        ${dashboard}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } else {
+            Utils.showNotification('نظام الأدوار غير متاح', 'error');
+        }
+    },
+    
+    // تحديث واجهة المستخدم حسب الدور
+    updateUIByRole() {
+        if (!Auth.currentUser) return;
+        
+        const user = Auth.currentUser;
+        
+        // إظهار/إخفاء زر المخزون
+        const inventoryBtn = document.getElementById('inventoryBtn');
+        if (inventoryBtn) {
+            const hasPermission = window.Roles ? Roles.hasPermission(user, 'manage_inventory') : (user.role === 'merchant' || user.role === 'admin');
+            inventoryBtn.style.display = hasPermission ? 'flex' : 'none';
+        }
+        
+        // تحديث أيقونة المستخدم حسب الدور
+        const userBtn = document.getElementById('userBtn');
+        if (userBtn) {
+            if (user.role === 'admin') userBtn.innerHTML = '<i class="fas fa-crown"></i>';
+            else if (user.role === 'merchant') userBtn.innerHTML = '<i class="fas fa-store"></i>';
+            else userBtn.innerHTML = '<i class="fas fa-user"></i>';
+        }
     },
     
     playReel(reelId) {
@@ -493,9 +621,13 @@ const App = {
     toggleTheme() {
         document.body.classList.toggle('light-mode');
         const toggle = document.getElementById('themeToggle');
-        toggle.innerHTML = toggle.innerHTML.includes('moon') ? 
-            '<i class="fas fa-sun"></i><span>نهاري</span>' : 
-            '<i class="fas fa-moon"></i><span>ليلي</span>';
+        if (toggle) {
+            const isDark = !document.body.classList.contains('light-mode');
+            toggle.innerHTML = isDark ? 
+                '<i class="fas fa-moon"></i><span>ليلي</span>' : 
+                '<i class="fas fa-sun"></i><span>نهاري</span>';
+        }
+        Utils.save('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
     },
     
     startTypingEffect() {
@@ -532,9 +664,13 @@ const App = {
     startClock() {
         setInterval(() => {
             const now = new Date();
-            document.getElementById('marqueeHours').textContent = now.getHours().toString().padStart(2, '0');
-            document.getElementById('marqueeMinutes').textContent = now.getMinutes().toString().padStart(2, '0');
-            document.getElementById('marqueeSeconds').textContent = now.getSeconds().toString().padStart(2, '0');
+            const hours = document.getElementById('marqueeHours');
+            const minutes = document.getElementById('marqueeMinutes');
+            const seconds = document.getElementById('marqueeSeconds');
+            
+            if (hours) hours.textContent = now.getHours().toString().padStart(2, '0');
+            if (minutes) minutes.textContent = now.getMinutes().toString().padStart(2, '0');
+            if (seconds) seconds.textContent = now.getSeconds().toString().padStart(2, '0');
         }, 1000);
     }
 };
