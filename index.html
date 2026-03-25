@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="css/responsive.css">
     
     <style>
-        /* إضافات CSS للريلز - متوافقة مع تليجرام والفلترة */
+        /* إضافات CSS للريلز */
         .reels-video-header {
             display: flex;
             justify-content: space-between;
@@ -176,6 +176,52 @@
             font-family: monospace;
         }
         
+        /* شبكة الريلز (لجميع الفيديوهات) */
+        .all-reels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 10px 0 20px;
+        }
+        .all-reels-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(255,215,0,0.3);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .all-reels-card:hover {
+            transform: translateY(-3px);
+            border-color: gold;
+        }
+        .all-reels-thumb {
+            height: 200px;
+            background: linear-gradient(135deg, #1a1a2e, #0a0a1a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .all-reels-thumb i {
+            font-size: 45px;
+            color: gold;
+        }
+        .all-reels-info {
+            padding: 12px;
+        }
+        .all-reels-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: gold;
+            margin-bottom: 6px;
+        }
+        .all-reels-meta {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
         /* ستايل المشغل الكامل العمودي (تيك توك ستايل) */
         .full-reel-player {
             position: fixed;
@@ -317,6 +363,18 @@
             background: gold;
             color: black;
         }
+        
+        .section-divider {
+            margin: 40px 0 20px;
+            border-top: 1px solid rgba(255,215,0,0.3);
+            position: relative;
+        }
+        .section-title {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 24px;
+            color: gold;
+        }
     </style>
 </head>
 <body>
@@ -392,14 +450,14 @@
         </div>
     </div>
     
-    <!-- ===== قسم ريلز الفيديو في الأعلى (فقط من add-reel.html) ===== -->
+    <!-- ===== القسم الأول: ريلز الإضافة (معرف خاص) ===== -->
     <div class="reels-video-section">
         <div class="container">
             <div class="reels-video-header">
                 <div class="header-title">
                     <i class="fas fa-film reel-section-icon"></i>
-                    <h2>ناردو ريلز</h2>
-                    <span class="refresh-badge" onclick="loadReelsFromTelegram()">
+                    <h2>ناردو ريلز | المميزة</h2>
+                    <span class="refresh-badge" onclick="loadReelsFromTelegram(true)">
                         <i class="fas fa-sync-alt"></i> تحديث
                     </span>
                 </div>
@@ -412,8 +470,22 @@
             <div class="reels-video-container" id="reelsVideoContainer">
                 <div class="loading-reels">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>🔄 جاري تحميل الريلز من تليجرام...</p>
+                    <p>🔄 جاري تحميل الريلز المميزة...</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== القسم الثاني: جميع الريلز (مثل الأيقونة) ===== -->
+    <div class="container">
+        <div class="section-divider"></div>
+        <div class="section-title">
+            <i class="fas fa-globe"></i> جميع الريلز
+        </div>
+        <div class="all-reels-grid" id="allReelsGrid">
+            <div class="loading-reels">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>🔄 جاري تحميل جميع الريلز...</p>
             </div>
         </div>
     </div>
@@ -558,7 +630,7 @@
         <i class="fab fa-whatsapp"></i>
     </a>
     
-    <a href="reels.html" class="fixed-reels" title="ناردو ريلز">
+    <a href="reels.html" class="fixed-reels" title="جميع الريلز">
         <i class="fas fa-film"></i>
         <span class="reels-notification">جديد</span>
     </a>
@@ -712,19 +784,21 @@
     <script src="js/app.js"></script>
 
     <script>
-        // ========== إعدادات تليجرام (نفس نظام add-reel.html) ==========
+        // ========== إعدادات تليجرام ==========
         const TELEGRAM = {
             botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
             channelId: '-1003822964890',
             apiUrl: 'https://api.telegram.org/bot'
         };
         
-        // ========== متغيرات الريلز ==========
-        let reelsCache = [];
+        // ========== متغيرات ==========
         let currentUser = null;
-        let isLoading = false;
+        let isLoadingBar = false;
+        let isLoadingAll = false;
+        let allReelsCache = [];      // جميع الريلز (غير مفلترة)
+        let specialReelsCache = [];   // الريلز التي تحتوي على المعرف NARD-
         
-        // ========== تحميل المستخدم الحالي من localStorage ==========
+        // ========== تحميل المستخدم ==========
         function loadCurrentUser() {
             try {
                 const savedUser = localStorage.getItem('current_user');
@@ -733,46 +807,26 @@
                 } else {
                     currentUser = { id: 0, name: 'زائر', role: 'guest' };
                 }
-                // التحكم في ظهور زر الإضافة حسب صلاحية المدير
                 const addReelLink = document.getElementById('addReelLink');
                 if (addReelLink) {
-                    if (currentUser.role === 'admin') {
-                        addReelLink.style.display = 'flex';
-                    } else {
-                        addReelLink.style.display = 'none';
-                    }
+                    addReelLink.style.display = currentUser.role === 'admin' ? 'flex' : 'none';
                 }
             } catch(e) {
                 currentUser = { id: 0, name: 'زائر', role: 'guest' };
             }
         }
         
-        // ========== استخراج المعرف الخاص من الكابشن (متوافق مع add-reel.html) ==========
+        // ========== استخراج المعرف الخاص ==========
         function extractSerialFromCaption(caption) {
             if (!caption) return null;
-            // البحث عن المعرف بصيغة 🔑 NARD-SERIAL: NARD-...
             let match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
             if (match) return match[1];
-            // احتياطي: البحث عن أي نص يبدأ بـ NARD- (للتأكد)
             match = caption.match(/\b(NARD-[A-Z0-9-]+)\b/i);
             return match ? match[1] : null;
         }
         
-        // ========== جلب الريلز من قناة تليجرام مع فلترة المعرف الخاص ==========
-        async function loadReelsFromTelegram() {
-            if (isLoading) return;
-            isLoading = true;
-            
-            const container = document.getElementById('reelsVideoContainer');
-            if (container) {
-                container.innerHTML = `
-                    <div class="loading-reels" style="width: 100%;">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>🔄 جاري تحميل الريلز من تليجرام...</p>
-                    </div>
-                `;
-            }
-            
+        // ========== جلب جميع الريلز من تلغرام (دالة موحدة) ==========
+        async function fetchAllReelsFromTelegram() {
             try {
                 const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
                 const response = await fetch(url);
@@ -789,17 +843,9 @@
                         
                         const messageId = post.message_id;
                         const caption = post.caption || '';
-                        
-                        // استخراج المعرف الخاص (NARD-...)
                         const serial = extractSerialFromCaption(caption);
                         
-                        // ✅ فلترة مهمة: فقط الريلز التي تحتوي على المعرف NARD- يتم عرضها في الشريط
-                        if (!serial || !serial.startsWith('NARD-')) {
-                            console.log('تخطي فيديو بدون معرف:', messageId);
-                            continue; // تخطي الريلز التي لا تحمل المعرف الخاص
-                        }
-                        
-                        // استخراج العنوان من الكابشن
+                        // استخراج العنوان
                         let title = '🎬 ريلز';
                         const titleMatch = caption.match(/🎬\s*(.+?)(?:\n|$)/);
                         if (titleMatch) title = titleMatch[1];
@@ -809,7 +855,7 @@
                         const publisherMatch = caption.match(/👤\s*(.+?)(?:\n|$)/);
                         if (publisherMatch) publisher = publisherMatch[1];
                         
-                        // الحصول على رابط الفيديو الدائم
+                        // رابط الفيديو
                         const fileId = post.video.file_id;
                         const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                         const fileData = await fileRes.json();
@@ -819,7 +865,6 @@
                             
                             allReels.push({
                                 id: messageId,
-                                telegramId: messageId,
                                 title: title,
                                 videoUrl: videoUrl,
                                 publisher: publisher,
@@ -831,123 +876,150 @@
                         }
                     }
                 }
-                
-                if (allReels.length > 0) {
-                    reelsCache = allReels;
-                    localStorage.setItem('nardoo_reels_bar_cache', JSON.stringify(allReels));
-                    showToastMessage(`✅ تم تحميل ${allReels.length} ريلز مخصصة للشريط العلوي`, 'success');
-                } else {
-                    // استخدام الكاش إذا كان موجوداً
-                    const cached = localStorage.getItem('nardoo_reels_bar_cache');
-                    if (cached && JSON.parse(cached).length > 0) {
-                        reelsCache = JSON.parse(cached);
-                        showToastMessage(`📦 عرض ${reelsCache.length} ريلز من الذاكرة (المعرف الخاص)`, 'info');
-                    } else {
-                        reelsCache = [];
-                        showToastMessage('📹 لا توجد ريلز مخصصة للشريط العلوي', 'info');
-                    }
-                }
-                
-                displayReelsInBar();
-                
+                return allReels;
             } catch (error) {
                 console.error('❌ خطأ في جلب الريلز:', error);
-                const cached = localStorage.getItem('nardoo_reels_bar_cache');
-                if (cached && JSON.parse(cached).length > 0) {
-                    reelsCache = JSON.parse(cached);
-                    displayReelsInBar();
-                    showToastMessage('⚠️ فشل الاتصال، تم عرض الريلز المخزنة', 'warning');
-                } else {
-                    if (container) {
-                        container.innerHTML = `
-                            <div class="no-reels-message" style="width: 100%;">
-                                <i class="fas fa-film"></i>
-                                <p>✨ لا توجد ريلز مخصصة للشريط العلوي ✨</p>
-                                <p>الريلز التي تحمل المعرف NARD- فقط هي التي تظهر هنا</p>
-                                ${currentUser?.role === 'admin' ? '<a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف ريلز الآن (سيظهر تلقائياً)</a>' : ''}
-                            </div>
-                        `;
-                    }
-                }
-            } finally {
-                isLoading = false;
+                return [];
             }
         }
         
-        // ========== عرض الريلز في الشريط الأفقي ==========
-        function displayReelsInBar() {
+        // ========== تحديث القسمين ==========
+        async function loadReelsFromTelegram(isBarRefresh = false) {
+            if (isBarRefresh && isLoadingBar) return;
+            if (!isBarRefresh && isLoadingAll) return;
+            
+            if (isBarRefresh) isLoadingBar = true;
+            else isLoadingAll = true;
+            
+            // عرض مؤشر التحميل للقسم المطلوب
+            if (isBarRefresh) {
+                const container = document.getElementById('reelsVideoContainer');
+                if (container) container.innerHTML = `<div class="loading-reels"><i class="fas fa-spinner fa-spin"></i><p>🔄 جاري التحميل...</p></div>`;
+            } else {
+                const grid = document.getElementById('allReelsGrid');
+                if (grid) grid.innerHTML = `<div class="loading-reels"><i class="fas fa-spinner fa-spin"></i><p>🔄 جاري تحميل جميع الريلز...</p></div>`;
+            }
+            
+            // جلب البيانات
+            const allReels = await fetchAllReelsFromTelegram();
+            allReelsCache = allReels;
+            
+            // تصنيف: المميزة (تحتوي على معرف NARD-)
+            specialReelsCache = allReels.filter(r => r.serialNumber && r.serialNumber.startsWith('NARD-'));
+            
+            // عرض في الشريط العلوي (قسم الإضافة)
+            displaySpecialReelsInBar();
+            // عرض في الشبكة السفلية (جميع الريلز)
+            displayAllReelsInGrid();
+            
+            // تخزين الكاش
+            localStorage.setItem('nardoo_all_reels', JSON.stringify(allReelsCache));
+            localStorage.setItem('nardoo_special_reels', JSON.stringify(specialReelsCache));
+            
+            if (isBarRefresh) isLoadingBar = false;
+            else isLoadingAll = false;
+        }
+        
+        // عرض الريلز المميزة في الشريط الأفقي
+        function displaySpecialReelsInBar() {
             const container = document.getElementById('reelsVideoContainer');
             if (!container) return;
             
-            if (!reelsCache || reelsCache.length === 0) {
+            if (!specialReelsCache || specialReelsCache.length === 0) {
                 container.innerHTML = `
                     <div class="no-reels-message" style="width: 100%;">
-                        <i class="fas fa-film"></i>
-                        <p>✨ لا توجد ريلز مخصصة للشريط العلوي ✨</p>
-                        <p>الريلز التي تحمل المعرف NARD- فقط هي التي تظهر هنا</p>
+                        <i class="fas fa-star"></i>
+                        <p>✨ لا توجد ريلز مميزة بعد ✨</p>
+                        <p>الريلز التي تحمل المعرف NARD- فقط تظهر هنا</p>
                         ${currentUser?.role === 'admin' ? '<a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف ريلز الآن</a>' : ''}
                     </div>
                 `;
                 return;
             }
             
-            // ترتيب من الأحدث إلى الأقدم
-            const sortedReels = [...reelsCache].reverse();
-            
+            const sorted = [...specialReelsCache].reverse();
             let html = '';
-            for (let i = 0; i < sortedReels.length; i++) {
-                const reel = sortedReels[i];
-                const title = reel.title || 'بدون عنوان';
-                const views = reel.views || 0;
-                const publisher = reel.publisher || 'ناردو برو';
-                const serialNumber = reel.serialNumber || '';
-                
+            for (const reel of sorted) {
                 html += `
-                    <div class="reel-video-card" onclick="openFullReelPlayer('${reel.id}')">
+                    <div class="reel-video-card" onclick="openFullReelPlayer('${reel.id}', true)">
                         <div class="reel-video-placeholder">
                             <i class="fas fa-play-circle"></i>
-                            <div class="reel-play-overlay">
-                                <i class="fas fa-play"></i>
-                            </div>
+                            <div class="reel-play-overlay"><i class="fas fa-play"></i></div>
                         </div>
                         <div class="reel-video-overlay">
                             <div class="reel-video-info">
-                                <span class="reel-video-title">🎬 ${escapeHtml(title)}</span>
-                                <span class="reel-video-views"><i class="fas fa-eye"></i> ${formatViews(views)}</span>
+                                <span class="reel-video-title">🎬 ${escapeHtml(reel.title)}</span>
+                                <span class="reel-video-views"><i class="fas fa-eye"></i> ${formatViews(reel.views)}</span>
                             </div>
-                            <div class="reel-video-publisher">
-                                <i class="fas fa-user"></i> ${escapeHtml(publisher)}
-                            </div>
-                            <div class="reel-serial-badge">
-                                <i class="fas fa-fingerprint"></i> ${escapeHtml(serialNumber)}
-                            </div>
+                            <div class="reel-video-publisher"><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</div>
+                            <div class="reel-serial-badge"><i class="fas fa-fingerprint"></i> ${escapeHtml(reel.serialNumber || 'بدون')}</div>
                         </div>
                     </div>
                 `;
             }
-            
             container.innerHTML = html;
         }
         
-        // ========== مشغل الريلز الكامل (عمودي) ==========
-        let currentFullReels = [];
-        let currentPlayingVideoInFull = null;
-        
-        function openFullReelPlayer(startReelId) {
-            if (!reelsCache || reelsCache.length === 0) {
-                showToastMessage('لا توجد ريلز للعرض', 'error');
+        // عرض جميع الريلز في الشبكة
+        function displayAllReelsInGrid() {
+            const grid = document.getElementById('allReelsGrid');
+            if (!grid) return;
+            
+            if (!allReelsCache || allReelsCache.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-reels-message" style="grid-column:1/-1">
+                        <i class="fas fa-film"></i>
+                        <p>📹 لا توجد ريلز متاحة حالياً</p>
+                        <p>أول ريلز سيظهر هنا تلقائياً</p>
+                    </div>
+                `;
                 return;
             }
             
-            currentFullReels = [...reelsCache];
-            const startIndex = currentFullReels.findIndex(r => r.id == startReelId);
+            const sorted = [...allReelsCache].reverse();
+            let html = '';
+            for (const reel of sorted) {
+                const hasSerial = reel.serialNumber && reel.serialNumber.startsWith('NARD-');
+                html += `
+                    <div class="all-reels-card" onclick="openFullReelPlayer('${reel.id}', false)">
+                        <div class="all-reels-thumb">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="all-reels-info">
+                            <div class="all-reels-title">🎬 ${escapeHtml(reel.title)}</div>
+                            <div class="all-reels-meta"><i class="fas fa-user"></i> ${escapeHtml(reel.publisher)}</div>
+                            <div class="all-reels-meta"><i class="fas fa-eye"></i> ${formatViews(reel.views)}</div>
+                            ${hasSerial ? `<div class="all-reels-meta" style="color:gold"><i class="fas fa-fingerprint"></i> ${escapeHtml(reel.serialNumber)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+        
+        // ========== مشغل الفيديو الكامل ==========
+        let currentFullReels = [];
+        let currentPlayingVideo = null;
+        
+        function openFullReelPlayer(startId, isSpecial = true) {
+            const sourceList = isSpecial ? specialReelsCache : allReelsCache;
+            if (!sourceList || sourceList.length === 0) return;
+            
+            currentFullReels = [...sourceList];
+            const startIndex = currentFullReels.findIndex(r => r.id == startId);
             if (startIndex === -1) return;
             
-            // تحديث عدد المشاهدات
-            const reel = currentFullReels[startIndex];
-            if (reel) {
-                reel.views = (reel.views || 0) + 1;
-                displayReelsInBar();
+            // تحديث المشاهدات
+            currentFullReels[startIndex].views = (currentFullReels[startIndex].views || 0) + 1;
+            // تحديث الكاش
+            if (isSpecial) {
+                specialReelsCache = currentFullReels;
+                localStorage.setItem('nardoo_special_reels', JSON.stringify(specialReelsCache));
+                displaySpecialReelsInBar();
+            } else {
+                allReelsCache = currentFullReels;
+                localStorage.setItem('nardoo_all_reels', JSON.stringify(allReelsCache));
+                displayAllReelsInGrid();
             }
             
             // إنشاء المودال
@@ -958,202 +1030,129 @@
             const closeBtn = document.createElement('button');
             closeBtn.className = 'close-full-player';
             closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-            closeBtn.onclick = function() {
-                if (currentPlayingVideoInFull) {
-                    currentPlayingVideoInFull.pause();
-                }
-                modal.remove();
-            };
+            closeBtn.onclick = () => modal.remove();
             modal.appendChild(closeBtn);
             
-            // بناء جميع الريلز
             for (let i = 0; i < currentFullReels.length; i++) {
                 const r = currentFullReels[i];
-                const videoUrl = r.videoUrl || '';
-                const title = r.title || 'بدون عنوان';
-                const views = r.views || 0;
-                const likes = r.likes || 0;
-                const publisher = r.publisher || 'ناردو برو';
-                const serialNumber = r.serialNumber || '';
-                
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'full-reel-item';
                 itemDiv.setAttribute('data-id', r.id);
-                itemDiv.setAttribute('data-index', i);
-                
                 itemDiv.innerHTML = `
-                    <video 
-                        src="${videoUrl}"
-                        muted
-                        loop
-                        playsinline
-                        preload="auto"
-                    ></video>
+                    <video src="${r.videoUrl}" muted loop playsinline preload="auto"></video>
                     <div class="full-reel-info">
-                        <div class="full-reel-title">${escapeHtml(title)}</div>
-                        <div class="full-reel-publisher">
-                            <i class="fas fa-user"></i> ${escapeHtml(publisher)}
-                        </div>
-                        <div class="full-reel-views">
-                            <i class="fas fa-eye"></i> ${views} مشاهدة
-                        </div>
-                        <div class="full-reel-serial">
-                            <i class="fas fa-fingerprint"></i> ${escapeHtml(serialNumber)}
-                        </div>
+                        <div class="full-reel-title">🎬 ${escapeHtml(r.title)}</div>
+                        <div class="full-reel-publisher"><i class="fas fa-user"></i> ${escapeHtml(r.publisher)}</div>
+                        <div class="full-reel-views"><i class="fas fa-eye"></i> ${r.views || 0}</div>
+                        ${r.serialNumber ? `<div class="full-reel-serial"><i class="fas fa-fingerprint"></i> ${escapeHtml(r.serialNumber)}</div>` : ''}
                     </div>
                     <div class="full-reel-actions">
-                        <div class="full-reel-action" onclick="likeFullReel('${r.id}')">
+                        <div class="full-reel-action" onclick="likeCurrentReel('${r.id}')">
                             <i class="far fa-heart"></i>
-                            <span class="like-count-${r.id.toString().replace(/[^a-zA-Z0-9]/g, '_')}">${likes}</span>
+                            <span class="like-count-${r.id}">${r.likes || 0}</span>
                         </div>
-                        <div class="full-reel-action" onclick="shareFullReel('${videoUrl}', '${escapeHtml(title)}')">
+                        <div class="full-reel-action" onclick="shareCurrentReel('${r.videoUrl}', '${escapeHtml(r.title)}')">
                             <i class="fas fa-share-alt"></i>
                             <span>مشاركة</span>
                         </div>
                     </div>
                 `;
-                
                 modal.appendChild(itemDiv);
             }
             
             document.body.appendChild(modal);
-            
             setTimeout(() => {
-                const targetItem = document.querySelector(`.full-reel-item[data-id="${startReelId}"]`);
-                if (targetItem) {
-                    targetItem.scrollIntoView({ behavior: 'instant' });
-                }
-                modal.addEventListener('scroll', onFullPlayerScroll);
-                setTimeout(() => playVisibleFullReel(), 300);
+                const target = document.querySelector(`.full-reel-item[data-id="${startId}"]`);
+                if (target) target.scrollIntoView({ behavior: 'instant' });
+                modal.addEventListener('scroll', () => {
+                    clearTimeout(window.fullScrollTimeout);
+                    window.fullScrollTimeout = setTimeout(playVisibleReel, 150);
+                });
+                setTimeout(playVisibleReel, 300);
             }, 100);
         }
         
-        function onFullPlayerScroll() {
-            clearTimeout(window.fullScrollTimeout);
-            window.fullScrollTimeout = setTimeout(() => playVisibleFullReel(), 150);
-        }
-        
-        function playVisibleFullReel() {
+        function playVisibleReel() {
             const player = document.getElementById('fullReelPlayer');
             if (!player) return;
-            
             const items = document.querySelectorAll('.full-reel-item');
             if (!items.length) return;
             
-            const playerRect = player.getBoundingClientRect();
-            const playerCenter = playerRect.top + (playerRect.height / 2);
-            
-            let activeItem = null;
-            let minDistance = Infinity;
-            
+            const center = player.getBoundingClientRect().top + player.clientHeight / 2;
+            let active = null;
+            let min = Infinity;
             items.forEach(item => {
                 const rect = item.getBoundingClientRect();
-                const itemCenter = rect.top + (rect.height / 2);
-                const distance = Math.abs(itemCenter - playerCenter);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    activeItem = item;
-                }
+                const dist = Math.abs(rect.top + rect.height/2 - center);
+                if (dist < min) { min = dist; active = item; }
             });
-            
-            if (activeItem) {
-                const video = activeItem.querySelector('video');
-                if (video) {
-                    if (currentPlayingVideoInFull && currentPlayingVideoInFull !== video) {
-                        currentPlayingVideoInFull.pause();
-                    }
-                    if (video.paused) {
-                        video.play().catch(e => console.log('Auto-play error'));
-                    }
-                    currentPlayingVideoInFull = video;
+            if (active) {
+                const vid = active.querySelector('video');
+                if (vid) {
+                    if (currentPlayingVideo && currentPlayingVideo !== vid) currentPlayingVideo.pause();
+                    if (vid.paused) vid.play().catch(e => console.log);
+                    currentPlayingVideo = vid;
                 }
             }
         }
         
-        function likeFullReel(reelId) {
-            const reelIndex = reelsCache.findIndex(r => r.id == reelId);
-            if (reelIndex !== -1) {
-                reelsCache[reelIndex].likes = (reelsCache[reelIndex].likes || 0) + 1;
-                localStorage.setItem('nardoo_reels_bar_cache', JSON.stringify(reelsCache));
-                
-                const likeSpan = document.querySelector(`.like-count-${reelId.toString().replace(/[^a-zA-Z0-9]/g, '_')}`);
-                if (likeSpan) {
-                    const currentLikes = parseInt(likeSpan.textContent) || 0;
-                    likeSpan.textContent = currentLikes + 1;
-                }
-                showToastMessage('❤️ تم الإعجاب بالريلز', 'success');
-                displayReelsInBar();
+        function likeCurrentReel(reelId) {
+            const idx = allReelsCache.findIndex(r => r.id == reelId);
+            if (idx !== -1) {
+                allReelsCache[idx].likes = (allReelsCache[idx].likes || 0) + 1;
+                localStorage.setItem('nardoo_all_reels', JSON.stringify(allReelsCache));
+                const specialIdx = specialReelsCache.findIndex(r => r.id == reelId);
+                if (specialIdx !== -1) specialReelsCache[specialIdx].likes = allReelsCache[idx].likes;
+                localStorage.setItem('nardoo_special_reels', JSON.stringify(specialReelsCache));
+                const likeSpan = document.querySelector(`.like-count-${reelId}`);
+                if (likeSpan) likeSpan.textContent = allReelsCache[idx].likes;
+                showToastMessage('❤️ تم الإعجاب', 'success');
+                displaySpecialReelsInBar();
+                displayAllReelsInGrid();
             }
         }
         
-        function shareFullReel(videoUrl, title) {
+        function shareCurrentReel(videoUrl, title) {
             if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    text: `شاهد هذا الريلز على ناردو برو`,
-                    url: videoUrl
-                }).catch(() => copyToClipboardFull(videoUrl, title));
+                navigator.share({ title, text: `شاهد هذا الريلز على ناردو برو`, url: videoUrl });
             } else {
-                copyToClipboardFull(videoUrl, title);
+                navigator.clipboard.writeText(videoUrl);
+                showToastMessage(`📎 تم نسخ الرابط: ${title}`, 'success');
             }
         }
         
-        function copyToClipboardFull(text, title) {
-            navigator.clipboard.writeText(text);
-            showToastMessage(`📎 تم نسخ رابط الريلز: ${title}`, 'success');
-        }
-        
-        function showToastMessage(message, type) {
-            const toast = document.createElement('div');
-            toast.style.cssText = `
-                position: fixed;
-                bottom: 100px;
-                right: 20px;
-                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-                color: white;
-                padding: 12px 20px;
-                border-radius: 50px;
-                z-index: 20001;
-                font-size: 14px;
-                animation: fadeInOut 0.3s ease;
-            `;
-            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+        // ========== دوال مساعدة ==========
+        function formatViews(v) { return v ? (v >= 1000 ? (v/1000).toFixed(1)+'K' : v) : '0'; }
+        function escapeHtml(t) { if(!t) return ''; const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+        function showToastMessage(msg, type) {
+            const toast=document.createElement('div');
+            toast.style.cssText=`position:fixed;bottom:100px;right:20px;background:${type==='success'?'#10b981':'#3b82f6'};color:white;padding:12px 20px;border-radius:50px;z-index:20001;font-size:14px;`;
+            toast.innerHTML=`<i class="fas fa-${type==='success'?'check-circle':'info-circle'}"></i> ${msg}`;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function formatViews(views) {
-            if (!views) return '0';
-            if (views >= 1000) return (views / 1000).toFixed(1) + 'K';
-            return views.toString();
-        }
-        
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            setTimeout(()=>toast.remove(),3000);
         }
         
         // ========== مراقبة التحديثات ==========
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'nardoo_reels_bar_cache' || e.key === 'nardo_reels_updated') {
-                loadReelsFromTelegram();
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'nardoo_all_reels' || e.key === 'nardoo_special_reels') {
+                loadReelsFromTelegram(false);
+                loadReelsFromTelegram(true);
             }
         });
         
-        // ========== تحديث تلقائي كل دقيقة ==========
-        setInterval(() => {
-            loadReelsFromTelegram();
-        }, 60000);
+        setInterval(() => { loadReelsFromTelegram(false); loadReelsFromTelegram(true); }, 60000);
         
         // ========== تهيئة الصفحة ==========
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', () => {
             loadCurrentUser();
-            loadReelsFromTelegram();
-            console.log('🎬 نظام ناردو ريلز - الشريط العلوي');
-            console.log('🔑 يعرض فقط الريلز التي تحمل المعرف NARD- (المرفوعة من add-reel.html)');
-            console.log('📡 التخزين في قناة تليجرام مع فلترة ذكية');
+            // استعادة الكاش إن وجد
+            const cachedAll = localStorage.getItem('nardoo_all_reels');
+            if (cachedAll) allReelsCache = JSON.parse(cachedAll);
+            const cachedSpecial = localStorage.getItem('nardoo_special_reels');
+            if (cachedSpecial) specialReelsCache = JSON.parse(cachedSpecial);
+            if (allReelsCache.length) { displayAllReelsInGrid(); displaySpecialReelsInBar(); }
+            loadReelsFromTelegram(false);
+            loadReelsFromTelegram(true);
         });
     </script>
 </body>
