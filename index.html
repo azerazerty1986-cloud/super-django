@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -748,11 +747,11 @@
             }
         }
         
-        // ========== استخراج المعرف الخاص من الكابشن ==========
+        // ========== استخراج المعرف الخاص من الكابشن (متوافق مع add-reel.html) ==========
         function extractBarSerialFromCaption(caption) {
             if (!caption) return null;
-            // البحث عن المعرف بتنسيق NARD-YYYYMMDD-HHMMSS-RANDOM
-            const match = caption.match(/🔑 NARD-SERIAL: (NARD-\d{8}-\d{6}-\d{4})/);
+            // البحث عن أي معرف يبدأ بـ NARD- ويكون مسبوقاً بـ 🔑 NARD-SERIAL: (غير حساس لحالة الأحرف)
+            const match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
             return match ? match[1] : null;
         }
         
@@ -788,7 +787,7 @@
                         const messageId = post.message_id;
                         const caption = post.caption || '';
                         
-                        // استخراج المعرف الخاص (NARD-SERIAL)
+                        // استخراج المعرف الخاص (NARD-...)
                         const barSerial = extractBarSerialFromCaption(caption);
                         
                         // ✅ فلترة مهمة: فقط الريلز التي تحتوي على المعرف NARD- يتم عرضها في الشريط
@@ -798,12 +797,12 @@
                         
                         // استخراج العنوان من الكابشن
                         let title = '🎬 ريلز';
-                        const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
+                        const titleMatch = caption.match(/🎬\s*(.+?)(?:\n|$)/);
                         if (titleMatch) title = titleMatch[1];
                         
                         // استخراج الناشر
                         let publisher = 'المدير';
-                        const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
+                        const publisherMatch = caption.match(/👤\s*(.+?)(?:\n|$)/);
                         if (publisherMatch) publisher = publisherMatch[1];
                         
                         // الحصول على رابط الفيديو الدائم
@@ -1134,7 +1133,7 @@
         
         // ========== مراقبة التحديثات ==========
         window.addEventListener('storage', function(e) {
-            if (e.key === 'nardo_reels_bar_cache' || e.key === 'nardo_reels_updated') {
+            if (e.key === 'nardoo_reels_bar_cache' || e.key === 'nardo_reels_updated') {
                 loadReelsFromTelegram();
             }
         });
