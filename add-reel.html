@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو ريلز | تليجرام قاعدة بيانات + إضافة فيديو</title>
+    <title>ناردو ريلز | تليجرام قاعدة بيانات + معرف خاص</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -20,7 +20,6 @@
             min-height: 100vh;
         }
 
-        /* الهيدر */
         .header {
             background: rgba(0,0,0,0.9);
             backdrop-filter: blur(10px);
@@ -96,7 +95,6 @@
             color: gold;
         }
 
-        /* حاوية الفيديوهات */
         .videos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -105,7 +103,6 @@
             margin-top: 10px;
         }
 
-        /* بطاقة الفيديو */
         .video-card {
             background: rgba(255,255,255,0.05);
             border-radius: 20px;
@@ -189,7 +186,6 @@
             color: #ff0066;
         }
 
-        /* نافذة إضافة الفيديو */
         .modal {
             display: none;
             position: fixed;
@@ -256,7 +252,6 @@
             margin-top: 15px;
         }
 
-        /* مشغل الفيديو في نفس النافذة */
         .video-player {
             display: none;
             background: #000;
@@ -348,7 +343,6 @@
 </head>
 <body>
 
-    <!-- الهيدر -->
     <div class="header">
         <div class="logo">
             <i class="fab fa-telegram"></i>
@@ -368,7 +362,6 @@
         </button>
     </div>
 
-    <!-- مشغل الفيديو (في نفس النافذة) -->
     <div id="videoPlayer" class="video-player">
         <div class="player-header">
             <h3 id="playerTitle"><i class="fas fa-play"></i> عنوان الفيديو</h3>
@@ -391,17 +384,15 @@
         </div>
     </div>
 
-    <!-- شبكة الفيديوهات -->
     <div id="videosGrid" class="videos-grid">
         <div class="empty-state">
             <i class="fas fa-film"></i>
             <h3>لا توجد فيديوهات</h3>
-            <p>اضف أول ريلز وسيظهر هنا للجميع</p>
+            <p>أضف أول ريلز وسيظهر هنا للجميع</p>
             <button class="btn" style="margin-top: 15px;" onclick="openAddModal()">➕ إضافة ريلز</button>
         </div>
     </div>
 
-    <!-- نافذة إضافة الفيديو -->
     <div id="addModal" class="modal">
         <div class="modal-content">
             <h2><i class="fab fa-telegram"></i> إضافة ريلز جديد</h2>
@@ -429,18 +420,15 @@
         const CHANNEL_ID = '-1003822964890';
         const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-        // ========== المتغيرات ==========
         let allVideos = [];
         let selectedFile = null;
         let currentPlayingVideo = null;
         let userLikes = JSON.parse(localStorage.getItem('user_likes') || '{}');
 
-        // ========== حفظ الإعجابات ==========
         function saveLikes() {
             localStorage.setItem('user_likes', JSON.stringify(userLikes));
         }
 
-        // ========== جلب الفيديوهات من تليجرام ==========
         async function loadVideos() {
             showToast("🔄 جاري تحميل الفيديوهات...");
             
@@ -457,7 +445,6 @@
                             const messageId = post.message_id;
                             const caption = post.caption || '';
                             
-                            // استخراج المعلومات من الكابشن
                             let title = 'ريلز';
                             let publisher = 'ناردو برو';
                             
@@ -467,14 +454,13 @@
                             const publisherMatch = caption.match(/👤\s*(.+?)(?:\n|$)/);
                             if (publisherMatch) publisher = publisherMatch[1];
                             
-                            // جلب رابط الفيديو
                             const fileRes = await fetch(`${API_URL}/getFile?file_id=${post.video.file_id}`);
                             const fileData = await fileRes.json();
                             
                             if (fileData.ok) {
                                 const videoUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
                                 
-                                // إنشاء معرف خاص
+                                // ✅ معرف خاص لكل فيديو
                                 const serialNumber = `NARD-${messageId}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
                                 
                                 videos.push({
@@ -518,7 +504,6 @@
             }
         }
 
-        // ========== عرض الفيديوهات ==========
         function displayVideos() {
             const grid = document.getElementById('videosGrid');
             
@@ -527,7 +512,7 @@
                     <div class="empty-state">
                         <i class="fas fa-film"></i>
                         <h3>لا توجد فيديوهات</h3>
-                        <p>اضف أول ريلز وسيظهر هنا للجميع</p>
+                        <p>أضف أول ريلز وسيظهر هنا للجميع</p>
                         <button class="btn" style="margin-top: 15px;" onclick="openAddModal()">➕ إضافة ريلز</button>
                     </div>
                 `;
@@ -567,14 +552,12 @@
             }).join('');
         }
 
-        // ========== تشغيل الفيديو في نفس النافذة ==========
         function playVideo(videoId) {
             const video = allVideos.find(v => v.id === videoId);
             if (!video) return;
             
             currentPlayingVideo = video;
             
-            // عرض المشغل
             const player = document.getElementById('videoPlayer');
             const playerVideo = document.getElementById('playerVideo');
             const playerTitle = document.getElementById('playerTitle');
@@ -590,11 +573,7 @@
             playerVideo.play();
             
             player.classList.add('show');
-            
-            // تحديث زر الإعجاب
             updatePlayerLikeButton();
-            
-            // التمرير إلى المشغل
             player.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         
@@ -634,7 +613,6 @@
             }
         }
         
-        // ========== تبديل الإعجاب ==========
         function toggleLike(videoId) {
             if (!userLikes[videoId]) {
                 userLikes[videoId] = { liked: false, count: 0 };
@@ -649,17 +627,11 @@
             }
             
             saveLikes();
-            
-            // تحديث الفيديو في allVideos
             const video = allVideos.find(v => v.id === videoId);
-            if (video) {
-                video.likes = userLikes[videoId].count;
-            }
-            
+            if (video) video.likes = userLikes[videoId].count;
             displayVideos();
         }
         
-        // ========== رفع فيديو إلى تليجرام ==========
         async function uploadVideo() {
             if (!selectedFile) {
                 showToast("❌ اختر فيديو أولاً");
@@ -694,11 +666,7 @@
                     selectedFile = null;
                     document.getElementById('videoPreview').style.display = 'none';
                     document.getElementById('videoFile').value = '';
-                    
-                    // انتظار ثواني ثم تحديث القائمة
-                    setTimeout(() => {
-                        loadVideos();
-                    }, 3000);
+                    setTimeout(() => loadVideos(), 3000);
                 } else {
                     throw new Error(data.description);
                 }
@@ -710,7 +678,6 @@
             }
         }
         
-        // ========== معاينة الفيديو ==========
         function previewVideo(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -732,7 +699,6 @@
             }
         }
         
-        // ========== دوال مساعدة ==========
         function openAddModal() {
             document.getElementById('addModal').style.display = 'flex';
         }
@@ -765,15 +731,13 @@
             setTimeout(() => toast.remove(), 2500);
         }
         
-        // ========== إغلاق النافذة المنبثقة ==========
         window.onclick = function(e) {
             const modal = document.getElementById('addModal');
             if (e.target === modal) closeAddModal();
         }
         
-        // ========== تشغيل التطبيق ==========
         loadVideos();
-        setInterval(loadVideos, 60000); // تحديث كل دقيقة
+        setInterval(loadVideos, 60000);
     </script>
 </body>
 </html>
