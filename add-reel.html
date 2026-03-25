@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
+        /* نفس الستايلات السابقة مع إضافة ستايل لشريط التقدم */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
@@ -22,7 +23,6 @@
         
         .container { max-width: 1100px; margin: 0 auto; }
         
-        /* تخطيط ثنائي الأعمدة */
         .two-columns {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -74,7 +74,6 @@
         
         .reel-content { padding: 35px; }
         
-        /* حاوية الريلز المرفوعة */
         .my-reels-section {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
@@ -213,7 +212,7 @@
             margin-bottom: 15px;
         }
         
-        /* مشغل الفيديو المدمج في نفس النافذة */
+        /* مشغل الفيديو المدمج */
         .video-player-embedded {
             background: rgba(0, 0, 0, 0.8);
             border-radius: 20px;
@@ -224,14 +223,8 @@
         }
         
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .embedded-player-header {
@@ -289,6 +282,22 @@
             padding: 40px;
         }
         
+        .retry-progress {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .retry-progress-bar {
+            height: 100%;
+            background: #ffd700;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
         .embedded-video-info {
             padding: 12px 20px;
             background: rgba(0,0,0,0.7);
@@ -313,6 +322,17 @@
         .embedded-video-publisher {
             color: #ccc;
             font-size: 12px;
+        }
+        
+        .retry-btn {
+            background: #ffd700;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #1a1a2e;
         }
         
         /* نموذج الإضافة */
@@ -419,11 +439,6 @@
             gap: 12px;
         }
         
-        .save-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
-        }
-        
         .toast-message {
             position: fixed;
             bottom: 30px;
@@ -437,6 +452,7 @@
         .toast-success { background: #10b981; color: white; }
         .toast-error { background: #ef4444; color: white; }
         .toast-info { background: #3b82f6; color: white; }
+        .toast-warning { background: #ff9800; color: white; }
         
         @keyframes slideInRight {
             from { transform: translateX(100%); opacity: 0; }
@@ -476,20 +492,6 @@
             margin: 0 auto 20px;
         }
         
-        .success-checkmark i { font-size: 3rem; color: white; }
-        
-        .confirm-buttons { display: flex; gap: 15px; margin-top: 25px; }
-        .confirm-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .confirm-yes { background: #ffd700; color: #1a1a2e; }
-        .confirm-no { background: #333; color: white; }
-        
         .active-reel-badge {
             background: #ffd700;
             color: #1a1a2e;
@@ -503,7 +505,6 @@
             .reel-content { padding: 25px; }
             .mini-reel-card { flex-direction: column; }
             .mini-reel-thumb { width: 100%; height: 120px; }
-            .embedded-video-info { flex-direction: column; }
         }
     </style>
 </head>
@@ -578,7 +579,7 @@
                     </div>
                 </div>
                 
-                <!-- مشغل الفيديو المدمج في نفس النافذة -->
+                <!-- مشغل الفيديو المدمج -->
                 <div id="embeddedPlayer" style="display: none;"></div>
             </div>
         </div>
@@ -599,6 +600,7 @@
         let currentSerialNumber = '';
         let myUploadedReels = [];
         let reelsVideoCache = {};
+        let currentRetryTimeout = null;
         
         // ========== إنشاء معرف خاص ==========
         function generateBarSerialNumber() {
@@ -688,7 +690,59 @@
             container.innerHTML = html;
         }
         
-        // ========== تشغيل الريلز في نفس النافذة (مدمج) ==========
+        // ========== جلب رابط الفيديو من تليجرام مع إعادة المحاولة التلقائية ==========
+        async function getReelVideoUrlWithRetry(messageId, retryCount = 0, maxRetries = 8, updateProgressCallback = null) {
+            const delay = 2500; // 2.5 ثانية بين المحاولات
+            
+            try {
+                console.log(`🔄 محاولة ${retryCount + 1}/${maxRetries} لجلب الفيديو للمعرف: ${messageId}`);
+                
+                if (updateProgressCallback) {
+                    updateProgressCallback(retryCount + 1, maxRetries);
+                }
+                
+                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+                const data = await response.json();
+                
+                if (data.ok && data.result) {
+                    for (const update of data.result) {
+                        const post = update.channel_post || update.message;
+                        if (post && post.message_id === messageId && post.video) {
+                            const fileId = post.video.file_id;
+                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                            const fileData = await fileRes.json();
+                            
+                            if (fileData.ok) {
+                                const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                                reelsVideoCache[messageId] = videoUrl;
+                                console.log(`✅ تم الحصول على رابط الفيديو بعد ${retryCount + 1} محاولات`);
+                                return videoUrl;
+                            }
+                        }
+                    }
+                }
+                
+                // إذا لم يتم العثور على الفيديو وكان لدينا محاولات متبقية
+                if (retryCount < maxRetries - 1) {
+                    console.log(`⚠️ لم يتم العثور على الفيديو، إعادة المحاولة بعد ${delay/1000} ثانية... (${retryCount + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return getReelVideoUrlWithRetry(messageId, retryCount + 1, maxRetries, updateProgressCallback);
+                }
+                
+                console.log(`❌ فشل جلب الفيديو بعد ${maxRetries} محاولات`);
+                return null;
+                
+            } catch (error) {
+                console.error('❌ خطأ:', error);
+                if (retryCount < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return getReelVideoUrlWithRetry(messageId, retryCount + 1, maxRetries, updateProgressCallback);
+                }
+                return null;
+            }
+        }
+        
+        // ========== تشغيل الريلز في نفس النافذة مع إعادة المحاولة ==========
         async function playReelInSameWindow(serialNumber) {
             const reel = myUploadedReels.find(r => r.serialNumber === serialNumber);
             if (!reel) {
@@ -698,7 +752,7 @@
             
             const embeddedContainer = document.getElementById('embeddedPlayer');
             
-            // عرض واجهة التحميل
+            // عرض واجهة التحميل مع شريط التقدم
             embeddedContainer.style.display = 'block';
             embeddedContainer.innerHTML = `
                 <div class="video-player-embedded">
@@ -716,6 +770,11 @@
                         <div class="embedded-video-loading">
                             <i class="fas fa-spinner fa-pulse fa-2x"></i>
                             <p>🔄 جاري تحميل الفيديو من تليجرام...</p>
+                            <p style="font-size: 12px; color: #aaa;">قد يستغرق الأمر بضع ثوانٍ</p>
+                            <div class="retry-progress">
+                                <div class="retry-progress-bar" id="retryProgressBar"></div>
+                            </div>
+                            <p id="retryStatusText" style="font-size: 11px;">محاولة 1/8</p>
                         </div>
                     </div>
                     <div class="embedded-video-info">
@@ -732,8 +791,21 @@
                 </div>
             `;
             
-            // جلب الفيديو من تليجرام
-            const videoUrl = await getReelVideoUrl(reel.telegramId);
+            // تحديث شريط التقدم
+            const updateProgress = (current, total) => {
+                const progressBar = document.getElementById('retryProgressBar');
+                const statusText = document.getElementById('retryStatusText');
+                if (progressBar) {
+                    const percent = (current / total) * 100;
+                    progressBar.style.width = `${percent}%`;
+                }
+                if (statusText) {
+                    statusText.textContent = `محاولة ${current}/${total}`;
+                }
+            };
+            
+            // جلب الفيديو مع إعادة المحاولة التلقائية
+            const videoUrl = await getReelVideoUrlWithRetry(reel.telegramId, 0, 8, updateProgress);
             const videoContainer = document.getElementById('embeddedVideoContainer');
             
             if (videoUrl && videoContainer) {
@@ -744,22 +816,35 @@
                     </video>
                 `;
                 showToast(`✅ جاري تشغيل: ${reel.title}`, 'success');
-                
-                // التمرير إلى المشغل
                 embeddedContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else if (videoContainer) {
                 videoContainer.innerHTML = `
                     <div style="text-align: center; padding: 40px;">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ff9800; margin-bottom: 15px;"></i>
-                        <p style="color: white;">⚠️ لا يمكن تحميل الفيديو حالياً</p>
-                        <p style="color: #aaa; font-size: 12px; margin-top: 10px;">تم رفع الفيديو بنجاح، يمكنك المحاولة لاحقاً</p>
-                        <button onclick="closeEmbeddedPlayer()" style="margin-top: 20px; background: #ffd700; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer;">
+                        <i class="fas fa-clock" style="font-size: 3rem; color: #ff9800; margin-bottom: 15px;"></i>
+                        <p style="color: white;">⏳ الفيديو لا يزال قيد المعالجة في تليجرام</p>
+                        <p style="color: #aaa; font-size: 12px; margin-top: 10px;">
+                            تم رفع الفيديو بنجاح، لكنه يحتاج وقتاً للمعالجة
+                        </p>
+                        <p style="color: #ffd700; font-size: 11px; margin-top: 8px;">
+                            انتظر 30-60 ثانية ثم حاول مرة أخرى
+                        </p>
+                        <button class="retry-btn" onclick="retryPlayReel('${serialNumber}')">
+                            <i class="fas fa-redo-alt"></i> إعادة المحاولة
+                        </button>
+                        <button onclick="closeEmbeddedPlayer()" style="margin-top: 15px; background: #333; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; color: white; margin-right: 10px;">
                             إغلاق
                         </button>
                     </div>
                 `;
-                showToast(`⚠️ تعذر تحميل الفيديو`, 'info');
+                showToast(`⏳ الفيديو قيد المعالجة، حاول مرة أخرى بعد قليل`, 'warning');
             }
+        }
+        
+        // إعادة محاولة التشغيل
+        async function retryPlayReel(serialNumber) {
+            closeEmbeddedPlayer();
+            await new Promise(resolve => setTimeout(resolve, 300));
+            playReelInSameWindow(serialNumber);
         }
         
         // إغلاق المشغل المدمج
@@ -767,39 +852,6 @@
             const embeddedContainer = document.getElementById('embeddedPlayer');
             embeddedContainer.style.display = 'none';
             embeddedContainer.innerHTML = '';
-        }
-        
-        // ========== جلب رابط الفيديو من تليجرام ==========
-        async function getReelVideoUrl(messageId) {
-            if (reelsVideoCache[messageId]) {
-                return reelsVideoCache[messageId];
-            }
-            
-            try {
-                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
-                const data = await response.json();
-                
-                if (data.ok && data.result) {
-                    for (const update of data.result) {
-                        const post = update.channel_post || update.message;
-                        if (post && post.message_id === messageId && post.video) {
-                            const fileId = post.video.file_id;
-                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                            const fileData = await fileRes.json();
-                            
-                            if (fileData.ok) {
-                                const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                                reelsVideoCache[messageId] = videoUrl;
-                                return videoUrl;
-                            }
-                        }
-                    }
-                }
-                return null;
-            } catch (error) {
-                console.error('خطأ:', error);
-                return null;
-            }
         }
         
         // ========== رفع الريلز إلى تليجرام ==========
@@ -888,6 +940,9 @@
                             <i class="fas fa-fingerprint"></i> المعرف: <strong>${reel.serialNumber}</strong>
                         </div>
                     </div>
+                    <p style="color: #10b981; font-size: 12px;">
+                        ⏳ الفيديو يحتاج 30-60 ثانية للمعالجة قبل التشغيل
+                    </p>
                     <div class="confirm-buttons">
                         <button class="confirm-btn confirm-yes" onclick="redirectToHome()">
                             <i class="fas fa-home"></i> العودة للرئيسية
@@ -1003,16 +1058,20 @@
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = `toast-message toast-${type}`;
-            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-clock' : 'fa-info-circle'}"></i> ${message}`;
             container.appendChild(toast);
             setTimeout(() => {
                 toast.style.animation = 'slideInRight 0.3s reverse';
                 setTimeout(() => toast.remove(), 300);
-            }, 3000);
+            }, 4000);
         }
         
         loadCurrentUser();
         loadMyReels();
+        
+        console.log('🎬 ناردو ريلز - مع إعادة المحاولة التلقائية');
+        console.log('⏳ الفيديو يحتاج وقت للمعالجة بعد الرفع');
+        console.log('🔄 سيتم إعادة المحاولة 8 مرات تلقائياً');
     </script>
 </body>
 </html>
