@@ -796,7 +796,7 @@
         <div class="modal-content modal-lg" id="productDetailContent"></div>
     </div>
 
-    <!-- ===== ملفات JavaScript ===== -->
+        <!-- ===== ملفات JavaScript ===== -->
     <script src="js/core.js"></script>
     <script src="js/telegram.js"></script>
     <script src="js/auth.js"></script>
@@ -804,346 +804,353 @@
     <script src="js/app.js"></script>
 
     <script>
+        // ===== نظام الريلز المتوافق مع telegram.js =====
         
-
-// ===== نظام الريلز المتوافق مع telegram.js =====
-// استخدام الدوال الموجودة في telegram.js بدلاً من إعادة تعريفها
-
-// التحقق من وجود TELEGRAM في النطاق العام
-if (typeof TELEGRAM === 'undefined') {
-    console.error('❌ TELEGRAM غير معرف - تأكد من تحميل telegram.js أولاً');
-} else {
-    console.log('✅ تم اكتشاف TELEGRAM، جاري تهيئة الريلز...');
-}
-
-// متغيرات الريلز (بأسماء مختلفة لتجنب التعارض)
-let nardooReelsList = [];
-let nardooSpecialReelsList = [];
-
-// استخراج الرقم التسلسلي من النص
-function extractNardooSerialFromCaption(caption) {
-    if (!caption) return null;
-    let match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
-    if (match) return match[1];
-    match = caption.match(/\b(NARD-[A-Z0-9-]+)\b/i);
-    return match ? match[1] : null;
-}
-
-// جلب الريلز باستخدام دوال telegram.js الموجودة
-async function loadNardooReels() {
-    try {
-        console.log('🔄 [ناردو ريلز] جاري التحميل...');
-        
-        // استخدام TELEGRAM الموجود في telegram.js
-        const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        const reelsTemp = [];
-        
-        if (data.ok && data.result) {
-            const updates = [...data.result].reverse();
-            
-            for (const update of updates) {
-                const post = update.channel_post || update.message;
-                if (!post || !post.video) continue;
-                
-                const caption = post.caption || '';
-                const serial = extractNardooSerialFromCaption(caption);
-                
-                // استخراج العنوان
-                let title = '🎬 ريلز';
-                const titleMatch = caption.match(/🎬\s*(.+?)(?:\n|$)/);
-                if (titleMatch) title = titleMatch[1];
-                
-                // استخراج الناشر
-                let publisher = 'ناردو برو';
-                const publisherMatch = caption.match(/👤\s*(.+?)(?:\n|$)/);
-                if (publisherMatch) publisher = publisherMatch[1];
-                
-                try {
-                    const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${post.video.file_id}`);
-                    const fileData = await fileRes.json();
-                    
-                    if (fileData.ok && fileData.result) {
-                        const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                        
-                        reelsTemp.push({
-                            id: post.message_id,
-                            title: title,
-                            videoUrl: videoUrl,
-                            publisher: publisher,
-                            serialNumber: serial,
-                            views: Math.floor(Math.random() * 500) + 50,
-                            likes: Math.floor(Math.random() * 100) + 10,
-                            date: new Date(post.date * 1000).toISOString()
-                        });
-                        
-                        console.log(`✅ [ناردو ريلز] تم: ${title}`);
-                    }
-                } catch(err) {
-                    console.warn('⚠️ خطأ في جلب فيديو:', err);
-                }
-            }
+        // التحقق من وجود TELEGRAM في النطاق العام
+        if (typeof TELEGRAM === 'undefined') {
+            console.error('❌ TELEGRAM غير معرف - تأكد من تحميل telegram.js أولاً');
+        } else {
+            console.log('✅ تم اكتشاف TELEGRAM، جاري تهيئة الريلز...');
         }
-        
-        nardooReelsList = reelsTemp;
-        nardooSpecialReelsList = nardooReelsList.filter(r => r.serialNumber && r.serialNumber.startsWith('NARD-'));
-        
-        // حفظ في localStorage
-        localStorage.setItem('nardoo_reels_cache', JSON.stringify({
-            all: nardooReelsList,
-            special: nardooSpecialReelsList,
-            timestamp: Date.now()
-        }));
-        
-        // عرض الريلز
-        displayNardooSpecialReels();
-        displayNardooAllReels();
-        
-        console.log(`📊 [ناردو ريلز] تم تحميل ${nardooReelsList.length} مقطع (${nardooSpecialReelsList.length} مميز)`);
-        
-        // استخدام showNotification من telegram.js إذا كانت موجودة
-        if (typeof showNotification === 'function') {
-            showNotification(`📹 تم تحميل ${nardooReelsList.length} ريلز`, 'info');
+
+        // متغيرات الريلز (بأسماء مختلفة لتجنب التعارض)
+        let nardooReelsList = [];
+        let nardooSpecialReelsList = [];
+
+        // استخراج الرقم التسلسلي من النص
+        function extractNardooSerialFromCaption(caption) {
+            if (!caption) return null;
+            let match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
+            if (match) return match[1];
+            match = caption.match(/\b(NARD-[A-Z0-9-]+)\b/i);
+            return match ? match[1] : null;
         }
-        
-        return nardooReelsList;
-        
-    } catch(error) {
-        console.error('❌ [ناردو ريلز] خطأ:', error);
-        
-        // محاولة تحميل من cache
-        const cached = localStorage.getItem('nardoo_reels_cache');
-        if (cached) {
+
+        // جلب الريلز باستخدام دوال telegram.js الموجودة
+        async function loadNardooReels() {
             try {
-                const data = JSON.parse(cached);
-                nardooReelsList = data.all || [];
-                nardooSpecialReelsList = data.special || [];
+                console.log('🔄 [ناردو ريلز] جاري التحميل...');
+                
+                // استخدام TELEGRAM الموجود في telegram.js
+                const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const reelsTemp = [];
+                
+                if (data.ok && data.result) {
+                    const updates = [...data.result].reverse();
+                    
+                    for (const update of updates) {
+                        const post = update.channel_post || update.message;
+                        if (!post || !post.video) continue;
+                        
+                        const caption = post.caption || '';
+                        const serial = extractNardooSerialFromCaption(caption);
+                        
+                        // استخراج العنوان
+                        let title = '🎬 ريلز';
+                        const titleMatch = caption.match(/🎬\s*(.+?)(?:\n|$)/);
+                        if (titleMatch) title = titleMatch[1];
+                        
+                        // استخراج الناشر
+                        let publisher = 'ناردو برو';
+                        const publisherMatch = caption.match(/👤\s*(.+?)(?:\n|$)/);
+                        if (publisherMatch) publisher = publisherMatch[1];
+                        
+                        try {
+                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${post.video.file_id}`);
+                            const fileData = await fileRes.json();
+                            
+                            if (fileData.ok && fileData.result) {
+                                const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                                
+                                reelsTemp.push({
+                                    id: post.message_id,
+                                    title: title,
+                                    videoUrl: videoUrl,
+                                    publisher: publisher,
+                                    serialNumber: serial,
+                                    views: Math.floor(Math.random() * 500) + 50,
+                                    likes: Math.floor(Math.random() * 100) + 10,
+                                    date: new Date(post.date * 1000).toISOString()
+                                });
+                                
+                                console.log(`✅ [ناردو ريلز] تم: ${title}`);
+                            }
+                        } catch(err) {
+                            console.warn('⚠️ خطأ في جلب فيديو:', err);
+                        }
+                    }
+                }
+                
+                nardooReelsList = reelsTemp;
+                nardooSpecialReelsList = nardooReelsList.filter(r => r.serialNumber && r.serialNumber.startsWith('NARD-'));
+                
+                // حفظ في localStorage
+                localStorage.setItem('nardoo_reels_cache', JSON.stringify({
+                    all: nardooReelsList,
+                    special: nardooSpecialReelsList,
+                    timestamp: Date.now()
+                }));
+                
+                // عرض الريلز
                 displayNardooSpecialReels();
                 displayNardooAllReels();
-                console.log(`📦 [ناردو ريلز] تم من cache: ${nardooReelsList.length} مقطع`);
-            } catch(e) {}
-        }
-        
-        return [];
-    }
-}
-
-// عرض الريلز المميزة
-function displayNardooSpecialReels() {
-    const container = document.getElementById('specialReelsContainer');
-    if (!container) return;
-    
-    if (!nardooSpecialReelsList || nardooSpecialReelsList.length === 0) {
-        container.innerHTML = `
-            <div class="no-reels-message" style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.05); border-radius: 20px;">
-                <i class="fas fa-star" style="font-size: 48px; color: gold; margin-bottom: 15px;"></i>
-                <p style="color: white;">✨ لا توجد ريلز مميزة بعد</p>
-                <p style="color: #aaa; font-size: 12px;">الريلز التي تحتوي على NARD-SERIAL تظهر هنا</p>
-                <button onclick="refreshNardooReels()" style="background: gold; color: black; border: none; padding: 8px 20px; border-radius: 20px; margin-top: 15px; cursor: pointer;">
-                    <i class="fas fa-sync-alt"></i> تحديث
-                </button>
-            </div>
-        `;
-        return;
-    }
-    
-    const sorted = [...nardooSpecialReelsList].reverse();
-    container.innerHTML = sorted.map(r => `
-        <div class="reel-video-card" onclick="openNardooReelPlayer(${r.id})" style="flex: 0 0 auto; width: 280px; border-radius: 15px; overflow: hidden; background: #1a1a2e; cursor: pointer; transition: transform 0.3s;">
-            <div style="height: 280px; position: relative; background: linear-gradient(135deg, #1a472a, #0a2a1a); display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-play-circle" style="font-size: 60px; color: gold;"></i>
-                ${r.serialNumber ? `<div style="position: absolute; top: 10px; right: 10px; background: linear-gradient(135deg, #ffd700, #ffb347); color: #1a1a2e; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold;">
-                    <i class="fas fa-key"></i> ${escapeNardooHtml(r.serialNumber)}
-                </div>` : ''}
-            </div>
-            <div style="padding: 10px; background: rgba(0,0,0,0.7);">
-                <div style="display: flex; justify-content: space-between; color: white;">
-                    <span style="font-size: 14px;">🎬 ${escapeNardooHtml(r.title)}</span>
-                    <span style="color: gold; font-size: 12px;"><i class="fas fa-eye"></i> ${r.views}</span>
-                </div>
-                <div style="font-size: 11px; color: #aaa; margin-top: 5px;">
-                    <i class="fas fa-user"></i> ${escapeNardooHtml(r.publisher)}
-                </div>
-                ${r.serialNumber ? `<div style="font-size: 9px; color: gold; margin-top: 3px;"><i class="fas fa-fingerprint"></i> ${escapeNardooHtml(r.serialNumber)}</div>` : ''}
-            </div>
-        </div>
-    `).join('');
-}
-
-// عرض جميع الريلز
-function displayNardooAllReels() {
-    const grid = document.getElementById('allReelsGrid');
-    if (!grid) return;
-    
-    if (!nardooReelsList || nardooReelsList.length === 0) {
-        grid.innerHTML = `
-            <div class="no-reels-message" style="grid-column:1/-1; text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.05); border-radius: 20px;">
-                <i class="fas fa-film" style="font-size: 60px; color: gold; margin-bottom: 15px;"></i>
-                <p style="color: white;">📹 لا توجد ريلز متاحة</p>
-                <button onclick="refreshNardooReels()" style="background: gold; color: black; border: none; padding: 10px 25px; border-radius: 25px; margin-top: 15px; cursor: pointer;">
-                    <i class="fas fa-sync-alt"></i> تحديث
-                </button>
-            </div>
-        `;
-        return;
-    }
-    
-    const sorted = [...nardooReelsList].reverse();
-    grid.innerHTML = sorted.map(r => {
-        const hasSerial = r.serialNumber && r.serialNumber.startsWith('NARD-');
-        return `
-            <div class="all-reels-card" onclick="openNardooReelPlayer(${r.id})" style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden; border: 1px solid ${hasSerial ? 'gold' : 'rgba(255,215,0,0.3)'}; cursor: pointer; transition: all 0.3s;">
-                <div style="height: 200px; background: linear-gradient(135deg, #1a1a2e, #0a0a1a); display: flex; align-items: center; justify-content: center; position: relative;">
-                    <i class="fas fa-play-circle" style="font-size: 50px; color: gold;"></i>
-                    ${hasSerial ? `<div style="position: absolute; top: 10px; right: 10px; background: gold; color: black; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold;">
-                        <i class="fas fa-crown"></i> مميز
-                    </div>` : ''}
-                </div>
-                <div style="padding: 12px;">
-                    <div style="font-size: 14px; font-weight: bold; color: gold; margin-bottom: 6px;">
-                        ${hasSerial ? '<i class="fas fa-star" style="color:gold"></i> ' : '🎬 '}${escapeNardooHtml(r.title)}
-                    </div>
-                    <div style="font-size: 11px; color: #aaa; margin-top: 5px;">
-                        <i class="fas fa-user"></i> ${escapeNardooHtml(r.publisher)}
-                    </div>
-                    <div style="font-size: 11px; color: #aaa;">
-                        <i class="fas fa-eye"></i> ${r.views}
-                    </div>
-                    ${hasSerial ? `<div style="font-size: 10px; color: gold; margin-top: 5px;"><i class="fas fa-fingerprint"></i> ${escapeNardooHtml(r.serialNumber)}</div>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// فتح مشغل الفيديو
-function openNardooReelPlayer(startId) {
-    const reel = nardooReelsList.find(r => r.id == startId);
-    if (!reel) {
-        if (typeof showNotification === 'function') {
-            showNotification('الفيديو غير موجود', 'error');
-        }
-        return;
-    }
-    
-    // إنشاء نافذة المشغل
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: black;
-        z-index: 20000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-    `;
-    
-    const video = document.createElement('video');
-    video.src = reel.videoUrl;
-    video.controls = true;
-    video.autoplay = true;
-    video.style.cssText = `
-        max-width: 100%;
-        max-height: 80%;
-        border-radius: 10px;
-    `;
-    
-    const info = document.createElement('div');
-    info.style.cssText = `
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        right: 20px;
-        background: rgba(0,0,0,0.7);
-        padding: 15px;
-        border-radius: 10px;
-        color: white;
-    `;
-    info.innerHTML = `
-        <div style="font-size: 18px; font-weight: bold;">${escapeNardooHtml(reel.title)}</div>
-        <div style="font-size: 12px; margin-top: 5px;"><i class="fas fa-user"></i> ${escapeNardooHtml(reel.publisher)}</div>
-        ${reel.serialNumber ? `<div style="font-size: 11px; color: gold; margin-top: 5px;"><i class="fas fa-key"></i> ${escapeNardooHtml(reel.serialNumber)}</div>` : ''}
-    `;
-    
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '✕';
-    closeBtn.style.cssText = `
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(0,0,0,0.6);
-        color: white;
-        border: none;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        font-size: 20px;
-        cursor: pointer;
-        z-index: 10;
-    `;
-    closeBtn.onclick = () => {
-        video.pause();
-        modal.remove();
-    };
-    
-    modal.appendChild(video);
-    modal.appendChild(info);
-    modal.appendChild(closeBtn);
-    document.body.appendChild(modal);
-    
-    video.play().catch(e => console.log('تشغيل:', e));
-}
-
-// تحديث الريلز
-async function refreshNardooReels() {
-    if (typeof showNotification === 'function') {
-        showNotification('🔄 جاري تحديث الريلز...', 'info');
-    }
-    await loadNardooReels();
-    if (typeof showNotification === 'function') {
-        showNotification('✅ تم تحديث الريلز', 'success');
-    }
-}
-
-// دالة مساعدة للهروب من HTML
-function escapeNardooHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// تحميل الريلز عند تحميل الصفحة
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            loadNardooReels();
-        }, 1000);
-    });
-} else {
-    setTimeout(() => {
-        loadNardooReels();
-    }, 1000);
-}
-
-// تحديث كل 5 دقائق
-setInterval(() => {
-    loadNardooReels();
-}, 300000);
-
-// تصدير الدوال للنطاق العام
-window.loadNardooReels = loadNardooReels;
-window.refreshNardooReels = refreshNardooReels;
-window.openNardooReelPlayer = openNardooReelPlayer;
-
-console.log('✅ [ناردو ريلز] النظام جاهز - متوافق مع telegram.js');
-</script>
-        
                 
+                console.log(`📊 [ناردو ريلز] تم تحميل ${nardooReelsList.length} مقطع (${nardooSpecialReelsList.length} مميز)`);
+                
+                // استخدام showNotification من telegram.js إذا كانت موجودة
+                if (typeof showNotification === 'function') {
+                    showNotification(`📹 تم تحميل ${nardooReelsList.length} ريلز`, 'info');
+                }
+                
+                return nardooReelsList;
+                
+            } catch(error) {
+                console.error('❌ [ناردو ريلز] خطأ:', error);
+                
+                // محاولة تحميل من cache
+                const cached = localStorage.getItem('nardoo_reels_cache');
+                if (cached) {
+                    try {
+                        const data = JSON.parse(cached);
+                        nardooReelsList = data.all || [];
+                        nardooSpecialReelsList = data.special || [];
+                        displayNardooSpecialReels();
+                        displayNardooAllReels();
+                        console.log(`📦 [ناردو ريلز] تم من cache: ${nardooReelsList.length} مقطع`);
+                    } catch(e) {}
+                }
+                
+                return [];
+            }
+        }
+
+        // عرض الريلز المميزة
+        function displayNardooSpecialReels() {
+            const container = document.getElementById('specialReelsContainer');
+            if (!container) return;
+            
+            if (!nardooSpecialReelsList || nardooSpecialReelsList.length === 0) {
+                container.innerHTML = `
+                    <div class="no-reels-message" style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.05); border-radius: 20px;">
+                        <i class="fas fa-star" style="font-size: 48px; color: gold; margin-bottom: 15px;"></i>
+                        <p style="color: white;">✨ لا توجد ريلز مميزة بعد</p>
+                        <p style="color: #aaa; font-size: 12px;">الريلز التي تحتوي على NARD-SERIAL تظهر هنا</p>
+                        <button onclick="refreshNardooReels()" style="background: gold; color: black; border: none; padding: 8px 20px; border-radius: 20px; margin-top: 15px; cursor: pointer;">
+                            <i class="fas fa-sync-alt"></i> تحديث
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sorted = [...nardooSpecialReelsList].reverse();
+            container.innerHTML = sorted.map(r => `
+                <div class="reel-video-card" onclick="openNardooReelPlayer(${r.id})" style="flex: 0 0 auto; width: 280px; border-radius: 15px; overflow: hidden; background: #1a1a2e; cursor: pointer; transition: transform 0.3s;">
+                    <div style="height: 280px; position: relative; background: linear-gradient(135deg, #1a472a, #0a2a1a); display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-play-circle" style="font-size: 60px; color: gold;"></i>
+                        ${r.serialNumber ? `<div style="position: absolute; top: 10px; right: 10px; background: linear-gradient(135deg, #ffd700, #ffb347); color: #1a1a2e; padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: bold;">
+                            <i class="fas fa-key"></i> ${escapeNardooHtml(r.serialNumber)}
+                        </div>` : ''}
+                    </div>
+                    <div style="padding: 10px; background: rgba(0,0,0,0.7);">
+                        <div style="display: flex; justify-content: space-between; color: white;">
+                            <span style="font-size: 14px;">🎬 ${escapeNardooHtml(r.title)}</span>
+                            <span style="color: gold; font-size: 12px;"><i class="fas fa-eye"></i> ${r.views}</span>
+                        </div>
+                        <div style="font-size: 11px; color: #aaa; margin-top: 5px;">
+                            <i class="fas fa-user"></i> ${escapeNardooHtml(r.publisher)}
+                        </div>
+                        ${r.serialNumber ? `<div style="font-size: 9px; color: gold; margin-top: 3px;"><i class="fas fa-fingerprint"></i> ${escapeNardooHtml(r.serialNumber)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // عرض جميع الريلز
+        function displayNardooAllReels() {
+            const grid = document.getElementById('allReelsGrid');
+            if (!grid) return;
+            
+            if (!nardooReelsList || nardooReelsList.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-reels-message" style="grid-column:1/-1; text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.05); border-radius: 20px;">
+                        <i class="fas fa-film" style="font-size: 60px; color: gold; margin-bottom: 15px;"></i>
+                        <p style="color: white;">📹 لا توجد ريلز متاحة</p>
+                        <button onclick="refreshNardooReels()" style="background: gold; color: black; border: none; padding: 10px 25px; border-radius: 25px; margin-top: 15px; cursor: pointer;">
+                            <i class="fas fa-sync-alt"></i> تحديث
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sorted = [...nardooReelsList].reverse();
+            grid.innerHTML = sorted.map(r => {
+                const hasSerial = r.serialNumber && r.serialNumber.startsWith('NARD-');
+                return `
+                    <div class="all-reels-card" onclick="openNardooReelPlayer(${r.id})" style="background: rgba(255,255,255,0.05); border-radius: 15px; overflow: hidden; border: 1px solid ${hasSerial ? 'gold' : 'rgba(255,215,0,0.3)'}; cursor: pointer; transition: all 0.3s;">
+                        <div style="height: 200px; background: linear-gradient(135deg, #1a1a2e, #0a0a1a); display: flex; align-items: center; justify-content: center; position: relative;">
+                            <i class="fas fa-play-circle" style="font-size: 50px; color: gold;"></i>
+                            ${hasSerial ? `<div style="position: absolute; top: 10px; right: 10px; background: gold; color: black; padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: bold;">
+                                <i class="fas fa-crown"></i> مميز
+                            </div>` : ''}
+                        </div>
+                        <div style="padding: 12px;">
+                            <div style="font-size: 14px; font-weight: bold; color: gold; margin-bottom: 6px;">
+                                ${hasSerial ? '<i class="fas fa-star" style="color:gold"></i> ' : '🎬 '}${escapeNardooHtml(r.title)}
+                            </div>
+                            <div style="font-size: 11px; color: #aaa; margin-top: 5px;">
+                                <i class="fas fa-user"></i> ${escapeNardooHtml(r.publisher)}
+                            </div>
+                            <div style="font-size: 11px; color: #aaa;">
+                                <i class="fas fa-eye"></i> ${r.views}
+                            </div>
+                            ${hasSerial ? `<div style="font-size: 10px; color: gold; margin-top: 5px;"><i class="fas fa-fingerprint"></i> ${escapeNardooHtml(r.serialNumber)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // فتح مشغل الفيديو
+        function openNardooReelPlayer(startId) {
+            const reel = nardooReelsList.find(r => r.id == startId);
+            if (!reel) {
+                if (typeof showNotification === 'function') {
+                    showNotification('الفيديو غير موجود', 'error');
+                }
+                return;
+            }
+            
+            // إنشاء نافذة المشغل
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: black;
+                z-index: 20000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+            `;
+            
+            const video = document.createElement('video');
+            video.src = reel.videoUrl;
+            video.controls = true;
+            video.autoplay = true;
+            video.style.cssText = `
+                max-width: 100%;
+                max-height: 80%;
+                border-radius: 10px;
+            `;
+            
+            const info = document.createElement('div');
+            info.style.cssText = `
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                background: rgba(0,0,0,0.7);
+                padding: 15px;
+                border-radius: 10px;
+                color: white;
+            `;
+            info.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold;">${escapeNardooHtml(reel.title)}</div>
+                <div style="font-size: 12px; margin-top: 5px;"><i class="fas fa-user"></i> ${escapeNardooHtml(reel.publisher)}</div>
+                ${reel.serialNumber ? `<div style="font-size: 11px; color: gold; margin-top: 5px;"><i class="fas fa-key"></i> ${escapeNardooHtml(reel.serialNumber)}</div>` : ''}
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: rgba(0,0,0,0.6);
+                color: white;
+                border: none;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                font-size: 20px;
+                cursor: pointer;
+                z-index: 10;
+            `;
+            closeBtn.onclick = () => {
+                video.pause();
+                modal.remove();
+            };
+            
+            modal.appendChild(video);
+            modal.appendChild(info);
+            modal.appendChild(closeBtn);
+            document.body.appendChild(modal);
+            
+            video.play().catch(e => console.log('تشغيل:', e));
+        }
+
+        // تحديث الريلز
+        async function refreshNardooReels() {
+            if (typeof showNotification === 'function') {
+                showNotification('🔄 جاري تحديث الريلز...', 'info');
+            }
+            await loadNardooReels();
+            if (typeof showNotification === 'function') {
+                showNotification('✅ تم تحديث الريلز', 'success');
+            }
+        }
+
+        // دالة مساعدة للهروب من HTML
+        function escapeNardooHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // دوال وهمية للتوافق مع أزرار التحديث القديمة
+        window.refreshSpecialReels = function() {
+            refreshNardooReels();
+        };
+        
+        window.refreshAllReels = function() {
+            refreshNardooReels();
+        };
+
+        // تصدير الدوال للنطاق العام
+        window.loadNardooReels = loadNardooReels;
+        window.refreshNardooReels = refreshNardooReels;
+        window.openNardooReelPlayer = openNardooReelPlayer;
+
+        // تحميل الريلز عند تحميل الصفحة
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => {
+                    loadNardooReels();
+                }, 1000);
+            });
+        } else {
+            setTimeout(() => {
+                loadNardooReels();
+            }, 1000);
+        }
+
+        // تحديث كل 5 دقائق
+        setInterval(() => {
+            loadNardooReels();
+        }, 300000);
+
+        console.log('✅ [ناردو ريلز] النظام جاهز - متوافق مع telegram.js');
+    </script>
+</body> 
+</html>
+    
                         
