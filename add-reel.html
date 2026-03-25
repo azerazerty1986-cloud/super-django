@@ -210,7 +210,7 @@
             margin-bottom: 15px;
         }
         
-        /* مشغل الفيديو */
+        /* مشغل الفيديو المنبثق (نفس التصميم السابق) */
         .video-player-overlay {
             position: fixed;
             top: 0;
@@ -222,6 +222,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .video-player-card {
@@ -254,6 +260,12 @@
             border-radius: 50%;
             color: white;
             cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .close-video-btn:hover {
+            background: #ff4444;
+            transform: scale(1.1);
         }
         
         .video-container {
@@ -267,6 +279,24 @@
         .video-container video {
             width: 100%;
             max-height: 500px;
+        }
+        
+        .video-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            color: gold;
+        }
+        
+        .video-loading i {
+            font-size: 3rem;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         
         .video-info {
@@ -345,6 +375,14 @@
             cursor: pointer;
         }
         
+        .file-info {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 10px;
+            color: #ffd700;
+        }
+        
         .serial-info {
             background: rgba(255,215,0,0.15);
             padding: 15px;
@@ -380,6 +418,11 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
+        }
+        
+        .save-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
         }
         
         .toast-message {
@@ -521,7 +564,7 @@
                 <div class="empty-reels">
                     <i class="fas fa-film"></i>
                     <p>📹 الريلز التي ترفعها من هذه الصفحة ستظهر هنا</p>
-                    <p style="font-size: 12px;">اضغط على أي ريلز لمشاهدته مباشرة</p>
+                    <p style="font-size: 12px;">اضغط على أي ريلز لمشاهدته</p>
                 </div>
             </div>
         </div>
@@ -541,7 +584,7 @@
         let currentUser = null;
         let currentSerialNumber = '';
         let myUploadedReels = [];
-        let reelsVideoCache = {};
+        let reelsVideoCache = {}; // تخزين مؤقت للروابط
         
         // ========== إنشاء معرف خاص ==========
         function generateBarSerialNumber() {
@@ -608,7 +651,7 @@
                 const date = new Date(reel.timestamp).toLocaleString('ar-EG');
                 
                 html += `
-                    <div class="mini-reel-card" onclick="playReelInAddPage('${reel.serialNumber}')">
+                    <div class="mini-reel-card" onclick="playReelInPopup('${reel.serialNumber}')">
                         ${isCurrentReel ? `
                             <div class="this-reel-badge">
                                 <i class="fas fa-star"></i>
@@ -638,83 +681,30 @@
             container.innerHTML = html;
         }
         
-        // ========== تشغيل الريلز في صفحة الإضافة (الطريقة الناجحة) ==========
-        async function playReelInAddPage(serialNumber) {
+        // ========== تشغيل الريلز في نافذة منبثقة (باستخدام السر من الكود الناجح) ==========
+        async function playReelInPopup(serialNumber) {
             const reel = myUploadedReels.find(r => r.serialNumber === serialNumber);
             if (!reel) {
                 showToast('❌ لم يتم العثور على الريلز', 'error');
                 return;
             }
             
-            showToast(`🎬 جاري تحميل: ${reel.title}`, 'info');
-            
-            // جلب الفيديو من تليجرام باستخدام نفس الطريقة الناجحة
-            const videoUrl = await getReelVideoUrl(reel.telegramId);
-            
-            if (videoUrl) {
-                openVideoPlayer(reel, videoUrl);
-            } else {
-                // عرض نافذة بالفيديو التجريبي مع رابط التليجرام
-                openDemoVideoPlayer(reel);
-            }
-        }
-        
-        // ========== جلب رابط الفيديو من تليجرام (الطريقة الصحيحة) ==========
-        async function getReelVideoUrl(messageId) {
-            // التحقق من الكاش أولاً
-            if (reelsVideoCache[messageId]) {
-                return reelsVideoCache[messageId];
-            }
-            
-            try {
-                // جلب آخر التحديثات من القناة
-                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
-                const data = await response.json();
-                
-                if (data.ok && data.result) {
-                    // البحث عن الرسالة التي تحتوي على الفيديو
-                    for (const update of data.result) {
-                        const post = update.channel_post || update.message;
-                        if (post && post.message_id === messageId && post.video) {
-                            // الحصول على file_id
-                            const fileId = post.video.file_id;
-                            
-                            // جلب رابط الفيديو
-                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                            const fileData = await fileRes.json();
-                            
-                            if (fileData.ok) {
-                                const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                                reelsVideoCache[messageId] = videoUrl;
-                                return videoUrl;
-                            }
-                        }
-                    }
-                }
-                return null;
-            } catch (error) {
-                console.error('خطأ في جلب الفيديو:', error);
-                return null;
-            }
-        }
-        
-        // ========== عرض مشغل الفيديو ==========
-        function openVideoPlayer(reel, videoUrl) {
+            // فتح نافذة التحميل أولاً
             const modal = document.createElement('div');
             modal.className = 'video-player-overlay';
             modal.innerHTML = `
                 <div class="video-player-card">
                     <div class="video-player-header">
-                        <h3><i class="fas fa-play-circle"></i> مشاهدة الريلز</h3>
+                        <h3><i class="fas fa-play-circle"></i> ${escapeHtml(reel.title)}</h3>
                         <button class="close-video-btn" onclick="this.closest('.video-player-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div class="video-container">
-                        <video controls autoplay>
-                            <source src="${videoUrl}" type="video/mp4">
-                            متصفحك لا يدعم تشغيل الفيديو
-                        </video>
+                    <div class="video-container" id="videoContainer-${reel.id}">
+                        <div class="video-loading">
+                            <i class="fas fa-spinner fa-pulse"></i>
+                            <p>🔄 جاري تحميل الفيديو من تليجرام...</p>
+                        </div>
                     </div>
                     <div class="video-info">
                         <div class="video-title">
@@ -731,49 +721,86 @@
             `;
             document.body.appendChild(modal);
             
+            // جلب الفيديو من تليجرام (نفس طريقة الكود الناجح)
+            const videoUrl = await getReelVideoUrl(reel.telegramId);
+            const videoContainer = document.getElementById(`videoContainer-${reel.id}`);
+            
+            if (videoUrl && videoContainer) {
+                // عرض الفيديو
+                videoContainer.innerHTML = `
+                    <video controls autoplay>
+                        <source src="${videoUrl}" type="video/mp4">
+                        متصفحك لا يدعم تشغيل الفيديو
+                    </video>
+                `;
+                showToast(`✅ تم تحميل الفيديو: ${reel.title}`, 'success');
+            } else if (videoContainer) {
+                // عرض رسالة خطأ
+                videoContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ff9800; margin-bottom: 15px;"></i>
+                        <p style="color: white;">⚠️ لا يمكن تحميل الفيديو حالياً</p>
+                        <p style="color: #aaa; font-size: 12px; margin-top: 10px;">تم رفع الفيديو بنجاح، يمكن مشاهدته في الصفحة الرئيسية</p>
+                        <button onclick="this.closest('.video-player-overlay').remove()" style="margin-top: 20px; background: #ffd700; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer;">
+                            إغلاق
+                        </button>
+                    </div>
+                `;
+                showToast(`⚠️ الفيديو موجود في القناة لكن تعذر التحميل`, 'info');
+            }
+            
+            // إغلاق عند الضغط خارج الفيديو
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) modal.remove();
             });
         }
         
-        // ========== عرض فيديو تجريبي ==========
-        function openDemoVideoPlayer(reel) {
-            const modal = document.createElement('div');
-            modal.className = 'video-player-overlay';
-            modal.innerHTML = `
-                <div class="video-player-card">
-                    <div class="video-player-header">
-                        <h3><i class="fas fa-play-circle"></i> مشاهدة الريلز</h3>
-                        <button class="close-video-btn" onclick="this.closest('.video-player-overlay').remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="video-container" style="background: linear-gradient(135deg, #1a472a, #0a2a1a); flex-direction: column; min-height: 350px;">
-                        <div style="text-align: center;">
-                            <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 20px;"></i>
-                            <h3 style="color: #ffd700;">✓ تم الرفع بنجاح</h3>
-                            <p style="color: white; margin-top: 15px;">الفيديو تم تخزينه في قناة تليجرام</p>
-                            <p style="color: #aaa; font-size: 12px; margin-top: 10px;">يمكن مشاهدته في الصفحة الرئيسية</p>
-                        </div>
-                    </div>
-                    <div class="video-info">
-                        <div class="video-title">
-                            <i class="fas fa-tag"></i> ${escapeHtml(reel.title)}
-                        </div>
-                        <div class="video-serial">
-                            <i class="fas fa-fingerprint"></i> ${escapeHtml(reel.serialNumber)}
-                        </div>
-                        <div class="video-serial" style="margin-top: 8px; color: #ffd700;">
-                            <i class="fab fa-telegram"></i> تم الرفع عبر ناردو ريلز
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
+        // ========== جلب رابط الفيديو من تليجرام (السر من الكود الناجح) ==========
+        async function getReelVideoUrl(messageId) {
+            // التحقق من الكاش أولاً
+            if (reelsVideoCache[messageId]) {
+                console.log(`✅ استخدام الكاش للفيديو ${messageId}`);
+                return reelsVideoCache[messageId];
+            }
             
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) modal.remove();
-            });
+            try {
+                console.log(`🔄 جلب الفيديو من تليجرام للمعرف: ${messageId}`);
+                
+                // جلب آخر التحديثات من القناة
+                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+                const data = await response.json();
+                
+                if (data.ok && data.result) {
+                    // البحث عن الرسالة التي تحتوي على الفيديو
+                    for (const update of data.result) {
+                        const post = update.channel_post || update.message;
+                        if (post && post.message_id === messageId && post.video) {
+                            console.log(`✅ تم العثور على الفيديو في القناة`);
+                            
+                            // الحصول على file_id
+                            const fileId = post.video.file_id;
+                            
+                            // جلب رابط الفيديو
+                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                            const fileData = await fileRes.json();
+                            
+                            if (fileData.ok) {
+                                const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                                reelsVideoCache[messageId] = videoUrl;
+                                console.log(`✅ تم الحصول على رابط الفيديو: ${videoUrl.substring(0, 100)}...`);
+                                return videoUrl;
+                            }
+                        }
+                    }
+                }
+                
+                console.log(`⚠️ لم يتم العثور على الفيديو للمعرف ${messageId}`);
+                return null;
+                
+            } catch (error) {
+                console.error('❌ خطأ في جلب الفيديو:', error);
+                return null;
+            }
         }
         
         // ========== رفع الريلز إلى تليجرام ==========
@@ -993,7 +1020,8 @@
         loadMyReels();
         
         console.log('🎬 صفحة إضافة الريلز - ناردو برو');
-        console.log('✅ تم إصلاح مشكلة التشغيل باستخدام نفس طريقة الكود الناجح');
+        console.log('✅ تم استخدام طريقة جلب الفيديو الناجحة من الكود المرجعي');
+        console.log('🔑 المعرف الخاص: NARD-YYYYMMDD-HHMMSS-RANDOM');
     </script>
 </body>
 </html>
