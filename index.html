@@ -1149,6 +1149,98 @@
         }, 300000);
 
         console.log('✅ [ناردو ريلز] النظام جاهز - متوافق مع telegram.js');
+        // ===== التحكم في ظهور زر إضافة المقطع =====
+function checkReelAddPermission() {
+    const addReelLink = document.getElementById('addReelLink');
+    if (!addReelLink) return;
+    
+    // التحقق من وجود المستخدم الحالي من telegram.js
+    if (typeof currentUser !== 'undefined' && currentUser) {
+        // المدير فقط يمكنه رؤية زر إضافة المقطع
+        if (currentUser.role === 'admin') {
+            addReelLink.style.display = 'flex';
+            console.log('✅ زر إضافة المقطع ظاهر للمدير');
+        } else {
+            addReelLink.style.display = 'none';
+            console.log('❌ زر إضافة المقطع مخفي - ليس مدير');
+        }
+    } else {
+        addReelLink.style.display = 'none';
+        console.log('❌ زر إضافة المقطع مخفي - غير مسجل دخول');
+    }
+}
+
+// مراقبة تغيير المستخدم (عند تسجيل الدخول أو الخروج)
+function watchUserForReelPermission() {
+    // التحقق فوراً
+    checkReelAddPermission();
+    
+    // مراقبة تغيير currentUser (إذا كان متاحاً)
+    if (typeof currentUser !== 'undefined') {
+        // إضافة مراقب للتغيرات
+        let userWatcher = setInterval(() => {
+            if (typeof currentUser !== 'undefined') {
+                checkReelAddPermission();
+            }
+        }, 1000);
+        
+        // إيقاف المراقبة بعد 10 ثواني (توفير للموارد)
+        setTimeout(() => clearInterval(userWatcher), 10000);
+    }
+}
+
+// تنفيذ الفحص عند تحميل الصفحة
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(watchUserForReelPermission, 1500);
+    });
+} else {
+    setTimeout(watchUserForReelPermission, 1500);
+}
+
+// إضافة دالة لتحديث صلاحية الزر عند تسجيل الدخول
+window.updateReelAddButton = function() {
+    checkReelAddPermission();
+};
+
+// إذا كانت دالة openLoginModal موجودة، نضيف لها تحديث الزر بعد تسجيل الدخول
+if (typeof openLoginModal === 'function') {
+    const originalOpenLoginModal = openLoginModal;
+    window.openLoginModal = function() {
+        originalOpenLoginModal();
+        // بعد إغلاق النافذة، نتحقق من الصلاحية
+        setTimeout(checkReelAddPermission, 500);
+    };
+}
+
+// إذا كانت دالة handleLogin موجودة
+if (typeof handleLogin === 'function') {
+    const originalHandleLogin = handleLogin;
+    window.handleLogin = function() {
+        originalHandleLogin();
+        setTimeout(checkReelAddPermission, 500);
+    };
+}
+
+// إذا كانت دالة handleRegister موجودة
+if (typeof handleRegister === 'function') {
+    const originalHandleRegister = handleRegister;
+    window.handleRegister = function() {
+        originalHandleRegister();
+        setTimeout(checkReelAddPermission, 500);
+    };
+}
+
+// إذا كانت دالة logout موجودة (لإخفاء الزر عند تسجيل الخروج)
+if (typeof logout === 'function') {
+    const originalLogout = logout;
+    window.logout = function() {
+        if (originalLogout) originalLogout();
+        setTimeout(checkReelAddPermission, 500);
+    };
+}
+
+console.log('✅ نظام صلاحيات إضافة الريلز جاهز - فقط المدير يظهر له الزر');
     </script>
 </body> 
 </html>
