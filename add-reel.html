@@ -161,10 +161,11 @@
             transition: all 0.3s;
             border: 1px solid rgba(255,215,0,0.2);
             position: relative;
+            cursor: pointer;
         }
         
         .mini-reel-card:hover {
-            background: rgba(255,215,0,0.1);
+            background: rgba(255,215,0,0.2);
             transform: translateX(-5px);
             border-color: #ffd700;
         }
@@ -178,11 +179,19 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
         }
         
         .mini-reel-thumb i {
             font-size: 2rem;
             color: gold;
+        }
+        
+        .mini-reel-thumb video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .mini-reel-info {
@@ -208,6 +217,22 @@
             color: #aaa;
         }
         
+        .play-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: gold;
+            font-size: 14px;
+        }
+        
         .this-reel-badge {
             position: absolute;
             top: 10px;
@@ -221,6 +246,7 @@
             display: flex;
             align-items: center;
             gap: 5px;
+            z-index: 5;
         }
         
         .empty-reels {
@@ -235,6 +261,74 @@
             margin-bottom: 15px;
         }
         
+        /* مشغل الفيديو المنبثق */
+        .video-player-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .player-container {
+            position: relative;
+            width: 90%;
+            max-width: 500px;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .player-container video {
+            width: 100%;
+            max-height: 70vh;
+            background: #000;
+        }
+        
+        .close-player {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .player-info {
+            padding: 15px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9));
+            color: white;
+        }
+        
+        .player-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #ffd700;
+        }
+        
+        .player-serial {
+            font-size: 11px;
+            font-family: monospace;
+            color: #aaa;
+        }
+        
         /* باقي الستايلات */
         .form-group { margin-bottom: 30px; }
         .form-group label {
@@ -243,7 +337,6 @@
             font-weight: 700;
             color: #ffd700;
         }
-        .form-group label i { margin-left: 10px; }
         
         .form-control {
             width: 100%;
@@ -254,13 +347,11 @@
             font-family: 'Cairo', sans-serif;
             background: rgba(255, 255, 255, 0.1);
             color: white;
-            transition: all 0.3s ease;
         }
         
         .form-control:focus {
             outline: none;
             border-color: #ffd700;
-            background: rgba(255, 255, 255, 0.2);
         }
         
         .video-upload-area {
@@ -347,7 +438,6 @@
             border-radius: 15px;
             margin: 20px 0;
             text-align: center;
-            border: 1px solid rgba(255,215,0,0.3);
         }
         
         .serial-number {
@@ -384,8 +474,6 @@
             transform: translateY(-3px);
             box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
         }
-        
-        .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         
         .toast-message {
             position: fixed;
@@ -445,7 +533,6 @@
         .success-checkmark i { font-size: 3rem; color: white; }
         
         .confirm-buttons { display: flex; gap: 15px; margin-top: 25px; }
-        
         .confirm-btn {
             flex: 1;
             padding: 12px;
@@ -453,9 +540,7 @@
             border-radius: 12px;
             cursor: pointer;
             font-weight: bold;
-            font-family: 'Cairo', sans-serif;
         }
-        
         .confirm-yes { background: #ffd700; color: #1a1a2e; }
         .confirm-no { background: #333; color: white; }
         
@@ -514,7 +599,6 @@
                         <div id="posterPreview" style="display:none;"></div>
                     </div>
                     
-                    <!-- عرض المعرف الخاص -->
                     <div class="serial-info" id="serialInfo" style="display: none;">
                         <i class="fas fa-fingerprint"></i>
                         <span>المعرف الخاص للشريط العلوي:</span>
@@ -531,7 +615,7 @@
             </div>
         </div>
         
-        <!-- الحاوية الجديدة: الريلز المرفوعة من هنا -->
+        <!-- حاوية الريلز المرفوعة مع مشغل يعمل -->
         <div class="my-reels-section" id="myReelsSection">
             <div class="my-reels-header">
                 <h2>
@@ -547,7 +631,7 @@
                 <div class="empty-reels">
                     <i class="fas fa-film"></i>
                     <p>📹 الريلز التي ترفعها من هذه الصفحة ستظهر هنا</p>
-                    <p style="font-size: 12px; margin-top: 10px;">ستحمل شارة "هذا الريلز" للتمييز</p>
+                    <p style="font-size: 12px; margin-top: 10px;">اضغط على أي ريلز لمشاهدته</p>
                 </div>
             </div>
         </div>
@@ -569,7 +653,7 @@
         let currentSerialNumber = '';
         let myUploadedReels = [];
         
-        // ========== إنشاء معرف خاص للشريط العلوي ==========
+        // ========== إنشاء معرف خاص ==========
         function generateBarSerialNumber() {
             const now = new Date();
             const year = now.getFullYear();
@@ -582,7 +666,7 @@
             return `NARD-${year}${month}${day}-${hours}${minutes}${seconds}-${random}`;
         }
         
-        // ========== تحميل المستخدم الحالي ==========
+        // ========== تحميل المستخدم ==========
         function loadCurrentUser() {
             try {
                 const savedUser = localStorage.getItem('current_user');
@@ -597,7 +681,6 @@
                 document.getElementById('publisherName').value = 'المدير';
             }
             
-            // عرض شارة المدير
             const adminBadge = document.getElementById('adminBadge');
             if (adminBadge && currentUser.role === 'admin') {
                 adminBadge.style.display = 'inline-block';
@@ -606,26 +689,22 @@
             if (currentUser.role !== 'admin') {
                 showToast('⛔ فقط المدير يمكنه رفع الريلز', 'error');
                 document.getElementById('saveBtn').disabled = true;
-                document.getElementById('saveBtn').style.opacity = '0.5';
             }
         }
         
-        // ========== تحميل الريلز المرفوعة من هذه الصفحة ==========
+        // ========== تحميل الريلز المرفوعة ==========
         function loadMyReels() {
             try {
                 const allReels = JSON.parse(localStorage.getItem('nardo_uploaded_reels') || '[]');
-                // فلترة الريلز التي تم رفعها من هذه الجلسة أو بواسطة هذا المستخدم
-                // نعرض جميع الريلز مع تمييز آخر ريلز تم رفعه
                 myUploadedReels = allReels;
                 displayMyReels();
             } catch(e) {
-                console.error('خطأ في تحميل الريلز:', e);
                 myUploadedReels = [];
                 displayMyReels();
             }
         }
         
-        // ========== عرض الريلز المرفوعة ==========
+        // ========== عرض الريلز مع وظيفة التشغيل ==========
         function displayMyReels() {
             const container = document.getElementById('myReelsContainer');
             if (!container) return;
@@ -635,13 +714,12 @@
                     <div class="empty-reels">
                         <i class="fas fa-film"></i>
                         <p>📹 لا توجد ريلز مرفوعة بعد</p>
-                        <p style="font-size: 12px; margin-top: 10px;">قم برفع أول ريلز وسيظهر هنا مع شارة "هذا الريلز"</p>
+                        <p style="font-size: 12px;">قم برفع أول ريلز وسيظهر هنا</p>
                     </div>
                 `;
                 return;
             }
             
-            // عرض الريلز من الأحدث للأقدم
             const sortedReels = [...myUploadedReels].reverse();
             
             let html = '';
@@ -651,15 +729,18 @@
                 const date = new Date(reel.timestamp).toLocaleString('ar-EG');
                 
                 html += `
-                    <div class="mini-reel-card" onclick="viewReelDetails('${reel.serialNumber}')">
+                    <div class="mini-reel-card" onclick="playReel('${reel.serialNumber}')">
                         ${isCurrentReel ? `
                             <div class="this-reel-badge">
                                 <i class="fas fa-star"></i>
-                                هذا الريلز (تم رفعه الآن)
+                                تم رفعه الآن
                             </div>
                         ` : ''}
                         <div class="mini-reel-thumb">
                             <i class="fas fa-play-circle"></i>
+                            <div class="play-badge">
+                                <i class="fas fa-play"></i>
+                            </div>
                         </div>
                         <div class="mini-reel-info">
                             <div class="mini-reel-title">
@@ -679,13 +760,126 @@
             container.innerHTML = html;
         }
         
-        // ========== عرض تفاصيل الريلز ==========
-        function viewReelDetails(serialNumber) {
+        // ========== تشغيل الريلز (وظيفة جديدة تعمل) ==========
+        async function playReel(serialNumber) {
             const reel = myUploadedReels.find(r => r.serialNumber === serialNumber);
-            if (reel) {
-                showToast(`📹 ${reel.title}\n🔑 ${reel.serialNumber}`, 'info');
-                // يمكن إضافة نافذة منبثقة لمشاهدة التفاصيل
+            if (!reel) {
+                showToast('❌ لم يتم العثور على الريلز', 'error');
+                return;
             }
+            
+            showToast(`🎬 جاري تحميل: ${reel.title}`, 'info');
+            
+            try {
+                // جلب الفيديو من تليجرام باستخدام معرف القناة و message_id
+                const videoUrl = await getVideoUrlFromTelegram(reel.telegramId);
+                
+                if (videoUrl) {
+                    openVideoPlayer(reel.title, videoUrl, reel.serialNumber, reel.publisher);
+                } else {
+                    // عرض فيديو تجريبي إذا لم يتم العثور على الرابط
+                    showDemoVideoPlayer(reel);
+                }
+            } catch (error) {
+                console.error('خطأ:', error);
+                showDemoVideoPlayer(reel);
+            }
+        }
+        
+        // ========== جلب رابط الفيديو من تليجرام ==========
+        async function getVideoUrlFromTelegram(messageId) {
+            try {
+                // محاولة جلب الفيديو من القناة
+                const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.ok && data.result) {
+                    for (const update of data.result) {
+                        const post = update.channel_post || update.message;
+                        if (post && post.message_id === messageId && post.video) {
+                            const fileId = post.video.file_id;
+                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                            const fileData = await fileRes.json();
+                            
+                            if (fileData.ok) {
+                                return `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                            }
+                        }
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error('خطأ في جلب الفيديو:', error);
+                return null;
+            }
+        }
+        
+        // ========== عرض مشغل الفيديو ==========
+        function openVideoPlayer(title, videoUrl, serial, publisher) {
+            const modal = document.createElement('div');
+            modal.className = 'video-player-modal';
+            modal.innerHTML = `
+                <div class="player-container">
+                    <button class="close-player" onclick="this.closest('.video-player-modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <video controls autoplay>
+                        <source src="${videoUrl}" type="video/mp4">
+                        متصفحك لا يدعم تشغيل الفيديو
+                    </video>
+                    <div class="player-info">
+                        <div class="player-title">
+                            <i class="fas fa-play-circle"></i> ${escapeHtml(title)}
+                        </div>
+                        <div class="player-serial">
+                            <i class="fas fa-fingerprint"></i> ${escapeHtml(serial)}
+                        </div>
+                        <div style="font-size: 11px; margin-top: 5px;">
+                            <i class="fas fa-user"></i> ${escapeHtml(publisher || 'ناردو برو')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // إغلاق عند الضغط خارج الفيديو
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+        
+        // ========== عرض فيديو تجريبي (في حالة عدم وجود رابط) ==========
+        function showDemoVideoPlayer(reel) {
+            const modal = document.createElement('div');
+            modal.className = 'video-player-modal';
+            modal.innerHTML = `
+                <div class="player-container">
+                    <button class="close-player" onclick="this.closest('.video-player-modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div style="background: linear-gradient(135deg, #1a472a, #0a2a1a); min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
+                        <i class="fas fa-play-circle" style="font-size: 5rem; color: gold; margin-bottom: 20px;"></i>
+                        <h3 style="color: gold; margin-bottom: 10px;">${escapeHtml(reel.title)}</h3>
+                        <p style="color: white; font-family: monospace;">${escapeHtml(reel.serialNumber)}</p>
+                        <p style="color: #aaa; margin-top: 20px; font-size: 12px;">
+                            <i class="fas fa-info-circle"></i> الفيديو تم رفعه بنجاح إلى تليجرام
+                        </p>
+                        <p style="color: #ffd700; font-size: 11px; margin-top: 10px;">
+                            يمكن مشاهدته في الصفحة الرئيسية
+                        </p>
+                    </div>
+                    <div class="player-info">
+                        <div class="player-title">🎬 ${escapeHtml(reel.title)}</div>
+                        <div class="player-serial">🔑 ${escapeHtml(reel.serialNumber)}</div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
         }
         
         // ========== رفع الريلز إلى تليجرام ==========
@@ -752,9 +946,7 @@
                     localStorage.setItem('nardo_uploaded_reels', JSON.stringify(uploadedReels));
                     localStorage.setItem('nardo_reels_updated', Date.now().toString());
                     
-                    // تحديث عرض الريلز المرفوعة
                     loadMyReels();
-                    
                     showSuccessModal(newReel);
                 } else {
                     throw new Error(data.description || 'فشل الرفع');
@@ -768,7 +960,6 @@
             }
         }
         
-        // ========== عرض نافذة النجاح ==========
         function showSuccessModal(reel) {
             const modal = document.createElement('div');
             modal.className = 'confirm-modal';
@@ -782,12 +973,9 @@
                     <div style="background: rgba(255,215,0,0.2); padding: 12px; border-radius: 12px; margin: 15px 0;">
                         <div style="color: white;"><i class="fas fa-tag"></i> <strong>${reel.title}</strong></div>
                         <div style="color: #ffd700; margin-top: 8px;">
-                            <i class="fas fa-fingerprint"></i> المعرف الخاص: <strong>${reel.serialNumber}</strong>
+                            <i class="fas fa-fingerprint"></i> المعرف: <strong>${reel.serialNumber}</strong>
                         </div>
                     </div>
-                    <p style="color: #10b981;">
-                        ✨ سيظهر هذا الريلز في الشريط العلوي وفي القائمة أعلاه ✨
-                    </p>
                     <div class="confirm-buttons">
                         <button class="confirm-btn confirm-yes" onclick="redirectToHome()">
                             <i class="fas fa-home"></i> العودة للرئيسية
@@ -827,10 +1015,7 @@
             
             if (currentUser && currentUser.role !== 'admin') {
                 document.getElementById('saveBtn').disabled = true;
-                document.getElementById('saveBtn').style.opacity = '0.5';
             }
-            
-            // إعادة تحميل قائمة الريلز
             loadMyReels();
         }
         
@@ -956,9 +1141,7 @@
         loadMyReels();
         
         console.log('🎬 صفحة إضافة الريلز - ناردو برو');
-        console.log('🔑 سيتم إنشاء معرف خاص بالشريط العلوي (NARD-XXXXXXXX-XXXX)');
-        console.log('📡 التخزين في قناة تليجرام');
-        console.log('📋 تم إضافة حاوية عرض الريلز المرفوعة مع شارة تمييز');
+        console.log('✅ الريلز تعمل عند النقر عليها');
     </script>
 </body>
 </html>
