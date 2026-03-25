@@ -747,11 +747,14 @@
             }
         }
         
-        // ========== استخراج المعرف الخاص من الكابشن (متوافق مع add-reel.html) ==========
-        function extractBarSerialFromCaption(caption) {
+        // ========== استخراج المعرف الخاص من الكابشن (نفس منطق add-reel.html) ==========
+        function extractSerialFromCaption(caption) {
             if (!caption) return null;
-            // البحث عن أي معرف يبدأ بـ NARD- ويكون مسبوقاً بـ 🔑 NARD-SERIAL: (غير حساس لحالة الأحرف)
-            const match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
+            // البحث عن المعرف بصيغة 🔑 NARD-SERIAL: NARD-xxxxx (غير حساس لحالة الأحرف)
+            let match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
+            if (match) return match[1];
+            // البحث عن أي معرف يبدأ بـ NARD- (احتياطي)
+            match = caption.match(/\b(NARD-[A-Z0-9-]+)\b/i);
             return match ? match[1] : null;
         }
         
@@ -788,10 +791,10 @@
                         const caption = post.caption || '';
                         
                         // استخراج المعرف الخاص (NARD-...)
-                        const barSerial = extractBarSerialFromCaption(caption);
+                        const serial = extractSerialFromCaption(caption);
                         
                         // ✅ فلترة مهمة: فقط الريلز التي تحتوي على المعرف NARD- يتم عرضها في الشريط
-                        if (!barSerial || !barSerial.startsWith('NARD-')) {
+                        if (!serial || !serial.startsWith('NARD-')) {
                             continue; // تخطي الريلز التي لا تحمل المعرف الخاص
                         }
                         
@@ -819,7 +822,7 @@
                                 title: title,
                                 videoUrl: videoUrl,
                                 publisher: publisher,
-                                serialNumber: barSerial,
+                                serialNumber: serial,
                                 views: 0,
                                 likes: 0,
                                 createdAt: new Date(post.date * 1000).toISOString()
