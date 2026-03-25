@@ -57,6 +57,112 @@
             background: gold;
             color: black;
         }
+        
+        /* شريط البحث والتحميل للريلز */
+        .reels-tools-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .reels-search-box {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 5px;
+            backdrop-filter: blur(10px);
+        }
+        .reels-search-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px 20px;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+        }
+        .reels-search-box input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        .reels-search-box input:focus {
+            outline: none;
+        }
+        .reels-search-box button {
+            background: linear-gradient(135deg, #ffd700, #ffb347);
+            border: none;
+            border-radius: 50px;
+            padding: 0 20px;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .reels-search-box button:hover {
+            transform: scale(1.05);
+        }
+        .reels-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .reels-action-btn {
+            background: rgba(255,215,0,0.2);
+            border: 1px solid rgba(255,215,0,0.3);
+            padding: 8px 15px;
+            border-radius: 30px;
+            color: gold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Cairo', sans-serif;
+        }
+        .reels-action-btn:hover {
+            background: gold;
+            color: black;
+            transform: translateY(-2px);
+        }
+        .reels-action-btn:active {
+            transform: translateY(0);
+        }
+        .reels-filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .reels-filter-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 6px 15px;
+            border-radius: 20px;
+            color: #ddd;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        .reels-filter-btn.active {
+            background: #ffd700;
+            color: #1a1a2e;
+        }
+        .reels-filter-btn:hover {
+            background: rgba(255,215,0,0.3);
+        }
+        .reels-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255,215,0,0.1);
+            border-radius: 15px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #ffd700;
+        }
         .no-reels-message {
             text-align: center;
             padding: 60px 20px;
@@ -301,6 +407,9 @@
             .full-reel-action i { font-size: 24px; }
             .reel-video-card { width: 220px; }
             .reel-video-placeholder { height: 220px; }
+            .reels-tools-bar { flex-direction: column; }
+            .reels-search-box { width: 100%; }
+            .reels-actions { width: 100%; justify-content: center; }
         }
         
         /* شارة التحديث */
@@ -316,6 +425,15 @@
         .refresh-badge:hover {
             background: gold;
             color: black;
+        }
+        
+        /* تأثير التحميل */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
@@ -392,7 +510,7 @@
         </div>
     </div>
     
-    <!-- ===== قسم ريلز الفيديو في الأعلى (فقط من add-reel.html) ===== -->
+    <!-- ===== قسم ريلز الفيديو في الأعلى (مع بحث وتحكم متقدم) ===== -->
     <div class="reels-video-section">
         <div class="container">
             <div class="reels-video-header">
@@ -407,6 +525,45 @@
                     <span>إضافة مقطع</span>
                     <i class="fas fa-arrow-left"></i>
                 </a>
+            </div>
+            
+            <!-- شريط البحث والتحكم المتقدم -->
+            <div class="reels-tools-bar">
+                <div class="reels-search-box">
+                    <input type="text" id="reelsSearchInput" placeholder="🔍 ابحث في الريلز بالعنوان، الناشر، أو المعرف..." onkeyup="handleReelsSearchOnEnter(event)">
+                    <button onclick="performReelsSearch()">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                </div>
+                <div class="reels-actions">
+                    <button class="reels-action-btn" onclick="clearReelsSearch()">
+                        <i class="fas fa-times"></i> مسح
+                    </button>
+                    <button class="reels-action-btn" onclick="loadReelsFromTelegram()">
+                        <i class="fas fa-download"></i> تحميل
+                    </button>
+                </div>
+            </div>
+            
+            <!-- أزرار التصفية -->
+            <div class="reels-filter-buttons">
+                <button class="reels-filter-btn active" data-filter="all" onclick="filterReelsBy('all')">
+                    <i class="fas fa-list"></i> الكل
+                </button>
+                <button class="reels-filter-btn" data-filter="recent" onclick="filterReelsBy('recent')">
+                    <i class="fas fa-clock"></i> الأحدث
+                </button>
+                <button class="reels-filter-btn" data-filter="oldest" onclick="filterReelsBy('oldest')">
+                    <i class="fas fa-history"></i> الأقدم
+                </button>
+                <button class="reels-filter-btn" data-filter="mostViewed" onclick="filterReelsBy('mostViewed')">
+                    <i class="fas fa-eye"></i> الأكثر مشاهدة
+                </button>
+            </div>
+            
+            <!-- إحصائيات البحث -->
+            <div class="reels-stats" id="reelsStats">
+                <span><i class="fas fa-chart-line"></i> جاري التحميل...</span>
             </div>
             
             <div class="reels-video-container" id="reelsVideoContainer">
@@ -721,8 +878,11 @@
         
         // ========== متغيرات الريلز ==========
         let reelsCache = [];
+        let filteredReels = [];
         let currentUser = null;
         let isLoading = false;
+        let currentReelsFilter = 'all';
+        let currentReelsSearchQuery = '';
         
         // ========== تحميل المستخدم الحالي من localStorage ==========
         function loadCurrentUser() {
@@ -750,7 +910,6 @@
         // ========== استخراج المعرف الخاص من الكابشن ==========
         function extractBarSerialFromCaption(caption) {
             if (!caption) return null;
-            // البحث عن المعرف بتنسيق NARD-YYYYMMDD-HHMMSS-RANDOM
             const match = caption.match(/🔑 NARD-SERIAL: (NARD-\d{8}-\d{6}-\d{4})/);
             return match ? match[1] : null;
         }
@@ -770,6 +929,8 @@
                 `;
             }
             
+            updateReelsStats('جاري التحميل...', true);
+            
             try {
                 const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
                 const response = await fetch(url);
@@ -787,25 +948,20 @@
                         const messageId = post.message_id;
                         const caption = post.caption || '';
                         
-                        // استخراج المعرف الخاص (NARD-SERIAL)
                         const barSerial = extractBarSerialFromCaption(caption);
                         
-                        // ✅ فلترة مهمة: فقط الريلز التي تحتوي على المعرف NARD- يتم عرضها في الشريط
                         if (!barSerial || !barSerial.startsWith('NARD-')) {
-                            continue; // تخطي الريلز التي لا تحمل المعرف الخاص
+                            continue;
                         }
                         
-                        // استخراج العنوان من الكابشن
                         let title = '🎬 ريلز';
                         const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
                         if (titleMatch) title = titleMatch[1];
                         
-                        // استخراج الناشر
                         let publisher = 'المدير';
                         const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
                         if (publisherMatch) publisher = publisherMatch[1];
                         
-                        // الحصول على رابط الفيديو الدائم
                         const fileId = post.video.file_id;
                         const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                         const fileData = await fileRes.json();
@@ -820,9 +976,10 @@
                                 videoUrl: videoUrl,
                                 publisher: publisher,
                                 serialNumber: barSerial,
-                                views: 0,
-                                likes: 0,
-                                createdAt: new Date(post.date * 1000).toISOString()
+                                views: parseInt(localStorage.getItem(`reel_views_${messageId}`)) || 0,
+                                likes: parseInt(localStorage.getItem(`reel_likes_${messageId}`)) || 0,
+                                createdAt: new Date(post.date * 1000).toISOString(),
+                                timestamp: post.date * 1000
                             });
                         }
                     }
@@ -833,25 +990,24 @@
                     localStorage.setItem('nardoo_reels_bar_cache', JSON.stringify(allReels));
                     showToastMessage(`✅ تم تحميل ${allReels.length} ريلز مخصصة للشريط العلوي`, 'success');
                 } else {
-                    // استخدام الكاش إذا كان موجوداً
                     const cached = localStorage.getItem('nardoo_reels_bar_cache');
                     if (cached && JSON.parse(cached).length > 0) {
                         reelsCache = JSON.parse(cached);
-                        showToastMessage(`📦 عرض ${reelsCache.length} ريلز من الذاكرة (المعرف الخاص)`, 'info');
+                        showToastMessage(`📦 عرض ${reelsCache.length} ريلز من الذاكرة`, 'info');
                     } else {
                         reelsCache = [];
                         showToastMessage('📹 لا توجد ريلز مخصصة للشريط العلوي', 'info');
                     }
                 }
                 
-                displayReelsInBar();
+                applyFiltersAndSearch();
                 
             } catch (error) {
                 console.error('❌ خطأ في جلب الريلز:', error);
                 const cached = localStorage.getItem('nardoo_reels_bar_cache');
                 if (cached && JSON.parse(cached).length > 0) {
                     reelsCache = JSON.parse(cached);
-                    displayReelsInBar();
+                    applyFiltersAndSearch();
                     showToastMessage('⚠️ فشل الاتصال، تم عرض الريلز المخزنة', 'warning');
                 } else {
                     if (container) {
@@ -864,9 +1020,97 @@
                             </div>
                         `;
                     }
+                    updateReelsStats('لا توجد نتائج', false);
                 }
             } finally {
                 isLoading = false;
+            }
+        }
+        
+        // ========== تطبيق التصفية والبحث ==========
+        function applyFiltersAndSearch() {
+            let result = [...reelsCache];
+            
+            // تطبيق البحث
+            if (currentReelsSearchQuery.trim() !== '') {
+                const query = currentReelsSearchQuery.trim().toLowerCase();
+                result = result.filter(reel => {
+                    return reel.title?.toLowerCase().includes(query) ||
+                           reel.publisher?.toLowerCase().includes(query) ||
+                           reel.serialNumber?.toLowerCase().includes(query);
+                });
+            }
+            
+            // تطبيق التصفية
+            if (currentReelsFilter === 'recent') {
+                result.sort((a, b) => b.timestamp - a.timestamp);
+            } else if (currentReelsFilter === 'oldest') {
+                result.sort((a, b) => a.timestamp - b.timestamp);
+            } else if (currentReelsFilter === 'mostViewed') {
+                result.sort((a, b) => (b.views || 0) - (a.views || 0));
+            } else {
+                result.sort((a, b) => b.timestamp - a.timestamp);
+            }
+            
+            filteredReels = result;
+            displayReelsInBar();
+            updateReelsStats(`عرض ${filteredReels.length} من ${reelsCache.length} ريلز`, false);
+        }
+        
+        // ========== وظائف البحث ==========
+        function performReelsSearch() {
+            const searchInput = document.getElementById('reelsSearchInput');
+            currentReelsSearchQuery = searchInput.value;
+            applyFiltersAndSearch();
+            if (currentReelsSearchQuery) {
+                showToastMessage(`🔍 تم البحث عن: "${currentReelsSearchQuery}"`, 'info');
+            }
+        }
+        
+        function handleReelsSearchOnEnter(event) {
+            if (event.key === 'Enter') {
+                performReelsSearch();
+            }
+        }
+        
+        function clearReelsSearch() {
+            document.getElementById('reelsSearchInput').value = '';
+            currentReelsSearchQuery = '';
+            applyFiltersAndSearch();
+            showToastMessage('🗑️ تم مسح البحث', 'info');
+        }
+        
+        function filterReelsBy(type) {
+            currentReelsFilter = type;
+            
+            // تحديث الأزرار النشطة
+            document.querySelectorAll('.reels-filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-filter') === type) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            applyFiltersAndSearch();
+            
+            const filterNames = {
+                all: 'الكل',
+                recent: 'الأحدث',
+                oldest: 'الأقدم',
+                mostViewed: 'الأكثر مشاهدة'
+            };
+            showToastMessage(`📂 عرض: ${filterNames[type]}`, 'info');
+        }
+        
+        // ========== تحديث إحصائيات الريلز ==========
+        function updateReelsStats(message, isLoading) {
+            const statsDiv = document.getElementById('reelsStats');
+            if (!statsDiv) return;
+            
+            if (isLoading) {
+                statsDiv.innerHTML = `<span><i class="fas fa-spinner fa-spin"></i> ${message}</span>`;
+            } else {
+                statsDiv.innerHTML = `<span><i class="fas fa-chart-line"></i> ${message}</span>`;
             }
         }
         
@@ -875,24 +1119,21 @@
             const container = document.getElementById('reelsVideoContainer');
             if (!container) return;
             
-            if (!reelsCache || reelsCache.length === 0) {
+            if (!filteredReels || filteredReels.length === 0) {
                 container.innerHTML = `
                     <div class="no-reels-message" style="width: 100%;">
                         <i class="fas fa-film"></i>
-                        <p>✨ لا توجد ريلز مخصصة للشريط العلوي ✨</p>
-                        <p>الريلز التي تحمل المعرف NARD- فقط هي التي تظهر هنا</p>
-                        ${currentUser?.role === 'admin' ? '<a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف ريلز الآن</a>' : ''}
+                        <p>✨ ${currentReelsSearchQuery ? 'لا توجد نتائج تطابق بحثك' : 'لا توجد ريلز مخصصة للشريط العلوي'} ✨</p>
+                        ${!currentReelsSearchQuery ? '<p>الريلز التي تحمل المعرف NARD- فقط هي التي تظهر هنا</p>' : ''}
+                        ${currentUser?.role === 'admin' && !currentReelsSearchQuery ? '<a href="add-reel.html" class="add-first-reel"><i class="fas fa-plus-circle"></i> أضف ريلز الآن</a>' : ''}
                     </div>
                 `;
                 return;
             }
             
-            // ترتيب من الأحدث إلى الأقدم
-            const sortedReels = [...reelsCache].reverse();
-            
             let html = '';
-            for (let i = 0; i < sortedReels.length; i++) {
-                const reel = sortedReels[i];
+            for (let i = 0; i < filteredReels.length; i++) {
+                const reel = filteredReels[i];
                 const title = reel.title || 'بدون عنوان';
                 const views = reel.views || 0;
                 const publisher = reel.publisher || 'ناردو برو';
@@ -930,23 +1171,22 @@
         let currentPlayingVideoInFull = null;
         
         function openFullReelPlayer(startReelId) {
-            if (!reelsCache || reelsCache.length === 0) {
+            if (!filteredReels || filteredReels.length === 0) {
                 showToastMessage('لا توجد ريلز للعرض', 'error');
                 return;
             }
             
-            currentFullReels = [...reelsCache];
+            currentFullReels = [...filteredReels];
             const startIndex = currentFullReels.findIndex(r => r.id == startReelId);
             if (startIndex === -1) return;
             
-            // تحديث عدد المشاهدات
             const reel = currentFullReels[startIndex];
             if (reel) {
                 reel.views = (reel.views || 0) + 1;
-                displayReelsInBar();
+                localStorage.setItem(`reel_views_${reel.id}`, reel.views);
+                applyFiltersAndSearch();
             }
             
-            // إنشاء المودال
             const modal = document.createElement('div');
             modal.className = 'full-reel-player';
             modal.id = 'fullReelPlayer';
@@ -962,7 +1202,6 @@
             };
             modal.appendChild(closeBtn);
             
-            // بناء جميع الريلز
             for (let i = 0; i < currentFullReels.length; i++) {
                 const r = currentFullReels[i];
                 const videoUrl = r.videoUrl || '';
@@ -1070,6 +1309,7 @@
             const reelIndex = reelsCache.findIndex(r => r.id == reelId);
             if (reelIndex !== -1) {
                 reelsCache[reelIndex].likes = (reelsCache[reelIndex].likes || 0) + 1;
+                localStorage.setItem(`reel_likes_${reelId}`, reelsCache[reelIndex].likes);
                 localStorage.setItem('nardoo_reels_bar_cache', JSON.stringify(reelsCache));
                 
                 const likeSpan = document.querySelector(`.like-count-${reelId.toString().replace(/[^a-zA-Z0-9]/g, '_')}`);
@@ -1077,8 +1317,8 @@
                     const currentLikes = parseInt(likeSpan.textContent) || 0;
                     likeSpan.textContent = currentLikes + 1;
                 }
+                applyFiltersAndSearch();
                 showToastMessage('❤️ تم الإعجاب بالريلز', 'success');
-                displayReelsInBar();
             }
         }
         
@@ -1147,8 +1387,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadCurrentUser();
             loadReelsFromTelegram();
-            console.log('🎬 نظام ناردو ريلز - الشريط العلوي');
+            console.log('🎬 نظام ناردو ريلز - الشريط العلوي مع بحث متقدم');
             console.log('🔑 يعرض فقط الريلز التي تحمل المعرف NARD- (المرفوعة من add-reel.html)');
+            console.log('🔍 إضافة: بحث متقدم + تصفية + تحميل يدوي');
             console.log('📡 التخزين في قناة تليجرام مع فلترة ذكية');
         });
     </script>
