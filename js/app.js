@@ -10,7 +10,6 @@ const App = {
         
         Auth.init();
         
-        // تهيئة السلة
         if (window.Cart) {
             Cart.init();
         }
@@ -18,7 +17,6 @@ const App = {
         await this.loadProducts();
         Auth.updateUI();
         
-        // تحديث الواجهة حسب الدور
         this.updateUIByRole();
         
         this.startTypingEffect();
@@ -343,7 +341,6 @@ const App = {
                     this.displayProducts();
                 }
                 
-                // إضافة المنتج للمخزون
                 if (window.Inventory) {
                     const merchantId = Auth.currentUser.userId || Auth.currentUser.id;
                     if (!Inventory.warehouses[merchantId]) {
@@ -395,7 +392,6 @@ const App = {
             this.updateUIByRole();
             Utils.showNotification(`مرحباً ${result.user.name} - معرفك: ${result.user.userId}`);
             
-            // إنشاء مستودع للتاجر
             if (result.user.role === 'merchant' && window.Inventory) {
                 Inventory.createWarehouse(result.user);
             }
@@ -623,20 +619,38 @@ const App = {
         }
     },
     
+    // ===== عرض لوحة التحليلات =====
+    showAnalytics() {
+        if (!Auth.currentUser) {
+            Utils.showNotification('الرجاء تسجيل الدخول أولاً', 'error');
+            this.openLoginModal();
+            return;
+        }
+        
+        if (Auth.currentUser.role !== 'admin') {
+            Utils.showNotification('غير مصرح - هذه الصفحة للمدير فقط', 'error');
+            return;
+        }
+        
+        if (window.Analytics) {
+            Analytics.showAnalyticsDashboard();
+        } else {
+            Utils.showNotification('نظام التحليلات غير متاح', 'error');
+        }
+    },
+    
     // ===== تحديث واجهة المستخدم حسب الدور =====
     updateUIByRole() {
         if (!Auth.currentUser) return;
         
         const user = Auth.currentUser;
         
-        // إظهار/إخفاء زر المخزون
         const inventoryBtn = document.getElementById('inventoryBtn');
         if (inventoryBtn) {
             const hasPermission = window.Roles ? Roles.hasPermission(user, 'manage_inventory') : (user.role === 'merchant' || user.role === 'admin');
             inventoryBtn.style.display = hasPermission ? 'flex' : 'none';
         }
         
-        // إظهار/إخفاء زر التوصيل
         const deliveryBtn = document.getElementById('deliveryBtn');
         if (deliveryBtn) {
             const showDelivery = (user.role === 'admin' || user.role === 'delivery_person');
@@ -651,7 +665,11 @@ const App = {
             }
         }
         
-        // تحديث أيقونة المستخدم
+        const analyticsBtn = document.getElementById('analyticsBtn');
+        if (analyticsBtn) {
+            analyticsBtn.style.display = user.role === 'admin' ? 'flex' : 'none';
+        }
+        
         const userBtn = document.getElementById('userBtn');
         if (userBtn) {
             if (user.role === 'admin') userBtn.innerHTML = '<i class="fas fa-crown"></i>';
@@ -660,7 +678,6 @@ const App = {
             else userBtn.innerHTML = '<i class="fas fa-user"></i>';
         }
         
-        // تحديث زر لوحة التحكم
         const dashboardBtn = document.getElementById('dashboardBtn');
         if (dashboardBtn) {
             dashboardBtn.style.display = user.role === 'admin' ? 'flex' : 'none';
@@ -672,7 +689,6 @@ const App = {
         window.addEventListener('scroll', this.handleScroll.bind(this));
         window.addEventListener('click', this.handleClick.bind(this));
         
-        // مراقبة تغيير المستخدم
         setInterval(() => {
             if (Auth.currentUser && this.lastUser !== Auth.currentUser.userId) {
                 this.lastUser = Auth.currentUser.userId;
@@ -763,10 +779,7 @@ const App = {
     }
 };
 
-// تصدير
 window.App = App;
-
-// تهيئة التطبيق
 document.addEventListener('DOMContentLoaded', () => App.init());
 
 console.log('✅ التطبيق الرئيسي جاهز');
