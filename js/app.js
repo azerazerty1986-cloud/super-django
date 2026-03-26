@@ -34,17 +34,35 @@ const App = {
     
     // ===== تحميل المنتجات =====
     async loadProducts() {
-        if (window.Shop) {
-            await Shop.loadProducts();
-            this.products = Shop.products;
-        } else if (window.Telegram) {
-            this.products = await Telegram.fetchProducts();
+    // عرض فوري من sessionStorage
+    if (window.GlobalData) {
+        const cached = sessionStorage.getItem('global_products');
+        if (cached) {
+            this.products = JSON.parse(cached);
             this.displayProducts();
-        } else {
-            this.products = Utils.load('products', []);
-            this.displayProducts();
+            console.log('⚡ عرض فوري للمنتجات');
         }
-    },
+        
+        // جلب جديد في الخلفية
+        GlobalData.getProducts().then(products => {
+            if (products && products.length) {
+                this.products = products;
+                this.displayProducts();
+                console.log('✅ تحديث المنتجات من الخادم');
+            }
+        });
+        
+        return;
+    }
+    
+    // الكود الاحتياطي
+    if (window.Telegram) {
+        this.products = await Telegram.fetchProducts();
+    } else {
+        this.products = Utils.load('products', []);
+    }
+    this.displayProducts();
+}
     
     // ===== عرض المنتجات =====
     displayProducts(productsToShow = null) {
