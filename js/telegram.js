@@ -569,36 +569,6 @@ async function fetchProductsFromTelegram() {
     }
 }
 
- 
-        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام`);
-        
-        // ✅ حفظ في localStorage بالمفتاح الصحيح
-        localStorage.setItem('nardoo_products', JSON.stringify(telegramProducts));
-        
-        products = telegramProducts;
-        displayProducts();
-        
-        return telegramProducts;
-        
-    } catch (error) {
-        console.error('❌ خطأ في جلب المنتجات:', error);
-        showNotification('فشل الاتصال بتلغرام، عرض المنتجات المخزنة', 'warning');
-        
-        // ✅ قراءة من المفتاح الصحيح
-        const saved = localStorage.getItem('nardoo_products');
-        if (saved) {
-            products = JSON.parse(saved);
-            displayProducts();
-            return products;
-        }
-        
-        return [];
-        
-    } finally {
-        isLoading = false;
-    }
-}
-
 // ===== [4.18] تحميل المنتجات وعرضها =====
 async function loadProducts() {
     await fetchProductsFromTelegram();
