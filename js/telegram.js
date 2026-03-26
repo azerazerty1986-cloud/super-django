@@ -404,6 +404,7 @@ function handleImageUpload(event) {
 }
 
 // ===== [4.17] جلب جميع المنتجات من تلغرام =====
+// ===== [4.17] جلب جميع المنتجات من تلغرام (مع دمج المنتجات) =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
@@ -411,9 +412,12 @@ async function fetchProductsFromTelegram() {
     try {
         console.log('🔄 جاري جلب المنتجات من تلغرام...');
         
+        // حفظ المنتجات القديمة
+        const oldProducts = [...products];
+        
         // عرض المنتجات المخزنة فوراً (للسرعة)
         const saved = localStorage.getItem('nardoo_products');
-        if (saved) {
+        if (saved && oldProducts.length === 0) {
             products = JSON.parse(saved);
             displayProducts();
             console.log(`⚡ عرض سريع: ${products.length} منتج من التخزين`);
@@ -449,6 +453,7 @@ async function fetchProductsFromTelegram() {
                 let stock = 0;
                 let merchant = 'المتجر';
                 let description = 'منتج ممتاز';
+                let productId = post.message_id;
                 
                 lines.forEach(line => {
                     if (line.includes('المنتج:') || line.includes('📦 *المنتج:*')) {
@@ -475,6 +480,10 @@ async function fetchProductsFromTelegram() {
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
                     }
+                    else if (line.includes('معرف المنتج:')) {
+                        const match = line.match(/\d+/);
+                        if (match) productId = parseInt(match[0]);
+                    }
                 });
                 
                 let mediaUrl = null;
@@ -500,7 +509,7 @@ async function fetchProductsFromTelegram() {
                 
                 if (mediaUrl) {
                     telegramProducts.push({
-                        id: post.message_id,
+                        id: productId,
                         telegramId: post.message_id,
                         name: name,
                         price: price || 1000,
@@ -519,6 +528,48 @@ async function fetchProductsFromTelegram() {
             }
         }
         
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام`);
+        
+        // ✅ دمج المنتجات: الاحتفاظ بالقديمة وإضافة الجديدة فقط
+        const mergedProducts = [...oldProducts];
+        
+        for (const newProduct of telegramProducts) {
+            const exists = mergedProducts.some(p => p.id === newProduct.id);
+            if (!exists) {
+                mergedProducts.push(newProduct);
+                console.log(`➕ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
+            }
+        }
+        
+        // ✅ حفظ المنتجات المدمجة
+        localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
+        
+        products = mergedProducts;
+        displayProducts();
+        
+        console.log(`📦 إجمالي المنتجات: ${products.length}`);
+        
+        return mergedProducts;
+        
+    } catch (error) {
+        console.error('❌ خطأ في جلب المنتجات:', error);
+        showNotification('فشل الاتصال بتلغرام، عرض المنتجات المخزنة', 'warning');
+        
+        const saved = localStorage.getItem('nardoo_products');
+        if (saved) {
+            products = JSON.parse(saved);
+            displayProducts();
+            return products;
+        }
+        
+        return [];
+        
+    } finally {
+        isLoading = false;
+    }
+}
+
+ 
         console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام`);
         
         // ✅ حفظ في localStorage بالمفتاح الصحيح
