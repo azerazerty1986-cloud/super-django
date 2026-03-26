@@ -1,240 +1,216 @@
 /* ================================================================== */
-/* ===== [02] الملف: 02-auth.js - نظام المصادقة مع المعرفات ===== */
+/* ===== [02] الملف: 02-auth.js - نظام المصادقة والأمان ===== */
 /* ================================================================== */
 
-const AuthSystem = {
-    users: [],
+const Auth = {
     currentUser: null,
+    users: [],
+    pending2FA: null,
     
-    init() {
-        this.users = Utils.load('nardoo_users', []);
-        if (this.users.length === 0) {
-            this.createDefaultUsers();
-        }
-        
-        const saved = Utils.load('current_user');
-        if (saved) {
-            this.currentUser = saved;
-        }
-    },
-    
-    createDefaultUsers() {
-        // مدير النظام
-        const adminId = IDSystem.generateUserId('admin');
-        
-        this.users = [
+    getDefaultUsers() {
+        return [
             {
                 id: 1,
-                userId: adminId,
+                userId: 'ADM_0001',
                 name: 'azer',
-                email: 'admin@nardoo.com',
-                password: '123456',
+                email: 'azer@admin.com',
+                passwordHash: SecuritySystem.hashPassword('123456'),
                 role: 'admin',
-                roleName: 'مدير النظام',
-                phone: CONFIG.phone,
-                avatar: `${CONFIG.defaultAvatar}admin`,
-                fingerprint: Fingerprint.fingerprint,
-                createdAt: new Date().toISOString(),
-                status: 'active',
-                stats: {
-                    products: 0,
-                    followers: 0
-                }
+                status: 'approved',
+                phone: '',
+                createdAt: new Date().toISOString()
             },
             {
                 id: 2,
-                userId: 'MER_1001',
+                userId: 'MER_1000',
                 name: 'تاجر تجريبي',
                 email: 'merchant@nardoo.com',
-                password: 'merchant123',
+                passwordHash: SecuritySystem.hashPassword('m123'),
                 role: 'merchant',
-                roleName: 'تاجر',
-                phone: '0555123456',
+                status: 'approved',
+                phone: '0555111111',
                 storeName: 'متجر التجريبي',
-                avatar: `${CONFIG.defaultAvatar}merchant`,
-                fingerprint: 'FP_TEST',
-                createdAt: new Date().toISOString(),
-                status: 'active',
-                stats: {
-                    products: 5,
-                    followers: 120
-                }
+                merchantLevel: '2',
+                createdAt: new Date().toISOString()
             }
         ];
-        
-        this.save();
     },
     
-    save() {
+    init() {
+        this.loadUsers();
+        this.loadCurrentUser();
+        console.log('🔐 نظام المصادقة جاهز');
+    },
+    
+    loadUsers() {
+        this.users = Utils.load('nardoo_users', this.getDefaultUsers());
+        let needsUpdate = false;
+        this.users.forEach(user => {
+            if (user.password && !user.passwordHash) {
+                user.passwordHash = SecuritySystem.hashPassword(user.password);
+                delete user.password;
+                needsUpdate = true;
+            }
+        });
+        if (needsUpdate) {
+            this.saveUsers();
+        }
+    },
+    
+    saveUsers() {
         Utils.save('nardoo_users', this.users);
     },
     
-    // ===== [معدل] تسجيل مستخدم جديد مع معرف فوري =====
-    register(userData) {
-        if (this.users.find(u => u.email === userData.email)) {
-            return { success: false, message: '❌ البريد مستخدم بالفعل' };
+    loadCurrentUser() {
+        const saved = Utils.load('current_user');
+        if (saved && !SecuritySystem.isUserLocked(saved)) {
+            this.currentUser = saved;
+        } else if (saved && SecuritySystem.isUserLocked(saved)) {
+            Utils.showNotification('⚠️ حسابك مقفل مؤقتاً بسبب محاولات دخول فاشلة', 'warning');
+            this.currentUser = null;
+        }
+    },
+    
+    saveCurrentUser() {
+        if (this.currentUser) {
+            Utils.save('current_user', this.currentUser);
+        } else {
+            localStorage.removeItem('current_user');
+        }
+    },
+    
+    async login(username, password) {
+        const cleanUsername = SecuritySystem.sanitize(username);
+        const user = this.users.find(u => 
+            (u.email === cleanUsername || u.name === cleanUsername) && 
+            u.passwordHash === SecuritySystem.hashPassword(password)
+        );
+        
+        if (!user) {
+            SecuritySystem.recordFailedAttempt(cleanUsername);
+            return { success: false, message: 'بيانات غير صحيحة', require2FA: false };
         }
         
-        // تحديد الدور
-        let role = userData.role || 'customer';
-        let roleName = this.getRoleName(role);
+        if (SecuritySystem.isUserLocked(user)) {
+            return { success: false, message: 'الحساب مقفل مؤقتاً، حاول بعد 30 دقيقة', require2FA: false };
+        }
         
-        // إنشاء معرف فوري للمستخدم
+        const result = await TelegramAuth.sendVerificationCode(user.userId, user.name, user.phone);
+        
+        if (result.success) {
+            this.pending2FA = {
+                userId: user.userId,
+                expiresAt: Date.now() + 5 * 60 * 1000
+            };
+            return { 
+                success: true, 
+                message: 'تم إرسال رمز التحقق إلى قناة تلغرام', 
+                require2FA: true,
+                userId: user.userId
+            };
+        }
+        
+        return { success: false, message: 'فشل إرسال رمز التحقق', require2FA: false };
+    },
+    
+    verify2FA(userId, code) {
+        if (!this.pending2FA || this.pending2FA.userId !== userId) {
+            return { success: false, message: 'لا يوجد طلب تحقق نشط' };
+        }
+        
+        if (Date.now() > this.pending2FA.expiresAt) {
+            this.pending2FA = null;
+            return { success: false, message: 'انتهت صلاحية الرمز' };
+        }
+        
+        const result = TelegramAuth.verifyCode(userId, code);
+        
+        if (result.success) {
+            const user = this.users.find(u => u.userId === userId);
+            if (user) {
+                this.currentUser = user;
+                this.saveCurrentUser();
+                SecuritySystem.resetFailedAttempts(userId);
+                this.pending2FA = null;
+                return { success: true, message: 'تم تسجيل الدخول بنجاح', user: user };
+            }
+        }
+        
+        return result;
+    },
+    
+    register(userData) {
+        const { name, email, password, phone, role, ...roleData } = userData;
+        
+        if (this.users.find(u => u.email === email)) {
+            return { success: false, message: 'البريد الإلكتروني مستخدم بالفعل' };
+        }
+        
         const userId = IDSystem.generateUserId(role);
-        
         const newUser = {
             id: this.users.length + 1,
             userId: userId,
-            name: userData.name,
-            email: userData.email,
-            password: userData.password,
-            phone: userData.phone || '',
-            role: role,
-            roleName: roleName,
-            avatar: `${CONFIG.defaultAvatar}${userId}`,
-            fingerprint: Fingerprint.fingerprint,
-            createdAt: new Date().toISOString(),
-            status: role === 'customer' ? 'active' : 'pending',
-            stats: {
-                products: 0,
-                followers: 0
-            }
+            name: SecuritySystem.sanitize(name),
+            email: email,
+            passwordHash: SecuritySystem.hashPassword(password),
+            phone: phone || '',
+            role: role || 'customer',
+            status: role !== 'customer' ? 'pending' : 'approved',
+            ...roleData,
+            createdAt: new Date().toISOString()
         };
-        
-        // إضافة حقول إضافية حسب الدور
-        if (role === 'merchant') {
-            newUser.storeName = userData.storeName || `متجر ${userData.name}`;
-            newUser.specialization = userData.specialization || 'عام';
-        } else if (role === 'distributor') {
-            newUser.companyName = userData.companyName || `شركة ${userData.name}`;
-            newUser.serviceArea = userData.serviceArea || 'الجزائر';
-        } else if (role === 'delivery') {
-            newUser.vehicleType = userData.vehicleType || 'دراجة نارية';
-            newUser.workArea = userData.workArea || 'الجزائر';
-        } else if (role === 'content_creator') {
-            newUser.niche = userData.niche || 'عام';
-            newUser.platforms = userData.platforms || ['instagram'];
-        }
         
         this.users.push(newUser);
-        this.save();
+        this.saveUsers();
         
-        return { 
-            success: true, 
-            user: newUser,
-            message: `✅ تم التسجيل - معرفك: ${userId}`
-        };
-    },
-    
-    getRoleName(role) {
-        const names = {
-            'admin': 'مدير النظام',
-            'merchant': 'تاجر',
-            'distributor': 'موزع',
-            'delivery': 'مندوب توصيل',
-            'content_creator': 'صانع محتوى',
-            'customer': 'مشتري'
-        };
-        return names[role] || role;
-    },
-    
-    login(username, password) {
-        const user = this.users.find(u => 
-            (u.email === username || u.name === username || u.userId === username) && 
-            u.password === password
-        );
-        
-        if (user) {
-            this.currentUser = user;
-            user.lastLogin = new Date().toISOString();
-            Utils.save('current_user', user);
-            return { success: true, user };
+        if (role !== 'customer') {
+            if (window.Telegram) {
+                Telegram.sendMessage(`
+📋 *طلب تسجيل جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 المستخدم: ${name}
+🆔 المعرف: ${userId}
+📧 البريد: ${email}
+📞 الهاتف: ${phone}
+📊 الدور المطلوب: ${role}
+🕐 ${new Date().toLocaleString('ar-EG')}
+                `);
+            }
+            return { success: true, message: 'تم إرسال طلب التسجيل، سيتم مراجعته من قبل المدير' };
         }
         
-        return { success: false, message: '❌ بيانات غير صحيحة' };
+        return { success: true, message: 'تم التسجيل بنجاح' };
     },
     
     logout() {
         this.currentUser = null;
-        localStorage.removeItem('current_user');
-        Utils.showNotification('👋 تم تسجيل الخروج');
+        this.saveCurrentUser();
+        Utils.showNotification('تم تسجيل الخروج بنجاح', 'info');
         setTimeout(() => location.reload(), 500);
     },
     
     updateUI() {
         const userBtn = document.getElementById('userBtn');
         const dashboardBtn = document.getElementById('dashboardBtn');
-        const adminAppsNav = document.getElementById('adminAppsNav');
         
         if (this.currentUser) {
-            // أيقونة حسب الدور
-            const icons = {
-                'admin': 'crown',
-                'merchant': 'store',
-                'distributor': 'truck',
-                'delivery': 'motorcycle',
-                'content_creator': 'video',
-                'customer': 'user'
-            };
-            
-            const icon = icons[this.currentUser.role] || 'user';
-            userBtn.innerHTML = `<i class="fas fa-${icon}"></i>`;
-            
-            // إظهار زر dashboard للمدير فقط
-            if (this.currentUser.role === 'admin') {
-                if (dashboardBtn) dashboardBtn.style.display = 'flex';
-                if (adminAppsNav) adminAppsNav.style.display = 'flex';
+            if (userBtn) {
+                userBtn.innerHTML = `<i class="fas fa-user-check"></i>`;
+                userBtn.title = this.currentUser.name;
             }
-            
-            // إضافة معرف المستخدم في واجهة المستخدم (اختياري)
-            this.showUserIdBadge();
+            if (dashboardBtn && this.currentUser.role === 'admin') {
+                dashboardBtn.style.display = 'flex';
+            }
         } else {
-            userBtn.innerHTML = '<i class="far fa-user"></i>';
+            if (userBtn) {
+                userBtn.innerHTML = `<i class="fas fa-user"></i>`;
+            }
+            if (dashboardBtn) {
+                dashboardBtn.style.display = 'none';
+            }
         }
-    },
-    
-    showUserIdBadge() {
-        // يمكن إضافة شارة صغيرة تظهر معرف المستخدم
-        const existingBadge = document.getElementById('userIdBadge');
-        if (existingBadge) existingBadge.remove();
-        
-        if (this.currentUser) {
-            const badge = document.createElement('div');
-            badge.id = 'userIdBadge';
-            badge.style.cssText = `
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                background: var(--gold);
-                color: black;
-                padding: 5px 15px;
-                border-radius: 30px;
-                font-size: 12px;
-                font-weight: bold;
-                z-index: 9999;
-                border: 2px solid white;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            `;
-            badge.innerHTML = `🆔 ${this.currentUser.userId}`;
-            document.body.appendChild(badge);
-        }
-    },
-    
-    getStats() {
-        return {
-            total: this.users.length,
-            admins: this.users.filter(u => u.role === 'admin').length,
-            merchants: this.users.filter(u => u.role === 'merchant').length,
-            distributors: this.users.filter(u => u.role === 'distributor').length,
-            delivery: this.users.filter(u => u.role === 'delivery').length,
-            creators: this.users.filter(u => u.role === 'content_creator').length,
-            customers: this.users.filter(u => u.role === 'customer').length,
-            pending: this.users.filter(u => u.status === 'pending').length
-        };
     }
 };
 
-window.Auth = AuthSystem;
-AuthSystem.init();
-
-console.log('✅ نظام المصادقة جاهز - كل مستخدم له معرف فوري');
+window.Auth = Auth;
+console.log('✅ نظام المصادقة مع التوثيق الثنائي جاهز');
