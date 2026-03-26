@@ -1263,6 +1263,65 @@ if (typeof logout === 'function') {
 }
 
 console.log('✅ نظام صلاحيات إضافة الريلز جاهز - فقط المدير يظهر له الزر');
+        
+        // دوال التحقق الثنائي
+let pendingUserId = null;
+
+async function handleLogin() {
+    const username = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    const result = await Auth.login(username, password);
+    
+    if (result.success) {
+        if (result.require2FA) {
+            pendingUserId = result.userId;
+            closeModal('loginModal');
+            Utils.openModal('verify2FAModal');
+        } else {
+            closeModal('loginModal');
+            Auth.updateUI();
+            Utils.showNotification(`مرحباً ${result.user.name}`, 'success');
+            setTimeout(() => location.reload(), 500);
+        }
+    } else {
+        Utils.showNotification(result.message, 'error');
+    }
+}
+
+async function verify2FACode() {
+    const code = document.getElementById('verificationCode').value;
+    
+    if (!code || code.length !== 6) {
+        Utils.showNotification('الرجاء إدخال رمز مكون من 6 أرقام', 'error');
+        return;
+    }
+    
+    const result = Auth.verify2FA(pendingUserId, code);
+    
+    if (result.success) {
+        closeModal('verify2FAModal');
+        Auth.updateUI();
+        Utils.showNotification(`✅ ${result.message}`, 'success');
+        setTimeout(() => location.reload(), 500);
+    } else {
+        Utils.showNotification(result.message, 'error');
+    }
+}
+
+async function resendVerificationCode() {
+    if (!pendingUserId) return;
+    
+    const user = Auth.users.find(u => u.userId === pendingUserId);
+    if (user) {
+        const result = await TelegramAuth.sendVerificationCode(user.userId, user.name, user.phone);
+        if (result.success) {
+            Utils.showNotification('✅ تم إعادة إرسال رمز التحقق', 'success');
+        } else {
+            Utils.showNotification('❌ فشل إعادة الإرسال', 'error');
+        }
+    }
+}
     </script>
 </body> 
 </html>
