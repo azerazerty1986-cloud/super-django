@@ -245,7 +245,7 @@
             localStorage.setItem(`nardoo_likes_${userId}`, JSON.stringify(userLikes));
         }
         
-        // ========== جلب جميع الريلز من قناة تليجرام (مع دمج البيانات - لا تختفي) ==========
+        // ========== جلب جميع الريلز من قناة تليجرام ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
@@ -253,14 +253,11 @@
             showLoadingOverlay(true, "🔄 جاري تحميل الريلز...");
             
             try {
-                // ✅ حفظ الريلز القديمة (مثل المنتجات)
-                const oldReels = [...reelsCache];
-                
                 const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                const newReels = [];
+                const reels = [];
                 
                 if (data.ok && data.result) {
                     const updates = [...data.result].reverse();
@@ -284,7 +281,7 @@
                         if (fileData.ok) {
                             const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
                             
-                            newReels.push({
+                            reels.push({
                                 id: post.message_id,
                                 title: title,
                                 videoUrl: videoUrl,
@@ -297,28 +294,25 @@
                     }
                 }
                 
-                // ✅ دمج الريلز: الاحتفاظ بالقديمة وإضافة الجديدة فقط (مثل المنتجات)
-                const mergedReels = [...oldReels];
-                
-                for (const newReel of newReels) {
-                    const exists = mergedReels.some(r => r.id === newReel.id);
-                    if (!exists) {
-                        mergedReels.push(newReel);
-                        console.log(`➕ ريلز جديد: ${newReel.title} (ID: ${newReel.id})`);
+                if (reels.length > 0) {
+                    const oldIds = reelsCache.map(r => r.id).join(',');
+                    const newIds = reels.map(r => r.id).join(',');
+                    
+                    if (oldIds !== newIds) {
+                        reelsCache = reels;
+                        localStorage.setItem('nardoo_reels_cache', JSON.stringify(reels));
+                        console.log(`✅ تم تحميل ${reels.length} ريلز من تليجرام`);
+                        displayAllReels();
+                        updateStats();
+                        showNotification(`📹 تم تحديث ${reels.length} ريلز`, 'success');
+                    } else {
+                        console.log('⚡ لا توجد ريلز جديدة');
                     }
-                }
-                
-                // ✅ حفظ الريلز المدمجة
-                if (mergedReels.length > 0) {
-                    reelsCache = mergedReels;
-                    localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
-                    displayAllReels();
-                    updateStats();
-                    showNotification(`📹 ${reelsCache.length} ريلز متاحة`, 'success');
                 } else {
                     const cached = localStorage.getItem('nardoo_reels_cache');
                     if (cached && JSON.parse(cached).length > 0) {
                         reelsCache = JSON.parse(cached);
+                        console.log(`📦 تم استعادة ${reelsCache.length} ريلز من الكاش`);
                         displayAllReels();
                         updateStats();
                     } else {
@@ -345,6 +339,7 @@
                         localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
                         displayAllReels();
                         updateStats();
+                        console.log(`📹 تم تحميل ${reelsCache.length} ريلز تجريبية`);
                     }
                 }
                 
@@ -697,7 +692,8 @@
             if (e.target === modal) closeUploadModal();
         };
         
-        console.log('🎬 نظام ناردو ريلز جاهز - دمج البيانات (لا تختفي الريلز)');
+        console.log('🎬 نظام ناردو ريلز جاهز - جميع المستخدمين يرون نفس المحتوى من تليجرام');
     </script>
 </body>
 </html>
+
