@@ -10,30 +10,9 @@ const ShopSystem = {
     searchTerm: '',
     sortBy: 'newest',
     
-    // تحميل المنتجات (معدل - عرض فوري)
+    // تحميل المنتجات
     async loadProducts() {
-        // عرض فوري من sessionStorage
-        if (window.GlobalData) {
-            const cached = sessionStorage.getItem('global_products');
-            if (cached) {
-                this.products = JSON.parse(cached);
-                this.displayProducts();
-                console.log('⚡ عرض فوري للمنتجات');
-            }
-            
-            // جلب جديد في الخلفية
-            GlobalData.getProducts().then(products => {
-                if (products && products.length) {
-                    this.products = products;
-                    this.displayProducts();
-                    console.log('✅ تحديث المنتجات من الخادم');
-                }
-            });
-            
-            return this.products;
-        }
-        
-        // الكود الاحتياطي (إذا لم يكن GlobalData موجود)
+        // محاولة جلب من تلغرام أولاً
         if (window.Telegram) {
             this.products = await Telegram.fetchProducts();
         } else {
@@ -168,7 +147,7 @@ const ShopSystem = {
     
     // HTML لبطاقة المنتج
     getProductCardHTML(product) {
-        const mainImage = product.images && product.images.length > 0 ? product.images[0] : (product.image || CONFIG.defaultImage);
+        const mainImage = product.images && product.images.length > 0 ? product.images[0] : CONFIG.defaultImage;
         const categoryName = this.getCategoryName(product.category);
         const stockClass = this.getStockClass(product.stock);
         const stockText = this.getStockText(product.stock);
@@ -446,3 +425,4 @@ window.Cart = CartSystem;
 CartSystem.init();
 
 console.log('✅ نظام المتجر جاهز');
+
