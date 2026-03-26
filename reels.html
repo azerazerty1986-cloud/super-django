@@ -3,18 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو ريلز | تجربة ثورية مع الذكاء الاصطناعي</title>
+    <title>ناردو ريلز AI | تجربة ثورية مع الذكاء الاصطناعي</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Cairo', sans-serif;
-            background: #000;
-            color: white;
-            overflow-x: hidden;
-        }
+        body { font-family: 'Cairo', sans-serif; background: #000; color: white; overflow-x: hidden; }
 
-        /* شاشة تسجيل الدخول */
         .login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #0f2b23, #1e4a3f);
@@ -37,7 +31,6 @@
             border: none; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 18px;
         }
 
-        /* شريط المستخدم */
         .user-bar {
             position: fixed; top: 0; left: 0; right: 0;
             background: rgba(0,0,0,0.95); backdrop-filter: blur(15px);
@@ -65,7 +58,6 @@
         }
         .voice-btn.active { background: gold; color: black; animation: pulse 1s infinite; }
 
-        /* مشغل الفيديوهات */
         .reels-player {
             position: fixed; top: 70px; left: 0; width: 100%;
             height: calc(100% - 70px); overflow-y: scroll;
@@ -185,7 +177,6 @@
     </style>
 </head>
 <body>
-    <!-- شاشة تسجيل الدخول -->
     <div class="login-screen" id="loginScreen">
         <div class="login-box">
             <i class="fas fa-robot" style="font-size: 70px; color: gold; margin-bottom: 20px;"></i>
@@ -197,7 +188,6 @@
         </div>
     </div>
 
-    <!-- شريط المستخدم -->
     <div id="topBar" style="display: none;">
         <div class="user-bar">
             <div class="user-badge"><i class="fas fa-user"></i> <span id="userNameDisplay"></span></div>
@@ -214,15 +204,12 @@
         </div>
     </div>
 
-    <!-- مشغل الريلز -->
     <div id="reelsPlayer" class="reels-player" style="display: none;"></div>
 
-    <!-- أزرار الإجراءات -->
     <div id="fabButtons" style="display: none;">
         <div class="upload-fab" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
     </div>
 
-    <!-- نافذة التعليقات -->
     <div class="comments-panel" id="commentsPanel">
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
             <h3 style="color: gold;"><i class="fas fa-comments"></i> التعليقات</h3>
@@ -235,7 +222,6 @@
         <div id="commentsList"></div>
     </div>
 
-    <!-- نافذة رفع ريلز -->
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <button class="close-modal" onclick="closeUploadModal()" style="background: none; border: none; color: gold; font-size: 30px; float: left;">&times;</button>
@@ -289,19 +275,15 @@
             }
         }
 
-        // ========== تحميل بيانات المستخدم ==========
         function loadUserData() {
             if (!currentUser) return;
             const savedPoints = localStorage.getItem(`nardoo_points_${currentUser.id}`);
             userPoints = savedPoints ? parseInt(savedPoints) : 100;
             updatePointsDisplay();
-            
             const savedMood = localStorage.getItem(`nardoo_mood_${currentUser.id}`);
             if (savedMood) userMood = JSON.parse(savedMood);
-            
             const savedLikes = localStorage.getItem(`nardoo_likes_${currentUser.id}`);
             userLikes = savedLikes ? JSON.parse(savedLikes) : {};
-            
             const savedComments = localStorage.getItem(`nardoo_comments`);
             comments = savedComments ? JSON.parse(savedComments) : {};
         }
@@ -314,19 +296,13 @@
             localStorage.setItem(`nardoo_comments`, JSON.stringify(comments));
         }
 
-        // ========== نظام المكافآت ==========
         function addPoints(amount, reason) {
             userPoints += amount;
             updatePointsDisplay();
             saveUserData();
             showNotification(`+${amount} نقطة 🎁 (${reason})`, 'success');
-            
-            if (userPoints >= 500 && userPoints < 510) unlockAchievement('مشاهد نشيط');
-            if (userPoints >= 1000 && userPoints < 1010) unlockAchievement('نجم ناردو');
-        }
-
-        function unlockAchievement(title) {
-            showNotification(`🏆 إنجاز جديد: ${title}`, 'success');
+            if (userPoints >= 500 && userPoints < 510) showNotification(`🏆 إنجاز جديد: مشاهد نشيط`, 'success');
+            if (userPoints >= 1000 && userPoints < 1010) showNotification(`🏆 إنجاز جديد: نجم ناردو`, 'success');
         }
 
         function updatePointsDisplay() {
@@ -334,7 +310,6 @@
             if (pointsSpan) pointsSpan.innerText = userPoints;
         }
 
-        // ========== نظام تحليل المزاج ==========
         function updateMood(interaction) {
             let newMood = userMood.current;
             if (interaction === 'like') newMood = 'happy';
@@ -342,11 +317,9 @@
             else if (interaction === 'share') newMood = 'energetic';
             else if (interaction === 'watch') newMood = 'focused';
             else if (interaction === 'comment') newMood = 'social';
-            
             userMood.current = newMood;
             userMood.history.push({ mood: newMood, time: Date.now() });
             if (userMood.history.length > 50) userMood.history.shift();
-            
             const moodText = document.getElementById('moodText');
             const moodIcon = document.querySelector('#moodIndicator i');
             if (moodText) {
@@ -355,45 +328,19 @@
                 moodIcon.className = newMood === 'happy' ? 'fas fa-smile' : newMood === 'excited' ? 'fas fa-fire' : newMood === 'energetic' ? 'fas fa-bolt' : 'fas fa-heart';
             }
             saveUserData();
-            
-            // توصية حسب المزاج
-            recommendByMood();
         }
 
-        function recommendByMood() {
-            const mood = userMood.current;
-            const recommendations = {
-                happy: ['مضحك', 'كوميدي', 'مرح'],
-                excited: ['مغامرة', 'رياضة', 'تحدي'],
-                energetic: ['موسيقى', 'رقص', 'حماس'],
-                focused: ['تعليم', 'معلومات', 'نصائح'],
-                social: ['تحديات', 'تفاعل', 'مجموعات']
-            };
-            const tags = recommendations[mood] || recommendations.happy;
-            // يمكن إضافة توصيات حسب الوسوم
-        }
-
-        // ========== التحكم الصوتي ==========
         function toggleVoiceControl() {
-            if (!voiceActive) {
-                startVoiceRecognition();
-            } else {
-                stopVoiceRecognition();
-            }
+            if (!voiceActive) { startVoiceRecognition(); }
+            else { stopVoiceRecognition(); }
         }
 
         function startVoiceRecognition() {
-            if (!('webkitSpeechRecognition' in window)) {
-                showNotification('المتصفح لا يدعم التحكم الصوتي', 'error');
-                return;
-            }
+            if (!('webkitSpeechRecognition' in window)) { showNotification('المتصفح لا يدعم التحكم الصوتي', 'error'); return; }
             recognition = new webkitSpeechRecognition();
             recognition.lang = 'ar-SA';
             recognition.interimResults = false;
-            recognition.onresult = (event) => {
-                const command = event.results[0][0].transcript;
-                processVoiceCommand(command);
-            };
+            recognition.onresult = (event) => { processVoiceCommand(event.results[0][0].transcript); };
             recognition.onend = () => { if (voiceActive) recognition.start(); };
             recognition.start();
             voiceActive = true;
@@ -409,14 +356,11 @@
         }
 
         function processVoiceCommand(command) {
-            console.log('🎤 أمر صوتي:', command);
-            if (command.includes('التالي') || command.includes('سوي')) scrollToNext();
+            if (command.includes('التالي')) scrollToNext();
             else if (command.includes('السابق')) scrollToPrevious();
-            else if (command.includes('إعجاب') || command.includes('أعجبني')) likeCurrentReel();
+            else if (command.includes('إعجاب')) likeCurrentReel();
             else if (command.includes('تعليق')) openCommentsForCurrent();
             else if (command.includes('مشاركة')) shareCurrentReel();
-            else if (command.includes('سعيد')) changeMoodTo('happy');
-            else if (command.includes('متحمس')) changeMoodTo('excited');
             else showNotification(`🎤 الأمر: ${command}`, 'info');
         }
 
@@ -432,10 +376,7 @@
 
         function likeCurrentReel() {
             const activeSlide = document.querySelector('.reel-slide');
-            if (activeSlide) {
-                const reelId = parseInt(activeSlide.dataset.reelId);
-                likeReel(reelId, { stopPropagation: () => {} });
-            }
+            if (activeSlide) likeReel(parseInt(activeSlide.dataset.reelId), { stopPropagation: () => {} });
         }
 
         function shareCurrentReel() {
@@ -446,13 +387,11 @@
             }
         }
 
-        function changeMoodTo(mood) {
-            userMood.current = mood;
-            saveUserData();
-            updateMood(mood);
+        function openCommentsForCurrent() {
+            const activeSlide = document.querySelector('.reel-slide');
+            if (activeSlide) openComments(parseInt(activeSlide.dataset.reelId));
         }
 
-        // ========== جلب الريلز من تلغرام ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
@@ -478,10 +417,7 @@
                         const fileData = await fileRes.json();
                         if (fileData.ok) {
                             const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                            reels.push({
-                                id: post.message_id, title, videoUrl, publisher,
-                                views: 0, likes: 0, createdAt: new Date(post.date * 1000).toISOString()
-                            });
+                            reels.push({ id: post.message_id, title, videoUrl, publisher, views: 0, likes: 0, createdAt: new Date(post.date * 1000).toISOString() });
                         }
                     }
                 }
@@ -513,19 +449,10 @@
                 }
             } catch (error) {
                 const cached = localStorage.getItem('nardoo_reels_cache');
-                if (cached) {
-                    reelsCache = JSON.parse(cached);
-                    displayAllReels();
-                    updateStats();
-                    showNotification(`⚠️ عرض ${reelsCache.length} ريلز مخزنة`, 'warning');
-                }
-            } finally {
-                isLoading = false;
-                showLoadingOverlay(false);
-            }
+                if (cached) { reelsCache = JSON.parse(cached); displayAllReels(); updateStats(); showNotification(`⚠️ عرض ${reelsCache.length} ريلز مخزنة`, 'warning'); }
+            } finally { isLoading = false; showLoadingOverlay(false); }
         }
 
-        // ========== عرض الريلز ==========
         function displayAllReels() {
             const container = document.getElementById('reelsPlayer');
             if (!reelsCache || reelsCache.length === 0) {
@@ -545,9 +472,7 @@
                         <div class="reel-video-container">
                             <video src="${reel.videoUrl}" preload="metadata" playsinline webkit-playsinline loop></video>
                             <div class="action-sidebar">
-                                <div class="action-btn-side ${isLiked ? 'liked' : ''}" onclick="likeReel(${reel.id}, event)">
-                                    <i class="fas fa-heart"></i><span>${likesText}</span>
-                                </div>
+                                <div class="action-btn-side ${isLiked ? 'liked' : ''}" onclick="likeReel(${reel.id}, event)"><i class="fas fa-heart"></i><span>${likesText}</span></div>
                                 <div class="action-btn-side" onclick="openComments(${reel.id})"><i class="fas fa-comment"></i><span>تعليق</span></div>
                                 <div class="action-btn-side" onclick="shareReel('${reel.videoUrl}', event)"><i class="fas fa-share-alt"></i><span>مشاركة</span></div>
                             </div>
@@ -582,24 +507,16 @@
             }, 100);
         }
 
-        // ========== التعليقات ==========
         function openComments(reelId) {
             currentReelId = reelId;
             const panel = document.getElementById('commentsPanel');
             const list = document.getElementById('commentsList');
             const reelComments = comments[reelId] || [];
-            list.innerHTML = reelComments.map(c => `
-                <div class="comment-item">
-                    <div><i class="fas fa-user-circle"></i></div>
-                    <div><span class="comment-user">${escapeHtml(c.user)}</span><br><span style="font-size:12px;">${escapeHtml(c.text)}</span></div>
-                </div>
-            `).join('');
+            list.innerHTML = reelComments.map(c => `<div class="comment-item"><div><i class="fas fa-user-circle"></i></div><div><span class="comment-user">${escapeHtml(c.user)}</span><br><span style="font-size:12px;">${escapeHtml(c.text)}</span></div></div>`).join('');
             panel.classList.add('open');
         }
 
-        function closeComments() {
-            document.getElementById('commentsPanel').classList.remove('open');
-        }
+        function closeComments() { document.getElementById('commentsPanel').classList.remove('open'); }
 
         function addComment() {
             const text = document.getElementById('commentText').value.trim();
@@ -614,7 +531,6 @@
             showNotification('✅ تم إضافة التعليق', 'success');
         }
 
-        // ========== رفع ريلز جديد ==========
         async function uploadReelToTelegram() {
             if (!selectedVideoFile) { showNotification('❌ اختر فيديو أولاً', 'error'); return; }
             if (!currentUser) { showNotification('❌ يرجى تسجيل الدخول', 'error'); return; }
@@ -636,28 +552,16 @@
                     closeUploadModal();
                     removeSelectedVideo();
                 } else throw new Error(data.description || 'فشل الرفع');
-            } catch (error) {
-                showNotification('❌ فشل الرفع: ' + error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع ونشر للجميع';
-            }
+            } catch (error) { showNotification('❌ فشل الرفع: ' + error.message, 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fab fa-telegram"></i> رفع ونشر للجميع'; }
         }
 
-        // ========== الإعجاب ==========
         function likeReel(reelId, event) {
             event.stopPropagation();
             const reel = reelsCache.find(r => r.id === reelId);
             if (reel) {
-                if (userLikes[reelId]) {
-                    reel.likes = Math.max(0, (reel.likes || 0) - 1);
-                    delete userLikes[reelId];
-                } else {
-                    reel.likes = (reel.likes || 0) + 1;
-                    userLikes[reelId] = true;
-                    addPoints(1, 'إعجاب');
-                    updateMood('like');
-                }
+                if (userLikes[reelId]) { reel.likes = Math.max(0, (reel.likes || 0) - 1); delete userLikes[reelId]; }
+                else { reel.likes = (reel.likes || 0) + 1; userLikes[reelId] = true; addPoints(1, 'إعجاب'); updateMood('like'); }
                 saveUserData();
                 displayAllReels();
                 updateStats();
@@ -672,7 +576,6 @@
             updateMood('share');
         }
 
-        // ========== دوال مساعدة ==========
         function updateStats() {
             const totalReels = reelsCache.length;
             const countSpan = document.getElementById('totalReelsCount');
@@ -685,106 +588,47 @@
             return num || 0;
         }
 
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-        }
-
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
         function showNotification(msg, type = 'info') {
-            const div = document.createElement('div');
-            div.className = 'notification';
-            div.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} ${msg}`;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 3000);
+            const div = document.createElement('div'); div.className = 'notification'; div.innerHTML = `${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'} ${msg}`;
+            document.body.appendChild(div); setTimeout(() => div.remove(), 3000);
         }
-
         function showLoadingOverlay(show, message = "جاري التحميل...") {
             let overlay = document.getElementById('loadingOverlay');
-            if (show && !overlay) {
-                overlay = document.createElement('div');
-                overlay.id = 'loadingOverlay';
-                overlay.className = 'loading-overlay';
-                overlay.innerHTML = `<i class="fas fa-spinner fa-pulse" style="font-size: 50px; color: gold;"></i><p>${message}</p>`;
-                document.body.appendChild(overlay);
-            } else if (show && overlay) overlay.style.display = 'flex';
+            if (show && !overlay) { overlay = document.createElement('div'); overlay.id = 'loadingOverlay'; overlay.className = 'loading-overlay'; overlay.innerHTML = `<i class="fas fa-spinner fa-pulse" style="font-size: 50px; color: gold;"></i><p>${message}</p>`; document.body.appendChild(overlay); }
+            else if (show && overlay) overlay.style.display = 'flex';
             else if (!show && overlay) overlay.remove();
         }
-
         function handleVideoSelect(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
                 if (file.size > 50 * 1024 * 1024) { showNotification('حجم الفيديو كبير جداً', 'error'); return; }
                 if (!file.type.startsWith('video/')) { showNotification('اختر ملف فيديو صالح', 'error'); return; }
-                selectedVideoFile = file;
-                const url = URL.createObjectURL(file);
-                document.getElementById('previewVideo').src = url;
-                document.getElementById('videoPreviewDiv').classList.add('show');
+                selectedVideoFile = file; const url = URL.createObjectURL(file); document.getElementById('previewVideo').src = url; document.getElementById('videoPreviewDiv').classList.add('show');
             }
         }
-
-        function removeSelectedVideo() {
-            selectedVideoFile = null;
-            document.getElementById('videoPreviewDiv').classList.remove('show');
-            document.getElementById('videoInput').value = '';
-            document.getElementById('previewVideo').src = '';
-        }
-
-        function openUploadModal() {
-            if (!currentUser) { showNotification('يجب تسجيل الدخول أولاً', 'warning'); return; }
-            document.getElementById('uploadModal').style.display = 'flex';
-        }
-
+        function removeSelectedVideo() { selectedVideoFile = null; document.getElementById('videoPreviewDiv').classList.remove('show'); document.getElementById('videoInput').value = ''; document.getElementById('previewVideo').src = ''; }
+        function openUploadModal() { if (!currentUser) { showNotification('يجب تسجيل الدخول أولاً', 'warning'); return; } document.getElementById('uploadModal').style.display = 'flex'; }
         function closeUploadModal() { document.getElementById('uploadModal').style.display = 'none'; }
 
-        // ========== تسجيل الدخول والخروج ==========
         function login() {
             const username = document.getElementById('loginUsername').value.trim();
             if (!username) { showNotification('❌ أدخل اسم المستخدم', 'error'); return; }
             let user = users.find(u => u.username === username || u.name === username);
-            if (!user) {
-                user = { id: Date.now(), name: username, username: username, role: 'user', points: 100 };
-                users.push(user);
-                localStorage.setItem('nardoo_users', JSON.stringify(users));
-            }
-            currentUser = user;
-            localStorage.setItem('current_user', JSON.stringify(user));
-            loadUserData();
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('topBar').style.display = 'block';
-            document.getElementById('fabButtons').style.display = 'block';
-            document.getElementById('reelsPlayer').style.display = 'block';
-            document.getElementById('userNameDisplay').innerText = currentUser.name;
-            loadReelsFromTelegram();
-            showNotification(`✅ مرحباً ${user.name}`, 'success');
+            if (!user) { user = { id: Date.now(), name: username, username: username, role: 'user', points: 100 }; users.push(user); localStorage.setItem('nardoo_users', JSON.stringify(users)); }
+            currentUser = user; localStorage.setItem('current_user', JSON.stringify(user)); loadUserData();
+            document.getElementById('loginScreen').style.display = 'none'; document.getElementById('topBar').style.display = 'block'; document.getElementById('fabButtons').style.display = 'block'; document.getElementById('reelsPlayer').style.display = 'block'; document.getElementById('userNameDisplay').innerText = currentUser.name;
+            loadReelsFromTelegram(); showNotification(`✅ مرحباً ${user.name}`, 'success');
         }
 
-        function logout() {
-            currentUser = null;
-            localStorage.removeItem('current_user');
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('topBar').style.display = 'none';
-            document.getElementById('fabButtons').style.display = 'none';
-            document.getElementById('reelsPlayer').style.display = 'none';
-            reelsCache = [];
-        }
+        function logout() { currentUser = null; localStorage.removeItem('current_user'); document.getElementById('loginScreen').style.display = 'flex'; document.getElementById('topBar').style.display = 'none'; document.getElementById('fabButtons').style.display = 'none'; document.getElementById('reelsPlayer').style.display = 'none'; reelsCache = []; }
 
-        // ========== تحديث تلقائي كل 5 دقائق ==========
         setInterval(() => { if (currentUser && !isLoading) loadReelsFromTelegram(); }, 300000);
-
-        // ========== تهيئة الصفحة ==========
         loadUsers();
         const savedUser = localStorage.getItem('current_user');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
-            if (currentUser) {
-                loadUserData();
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('topBar').style.display = 'block';
-                document.getElementById('fabButtons').style.display = 'block';
-                document.getElementById('reelsPlayer').style.display = 'block';
-                document.getElementById('userNameDisplay').innerText = currentUser.name;
-                loadReelsFromTelegram();
-            }
+            if (currentUser) { loadUserData(); document.getElementById('loginScreen').style.display = 'none'; document.getElementById('topBar').style.display = 'block'; document.getElementById('fabButtons').style.display = 'block'; document.getElementById('reelsPlayer').style.display = 'block'; document.getElementById('userNameDisplay').innerText = currentUser.name; loadReelsFromTelegram(); }
         }
         window.onclick = e => { if (e.target === document.getElementById('uploadModal')) closeUploadModal(); };
         console.log('🤖 ناردو ريلز AI جاهز - ذكاء اصطناعي | تحكم صوتي | مكافآت | تعليقات');
