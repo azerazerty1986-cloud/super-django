@@ -1,16 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو ريلز | نظام ألبومات متقدم - تخزين دائم</title>
+    <title>ناردو ريلز | مشغل قناة التليجرام - تحويلات فقط</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Cairo', sans-serif; background: #000; color: white; overflow-x: hidden; }
 
-        /* شاشة تسجيل الدخول */
         .login-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #0f2b23, #1e4a3f);
@@ -32,7 +30,6 @@
             border: none; border-radius: 30px; font-weight: bold; cursor: pointer;
         }
 
-        /* شريط المستخدم */
         .user-bar {
             position: fixed; top: 0; left: 0; right: 0;
             background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
@@ -65,7 +62,6 @@
             transform: scale(1.05);
         }
 
-        /* شاشة الألبومات */
         .albums-screen {
             position: fixed; top: 70px; left: 0; width: 100%;
             height: calc(100% - 70px); background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
@@ -132,7 +128,6 @@
             display: inline-block;
         }
 
-        /* مشغل الفيديوهات داخل الألبوم */
         .album-player {
             position: fixed; top: 70px; left: 0; width: 100%;
             height: calc(100% - 70px); background: #000;
@@ -254,6 +249,13 @@
             z-index: 2001; min-width: 300px;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
+        .channel-badge {
+            background: #0088cc;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+        }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -274,7 +276,7 @@
     <div class="login-screen" id="loginScreen">
         <div class="login-box">
             <i class="fas fa-film" style="font-size: 60px; color: gold; margin-bottom: 20px;"></i>
-            <h2>ناردو ريلز - الألبومات</h2>
+            <h2>ناردو ريلز | مشغل القناة</h2>
             <input type="text" id="loginUsername" placeholder="اسم المستخدم">
             <button class="login-btn" onclick="login()">دخول <i class="fas fa-sign-in-alt"></i></button>
             <div style="margin-top: 15px; font-size: 12px;">👤 أدخل أي اسم للدخول</div>
@@ -285,7 +287,7 @@
         <div class="user-bar">
             <div class="user-badge"><i class="fas fa-user"></i> <span id="userNameDisplay"></span></div>
             <div class="user-stats">
-                <div class="user-stat"><span class="number" id="totalReelsCount">0</span><div class="label">الريلز</div></div>
+                <div class="user-stat"><span class="number" id="totalReelsCount">0</span><div class="label">التحويلات</div></div>
                 <div class="user-stat"><span class="number" id="totalAlbumsCount">0</span><div class="label">ألبومات</div></div>
             </div>
             <div id="topButtons"></div>
@@ -294,7 +296,6 @@
 
     <div id="albumsView" class="albums-screen" style="display: none;"></div>
     <div id="albumPlayer" class="album-player" style="display: none;"></div>
-    <div id="reelsPlayer" class="reels-player" style="display: none;"></div>
 
     <div id="fabButtons" style="display: none;">
         <div class="upload-fab" onclick="openUploadModal()"><i class="fas fa-plus"></i></div>
@@ -303,10 +304,10 @@
     <div class="modal" id="uploadModal">
         <div class="modal-content">
             <button class="close-modal" onclick="closeUploadModal()" style="background: none; border: none; color: gold; font-size: 30px; float: left; cursor: pointer;">&times;</button>
-            <h2 style="color: gold; text-align: center;"><i class="fas fa-upload"></i> رفع ريلز جديد</h2>
+            <h2 style="color: gold; text-align: center;"><i class="fas fa-upload"></i> تحويل ريلز جديد</h2>
             <div class="upload-area" onclick="document.getElementById('videoInput').click()">
                 <i class="fas fa-cloud-upload-alt" style="font-size: 50px; color: gold;"></i>
-                <p>اضغط لرفع فيديو (MP4, max 50MB)</p>
+                <p>اضغط لرفع فيديو للتحويل إلى القناة (MP4, max 50MB)</p>
             </div>
             <input type="file" id="videoInput" accept="video/*" style="display: none;" onchange="handleVideoSelect(this)">
             <div class="video-preview" id="videoPreviewDiv">
@@ -322,7 +323,7 @@
                 <option value="تعليمي">📚 تعليمي</option>
                 <option value="ترفيه">🎭 ترفيه</option>
             </select>
-            <button class="send-btn" id="uploadBtn" onclick="uploadReelToTelegram()"><i class="fab fa-telegram"></i> رفع ونشر للجميع</button>
+            <button class="send-btn" id="uploadBtn" onclick="uploadReelToTelegram()"><i class="fab fa-telegram"></i> تحويل إلى القناة</button>
         </div>
     </div>
 
@@ -335,7 +336,7 @@
         };
 
         // ========== المتغيرات العامة ==========
-        let reelsCache = [];
+        let reelsCache = [];      // فقط الفيديوهات من القناة
         let users = [];
         let currentUser = null;
         let selectedVideoFile = null;
@@ -348,9 +349,8 @@
         let allMessageIds = JSON.parse(localStorage.getItem('all_message_ids') || '[]');
         let processedMessageIds = JSON.parse(localStorage.getItem('processed_message_ids') || '[]');
 
-        // ========== دوال التخزين المتقدم ==========
+        // ========== جلب الفيديوهات من القناة فقط ==========
         
-        // استخراج الألبوم من التسمية التوضيحية
         function extractAlbumFromCaption(caption) {
             if (!caption) return 'عام';
             const albumMatch = caption.match(/📁 (.+?)(?:\n|$)/);
@@ -360,7 +360,6 @@
             return 'عام';
         }
         
-        // استخراج معلومات الفيديو من المنشور
         async function extractVideoFromPost(post) {
             try {
                 const caption = post.caption || '';
@@ -389,9 +388,10 @@
                         album: album,
                         caption: caption,
                         views: 0,
-                        likes: userLikes[post.message_id] ? (userLikes[post.message_id] ? 1 : 0) : 0,
+                        likes: userLikes[post.message_id] ? 1 : 0,
                         createdAt: new Date(post.date * 1000).toISOString(),
-                        fileId: post.video.file_id
+                        fileId: post.video.file_id,
+                        fromChannel: true
                     };
                 }
             } catch (error) {
@@ -400,14 +400,14 @@
             return null;
         }
         
-        // جلب جميع الفيديوهات من القناة (مزامنة كاملة)
-        async function fetchAllChannelVideos() {
+        // جلب جميع الفيديوهات من القناة (التحديثات)
+        async function fetchChannelVideos() {
             let allVideos = [];
             let offset = 0;
             let hasMore = true;
             let iterationCount = 0;
             
-            showLoadingOverlay(true, "🔄 جلب جميع الفيديوهات من القناة...");
+            showLoadingOverlay(true, "🔄 جلب التحويلات من القناة...");
             
             while (hasMore && iterationCount < 50) {
                 try {
@@ -427,8 +427,9 @@
                                 allMessageIds.push(messageId);
                             }
                             
+                            // التحقق من أن المنشور من القناة المحددة
                             const post = update.channel_post || update.message;
-                            if (post && post.video) {
+                            if (post && post.video && post.chat && post.chat.id.toString() === TELEGRAM.channelId) {
                                 if (!processedMessageIds.includes(post.message_id)) {
                                     const video = await extractVideoFromPost(post);
                                     if (video) {
@@ -466,8 +467,8 @@
             return allVideos;
         }
         
-        // جلب الفيديوهات الجديدة فقط
-        async function fetchNewVideos() {
+        // جلب الفيديوهات الجديدة فقط من القناة
+        async function fetchNewChannelVideos() {
             try {
                 let url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
                 if (lastUpdateId > 0) {
@@ -487,7 +488,8 @@
                             lastUpdateId = update.update_id;
                         }
                         
-                        if (post && post.video) {
+                        // فقط المنشورات من القناة المحددة
+                        if (post && post.video && post.chat && post.chat.id.toString() === TELEGRAM.channelId) {
                             const exists = reelsCache.some(r => r.id === post.message_id);
                             if (!exists && !processedMessageIds.includes(post.message_id)) {
                                 const video = await extractVideoFromPost(post);
@@ -503,33 +505,35 @@
                     localStorage.setItem('processed_message_ids', JSON.stringify(processedMessageIds));
                     
                     if (newVideos.length > 0) {
-                        console.log(`✅ تم العثور على ${newVideos.length} فيديوهات جديدة`);
+                        console.log(`✅ تم العثور على ${newVideos.length} تحويلات جديدة`);
                     }
                 }
                 
                 return newVideos;
                 
             } catch (error) {
-                console.error('خطأ في جلب الفيديوهات الجديدة:', error);
+                console.error('خطأ في جلب التحويلات الجديدة:', error);
                 return [];
             }
         }
         
-        // الدالة الرئيسية لتحميل الفيديوهات
+        // الدالة الرئيسية لتحميل الفيديوهات من القناة
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
             
             try {
-                // 1. تحميل الكاش المحلي أولاً
+                // 1. تحميل الكاش المحلي أولاً (فيديوهات القناة فقط)
                 const cachedVideos = localStorage.getItem('nardoo_reels_cache');
                 let localVideos = [];
                 
                 if (cachedVideos) {
                     localVideos = JSON.parse(cachedVideos);
+                    // التأكد أن الفيديوهات من القناة فقط
+                    localVideos = localVideos.filter(v => v.fromChannel === true);
                     if (localVideos.length > 0) {
                         reelsCache = localVideos;
-                        console.log(`📦 تم تحميل ${reelsCache.length} فيديو من الكاش المحلي`);
+                        console.log(`📦 تم تحميل ${reelsCache.length} تحويل من الكاش المحلي`);
                         updateStats();
                         
                         if (currentAlbum === null) {
@@ -540,14 +544,14 @@
                     }
                 }
                 
-                // 2. جلب الفيديوهات الجديدة
-                const newVideos = await fetchNewVideos();
+                // 2. جلب التحويلات الجديدة من القناة
+                const newVideos = await fetchNewChannelVideos();
                 
                 if (newVideos.length > 0) {
                     reelsCache = [...newVideos, ...reelsCache];
                     localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
-                    console.log(`✅ تمت إضافة ${newVideos.length} فيديوهات جديدة`);
-                    showNotification(`📹 تمت إضافة ${newVideos.length} ريلز جديد`, 'success');
+                    console.log(`✅ تمت إضافة ${newVideos.length} تحويلات جديدة`);
+                    showNotification(`📹 تمت إضافة ${newVideos.length} تحويل جديد`, 'success');
                     
                     if (currentAlbum === null) {
                         showAlbumsView();
@@ -565,11 +569,11 @@
                 if (!lastFullSync || lastFullSync !== today) {
                     console.log('🔄 جاري المزامنة الكاملة مع القناة...');
                     setTimeout(async () => {
-                        const allVideos = await fetchAllChannelVideos();
+                        const allVideos = await fetchChannelVideos();
                         if (allVideos.length > reelsCache.length) {
                             reelsCache = allVideos;
                             localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
-                            console.log(`✅ اكتملت المزامنة الكاملة: ${reelsCache.length} فيديو`);
+                            console.log(`✅ اكتملت المزامنة الكاملة: ${reelsCache.length} تحويل`);
                             localStorage.setItem('last_full_sync', today);
                             
                             if (currentAlbum === null) {
@@ -578,7 +582,7 @@
                                 showAlbumContent(currentAlbum);
                             }
                             updateStats();
-                            showNotification(`✅ تمت المزامنة الكاملة: ${reelsCache.length} ريلز`, 'success');
+                            showNotification(`✅ تمت المزامنة الكاملة: ${reelsCache.length} تحويل`, 'success');
                         }
                     }, 3000);
                 }
@@ -589,7 +593,7 @@
                 
                 const cachedVideos = localStorage.getItem('nardoo_reels_cache');
                 if (cachedVideos && reelsCache.length === 0) {
-                    reelsCache = JSON.parse(cachedVideos);
+                    reelsCache = JSON.parse(cachedVideos).filter(v => v.fromChannel === true);
                     updateStats();
                     
                     if (currentAlbum === null) {
@@ -597,14 +601,14 @@
                     } else {
                         showAlbumContent(currentAlbum);
                     }
-                    showNotification(`⚠️ عرض ${reelsCache.length} ريلز من الذاكرة`, 'warning');
+                    showNotification(`⚠️ عرض ${reelsCache.length} تحويل من الذاكرة`, 'warning');
                 }
             } finally {
                 isLoading = false;
             }
         }
         
-        // تجميع الريلز في ألبومات
+        // تجميع التحويلات في ألبومات
         function groupReelsIntoAlbums() {
             const albums = {};
             reelsCache.forEach(reel => {
@@ -622,7 +626,6 @@
             currentAlbum = null;
             document.getElementById('albumsView').style.display = 'block';
             document.getElementById('albumPlayer').style.display = 'none';
-            document.getElementById('reelsPlayer').style.display = 'none';
             
             const albums = groupReelsIntoAlbums();
             const albumCount = Object.keys(albums).length;
@@ -634,8 +637,11 @@
                 container.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; text-align: center;">
                         <i class="fas fa-folder-open" style="font-size: 80px; color: gold; margin-bottom: 20px;"></i>
-                        <h2>لا توجد ألبومات</h2>
-                        <p>قم برفع فيديوهات مع تحديد الألبوم</p>
+                        <h2>لا توجد تحويلات</h2>
+                        <p>قم بتحويل فيديوهات إلى القناة</p>
+                        <div class="channel-badge" style="margin: 20px auto;">
+                            <i class="fab fa-telegram"></i> القناة: ناردو ريلز
+                        </div>
                         <button class="refresh-btn" onclick="loadReelsFromTelegram()" style="margin-top: 20px;">
                             <i class="fas fa-sync-alt"></i> تحديث من القناة
                         </button>
@@ -647,7 +653,7 @@
             container.innerHTML = `
                 <div style="padding: 20px;">
                     <h2 style="color: gold; margin-bottom: 20px; text-align: center;">
-                        <i class="fas fa-folder-tree"></i> ألبومات الفيديو (${albumCount})
+                        <i class="fab fa-telegram"></i> تحويلات قناة ناردو ريلز (${albumCount} ألبوم)
                     </h2>
                     <div class="albums-grid">
                         ${Object.entries(albums).map(([albumName, reels]) => `
@@ -703,7 +709,6 @@
             
             document.getElementById('albumsView').style.display = 'none';
             document.getElementById('albumPlayer').style.display = 'block';
-            document.getElementById('reelsPlayer').style.display = 'none';
             
             const sortedReels = [...albumReels].reverse();
             
@@ -719,7 +724,7 @@
                     return `
                         <div class="reel-slide" data-reel-id="${reel.id}">
                             <div class="reel-id-badge">
-                                <i class="fas fa-folder"></i> ${escapeHtml(albumName)} | ID: ${reel.id}
+                                <i class="fab fa-telegram"></i> تحويل قناة | ${escapeHtml(albumName)} | ID: ${reel.id}
                             </div>
                             <div class="reel-video-container">
                                 <video src="${reel.videoUrl}" preload="metadata" playsinline webkit-playsinline loop></video>
@@ -727,6 +732,10 @@
                                     <div class="action-btn-side ${isLiked ? 'liked' : ''}" onclick="likeReel(${reel.id}, event)">
                                         <i class="fas fa-heart"></i>
                                         <span>${likesText}</span>
+                                    </div>
+                                    <div class="action-btn-side" onclick="downloadVideo('${reel.videoUrl}', '${reel.title}')">
+                                        <i class="fas fa-download"></i>
+                                        <span>تحميل</span>
                                     </div>
                                     <div class="action-btn-side" onclick="shareReel('${reel.videoUrl}', event)">
                                         <i class="fas fa-share-alt"></i>
@@ -760,12 +769,6 @@
                         const video = entry.target.querySelector('video');
                         if (entry.isIntersecting) {
                             video.play().catch(e => console.log);
-                            const reelId = parseInt(entry.target.dataset.reelId);
-                            const reel = reelsCache.find(r => r.id === reelId);
-                            if (reel && !reel.viewRecorded) {
-                                reel.views = (reel.views || 0) + 1;
-                                reel.viewRecorded = true;
-                            }
                         } else {
                             video.pause();
                         }
@@ -775,7 +778,18 @@
             }, 100);
         }
         
-        // رفع ريلز جديد
+        // تحميل الفيديو إلى الجهاز
+        function downloadVideo(videoUrl, title) {
+            const link = document.createElement('a');
+            link.href = videoUrl;
+            link.download = `nardo_reel_${title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showNotification('📥 جاري تحميل الفيديو...', 'success');
+        }
+        
+        // رفع/تحويل ريلز جديد إلى القناة
         async function uploadReelToTelegram() {
             if (!selectedVideoFile) {
                 showNotification('❌ اختر فيديو أولاً', 'error');
@@ -791,7 +805,7 @@
             
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري الرفع...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري التحويل...';
             
             try {
                 const formData = new FormData();
@@ -802,7 +816,7 @@
                 if (album) {
                     caption += `\n📁 ${album}`;
                 }
-                caption += `\n\n✅ تم الرفع عبر تطبيق ناردو ريلز - ألبومات`;
+                caption += `\n\n✅ تم التحويل عبر تطبيق ناردو ريلز`;
                 
                 formData.append('caption', caption);
                 
@@ -814,25 +828,24 @@
                 const data = await response.json();
                 
                 if (data.ok) {
-                    showNotification(`✅ تم الرفع بنجاح إلى ${album || 'الألبوم العام'}!`, 'success');
+                    showNotification(`✅ تم التحويل بنجاح إلى ${album || 'الألبوم العام'}!`, 'success');
                     setTimeout(() => {
                         loadReelsFromTelegram();
                     }, 2000);
                     closeUploadModal();
                     removeSelectedVideo();
                 } else {
-                    throw new Error(data.description || 'فشل الرفع');
+                    throw new Error(data.description || 'فشل التحويل');
                 }
             } catch (error) {
                 console.error('❌ خطأ:', error);
-                showNotification('❌ فشل الرفع: ' + error.message, 'error');
+                showNotification('❌ فشل التحويل: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع ونشر للجميع';
+                btn.innerHTML = '<i class="fab fa-telegram"></i> تحويل إلى القناة';
             }
         }
         
-        // الإعجاب
         function likeReel(reelId, event) {
             event.stopPropagation();
             const reel = reelsCache.find(r => r.id === reelId);
@@ -859,7 +872,7 @@
             if (navigator.share) {
                 navigator.share({
                     title: 'ناردو ريلز',
-                    text: 'شاهد هذا الفيديو الرائع',
+                    text: 'شاهد هذا الفيديو من قناة ناردو',
                     url: videoUrl
                 }).catch(() => {
                     navigator.clipboard.writeText(videoUrl);
@@ -899,10 +912,10 @@
             
             const statsHTML = `
                 <div class="stats-panel" id="statsPanel">
-                    <h3 style="color: gold; margin-bottom: 20px;"><i class="fas fa-chart-bar"></i> إحصائيات التخزين</h3>
-                    <div style="margin: 10px 0;"><i class="fas fa-video"></i> الفيديوهات المخزنة: <strong style="color: gold;">${videoCount}</strong></div>
+                    <h3 style="color: gold; margin-bottom: 20px;"><i class="fas fa-chart-bar"></i> إحصائيات التحويلات</h3>
+                    <div style="margin: 10px 0;"><i class="fas fa-video"></i> التحويلات المخزنة: <strong style="color: gold;">${videoCount}</strong></div>
                     <div style="margin: 10px 0;"><i class="fas fa-check-circle"></i> الرسائل المعالجة: <strong style="color: gold;">${processedCount}</strong></div>
-                    <div style="margin: 10px 0;"><i class="fas fa-database"></i> إجمالي التحديثات: <strong style="color: gold;">${allMessagesCount}</strong></div>
+                    <div style="margin: 10px 0;"><i class="fab fa-telegram"></i> القناة: <strong style="color: gold;">ناردو ريلز</strong></div>
                     <div style="margin: 10px 0;"><i class="fas fa-sync"></i> آخر مزامنة كاملة: <strong style="color: gold;">${lastSync}</strong></div>
                     <div style="margin: 10px 0;"><i class="fas fa-clock"></i> آخر تحديث: <strong style="color: gold;">${lastUpdate}</strong></div>
                     <button onclick="document.getElementById('statsPanel').remove()" style="margin-top: 20px; padding: 10px 20px; background: gold; border: none; border-radius: 20px; cursor: pointer;">إغلاق</button>
@@ -915,7 +928,7 @@
         }
         
         function resetStorage() {
-            if (confirm('⚠️ هل تريد إعادة تعيين التخزين؟ سيتم مسح جميع الفيديوهات المخزنة محلياً وإعادة تحميلها من القناة.')) {
+            if (confirm('⚠️ هل تريد إعادة تعيين التخزين؟ سيتم مسح جميع التحويلات المخزنة محلياً وإعادة تحميلها من القناة.')) {
                 localStorage.removeItem('nardoo_reels_cache');
                 localStorage.removeItem('all_message_ids');
                 localStorage.removeItem('processed_message_ids');
@@ -938,7 +951,6 @@
             }
         }
         
-        // دوال المستخدمين والإعجابات
         function loadUsers() {
             const saved = localStorage.getItem('nardoo_users');
             if (saved) {
@@ -964,7 +976,6 @@
             localStorage.setItem(`nardoo_likes_${userId}`, JSON.stringify(userLikes));
         }
         
-        // دوال مساعدة
         function handleVideoSelect(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -1057,7 +1068,6 @@
             setTimeout(() => div.remove(), 3000);
         }
         
-        // تسجيل الدخول والخروج
         function login() {
             const username = document.getElementById('loginUsername').value.trim();
             if (!username) {
@@ -1104,19 +1114,16 @@
             document.getElementById('fabButtons').style.display = 'none';
             document.getElementById('albumsView').style.display = 'none';
             document.getElementById('albumPlayer').style.display = 'none';
-            document.getElementById('reelsPlayer').style.display = 'none';
             reelsCache = [];
         }
         
-        // تحديث تلقائي كل 5 دقائق
         setInterval(() => {
             if (currentUser && !isLoading) {
-                console.log('🔄 تحديث تلقائي للفيديوهات الجديدة...');
+                console.log('🔄 تحديث تلقائي للتحويلات الجديدة...');
                 loadReelsFromTelegram();
             }
         }, 300000);
         
-        // تهيئة الصفحة
         loadUsers();
         
         const savedUser = localStorage.getItem('current_user');
@@ -1151,7 +1158,7 @@
             if (statsPanel && e.target === statsPanel) statsPanel.remove();
         };
         
-        console.log('🎬 نظام ناردو ريلز مع الألبومات والتخزين الدائم جاهز');
+        console.log('🎬 نظام ناردو ريلز - يعرض التحويلات من القناة فقط');
     </script>
 </body>
 </html>
