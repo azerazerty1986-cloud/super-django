@@ -214,6 +214,174 @@
         let selectedVideoFile = null;
         let userLikes = {};
         let isLoading = false;
+        // ========== نظام السرعة الفائقة - آخر 50 فيديو تلقائياً ==========
+const FastSystem = {
+    limit: 50,
+    cache: null,
+    isLoading: false,
+    
+    // جلب آخر 50 فيديو فقط (أسرع)
+    async fetchLast50() {
+        if (this.cache) {
+            return this.cache;
+        }
+        
+        if (this.isLoading) return this.cache || [];
+        this.isLoading = true;
+        
+        try {
+            const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=${this.limit}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            const videos = [];
+            
+            if (data.ok && data.result) {
+                const updates = [...data.result].reverse();
+                
+                for (const update of updates) {
+                    const post = update.channel_post || update.message;
+                    if (!post || !post.video) continue;
+                    
+                    const caption = post.caption || '';
+                    let title = '🎬 ريلز';
+                    const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
+                    if (titleMatch) title = titleMatch[1];
+                    
+                    let publisher = 'ناردو برو';
+                    const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
+                    if (publisherMatch) publisher = publisherMatch[1];
+                    
+                    const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${post.video.file_id}`);
+                    const fileData = await fileRes.json();
+                    
+                    if (fileData.ok) {
+                        const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                        
+                        videos.push({
+                            id: post.message_id,
+                            title: title,
+                            videoUrl: videoUrl,
+                            publisher: publisher,
+                            views: 0,
+                            likes: 0,
+                            createdAt: new Date(post.date * 1000).toISOString()
+                        });
+                    }
+                }
+            }
+            
+            this.cache = videos;
+            console.log(`✅ تم جلب آخر ${videos.length} فيديو (${Date.now() - start}ms)`);
+            return videos;
+            
+        } catch (error) {
+            console.error('❌ خطأ:', error);
+            return [];
+        } finally {
+            this.isLoading = false;
+        }
+    },
+    
+    // عرض فوري من الذاكرة
+    displayFast() {
+        if (this.cache && this.cache.length > 0) {
+            reelsCache = this.cache;
+            displayAllReels();
+            updateStats();
+            return true;
+        }
+        return false;
+    }
+};
+
+// ========== استبدال دالة loadReelsFromTelegram بالنسخة السريعة ==========
+async function loadReelsFromTelegram() {
+    if (isLoading) return;
+    isLoading = true;
+    
+    // ✅ الخطوة 1: عرض فوري من الذاكرة (0.01 ثانية)
+    if (FastSystem.displayFast()) {
+        console.log('⚡ عرض فوري من الذاكرة');
+        
+        // ✅ الخطوة 2: تحديث في الخلفية (لا يقطع التجربة)
+        FastSystem.fetchLast50().then(videos => {
+            if (videos.length > 0) {
+                const oldIds = reelsCache.map(r => r.id).join(',');
+                const newIds = videos.map(r => r.id).join(',');
+                if (oldIds !== newIds) {
+                    reelsCache = videos;
+                    localStorage.setItem('nardoo_reels_cache', JSON.stringify(videos));
+                    displayAllReels();
+                    updateStats();
+                    console.log(`✅ تحديث خلفي: ${videos.length} ريلز`);
+                }
+            }
+        });
+        
+        isLoading = false;
+        return;
+    }
+    
+    // ✅ أول مرة أو لا يوجد cache
+    showLoadingOverlay(true, "🔄 جاري التحميل السريع...");
+    
+    try {
+        const videos = await FastSystem.fetchLast50();
+        
+        if (videos.length > 0) {
+            reelsCache = videos;
+            localStorage.setItem('nardoo_reels_cache', JSON.stringify(videos));
+            displayAllReels();
+            updateStats();
+            showNotification(`📹 ${videos.length} ريلز متاحة`, 'success');
+        } else {
+            const cached = localStorage.getItem('nardoo_reels_cache');
+            if (cached && JSON.parse(cached).length > 0) {
+                reelsCache = JSON.parse(cached);
+                displayAllReels();
+                updateStats();
+            } else {
+                reelsCache = [
+                    {
+                        id: 1001,
+                        title: '🎬 مرحباً بك في ناردو ريلز',
+                        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+                        publisher: 'النظام',
+                        views: 0,
+                        likes: 0,
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 1002,
+                        title: '✨ قم برفع أول ريلز خاص بك',
+                        videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+                        publisher: 'النظام',
+                        views: 0,
+                        likes: 0,
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
+                displayAllReels();
+                updateStats();
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ خطأ:', error);
+        const cached = localStorage.getItem('nardoo_reels_cache');
+        if (cached) {
+            reelsCache = JSON.parse(cached);
+            displayAllReels();
+            updateStats();
+            showNotification(`⚠️ عرض ${reelsCache.length} ريلز مخزنة`, 'warning');
+        }
+    } finally {
+        isLoading = false;
+        showLoadingOverlay(false);
+    }
+}
 
         // ========== تحميل المستخدمين ==========
         function loadUsers() {
