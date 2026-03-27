@@ -1,3 +1,4 @@
+تلقرام جيد رقم 1 ميكرو 
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ================================================================== */
@@ -945,31 +946,20 @@ function toggleMerchantFields() {
 }
 
 // ===== [4.33] معالجة تسجيل الدخول =====
-// ===== معالجة تسجيل الدخول (تعطيل كل شيء) =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-    
-    // 🔓 تعطيل التحقق من كلمة السر (أي كلمة سر تدخل)
-    const user = users.find(u => (u.email === email || u.name === email));
-    
+
+    const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
+
     if (user) {
         currentUser = user;
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         updateUIBasedOnRole();
-        
-        // 🔓 تعطيل المصادقة الثنائية - لا نرسل رمز، لا نطلب تحقق
-        // no 2FA, no Telegram code
-        
-        showNotification(`✅ مرحباً ${user.name} (دخول سريع)`, 'success');
-        console.log('✅ تم تسجيل الدخول (بدون كلمة سر، بدون 2FA):', user);
-        
-        // تحديث الصفحة بعد ثانيتين
-        setTimeout(() => location.reload(), 1000);
+        showNotification(`مرحباً ${user.name}`, 'success');
     } else {
-        showNotification('❌ المستخدم غير موجود', 'error');
-        console.log('❌ المستخدم غير موجود:', email);
+        showNotification('بيانات غير صحيحة', 'error');
     }
 }
 
@@ -1763,5 +1753,4 @@ window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
 
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
-
 
