@@ -71,22 +71,7 @@ const App = {
             fields.style.display = document.getElementById('requestRole').checked ? 'block' : 'none';
         }
     },
-    
-    handleLogin() {
-        const username = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        const result = Auth.login(username, password);
-        
-        if (result.success) {
-            this.closeModal('loginModal');
-            Auth.updateUI();
-            Utils.showNotification(`مرحباً ${result.user.name} - معرفك: ${result.user.userId}`);
-            setTimeout(() => location.reload(), 500);
-        } else {
-            Utils.showNotification(result.message, 'error');
-        }
-    },
-    
+       
     handleRegister() {
         const name = document.getElementById('regName').value;
         const email = document.getElementById('regEmail').value;
