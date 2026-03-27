@@ -1,11 +1,14 @@
+تلغرام 54 
 
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
+/* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
+/* ===== المعدل النهائي - استخدام معرف تلغرام ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
-    botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
+    botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
     channelId: '-1003822964890',
     adminId: '7461896689',
     apiUrl: 'https://api.telegram.org/bot'
@@ -211,7 +214,7 @@ function changeSort(value) {
     displayProducts();
 }
 
-// ===== [4.14] إضافة منتج إلى تلغرام =====
+// ===== [4.14] إضافة منتج إلى تلغرام (معدل - يستخدم معرف تلغرام) =====
 async function addProductToTelegram(product, imageFile) {
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
@@ -242,7 +245,7 @@ async function addProductToTelegram(product, imageFile) {
         if (data.ok) {
             const messageId = data.result.message_id;
             showNotification(`✅ تم الإرسال - المعرف: ${messageId}`, 'success');
-            return { success: true, messageId: messageId };
+            return { success: true, messageId: messageId, telegramId: messageId };
         }
         showNotification('❌ فشل الإرسال: ' + data.description, 'error');
         return { success: false, error: data.description };
@@ -253,21 +256,24 @@ async function addProductToTelegram(product, imageFile) {
     }
 }
 
-// ===== [4.15] دالة حفظ المنتج =====
+// ===== [4.15] دالة حفظ المنتج (معدلة - تستخدم معرف تلغرام) =====
 async function saveProduct() {
     console.log('🔄 بدء saveProduct');
     
+    // التحقق من تسجيل الدخول
     if (!currentUser) {
         showNotification('يجب تسجيل الدخول أولاً', 'warning');
         openLoginModal();
         return;
     }
 
+    // التحقق من الصلاحية
     if (currentUser.role !== 'admin' && currentUser.role !== 'merchant_approved') {
         showNotification('فقط المدير والتجار يمكنهم إضافة منتجات', 'error');
         return;
     }
 
+    // الحصول على القيم من النموذج
     const nameInput = document.getElementById('productName');
     const categorySelect = document.getElementById('productCategory');
     const priceInput = document.getElementById('productPrice');
@@ -275,6 +281,7 @@ async function saveProduct() {
     const descInput = document.getElementById('productDescription');
     const imageInput = document.getElementById('productImages');
 
+    // التحقق من وجود العناصر
     if (!nameInput || !categorySelect || !priceInput || !stockInput || !imageInput) {
         console.error('❌ بعض حقول النموذج غير موجودة');
         showNotification('خطأ في النموذج', 'error');
@@ -288,6 +295,7 @@ async function saveProduct() {
     const description = descInput ? descInput.value : '';
     const imageFile = imageInput.files[0];
 
+    // التحقق من المدخلات
     if (!name) {
         showNotification('الرجاء إدخال اسم المنتج', 'error');
         nameInput.focus();
@@ -318,11 +326,13 @@ async function saveProduct() {
         return;
     }
 
+    // التحقق من نوع الملف
     if (!imageFile.type.startsWith('image/')) {
         showNotification('الرجاء اختيار ملف صورة صالح', 'error');
         return;
     }
 
+    // التحقق من حجم الملف (max 5MB)
     if (imageFile.size > 5 * 1024 * 1024) {
         showNotification('حجم الصورة كبير جداً (الحد الأقصى 5MB)', 'error');
         return;
@@ -348,6 +358,28 @@ async function saveProduct() {
     if (result.success) {
         showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.messageId}`, 'success');
         
+        // حفظ المنتج محلياً مع معرف تلغرام
+        const localProduct = {
+            id: result.messageId,
+            telegramId: result.messageId,
+            name: name,
+            price: price,
+            category: category,
+            stock: stock,
+            merchantName: currentUser.storeName || currentUser.name,
+            description: description,
+            publisherId: currentUser.id,
+            createdAt: new Date().toISOString(),
+            rating: 4.5,
+            images: []
+        };
+        
+        // إضافة للمنتجات المحلية
+        const localProducts = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
+        localProducts.push(localProduct);
+        localStorage.setItem('nardoo_products', JSON.stringify(localProducts));
+        
+        // إعادة تعيين النموذج
         nameInput.value = '';
         categorySelect.value = 'promo';
         priceInput.value = '';
@@ -355,13 +387,17 @@ async function saveProduct() {
         if (descInput) descInput.value = '';
         imageInput.value = '';
         
+        // مسح معاينة الصور
         const preview = document.getElementById('imagePreview');
         if (preview) preview.innerHTML = '';
         
+        // إغلاق النافذة
         closeModal('productModal');
         
-        // ✅ إعادة تحميل المنتجات من تلغرام
-        await loadProducts();
+        // إعادة تحميل المنتجات بعد ثانيتين
+        setTimeout(async () => {
+            await loadProducts();
+        }, 2000);
     }
 }
 
@@ -380,6 +416,7 @@ function handleImageUpload(event) {
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
+        // التحقق من نوع الملف
         if (!file.type.startsWith('image/')) {
             showNotification('الملف ' + file.name + ' ليس صورة', 'warning');
             continue;
@@ -404,8 +441,7 @@ function handleImageUpload(event) {
     }
 }
 
-// ===== [4.17] جلب جميع المنتجات من تلغرام =====
-// ===== [4.17] جلب جميع المنتجات من تلغرام (مع دمج المنتجات) =====
+// ===== [4.17] جلب جميع المنتجات من تلغرام (معدل - يستخدم معرف تلغرام) =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
@@ -413,18 +449,20 @@ async function fetchProductsFromTelegram() {
     try {
         console.log('🔄 جاري جلب المنتجات من تلغرام...');
         
-        // حفظ المنتجات القديمة
-        const oldProducts = [...products];
+        // أولاً: عرض المنتجات المخزنة محلياً فوراً
+        const cached = localStorage.getItem('nardoo_products');
+        let localProducts = [];
         
-        // عرض المنتجات المخزنة فوراً (للسرعة)
-        const saved = localStorage.getItem('nardoo_products');
-        if (saved && oldProducts.length === 0) {
-            products = JSON.parse(saved);
-            displayProducts();
-            console.log(`⚡ عرض سريع: ${products.length} منتج من التخزين`);
+        if (cached) {
+            localProducts = JSON.parse(cached);
+            if (localProducts.length > 0) {
+                console.log(`📦 عرض ${localProducts.length} منتج من الذاكرة المحلية`);
+                products = localProducts;
+                displayProducts();
+            }
         }
         
-        // جلب من تلغرام
+        // جلب المنتجات من تلغرام
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         
         if (!response.ok) {
@@ -446,6 +484,10 @@ async function fetchProductsFromTelegram() {
                 const caption = post.caption || '';
                 if (!caption.includes('🟣') && !caption.includes('منتج جديد')) continue;
                 
+                // 🔑 المفتاح: استخدام message_id من تلغرام كمعرف المنتج
+                const telegramId = post.message_id;
+                
+                // استخراج البيانات من النص
                 const lines = caption.split('\n');
                 
                 let name = 'منتج';
@@ -454,7 +496,6 @@ async function fetchProductsFromTelegram() {
                 let stock = 0;
                 let merchant = 'المتجر';
                 let description = 'منتج ممتاز';
-                let productId = post.message_id;
                 
                 lines.forEach(line => {
                     if (line.includes('المنتج:') || line.includes('📦 *المنتج:*')) {
@@ -481,12 +522,9 @@ async function fetchProductsFromTelegram() {
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
                     }
-                    else if (line.includes('معرف المنتج:')) {
-                        const match = line.match(/\d+/);
-                        if (match) productId = parseInt(match[0]);
-                    }
                 });
                 
+                // جلب الصورة
                 let mediaUrl = null;
                 let images = [];
                 
@@ -510,8 +548,8 @@ async function fetchProductsFromTelegram() {
                 
                 if (mediaUrl) {
                     telegramProducts.push({
-                        id: productId,
-                        telegramId: post.message_id,
+                        id: telegramId,
+                        telegramId: telegramId,
                         name: name,
                         price: price || 1000,
                         category: category,
@@ -529,26 +567,24 @@ async function fetchProductsFromTelegram() {
             }
         }
         
-        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام`);
-        
-        // ✅ دمج المنتجات: الاحتفاظ بالقديمة وإضافة الجديدة فقط
-        const mergedProducts = [...oldProducts];
+        // دمج المنتجات: الحفاظ على المنتجات المحلية وإضافة الجديدة
+        const mergedProducts = [...localProducts];
         
         for (const newProduct of telegramProducts) {
             const exists = mergedProducts.some(p => p.id === newProduct.id);
             if (!exists) {
                 mergedProducts.push(newProduct);
-                console.log(`➕ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
+                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
             }
         }
         
-        // ✅ حفظ المنتجات المدمجة
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام، إجمالي: ${mergedProducts.length}`);
+        
+        // حفظ في localStorage
         localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
         
         products = mergedProducts;
         displayProducts();
-        
-        console.log(`📦 إجمالي المنتجات: ${products.length}`);
         
         return mergedProducts;
         
@@ -833,6 +869,7 @@ async function checkoutCart() {
         total: total
     };
 
+    // إرسال الطلب إلى تلغرام
     const message = `🟢 *طلب جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
 👤 *الزبون:* ${order.customerName}
@@ -851,6 +888,23 @@ ${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity}
             text: message,
             parse_mode: 'Markdown'
         })
+    });
+
+    // إرسال للتجار عبر واتساب
+    const merchants = {};
+    cart.forEach(item => {
+        const merchant = users.find(u => u.name === item.merchantName || u.storeName === item.merchantName);
+        if (merchant?.phone) {
+            if (!merchants[merchant.phone]) {
+                merchants[merchant.phone] = [];
+            }
+            merchants[merchant.phone].push(item);
+        }
+    });
+
+    Object.entries(merchants).forEach(([phone, items]) => {
+        const msg = `🛍️ لديك طلب جديد من ${order.customerName}: ${items.map(i => i.name).join('، ')}`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
     });
 
     cart = [];
@@ -1093,12 +1147,6 @@ function updateUIBasedOnRole() {
             addBtn.innerHTML = '<i class="fas fa-plus-circle"></i><span>إضافة منتج</span>';
             navMenu.appendChild(addBtn);
         }
-        
-        const dashboardSection = document.getElementById('dashboardSection');
-        if (dashboardSection) {
-            dashboardSection.style.display = 'block';
-            showDashboardOverview();
-        }
     } 
     else if (currentUser.role === 'merchant_approved') {
         showMerchantPanel();
@@ -1233,12 +1281,12 @@ function showAddProductModal() {
     }
 }
 
-// ===== [4.41] البحث عن منتج بالمعرف =====
+// ===== [4.41] البحث عن منتج بالمعرف (معرف تلغرام) =====
 function findProductById() {
-    const id = prompt('🔍 أدخل معرف المنتج:');
+    const id = prompt('🔍 أدخل معرف المنتج (من تلغرام):');
     if (!id) return;
     
-    const product = products.find(p => p.id == id);
+    const product = products.find(p => p.id == id || p.telegramId == id);
     
     if (product) {
         alert(`
@@ -1753,4 +1801,5 @@ window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
 
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
+
 
