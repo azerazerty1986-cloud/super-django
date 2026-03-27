@@ -3,42 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختبار جلب فيديوهات القناة</title>
+    <title>تجربة ألبومات الريلز</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Cairo', sans-serif;
-            background: #0a1a15;
+            background: linear-gradient(135deg, #0a1a15, #1a2f28);
             color: white;
             padding: 20px;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .card {
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 10px 0;
-            border: 1px solid gold;
-        }
-        .video-item {
-            background: rgba(0,0,0,0.5);
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
-        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: gold; text-align: center; margin-bottom: 20px; }
+        
         .album {
-            background: rgba(255,215,0,0.1);
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 10px;
-            border-right: 3px solid gold;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+        .album-header {
+            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .album-header:hover {
+            background: rgba(255,215,0,0.15);
         }
         .album-title {
-            color: gold;
             font-size: 18px;
-            margin-bottom: 10px;
+            font-weight: bold;
+            color: gold;
+        }
+        .album-count {
+            background: rgba(255,215,0,0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .album-icon {
+            transition: transform 0.3s;
+        }
+        .album-icon.open {
+            transform: rotate(180deg);
+        }
+        .album-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        .album-content.open {
+            max-height: 2000px;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+        .video-card {
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(255,215,0,0.3);
+        }
+        .video-thumb {
+            height: 120px;
+            background: linear-gradient(135deg, #1a472a, #0a2a1a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-thumb i {
+            font-size: 40px;
+            color: gold;
+        }
+        .video-info {
+            padding: 10px;
+        }
+        .video-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .video-id {
+            font-size: 10px;
+            color: #aaa;
+            font-family: monospace;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: gold;
         }
         button {
             background: gold;
@@ -48,13 +117,16 @@
             border-radius: 25px;
             cursor: pointer;
             margin: 5px;
+            font-weight: bold;
         }
         .log {
-            background: #000;
-            padding: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 15px;
             font-family: monospace;
             font-size: 12px;
-            height: 300px;
+            margin-top: 20px;
+            max-height: 200px;
             overflow-y: auto;
         }
         .success { color: #4ade80; }
@@ -64,24 +136,26 @@
 </head>
 <body>
     <div class="container">
-        <h1 style="color: gold;">🧪 اختبار جلب فيديوهات القناة</h1>
+        <h1>🎬 تجربة ألبومات الريلز</h1>
         
-        <div class="card">
-            <button onclick="testFetch()">🔍 اختبار جلب الفيديوهات</button>
-            <button onclick="clearLog()">🗑️ مسح السجل</button>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="fetchAndDisplay()">📡 جلب من القناة</button>
+            <button onclick="clearAlbums()">🗑️ مسح</button>
         </div>
         
-        <div id="results"></div>
+        <div id="albumsContainer"></div>
         
-        <div class="card">
-            <h3>📋 سجل الأحداث</h3>
-            <div id="log" class="log"></div>
+        <div id="log" class="log">
+            <div class="info">📋 جاهز... اضغط "جلب من القناة"</div>
         </div>
     </div>
 
     <script>
         const BOT_TOKEN = '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4';
-        const CHANNEL_ID = '-1003822964890';
+        const API_URL = 'https://api.telegram.org/bot';
+        
+        let allVideos = [];
+        let albums = [];
         
         function addLog(message, type = 'info') {
             const logDiv = document.getElementById('log');
@@ -93,41 +167,39 @@
         }
         
         function clearLog() {
-            document.getElementById('log').innerHTML = '';
-            document.getElementById('results').innerHTML = '';
-            addLog('🗑️ تم مسح السجل', 'info');
+            document.getElementById('log').innerHTML = '<div class="info">📋 جاهز...</div>';
         }
         
-        async function testFetch() {
-            addLog('🚀 بدء اختبار جلب الفيديوهات...', 'info');
-            addLog(`🤖 البوت: ${BOT_TOKEN.substring(0, 20)}...`, 'info');
-            addLog(`📡 القناة: ${CHANNEL_ID}`, 'info');
-            
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<div class="card">⏳ جاري التحميل...</div>';
+        function clearAlbums() {
+            document.getElementById('albumsContainer').innerHTML = '';
+            addLog('🗑️ تم مسح الألبومات', 'info');
+        }
+        
+        async function fetchAndDisplay() {
+            addLog('🚀 بدء جلب الفيديوهات من القناة...', 'info');
+            document.getElementById('albumsContainer').innerHTML = '<div class="loading">⏳ جاري التحميل...</div>';
             
             try {
+                const url = `${API_URL}${BOT_TOKEN}/getUpdates?limit=200`;
+                addLog(`📡 إرسال طلب إلى تلغرام...`, 'info');
+                
                 const startTime = Date.now();
-                
-                // جلب آخر 200 منشور
-                const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?limit=200`;
-                addLog(`📡 إرسال طلب إلى: ${url.substring(0, 60)}...`, 'info');
-                
                 const response = await fetch(url);
                 const data = await response.json();
-                
                 const elapsed = Date.now() - startTime;
+                
                 addLog(`⏱️ استغرق الطلب: ${elapsed}ms`, 'info');
                 
                 if (!data.ok) {
-                    addLog(`❌ فشل الاتصال: ${data.description}`, 'error');
-                    resultsDiv.innerHTML = `<div class="card error">❌ فشل الاتصال: ${data.description}</div>`;
+                    addLog(`❌ فشل: ${data.description}`, 'error');
+                    document.getElementById('albumsContainer').innerHTML = `<div class="loading error">❌ فشل الاتصال</div>`;
                     return;
                 }
                 
                 addLog(`✅ الاتصال ناجح`, 'success');
                 addLog(`📊 عدد التحديثات: ${data.result?.length || 0}`, 'info');
                 
+                // استخراج الفيديوهات
                 const videos = [];
                 
                 if (data.ok && data.result) {
@@ -136,99 +208,112 @@
                     for (const update of updates) {
                         const post = update.channel_post || update.message;
                         if (post && post.video) {
+                            const caption = post.caption || '';
+                            let title = '🎬 ريلز';
+                            const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
+                            if (titleMatch) title = titleMatch[1];
+                            
                             videos.push({
                                 id: post.message_id,
-                                date: post.date,
-                                caption: post.caption || '',
-                                video: post.video
+                                title: title,
+                                date: new Date(post.date * 1000).toISOString(),
+                                videoId: post.video.file_id
                             });
                         }
                     }
                 }
                 
-                addLog(`🎬 عدد الفيديوهات الموجودة: ${videos.length}`, videos.length > 0 ? 'success' : 'error');
+                allVideos = videos;
+                addLog(`🎬 تم العثور على ${videos.length} فيديو`, videos.length > 0 ? 'success' : 'error');
                 
                 if (videos.length === 0) {
-                    addLog(`❌ لا توجد فيديوهات في القناة!`, 'error');
-                    addLog(`🔍 تأكد من:`, 'info');
-                    addLog(`   1. البوت مشرف في القناة`, 'info');
-                    addLog(`   2. هناك فيديوهات في القناة`, 'info');
-                    addLog(`   3. المعرفات صحيحة`, 'info');
-                    
-                    resultsDiv.innerHTML = `
-                        <div class="card error">
-                            <h3>❌ لا توجد فيديوهات!</h3>
-                            <p>لم يتم العثور على أي فيديوهات في القناة.</p>
-                            <p>تأكد من:</p>
-                            <ul>
-                                <li>البوت مشرف في القناة</li>
-                                <li>هناك فيديوهات مرفوعة في القناة</li>
-                                <li>معرف البوت والقناة صحيح</li>
-                            </ul>
+                    document.getElementById('albumsContainer').innerHTML = `
+                        <div class="loading">
+                            <i class="fas fa-film" style="font-size: 50px; color: gold;"></i>
+                            <p>لا توجد فيديوهات في القناة</p>
+                            <p style="font-size: 12px;">تأكد من أن البوت مشرف في القناة</p>
                         </div>
                     `;
                     return;
                 }
                 
-                // عرض أول 10 فيديوهات
-                addLog(`📹 عرض أول 10 فيديوهات:`, 'success');
-                
-                let videosHtml = '<div class="card"><h3>🎬 الفيديوهات الموجودة</h3>';
-                videos.slice(0, 10).forEach((v, i) => {
-                    videosHtml += `
-                        <div class="video-item">
-                            <strong>${i + 1}.</strong> ID: ${v.id}<br>
-                            📅 ${new Date(v.date * 1000).toLocaleString()}<br>
-                            📝 ${v.caption?.substring(0, 100) || 'بدون نص'}...
-                        </div>
-                    `;
-                });
-                videosHtml += `</div>`;
-                
                 // تقسيم إلى ألبومات (كل 10 فيديوهات)
-                const albums = [];
+                albums = [];
                 for (let i = 0; i < videos.length; i += 10) {
                     albums.push(videos.slice(i, i + 10));
                 }
                 
-                let albumsHtml = '<div class="card"><h3>📀 الألبومات (كل 10 فيديوهات)</h3>';
-                albums.forEach((album, idx) => {
-                    albumsHtml += `
-                        <div class="album">
-                            <div class="album-title">📀 ألبوم ${idx + 1} (${album.length} فيديو)</div>
-                            <div>المعرفات: ${album.map(v => v.id).join(', ')}</div>
-                            <button onclick="viewAlbum(${idx})">عرض الألبوم</button>
-                        </div>
-                    `;
-                });
-                albumsHtml += `</div>`;
+                addLog(`📀 تم تقسيم إلى ${albums.length} ألبوم (كل ألبوم 10 فيديوهات)`, 'success');
                 
-                resultsDiv.innerHTML = videosHtml + albumsHtml;
-                
-                addLog(`✅ تم العثور على ${videos.length} فيديو`, 'success');
-                addLog(`📀 تم تقسيمها إلى ${albums.length} ألبوم`, 'success');
-                
-                // حفظ البيانات في localStorage للتجربة
-                localStorage.setItem('test_videos', JSON.stringify(videos));
-                localStorage.setItem('test_albums', JSON.stringify(albums));
+                // عرض الألبومات
+                displayAlbums();
                 
             } catch (error) {
                 addLog(`❌ خطأ: ${error.message}`, 'error');
-                resultsDiv.innerHTML = `<div class="card error">❌ خطأ: ${error.message}</div>`;
+                document.getElementById('albumsContainer').innerHTML = `<div class="loading error">❌ خطأ: ${error.message}</div>`;
             }
         }
         
-        function viewAlbum(albumIndex) {
-            const albums = JSON.parse(localStorage.getItem('test_albums') || '[]');
-            const album = albums[albumIndex];
-            if (!album) return;
+        function displayAlbums() {
+            const container = document.getElementById('albumsContainer');
             
-            alert(`📀 ألبوم ${albumIndex + 1}\n\nالفيديوهات:\n${album.map(v => `ID: ${v.id}\n📅 ${new Date(v.date * 1000).toLocaleString()}`).join('\n\n')}`);
+            if (albums.length === 0) {
+                container.innerHTML = '<div class="loading">لا توجد ألبومات</div>';
+                return;
+            }
+            
+            container.innerHTML = albums.map((album, index) => `
+                <div class="album">
+                    <div class="album-header" onclick="toggleAlbum(${index})">
+                        <div>
+                            <span class="album-title">📀 ألبوم ${index + 1}</span>
+                            <span class="album-count">${album.length} فيديو</span>
+                        </div>
+                        <i class="fas fa-chevron-down album-icon" id="icon-${index}"></i>
+                    </div>
+                    <div class="album-content" id="album-${index}">
+                        <div class="video-grid">
+                            ${album.map(video => `
+                                <div class="video-card" onclick="showVideoInfo(${video.id})">
+                                    <div class="video-thumb">
+                                        <i class="fas fa-play-circle"></i>
+                                    </div>
+                                    <div class="video-info">
+                                        <div class="video-title">${video.title}</div>
+                                        <div class="video-id">ID: ${video.id}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
         
-        // تشغيل تلقائي عند فتح الصفحة
+        function toggleAlbum(index) {
+            const content = document.getElementById(`album-${index}`);
+            const icon = document.getElementById(`icon-${index}`);
+            
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                icon.classList.remove('open');
+            } else {
+                content.classList.add('open');
+                icon.classList.add('open');
+            }
+        }
+        
+        function showVideoInfo(videoId) {
+            const video = allVideos.find(v => v.id == videoId);
+            if (video) {
+                addLog(`🎬 فيديو ID: ${video.id} - ${video.title}`, 'success');
+                alert(`🎬 ${video.title}\n🆔 ID: ${video.id}\n📅 ${new Date(video.date).toLocaleString()}`);
+            }
+        }
+        
+        // تشغيل تلقائي
         setTimeout(() => {
-            testFetch();
+            fetchAndDisplay();
         }, 500);
     </script>
 </body>
