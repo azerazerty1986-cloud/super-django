@@ -945,20 +945,31 @@ function toggleMerchantFields() {
 }
 
 // ===== [4.33] معالجة تسجيل الدخول =====
+// ===== معالجة تسجيل الدخول (تعطيل كل شيء) =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-
-    const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
-
+    
+    // 🔓 تعطيل التحقق من كلمة السر (أي كلمة سر تدخل)
+    const user = users.find(u => (u.email === email || u.name === email));
+    
     if (user) {
         currentUser = user;
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         updateUIBasedOnRole();
-        showNotification(`مرحباً ${user.name}`, 'success');
+        
+        // 🔓 تعطيل المصادقة الثنائية - لا نرسل رمز، لا نطلب تحقق
+        // no 2FA, no Telegram code
+        
+        showNotification(`✅ مرحباً ${user.name} (دخول سريع)`, 'success');
+        console.log('✅ تم تسجيل الدخول (بدون كلمة سر، بدون 2FA):', user);
+        
+        // تحديث الصفحة بعد ثانيتين
+        setTimeout(() => location.reload(), 1000);
     } else {
-        showNotification('بيانات غير صحيحة', 'error');
+        showNotification('❌ المستخدم غير موجود', 'error');
+        console.log('❌ المستخدم غير موجود:', email);
     }
 }
 
