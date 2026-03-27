@@ -415,17 +415,15 @@ async function loadReelsFromTelegram() {
         
         // ========== جلب جميع الريلز من قناة تليجرام ==========
         
-        // ========== جلب جميع الريلز من قناة تليجرام (مع دمج البيانات) ==========
+        // ========== جلب الريلز من القناة مباشرة وعرضها فوراً ==========
 async function loadReelsFromTelegram() {
     if (isLoading) return;
     isLoading = true;
     
-    showLoadingOverlay(true, "🔄 جاري تحميل الريلز...");
+    showLoadingOverlay(true, "🔄 جاري تحميل الريلز من القناة...");
     
     try {
-        // ✅ حفظ الريلز القديمة قبل الجلب
-        const oldReels = [...reelsCache];
-        
+        // ✅ جلب مباشر من القناة (بدون انتظار cache)
         const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
         const response = await fetch(url);
         const data = await response.json();
@@ -467,72 +465,71 @@ async function loadReelsFromTelegram() {
             }
         }
         
-        // ✅ دمج الريلز: الاحتفاظ بالقديمة وإضافة الجديدة فقط
+        // ✅ دمج مع القديم (إذا كان موجوداً)
+        const oldReels = [...reelsCache];
         const mergedReels = [...oldReels];
         
         for (const newReel of newReels) {
             const exists = mergedReels.some(r => r.id === newReel.id);
             if (!exists) {
                 mergedReels.push(newReel);
-                console.log(`➕ ريلز جديد: ${newReel.title} (ID: ${newReel.id})`);
+                console.log(`➕ ريلز جديد من القناة: ${newReel.title}`);
             }
         }
         
-        // ✅ حفظ الريلز المدمجة (بدلاً من الاستبدال)
+        // ✅ عرض فوري للنتائج
         if (mergedReels.length > 0) {
             reelsCache = mergedReels;
             localStorage.setItem('nardoo_reels_cache', JSON.stringify(mergedReels));
             displayAllReels();
             updateStats();
-            showNotification(`📹 ${reelsCache.length} ريلز متاحة`, 'success');
-        } else {
-            const cached = localStorage.getItem('nardoo_reels_cache');
-            if (cached && JSON.parse(cached).length > 0) {
-                reelsCache = JSON.parse(cached);
-                displayAllReels();
-                updateStats();
-            } else {
-                reelsCache = [
-                    {
-                        id: 1001,
-                        title: '🎬 مرحباً بك في ناردو ريلز',
-                        videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-                        publisher: 'النظام',
-                        views: 0,
-                        likes: 0,
-                        createdAt: new Date().toISOString()
-                    },
-                    {
-                        id: 1002,
-                        title: '✨ قم برفع أول ريلز خاص بك',
-                        videoUrl: 'https://www.w3schools.com/html/movie.mp4',
-                        publisher: 'النظام',
-                        views: 0,
-                        likes: 0,
-                        createdAt: new Date().toISOString()
-                    }
-                ];
-                localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
-                displayAllReels();
-                updateStats();
-            }
+            showNotification(`📹 ${reelsCache.length} ريلز (من القناة + المخزنة)`, 'success');
+        } else if (newReels.length === 0 && mergedReels.length === 0) {
+            // إذا لم توجد ريلز في القناة ولا في cache
+            reelsCache = [
+                {
+                    id: 1001,
+                    title: '🎬 مرحباً بك في ناردو ريلز',
+                    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
+                    publisher: 'النظام',
+                    views: 0,
+                    likes: 0,
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 1002,
+                    title: '✨ قم برفع أول ريلز خاص بك',
+                    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+                    publisher: 'النظام',
+                    views: 0,
+                    likes: 0,
+                    createdAt: new Date().toISOString()
+                }
+            ];
+            localStorage.setItem('nardoo_reels_cache', JSON.stringify(reelsCache));
+            displayAllReels();
+            updateStats();
+            showNotification('📹 لا توجد ريلز في القناة، عرض تجريبي', 'info');
         }
         
     } catch (error) {
-        console.error('❌ خطأ:', error);
+        console.error('❌ خطأ في جلب القناة:', error);
+        
+        // إذا فشل الاتصال، استخدم المخزنة
         const cached = localStorage.getItem('nardoo_reels_cache');
-        if (cached) {
+        if (cached && JSON.parse(cached).length > 0) {
             reelsCache = JSON.parse(cached);
             displayAllReels();
             updateStats();
             showNotification(`⚠️ فشل الاتصال، عرض ${reelsCache.length} ريلز مخزنة`, 'warning');
         } else {
-            showNotification('❌ فشل الاتصال بتليجرام', 'error');
+            showNotification('❌ فشل الاتصال بتليجرام ولا توجد ريلز مخزنة', 'error');
         }
     } finally {
         isLoading = false;
         showLoadingOverlay(false);
     }
+}
 }
         // ========== رفع ريلز جديد ==========
         async function uploadReelToTelegram() {
