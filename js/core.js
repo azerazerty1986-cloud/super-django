@@ -8,7 +8,7 @@ const CONFIG = {
     version: '3.0.0',
     
     telegram: {
-        botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw-8Shw',
+        botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
         channelId: '-1003822964890',
         adminId: '7461896689',
         apiUrl: 'https://api.telegram.org/bot'
@@ -50,12 +50,12 @@ const SecuritySystem = {
             Utils.save('nardoo_users', users);
             if (window.Telegram) {
                 Telegram.sendMessage(`
-🔒 *حساب مقفل*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 المستخدم: ${user.name}
-🆔 المعرف: ${user.userId}
-⚠️ السبب: 5 محاولات دخول فاشلة
-⏰ مقفل حتى: ${new Date(user.lockedUntil).toLocaleString('ar-EG')}
+?? *حساب مقفل*
+??????????????????????
+?? المستخدم: ${user.name}
+?? المعرف: ${user.userId}
+?? السبب: 5 محاولات دخول فاشلة
+? مقفل حتى: ${new Date(user.lockedUntil).toLocaleString('ar-EG')}
                 `);
             }
         }
@@ -150,8 +150,8 @@ const IDSystem = {
         content_creator: 4000,
         customer: 5000,
         product: 1,
-        order: 1
-        // تم حذف reel: 1
+        order: 1,
+        reel: 1
     },
     
     prefixes: {
@@ -162,7 +162,6 @@ const IDSystem = {
         content_creator: 'CRE',
         customer: 'CUS',
         product: 'PRD'
-        // تم حذف reel: 'REL'
     },
     
     loadCounters() {
@@ -252,7 +251,7 @@ const FingerprintSystem = {
     
     init() {
         this.fingerprint = this.generate();
-        console.log('🆔 بصمة الجهاز:', this.fingerprint);
+        console.log('?? بصمة الجهاز:', this.fingerprint);
     }
 };
 
@@ -280,10 +279,10 @@ const Utils = {
         const cleanMessage = SecuritySystem.sanitize(message);
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        let icon = '✅';
-        if (type === 'error') icon = '❌';
-        else if (type === 'warning') icon = '⚠️';
-        else if (type === 'info') icon = 'ℹ️';
+        let icon = '?';
+        if (type === 'error') icon = '?';
+        else if (type === 'warning') icon = '??';
+        else if (type === 'info') icon = '??';
         toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle"></i> ${icon} ${cleanMessage}`;
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
@@ -346,22 +345,22 @@ const TelegramAuth = {
         Utils.save('telegram_verifications', this.pendingVerifications);
         
         const message = `
-🔐 *رمز التحقق - ناردو برو*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 المستخدم: ${userName}
-🆔 المعرف: ${userId}
-📞 الهاتف: ${userPhone || 'غير محدد'}
+?? *رمز التحقق - ناردو برو*
+??????????????????????
+?? المستخدم: ${userName}
+?? المعرف: ${userId}
+?? الهاتف: ${userPhone || 'غير محدد'}
 
-📱 *رمز التحقق الخاص بك:*
+?? *رمز التحقق الخاص بك:*
 
 \`\`\`
 ${code}
 \`\`\`
 
-⏰ *صالح لمدة: 5 دقائق*
-⚠️ لا تشارك هذا الرمز مع أي شخص
+? *صالح لمدة: 5 دقائق*
+?? لا تشارك هذا الرمز مع أي شخص
 
-🕐 ${new Date().toLocaleString('ar-EG')}
+?? ${new Date().toLocaleString('ar-EG')}
         `;
         
         try {
@@ -376,12 +375,12 @@ ${code}
             });
             const data = await response.json();
             if (data.ok) {
-                console.log(`✅ تم إرسال رمز التحقق للمستخدم ${userName}`);
+                console.log(`? تم إرسال رمز التحقق للمستخدم ${userName}`);
                 return { success: true, messageId: data.result.message_id };
             }
             return { success: false, error: data.description };
         } catch(error) {
-            console.error('❌ خطأ في الإرسال:', error);
+            console.error('? خطأ في الإرسال:', error);
             return { success: false, error: error.message };
         }
     },
@@ -411,7 +410,7 @@ ${code}
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     chat_id: CONFIG.telegram.channelId,
-                    text: `✅ *تم التحقق بنجاح*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 المستخدم: ${userId}\n🕐 ${new Date().toLocaleString('ar-EG')}`,
+                    text: `? *تم التحقق بنجاح*\n??????????????????????\n?? المستخدم: ${userId}\n?? ${new Date().toLocaleString('ar-EG')}`,
                     parse_mode: 'Markdown'
                 })
             });
@@ -441,29 +440,50 @@ ${code}
     }
 };
 
-// ===== [1.7] نظام البيانات الموحدة (المنتجات فقط) =====
+// ===== [1.7] تهيئة الأنظمة =====
+window.CONFIG = CONFIG;
+window.Security = SecuritySystem;
+window.IDSystem = IDSystem;
+window.Fingerprint = FingerprintSystem;
+window.Utils = Utils;
+window.TelegramAuth = TelegramAuth;
+
+SecuritySystem.generateCSRFToken();
+Fingerprint.init();
+IDSystem.loadCounters();
+TelegramAuth.loadPendingVerifications();
+setInterval(() => TelegramAuth.cleanupExpiredCodes(), 60000);
+
+// ===== نظام البيانات الموحدة (GlobalData) =====
 const GlobalData = {
     products: null,
+    reels: null,
     lastFetch: 0,
     fetching: false,
     
     // تحميل فوري من sessionStorage
     loadFromSession() {
         const savedProducts = sessionStorage.getItem('global_products');
+        const savedReels = sessionStorage.getItem('global_reels');
         
         if (savedProducts) {
             this.products = JSON.parse(savedProducts);
-            console.log(`📦 تحميل فوري: ${this.products.length} منتج`);
+            console.log(`?? تحميل فوري: ${this.products.length} منتج`);
         }
         
-        return { products: this.products };
+        if (savedReels) {
+            this.reels = JSON.parse(savedReels);
+            console.log(`?? تحميل فوري: ${this.reels.length} ريلز`);
+        }
+        
+        return { products: this.products, reels: this.reels };
     },
     
-    // جلب المنتجات من تلغرام
+    // جلب الكل من تلغرام
     async fetchAll() {
         if (this.fetching) {
             while (this.fetching) await new Promise(r => setTimeout(r, 100));
-            return { products: this.products };
+            return { products: this.products, reels: this.reels };
         }
         
         this.fetching = true;
@@ -474,6 +494,7 @@ const GlobalData = {
             const data = await response.json();
             
             const products = [];
+            const reels = [];
             
             for (const update of (data.result || []).reverse()) {
                 const post = update.channel_post || update.message;
@@ -481,8 +502,8 @@ const GlobalData = {
                 
                 const text = post.caption || '';
                 
-                // المنتجات فقط
-                if (post.photo && (text.includes('🟣') || text.includes('منتج'))) {
+                // المنتجات
+                if (post.photo && (text.includes('??') || text.includes('منتج'))) {
                     let name = 'منتج', price = 1000, merchant = 'المتجر';
                     const lines = text.split('\n');
                     for (let line of lines) {
@@ -512,20 +533,50 @@ const GlobalData = {
                         createdAt: new Date(post.date * 1000).toISOString()
                     });
                 }
+                
+                // الريلز
+                else if (post.video) {
+                    let title = 'ريلز', publisher = 'ناردو برو';
+                    const lines = text.split('\n');
+                    for (let line of lines) {
+                        if (line.includes('??')) title = line.replace('??', '').trim() || title;
+                        if (line.includes('??')) publisher = line.replace('??', '').trim() || publisher;
+                    }
+                    
+                    let videoUrl = null;
+                    if (post.video) {
+                        const fileRes = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/getFile?file_id=${post.video.file_id}`);
+                        const fileData = await fileRes.json();
+                        if (fileData.ok) {
+                            videoUrl = `https://api.telegram.org/file/bot${CONFIG.telegram.botToken}/${fileData.result.file_path}`;
+                        }
+                    }
+                    
+                    reels.push({
+                        id: post.message_id,
+                        title: SecuritySystem.sanitize(title),
+                        videoUrl: videoUrl,
+                        publisher: SecuritySystem.sanitize(publisher),
+                        serialNumber: text.match(/NARD-[A-Z0-9-]+/i)?.[0] || null,
+                        date: new Date(post.date * 1000).toISOString()
+                    });
+                }
             }
             
             this.products = products;
+            this.reels = reels;
             this.lastFetch = Date.now();
             
             // حفظ في sessionStorage
             sessionStorage.setItem('global_products', JSON.stringify(products));
+            sessionStorage.setItem('global_reels', JSON.stringify(reels));
             
-            console.log(`✅ جلب جديد: ${products.length} منتج`);
-            return { products };
+            console.log(`? جلب جديد: ${products.length} منتج, ${reels.length} ريلز`);
+            return { products, reels };
             
         } catch(error) {
-            console.error('❌ خطأ في الجلب:', error);
-            return { products: this.products || [] };
+            console.error('? خطأ في الجلب:', error);
+            return { products: this.products || [], reels: this.reels || [] };
         } finally {
             this.fetching = false;
         }
@@ -551,28 +602,35 @@ const GlobalData = {
         return this.products || [];
     },
     
+    // الحصول على الريلز (مع عرض فوري)
+    async getReels() {
+        if (this.reels) {
+            return this.reels;
+        }
+        
+        const saved = sessionStorage.getItem('global_reels');
+        if (saved) {
+            this.reels = JSON.parse(saved);
+            return this.reels;
+        }
+        
+        if (!this.fetching) {
+            this.fetchAll();
+        }
+        
+        await new Promise(r => setTimeout(r, 500));
+        return this.reels || [];
+    },
+    
     // تحديث يدوي
     async refresh() {
         sessionStorage.removeItem('global_products');
+        sessionStorage.removeItem('global_reels');
         this.products = null;
+        this.reels = null;
         return await this.fetchAll();
     }
 };
-
-// ===== [1.8] تهيئة الأنظمة =====
-window.CONFIG = CONFIG;
-window.Security = SecuritySystem;
-window.IDSystem = IDSystem;
-window.Fingerprint = FingerprintSystem;
-window.Utils = Utils;
-window.TelegramAuth = TelegramAuth;
-window.GlobalData = GlobalData;
-
-SecuritySystem.generateCSRFToken();
-Fingerprint.init();
-IDSystem.loadCounters();
-TelegramAuth.loadPendingVerifications();
-setInterval(() => TelegramAuth.cleanupExpiredCodes(), 60000);
 
 // تهيئة فورية
 GlobalData.loadFromSession();
@@ -582,6 +640,10 @@ window.addEventListener('beforeunload', () => {
     if (GlobalData.products) {
         sessionStorage.setItem('global_products', JSON.stringify(GlobalData.products));
     }
+    if (GlobalData.reels) {
+        sessionStorage.setItem('global_reels', JSON.stringify(GlobalData.reels));
+    }
 });
 
-console.log('✅ نظام الأمان والتوثيق جاهز (نسخة المنتجات فقط)');
+window.GlobalData = GlobalData;
+console.log('? نظام الأمان والتوثيق جاهز');
