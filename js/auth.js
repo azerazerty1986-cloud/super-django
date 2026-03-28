@@ -32,25 +32,37 @@ const Auth = {
                 storeName: 'متجر التجريبي',
                 merchantLevel: '2',
                 createdAt: new Date().toISOString()
+            },
+            {
+                id: 3,
+                userId: 'CUS_5001',
+                name: 'مستخدم عادي',
+                email: 'user@example.com',
+                password: 'user123',
+                role: 'customer',
+                status: 'approved',
+                phone: '0777777777',
+                createdAt: new Date().toISOString()
             }
         ];
     },
     
+    // تهيئة النظام
     init() {
         this.loadUsers();
         this.loadCurrentUser();
         console.log('🔐 نظام المصادقة جاهز');
     },
     
+    // تحميل المستخدمين من localStorage
     loadUsers() {
         this.users = Utils.load('nardoo_users', this.getDefaultUsers());
         
-        // تحديث المستخدمين القدامى
+        // تحديث المستخدمين القدامى (إضافة userId إذا لم يكن موجوداً)
         let needsUpdate = false;
         this.users.forEach(user => {
-            if (user.password && !user.passwordHash) {
-                user.passwordHash = this.hashPassword(user.password);
-                delete user.password;
+            if (!user.userId) {
+                user.userId = IDSystem.generateUserId(user.role);
                 needsUpdate = true;
             }
         });
@@ -60,10 +72,12 @@ const Auth = {
         }
     },
     
+    // حفظ المستخدمين
     saveUsers() {
         Utils.save('nardoo_users', this.users);
     },
     
+    // تحميل المستخدم الحالي
     loadCurrentUser() {
         const saved = Utils.load('current_user');
         if (saved) {
@@ -71,6 +85,7 @@ const Auth = {
         }
     },
     
+    // حفظ المستخدم الحالي
     saveCurrentUser() {
         if (this.currentUser) {
             Utils.save('current_user', this.currentUser);
@@ -79,33 +94,21 @@ const Auth = {
         }
     },
     
-    // تشفير بسيط (اختياري)
-    hashPassword(password) {
-        let hash = 0;
-        for (let i = 0; i < password.length; i++) {
-            const char = password.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return hash.toString(16);
-    },
-    
     // تسجيل الدخول
     login(username, password) {
-        const cleanUsername = username;
-        
+        // البحث عن المستخدم
         const user = this.users.find(u => 
-            (u.email === cleanUsername || u.name === cleanUsername) && 
-            (u.password === password || u.passwordHash === this.hashPassword(password))
+            (u.email === username || u.name === username) && 
+            (u.password === password)
         );
         
         if (!user) {
-            return { success: false, message: 'بيانات غير صحيحة' };
+            return { success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' };
         }
         
         // التحقق من حالة المستخدم
         if (user.status === 'pending') {
-            return { success: false, message: 'طلب التسجيل قيد المراجعة' };
+            return { success: false, message: 'طلب التسجيل قيد المراجعة من قبل المدير' };
         }
         
         if (user.status === 'rejected') {
@@ -123,13 +126,18 @@ const Auth = {
     register(userData) {
         const { name, email, password, phone, role, ...roleData } = userData;
         
+        // التحقق من المدخلات
+        if (!name || !email || !password) {
+            return { success: false, message: 'الرجاء ملء جميع الحقول المطلوبة' };
+        }
+        
         // التحقق من وجود البريد
         if (this.users.find(u => u.email === email)) {
             return { success: false, message: 'البريد الإلكتروني مستخدم بالفعل' };
         }
         
         // إنشاء معرف فريد
-        const userId = IDSystem.generateUserId(role);
+        const userId = IDSystem.generateUserId(role || 'customer');
         
         // إنشاء المستخدم
         const newUser = {
@@ -140,7 +148,7 @@ const Auth = {
             password: password,
             phone: phone || '',
             role: role || 'customer',
-            status: role !== 'customer' ? 'pending' : 'approved',
+            status: (role && role !== 'customer') ? 'pending' : 'approved',
             ...roleData,
             createdAt: new Date().toISOString()
         };
@@ -148,22 +156,98 @@ const Auth = {
         this.users.push(newUser);
         this.saveUsers();
         
-        // إشعار للمدير (إذا كان هناك طلب دور)
-        if (role !== 'customer' && window.Telegram) {
-            Telegram.sendMessage(`
-📋 *طلب تسجيل جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 المستخدم: ${name}
-🆔 المعرف: ${userId}
-📧 البريد: ${email}
-📞 الهاتف: ${phone}
-📊 الدور المطلوب: ${role}
-🕐 ${new Date().toLocaleString('ar-EG')}
-            `);
-            return { success: true, message: 'تم إرسال طلب التسجيل، سيتم مراجعته من قبل المدير' };
+        // إذا كان طلب دور خاص، إرسال إشعار للمدير
+        if (role && role !== 'customer') {
+            this.notifyAdminNewRequest(newUser);
+            return { 
+                success: true, 
+                message: 'تم إرسال طلب التسجيل، سيتم مراجعته من قبل المدير' 
+            };
         }
         
         return { success: true, message: 'تم التسجيل بنجاح' };
+    },
+    
+    // إشعار المدير بطلب جديد
+    notifyAdminNewRequest(user) {
+        if (window.Telegram) {
+            const roleNames = {
+                'merchant': 'تاجر',
+                'distributor': 'موزع',
+                'delivery': 'مندوب توصيل',
+                'content_creator': 'صانع محتوى'
+            };
+            
+            Telegram.sendMessage(`
+📋 *طلب تسجيل جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 المستخدم: ${user.name}
+🆔 المعرف: ${user.userId}
+📧 البريد: ${user.email}
+📞 الهاتف: ${user.phone || 'غير محدد'}
+📊 الدور المطلوب: ${roleNames[user.role] || user.role}
+📅 ${new Date().toLocaleString('ar-EG')}
+
+✅ للموافقة: /approve_${user.id}
+❌ للرفض: /reject_${user.id}
+            `);
+        }
+    },
+    
+    // الموافقة على طلب تاجر (للمدير)
+    approveRequest(userId) {
+        const user = this.users.find(u => u.id == userId || u.userId == userId);
+        if (!user) return { success: false, message: 'المستخدم غير موجود' };
+        
+        if (user.status === 'approved') {
+            return { success: false, message: 'المستخدم معتمد بالفعل' };
+        }
+        
+        user.status = 'approved';
+        this.saveUsers();
+        
+        // إشعار للمستخدم
+        if (window.Telegram) {
+            Telegram.sendMessage(`
+✅ *تمت الموافقة على طلبك*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 المستخدم: ${user.name}
+🆔 المعرف: ${user.userId}
+📊 الدور: ${user.role}
+🎉 يمكنك الآن الدخول إلى المتجر
+🕐 ${new Date().toLocaleString('ar-EG')}
+            `);
+        }
+        
+        return { success: true, message: 'تمت الموافقة على الطلب' };
+    },
+    
+    // رفض طلب تاجر
+    rejectRequest(userId) {
+        const user = this.users.find(u => u.id == userId || u.userId == userId);
+        if (!user) return { success: false, message: 'المستخدم غير موجود' };
+        
+        user.status = 'rejected';
+        this.saveUsers();
+        
+        // إشعار للمستخدم
+        if (window.Telegram) {
+            Telegram.sendMessage(`
+❌ *تم رفض طلبك*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 المستخدم: ${user.name}
+🆔 المعرف: ${user.userId}
+📊 الدور المطلوب: ${user.role}
+🕐 ${new Date().toLocaleString('ar-EG')}
+            `);
+        }
+        
+        return { success: true, message: 'تم رفض الطلب' };
+    },
+    
+    // الحصول على طلبات التجار المعلقة
+    getPendingRequests() {
+        return this.users.filter(u => u.status === 'pending');
     },
     
     // تسجيل الخروج
@@ -184,12 +268,14 @@ const Auth = {
             if (userBtn) {
                 if (this.currentUser.role === 'admin') {
                     userBtn.innerHTML = '<i class="fas fa-crown"></i>';
-                } else if (this.currentUser.role === 'merchant' || this.currentUser.role === 'merchant_approved') {
+                    userBtn.title = 'المدير - ' + this.currentUser.name;
+                } else if (this.currentUser.role === 'merchant') {
                     userBtn.innerHTML = '<i class="fas fa-store"></i>';
+                    userBtn.title = 'تاجر - ' + this.currentUser.name;
                 } else {
                     userBtn.innerHTML = '<i class="fas fa-user-check"></i>';
+                    userBtn.title = this.currentUser.name;
                 }
-                userBtn.title = this.currentUser.name;
             }
             
             // إظهار زر لوحة التحكم للمدير
@@ -199,6 +285,7 @@ const Auth = {
         } else {
             if (userBtn) {
                 userBtn.innerHTML = '<i class="fas fa-user"></i>';
+                userBtn.title = 'تسجيل الدخول';
             }
             if (dashboardBtn) {
                 dashboardBtn.style.display = 'none';
@@ -214,17 +301,19 @@ const Auth = {
         if (this.currentUser.role === 'admin') return true;
         
         // صلاحيات التاجر
-        if (this.currentUser.role === 'merchant' || this.currentUser.role === 'merchant_approved') {
+        if (this.currentUser.role === 'merchant') {
             const merchantPermissions = [
                 'view_products', 'add_product', 'edit_product', 'delete_product',
-                'view_orders', 'manage_inventory', 'view_sales'
+                'view_orders', 'manage_inventory', 'view_sales', 'view_earnings'
             ];
             return merchantPermissions.includes(permission);
         }
         
         // صلاحيات المستخدم العادي
         if (this.currentUser.role === 'customer') {
-            const customerPermissions = ['view_products', 'place_orders'];
+            const customerPermissions = [
+                'browse_products', 'place_orders', 'track_orders', 'write_reviews'
+            ];
             return customerPermissions.includes(permission);
         }
         
@@ -241,9 +330,35 @@ const Auth = {
         return this.currentUser?.role || 'guest';
     },
     
+    // الحصول على معرف المستخدم
+    getUserId() {
+        return this.currentUser?.userId || null;
+    },
+    
     // التحقق من تسجيل الدخول
     isLoggedIn() {
         return this.currentUser !== null;
+    },
+    
+    // الحصول على جميع المستخدمين (للمدير فقط)
+    getAllUsers() {
+        if (this.currentUser?.role !== 'admin') return [];
+        return this.users;
+    },
+    
+    // حذف مستخدم (للمدير فقط)
+    deleteUser(userId) {
+        if (this.currentUser?.role !== 'admin') return false;
+        
+        const index = this.users.findIndex(u => u.userId === userId || u.id == userId);
+        if (index === -1) return false;
+        
+        // لا يمكن حذف المدير الحالي
+        if (this.users[index].userId === this.currentUser.userId) return false;
+        
+        this.users.splice(index, 1);
+        this.saveUsers();
+        return true;
     }
 };
 
