@@ -1,5 +1,5 @@
 /* ================================================================== */
-/* ===== [01] الملف: 01-core.js - الأساسيات ونظام المعرفات ===== */
+/* ===== [01] الملف: 01-core.js - الأساسيات ===== */
 /* ================================================================== */
 
 // ===== [1.1] إعدادات المشروع =====
@@ -27,147 +27,7 @@ const CONFIG = {
     defaultAvatar: 'https://i.pravatar.cc/150?u='
 };
 
-// ===== [1.2] نظام الأمان =====
-const SecuritySystem = {
-    // تسجيل محاولات الدخول الفاشلة
-    failedAttempts: {},
-    
-    // تسجيل محاولة فاشلة
-    recordFailedAttempt(userId) {
-        this.failedAttempts[userId] = (this.failedAttempts[userId] || 0) + 1;
-        
-        // بعد 5 محاولات فاشلة، قفل الحساب
-        if (this.failedAttempts[userId] >= 5) {
-            this.lockUser(userId);
-        }
-        
-        // حفظ في localStorage
-        Utils.save('failed_attempts', this.failedAttempts);
-    },
-    
-    // إعادة تعيين محاولات الفشل
-    resetFailedAttempts(userId) {
-        delete this.failedAttempts[userId];
-        Utils.save('failed_attempts', this.failedAttempts);
-    },
-    
-    // قفل المستخدم
-    lockUser(userId) {
-        const users = Utils.load('nardoo_users', []);
-        const user = users.find(u => u.userId === userId || u.id == userId);
-        
-        if (user) {
-            user.locked = true;
-            user.lockedUntil = Date.now() + 30 * 60 * 1000; // 30 دقيقة
-            Utils.save('nardoo_users', users);
-            
-            // إشعار للمدير
-            if (window.Telegram) {
-                Telegram.sendMessage(`
-🔒 *حساب مقفل*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 المستخدم: ${user.name}
-🆔 المعرف: ${user.userId}
-⚠️ السبب: 5 محاولات دخول فاشلة
-⏰ مقفل حتى: ${new Date(user.lockedUntil).toLocaleString('ar-EG')}
-                `);
-            }
-        }
-    },
-    
-    // التحقق من قفل المستخدم
-    isUserLocked(user) {
-        if (!user.locked) return false;
-        
-        // إذا انتهى وقت القفل
-        if (user.lockedUntil && Date.now() > user.lockedUntil) {
-            user.locked = false;
-            delete user.lockedUntil;
-            
-            const users = Utils.load('nardoo_users', []);
-            const index = users.findIndex(u => u.userId === user.userId);
-            if (index !== -1) {
-                users[index] = user;
-                Utils.save('nardoo_users', users);
-            }
-            return false;
-        }
-        
-        return true;
-    },
-    
-    // تشفير كلمة المرور (SHA256 بسيط)
-    hashPassword(password) {
-        let hash = 0;
-        for (let i = 0; i < password.length; i++) {
-            const char = password.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return hash.toString(16);
-    },
-    
-    // توليد CSRF Token
-    generateCSRFToken() {
-        const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
-        sessionStorage.setItem('csrf_token', token);
-        return token;
-    },
-    
-    // التحقق من CSRF Token
-    verifyCSRFToken(token) {
-        const savedToken = sessionStorage.getItem('csrf_token');
-        return token === savedToken;
-    },
-    
-    // تنظيف النص من الأكواد الضارة (XSS)
-    sanitize(text) {
-        if (!text) return '';
-        return text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;')
-            .replace(/javascript:/gi, '')
-            .replace(/onclick=/gi, '')
-            .replace(/onerror=/gi, '')
-            .replace(/onload=/gi, '');
-    },
-    
-    // تنظيف HTML بالكامل
-    sanitizeHtml(html) {
-        if (!html) return '';
-        const temp = document.createElement('div');
-        temp.textContent = html;
-        return temp.innerHTML;
-    },
-    
-    // تشفير البيانات (Base64)
-    encrypt(data) {
-        try {
-            return btoa(encodeURIComponent(JSON.stringify(data)));
-        } catch(e) {
-            return null;
-        }
-    },
-    
-    // فك تشفير البيانات
-    decrypt(encrypted) {
-        try {
-            return JSON.parse(decodeURIComponent(atob(encrypted)));
-        } catch(e) {
-            return null;
-        }
-    },
-    
-    // توليد معرف جلسة آمن
-    generateSessionId() {
-        return 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-    }
-};
-
-// ===== [1.3] نظام المعرفات الفريدة =====
+// ===== [1.2] نظام المعرفات الفريدة =====
 const IDSystem = {
     // عدادات لكل نوع
     counters: {
@@ -269,7 +129,7 @@ const IDSystem = {
     }
 };
 
-// ===== [1.4] نظام البصمة الرقمية =====
+// ===== [1.3] نظام البصمة الرقمية =====
 const FingerprintSystem = {
     fingerprint: null,
     
@@ -303,7 +163,7 @@ const FingerprintSystem = {
     }
 };
 
-// ===== [1.5] دوال مساعدة =====
+// ===== [1.4] دوال مساعدة =====
 const Utils = {
     formatNumber(num) {
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -326,9 +186,6 @@ const Utils = {
         const container = document.getElementById('toastContainer');
         if (!container) return;
         
-        // تنظيف الرسالة قبل العرض
-        const cleanMessage = SecuritySystem.sanitize(message);
-        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         
@@ -337,7 +194,7 @@ const Utils = {
         else if (type === 'warning') icon = '⚠️';
         else if (type === 'info') icon = 'ℹ️';
         
-        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle"></i> ${icon} ${cleanMessage}`;
+        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle"></i> ${icon} ${message}`;
         container.appendChild(toast);
         
         setTimeout(() => toast.remove(), 3000);
@@ -388,159 +245,20 @@ const Utils = {
     
     // تنظيف النص للعرض الآمن
     escapeHtml(text) {
-        return SecuritySystem.sanitize(text);
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 };
 
-// ===== [1.6] نظام التوثيق عبر تلغرام =====
-const TelegramAuth = {
-    pendingVerifications: {},
-    
-    // إرسال رمز التحقق للمستخدم عبر القناة
-    async sendVerificationCode(userId, userName, userPhone) {
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = Date.now() + 5 * 60 * 1000; // 5 دقائق
-        
-        this.pendingVerifications[userId] = {
-            code: code,
-            expiresAt: expiresAt,
-            attempts: 0
-        };
-        
-        // حفظ في localStorage
-        Utils.save('telegram_verifications', this.pendingVerifications);
-        
-        // إرسال الرمز إلى القناة
-        const message = `
-🔐 *رمز التحقق - ناردو برو*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 المستخدم: ${userName}
-🆔 المعرف: ${userId}
-📞 الهاتف: ${userPhone || 'غير محدد'}
-
-📱 *رمز التحقق الخاص بك:*
-
-\`\`\`
-${code}
-\`\`\`
-
-⏰ *صالح لمدة: 5 دقائق*
-⚠️ لا تشارك هذا الرمز مع أي شخص
-
-🕐 ${new Date().toLocaleString('ar-EG')}
-        `;
-        
-        try {
-            const response = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CONFIG.telegram.channelId,
-                    text: message,
-                    parse_mode: 'Markdown'
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.ok) {
-                console.log(`✅ تم إرسال رمز التحقق للمستخدم ${userName}`);
-                return { success: true, messageId: data.result.message_id };
-            } else {
-                console.error('❌ فشل إرسال الرمز:', data);
-                return { success: false, error: data.description };
-            }
-        } catch(error) {
-            console.error('❌ خطأ في الإرسال:', error);
-            return { success: false, error: error.message };
-        }
-    },
-    
-    // التحقق من الرمز
-    verifyCode(userId, inputCode) {
-        const verification = this.pendingVerifications[userId];
-        
-        if (!verification) {
-            return { success: false, message: 'لا يوجد طلب تحقق نشط' };
-        }
-        
-        if (Date.now() > verification.expiresAt) {
-            delete this.pendingVerifications[userId];
-            Utils.save('telegram_verifications', this.pendingVerifications);
-            return { success: false, message: 'انتهت صلاحية الرمز، حاول مرة أخرى' };
-        }
-        
-        if (verification.attempts >= 3) {
-            delete this.pendingVerifications[userId];
-            Utils.save('telegram_verifications', this.pendingVerifications);
-            return { success: false, message: 'تجاوزت عدد المحاولات المسموح بها' };
-        }
-        
-        verification.attempts++;
-        Utils.save('telegram_verifications', this.pendingVerifications);
-        
-        if (verification.code === inputCode) {
-            // نجاح التحقق
-            delete this.pendingVerifications[userId];
-            Utils.save('telegram_verifications', this.pendingVerifications);
-            
-            // إرسال تأكيد إلى القناة
-            fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CONFIG.telegram.channelId,
-                    text: `✅ *تم التحقق بنجاح*\n━━━━━━━━━━━━━━━━━━━━━━\n👤 المستخدم: ${userId}\n🕐 ${new Date().toLocaleString('ar-EG')}`,
-                    parse_mode: 'Markdown'
-                })
-            });
-            
-            return { success: true, message: 'تم التحقق بنجاح' };
-        }
-        
-        return { success: false, message: `رمز غير صحيح (${3 - verification.attempts} محاولات متبقية)` };
-    },
-    
-    // تنظيف الرموز المنتهية
-    cleanupExpiredCodes() {
-        const now = Date.now();
-        let changed = false;
-        
-        Object.keys(this.pendingVerifications).forEach(userId => {
-            if (now > this.pendingVerifications[userId].expiresAt) {
-                delete this.pendingVerifications[userId];
-                changed = true;
-            }
-        });
-        
-        if (changed) {
-            Utils.save('telegram_verifications', this.pendingVerifications);
-        }
-    },
-    
-    // تحميل الرموز المعلقة
-    loadPendingVerifications() {
-        const saved = Utils.load('telegram_verifications', {});
-        this.pendingVerifications = saved;
-        this.cleanupExpiredCodes();
-    }
-};
-
-// ===== [1.7] تهيئة الأنظمة =====
+// ===== [1.5] تهيئة الأنظمة =====
 window.CONFIG = CONFIG;
-window.Security = SecuritySystem;
 window.IDSystem = IDSystem;
 window.Fingerprint = FingerprintSystem;
 window.Utils = Utils;
-window.TelegramAuth = TelegramAuth;
 
-// توليد CSRF Token عند التحميل
-SecuritySystem.generateCSRFToken();
 Fingerprint.init();
 IDSystem.loadCounters();
-TelegramAuth.loadPendingVerifications();
 
-// تنظيف الرموز المنتهية كل دقيقة
-setInterval(() => TelegramAuth.cleanupExpiredCodes(), 60000);
-
-console.log('✅ نظام الأمان والتوثيق جاهز');
+console.log('✅ نظام الأساسيات جاهز');
