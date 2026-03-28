@@ -8,7 +8,7 @@ const CONFIG = {
     version: '3.0.0',
     
     telegram: {
-        botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
+        botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw-8Shw',
         channelId: '-1003822964890',
         adminId: '7461896689',
         apiUrl: 'https://api.telegram.org/bot'
