@@ -39,7 +39,7 @@ const Auth = {
     init() {
         this.loadUsers();
         this.loadCurrentUser();
-        console.log('🔐 نظام المصادقة جاهز');
+        console.log('?? نظام المصادقة جاهز');
     },
     
     loadUsers() {
@@ -66,7 +66,7 @@ const Auth = {
         if (saved && !SecuritySystem.isUserLocked(saved)) {
             this.currentUser = saved;
         } else if (saved && SecuritySystem.isUserLocked(saved)) {
-            Utils.showNotification('⚠️ حسابك مقفل مؤقتاً بسبب محاولات دخول فاشلة', 'warning');
+            Utils.showNotification('?? حسابك مقفل مؤقتاً بسبب محاولات دخول فاشلة', 'warning');
             this.currentUser = null;
         }
     },
@@ -166,14 +166,14 @@ const Auth = {
         if (role !== 'customer') {
             if (window.Telegram) {
                 Telegram.sendMessage(`
-📋 *طلب تسجيل جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 المستخدم: ${name}
-🆔 المعرف: ${userId}
-📧 البريد: ${email}
-📞 الهاتف: ${phone}
-📊 الدور المطلوب: ${role}
-🕐 ${new Date().toLocaleString('ar-EG')}
+?? *طلب تسجيل جديد*
+??????????????????????
+?? المستخدم: ${name}
+?? المعرف: ${userId}
+?? البريد: ${email}
+?? الهاتف: ${phone}
+?? الدور المطلوب: ${role}
+?? ${new Date().toLocaleString('ar-EG')}
                 `);
             }
             return { success: true, message: 'تم إرسال طلب التسجيل، سيتم مراجعته من قبل المدير' };
@@ -213,5 +213,4 @@ const Auth = {
 };
 
 window.Auth = Auth;
-console.log('✅ نظام المصادقة مع التوثيق الثنائي جاهز');
-
+console.log('? نظام المصادقة مع التوثيق الثنائي جاهز');
