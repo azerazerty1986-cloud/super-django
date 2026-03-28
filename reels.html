@@ -6,52 +6,406 @@
     <title>ناردو ريلز | عرض موحد للجميع من تليجرام</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* نفس الستايلات الموجودة مع إضافة بعض التحسينات */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Cairo', sans-serif; background: #000; color: white; overflow-x: hidden; }
-
-        /* شاشة تسجيل الدخول - نسخة محسنة */
-        .login-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0f2b23, #1e4a3f);
-            display: flex; justify-content: center; align-items: center; z-index: 20000;
-        }
-        .login-box {
-            background: rgba(0,0,0,0.8); border: 3px solid gold; border-radius: 40px;
-            padding: 40px; width: 90%; max-width: 400px; text-align: center;
-        }
-        .login-box h2 { color: gold; margin-bottom: 20px; }
-        .login-box input {
-            width: 100%; padding: 15px; margin: 15px 0;
-            background: rgba(255,255,255,0.1); border: 2px solid gold;
-            border-radius: 30px; color: white; text-align: center;
-        }
-        .login-btn {
-            width: 100%; padding: 15px;
-            background: linear-gradient(135deg, gold, #ffd700);
-            border: none; border-radius: 30px; font-weight: bold; cursor: pointer;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        /* باقي الستايلات كما هي... */
-        /* ... */
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            color: white;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            height: 100vh;
+        }
+
+        /* الشريط العلوي */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #000000cc, #1a2a2acc);
+            backdrop-filter: blur(12px);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            font-size: 28px;
+            color: gold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            background: linear-gradient(135deg, gold, #ffaa00);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .stats {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 14px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .stats i {
+            color: gold;
+            margin-left: 5px;
+        }
+
+        /* حاوية الريلز */
+        .reels-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        .reel-slide {
+            height: 100vh;
+            scroll-snap-align: start;
+            position: relative;
+            background: #000;
+        }
+
+        .reel-video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .reel-video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* الأزرار الجانبية */
+        .action-sidebar {
+            position: absolute;
+            bottom: 100px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            z-index: 20;
+        }
+
+        .action-btn-side {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .action-btn-side i {
+            font-size: 24px;
+            color: white;
+        }
+
+        .action-btn-side span {
+            font-size: 11px;
+            color: white;
+        }
+
+        .action-btn-side.liked i {
+            color: #ff3366;
+            text-shadow: 0 0 10px #ff3366;
+        }
+
+        .action-btn-side:active {
+            transform: scale(0.9);
+        }
+
+        /* تراكب المعلومات */
+        .reel-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            padding: 80px 20px 30px;
+            z-index: 10;
+        }
+
+        .reel-info {
+            max-width: 70%;
+        }
+
+        .reel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reel-publisher {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .reel-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .reel-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .reel-id-badge {
+            position: absolute;
+            top: 80px;
+            left: 15px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            color: gold;
+            z-index: 15;
+            font-family: monospace;
+        }
+
+        /* أزرار الإضافة */
+        .fab-buttons {
+            position: fixed;
+            bottom: 25px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 15px;
+        }
+
+        .fab-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, gold, #ffaa00);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .fab-btn i {
+            font-size: 26px;
+            color: #000;
+        }
+
+        .fab-btn:active {
+            transform: scale(0.95);
+        }
+
+        .refresh-btn {
+            background: rgba(0,0,0,0.7);
+            border: 1px solid gold;
+            padding: 8px 16px;
+            border-radius: 30px;
+            color: gold;
+            cursor: pointer;
+        }
+
+        /* مودال الرفع */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a2a2a, #0a1a1a);
+            border-radius: 30px;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid gold;
+        }
+
+        .modal-content h3 {
+            color: gold;
+            margin-bottom: 20px;
+        }
+
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid gold;
+            border-radius: 25px;
+            color: white;
+        }
+
+        .video-preview {
+            display: none;
+            margin: 15px 0;
+        }
+
+        .video-preview.show {
+            display: block;
+        }
+
+        .video-preview video {
+            width: 100%;
+            border-radius: 15px;
+            max-height: 200px;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, gold, #ffaa00);
+            border: none;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: gold;
+            padding: 12px 24px;
+            border-radius: 50px;
+            z-index: 10001;
+            font-size: 14px;
+            border: 1px solid gold;
+            white-space: nowrap;
+        }
+
+        /* تذييل بسيط */
+        .footer-note {
+            position: fixed;
+            bottom: 10px;
+            right: 15px;
+            font-size: 10px;
+            color: #555;
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
-    <!-- نفس هيكل HTML مع بعض التحسينات -->
-    <div class="login-screen" id="loginScreen">
-        <div class="login-box">
-            <i class="fas fa-film" style="font-size: 60px; color: gold; margin-bottom: 20px;"></i>
-            <h2>ناردو ريلز</h2>
-            <input type="text" id="loginUsername" placeholder="اسم المستخدم">
-            <button class="login-btn" onclick="login()">دخول <i class="fas fa-sign-in-alt"></i></button>
-            <div style="margin-top: 15px; font-size: 12px;">👤 أدخل أي اسم للدخول</div>
+
+    <!-- الشريط العلوي -->
+    <div class="top-bar" id="topBar">
+        <div class="logo">
+            <i class="fas fa-film"></i>
+            <h1>ناردو ريلز</h1>
+        </div>
+        <div class="stats">
+            <i class="fas fa-video"></i>
+            <span id="totalReelsCount">0</span>
+            <span> ريلز</span>
         </div>
     </div>
 
-    <!-- باقي العناصر كما هي... -->
-    
+    <!-- حاوية الريلز -->
+    <div class="reels-container" id="reelsPlayer"></div>
+
+    <!-- أزرار الإضافة -->
+    <div class="fab-buttons" id="fabButtons">
+        <div class="fab-btn" onclick="openUploadModal()">
+            <i class="fas fa-plus"></i>
+        </div>
+        <div class="fab-btn" onclick="refreshReels()">
+            <i class="fas fa-sync-alt"></i>
+        </div>
+    </div>
+
+    <!-- مودال رفع ريلز -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-upload"></i> رفع ريلز جديد</h3>
+            <input type="text" id="reelTitleInput" placeholder="عنوان الريلز (اختياري)">
+            <input type="file" id="videoInput" accept="video/*" onchange="handleVideoSelect(this)">
+            <div class="video-preview" id="videoPreviewDiv">
+                <video id="previewVideo" controls></video>
+                <button onclick="removeSelectedVideo()" style="margin-top: 5px; background: red; border: none; padding: 5px; border-radius: 20px;">إزالة</button>
+            </div>
+            <button class="upload-btn" id="uploadBtn" onclick="uploadReelToTelegram()">
+                <i class="fab fa-telegram"></i> رفع ونشر للجميع
+            </button>
+            <button class="upload-btn" onclick="closeUploadModal()" style="background: #333; margin-top: 10px;">
+                إلغاء
+            </button>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        <i class="fas fa-bolt"></i> ناردو ريلز
+    </div>
+
     <script>
-        // ========== نظام الأمان المدمج (من الكود الأول) ==========
+        // ========== نظام الأمان ==========
         const SecuritySystem = {
             sanitize(text) {
                 if (!text) return '';
@@ -66,63 +420,46 @@
                     .replace(/onerror=/gi, '')
                     .replace(/onload=/gi, '');
             },
-            
             generateSessionId() {
                 return 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
             }
         };
 
-        // ========== نظام المعرفات الفريدة (من الكود الأول) ==========
+        // ========== نظام المعرفات ==========
         const IDSystem = {
-            counters: {
-                reel: 1,
-                user: 5000
-            },
-            
+            counters: { reel: 1, user: 5000 },
             generateId(type) {
                 this.counters[type] = (this.counters[type] || 0) + 1;
                 const prefix = type === 'reel' ? 'REL' : 'USR';
                 const number = this.counters[type].toString().padStart(6, '0');
                 return `${prefix}_${number}`;
             },
-            
-            saveCounters() {
-                localStorage.setItem('reel_id_counters', JSON.stringify(this.counters));
-            },
-            
+            saveCounters() { localStorage.setItem('reel_id_counters', JSON.stringify(this.counters)); },
             loadCounters() {
                 const saved = localStorage.getItem('reel_id_counters');
-                if (saved) {
-                    this.counters = { ...this.counters, ...JSON.parse(saved) };
-                }
+                if (saved) this.counters = { ...this.counters, ...JSON.parse(saved) };
             }
         };
 
-        // ========== دوال مساعدة محسنة (من الكود الأول) ==========
+        // ========== دوال مساعدة ==========
         const Utils = {
             formatNumber(num) {
                 if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
                 if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
                 return num.toString();
             },
-            
             getTimeAgo(dateString) {
                 if (!dateString) return '';
                 const now = new Date();
                 const past = new Date(dateString);
                 const diffInSeconds = Math.floor((now - past) / 1000);
-                
                 if (diffInSeconds < 60) return 'الآن';
                 if (diffInSeconds < 3600) return `منذ ${Math.floor(diffInSeconds / 60)} دقيقة`;
                 if (diffInSeconds < 86400) return `منذ ${Math.floor(diffInSeconds / 3600)} ساعة`;
                 if (diffInSeconds < 604800) return `منذ ${Math.floor(diffInSeconds / 86400)} يوم`;
                 return 'منذ وقت';
             },
-            
-            escapeHtml(text) {
-                return SecuritySystem.sanitize(text);
-            },
-            
+            escapeHtml(text) { return SecuritySystem.sanitize(text); },
             showNotification(msg, type = 'info') {
                 const div = document.createElement('div');
                 div.className = 'notification';
@@ -131,24 +468,13 @@
                 document.body.appendChild(div);
                 setTimeout(() => div.remove(), 3000);
             },
-            
             save(key, data) {
-                try {
-                    localStorage.setItem(key, JSON.stringify(data));
-                    return true;
-                } catch (e) {
-                    console.error('خطأ في الحفظ:', e);
-                    return false;
-                }
+                try { localStorage.setItem(key, JSON.stringify(data)); return true; } 
+                catch(e) { return false; }
             },
-            
             load(key, defaultValue = null) {
-                try {
-                    const data = localStorage.getItem(key);
-                    return data ? JSON.parse(data) : defaultValue;
-                } catch (e) {
-                    return defaultValue;
-                }
+                try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : defaultValue; } 
+                catch(e) { return defaultValue; }
             }
         };
 
@@ -159,45 +485,35 @@
             apiUrl: 'https://api.telegram.org/bot'
         };
 
-        // ========== المتغيرات العامة ==========
+        // ========== مستخدم افتراضي (بدون شاشة دخول) ==========
+        const DEFAULT_USER = {
+            id: 'USR_000001',
+            name: 'مستخدم ناردو',
+            username: 'nardo_user',
+            role: 'user',
+            points: 500,
+            createdAt: new Date().toISOString()
+        };
+
         let reelsCache = [];
-        let users = [];
-        let currentUser = null;
-        let selectedVideoFile = null;
+        let currentUser = DEFAULT_USER;
         let userLikes = {};
         let isLoading = false;
+        let selectedVideoFile = null;
 
-        // ========== تحميل المستخدمين المحسن ==========
-        function loadUsers() {
-            const saved = Utils.load('nardoo_reels_users');
-            if (saved) {
-                users = saved;
-            } else {
-                users = [
-                    { id: IDSystem.generateId('user'), name: 'المدير', username: 'admin', role: 'admin', points: 1000, createdAt: new Date().toISOString() },
-                    { id: IDSystem.generateId('user'), name: 'مستخدم', username: 'user', role: 'user', points: 100, createdAt: new Date().toISOString() }
-                ];
-                Utils.save('nardoo_reels_users', users);
-            }
-        }
-        
         // ========== تحميل الإعجابات ==========
         function loadLikes() {
             const userId = currentUser?.id || 'guest';
             const saved = Utils.load(`nardoo_reels_likes_${userId}`);
-            if (saved) {
-                userLikes = saved;
-            } else {
-                userLikes = {};
-            }
+            userLikes = saved || {};
         }
         
         function saveLikes() {
             const userId = currentUser?.id || 'guest';
             Utils.save(`nardoo_reels_likes_${userId}`, userLikes);
         }
-        
-        // ========== جلب جميع الريلز من قناة تليجرام (محسن) ==========
+
+        // ========== جلب الريلز من تليجرام ==========
         async function loadReelsFromTelegram() {
             if (isLoading) return;
             isLoading = true;
@@ -249,7 +565,6 @@
                 }
                 
                 if (reels.length > 0) {
-                    // حفظ في الكاش مع التحقق من التغيير
                     const reelsHash = JSON.stringify(reels.map(r => r.fingerprint));
                     const oldHash = Utils.load('reels_hash', '');
                     
@@ -257,23 +572,19 @@
                         reelsCache = reels;
                         Utils.save('nardoo_reels_cache', reels);
                         Utils.save('reels_hash', reelsHash);
-                        console.log(`✅ تم تحميل ${reels.length} ريلز من تليجرام`);
                         displayAllReels();
                         updateStats();
                         Utils.showNotification(`📹 تم تحديث ${reels.length} ريلز`, 'success');
                     } else {
-                        console.log('⚡ لا توجد ريلز جديدة');
+                        console.log('لا توجد ريلز جديدة');
                     }
                 } else {
-                    // استعادة من الكاش إذا لم تكن هناك ريلز جديدة
                     const cached = Utils.load('nardoo_reels_cache');
                     if (cached && cached.length > 0) {
                         reelsCache = cached;
-                        console.log(`📦 تم استعادة ${reelsCache.length} ريلز من الكاش`);
                         displayAllReels();
                         updateStats();
                     } else {
-                        // ريلز تجريبية
                         reelsCache = [
                             {
                                 id: 1001,
@@ -299,35 +610,29 @@
                         Utils.save('nardoo_reels_cache', reelsCache);
                         displayAllReels();
                         updateStats();
-                        console.log(`📹 تم تحميل ${reelsCache.length} ريلز تجريبية`);
                     }
                 }
-                
             } catch (error) {
-                console.error('❌ خطأ:', error);
+                console.error('خطأ:', error);
                 const cached = Utils.load('nardoo_reels_cache');
                 if (cached) {
                     reelsCache = cached;
                     displayAllReels();
                     updateStats();
-                    Utils.showNotification(`⚠️ فشل الاتصال، عرض ${reelsCache.length} ريلز مخزنة`, 'warning');
+                    Utils.showNotification(`⚠️ عرض ${reelsCache.length} ريلز مخزنة`, 'warning');
                 } else {
-                    Utils.showNotification('❌ فشل الاتصال بتليجرام', 'error');
+                    Utils.showNotification('❌ فشل الاتصال', 'error');
                 }
             } finally {
                 isLoading = false;
                 showLoadingOverlay(false);
             }
         }
-        
-        // ========== رفع ريلز جديد (محسن) ==========
+
+        // ========== رفع ريلز ==========
         async function uploadReelToTelegram() {
             if (!selectedVideoFile) {
                 Utils.showNotification('❌ اختر فيديو أولاً', 'error');
-                return;
-            }
-            if (!currentUser) {
-                Utils.showNotification('❌ يرجى تسجيل الدخول', 'error');
                 return;
             }
             
@@ -350,25 +655,23 @@
                 const data = await response.json();
                 
                 if (data.ok) {
-                    Utils.showNotification(`✅ تم الرفع بنجاح! المعرف: ${data.result.message_id}`, 'success');
-                    setTimeout(() => {
-                        loadReelsFromTelegram();
-                    }, 3000);
+                    Utils.showNotification(`✅ تم الرفع بنجاح!`, 'success');
+                    setTimeout(() => loadReelsFromTelegram(), 2000);
                     closeUploadModal();
                     removeSelectedVideo();
                 } else {
                     throw new Error(data.description || 'فشل الرفع');
                 }
             } catch (error) {
-                console.error('❌ خطأ:', error);
+                console.error('خطأ:', error);
                 Utils.showNotification('❌ فشل الرفع: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fab fa-telegram"></i> رفع ونشر للجميع';
             }
         }
-        
-        // ========== عرض جميع الريلز (محسن) ==========
+
+        // ========== عرض الريلز ==========
         function displayAllReels() {
             const container = document.getElementById('reelsPlayer');
             
@@ -430,7 +733,6 @@
                 `;
             }).join('');
             
-            // إضافة Intersection Observer للتشغيل التلقائي
             setTimeout(() => {
                 const slides = document.querySelectorAll('.reel-slide');
                 const observer = new IntersectionObserver((entries) => {
@@ -443,9 +745,8 @@
                             if (reel && !reel.viewRecorded) {
                                 reel.views = (reel.views || 0) + 1;
                                 reel.viewRecorded = true;
-                                updateStats();
-                                // حفظ المشاهدات في الكاش
                                 Utils.save('nardoo_reels_cache', reelsCache);
+                                updateStats();
                             }
                         } else {
                             video.pause();
@@ -456,7 +757,6 @@
             }, 100);
         }
         
-        // ========== الإعجاب (محسن) ==========
         function likeReel(reelId, event) {
             event.stopPropagation();
             const reel = reelsCache.find(r => r.id === reelId);
@@ -469,7 +769,6 @@
                     userLikes[reelId] = true;
                 }
                 saveLikes();
-                // حفظ التغييرات في الكاش
                 Utils.save('nardoo_reels_cache', reelsCache);
                 displayAllReels();
                 updateStats();
@@ -488,7 +787,10 @@
             if (countSpan) countSpan.innerText = totalReels;
         }
         
-        // ========== دوال مساعدة للواجهة ==========
+        function refreshReels() {
+            loadReelsFromTelegram();
+        }
+        
         function handleVideoSelect(input) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
@@ -515,15 +817,13 @@
         }
         
         function openUploadModal() {
-            if (!currentUser) {
-                Utils.showNotification('يجب تسجيل الدخول أولاً', 'warning');
-                return;
-            }
             document.getElementById('uploadModal').style.display = 'flex';
         }
         
         function closeUploadModal() {
             document.getElementById('uploadModal').style.display = 'none';
+            removeSelectedVideo();
+            document.getElementById('reelTitleInput').value = '';
         }
         
         function showLoadingOverlay(show, message = "جاري التحميل...") {
@@ -536,92 +836,31 @@
                 document.body.appendChild(overlay);
             } else if (show && overlay) {
                 overlay.style.display = 'flex';
-                overlay.querySelector('p').innerText = message;
+                if(overlay.querySelector('p')) overlay.querySelector('p').innerText = message;
             } else if (!show && overlay) {
                 overlay.remove();
             }
         }
         
-        // ========== تسجيل الدخول والخروج (محسن) ==========
-        function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            if (!username) {
-                Utils.showNotification('❌ أدخل اسم المستخدم', 'error');
-                return;
-            }
-            
-            let user = users.find(u => u.username === username || u.name === username);
-            if (!user) {
-                user = { 
-                    id: IDSystem.generateId('user'), 
-                    name: SecuritySystem.sanitize(username), 
-                    username: SecuritySystem.sanitize(username), 
-                    role: 'user', 
-                    points: 100,
-                    createdAt: new Date().toISOString(),
-                    sessionId: SecuritySystem.generateSessionId()
-                };
-                users.push(user);
-                Utils.save('nardoo_reels_users', users);
-            }
-            
-            currentUser = user;
-            Utils.save('current_reels_user', user);
-            loadLikes();
-            
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('topBar').style.display = 'block';
-            document.getElementById('fabButtons').style.display = 'block';
-            document.getElementById('reelsPlayer').style.display = 'block';
-            document.getElementById('userNameDisplay').innerText = currentUser.name;
-            
-            loadReelsFromTelegram();
-            
-            Utils.showNotification(`✅ مرحباً ${user.name}`, 'success');
-        }
-        
-        function logout() {
-            currentUser = null;
-            Utils.save('current_reels_user', null);
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('topBar').style.display = 'none';
-            document.getElementById('fabButtons').style.display = 'none';
-            document.getElementById('reelsPlayer').style.display = 'none';
-            reelsCache = [];
-        }
-        
-        // ========== تحديث تلقائي كل 5 دقائق ==========
-        setInterval(() => {
-            if (currentUser && !isLoading) {
-                loadReelsFromTelegram();
-            }
-        }, 300000);
-        
-        // ========== تهيئة الصفحة ==========
+        // ========== التهيئة ==========
         IDSystem.loadCounters();
-        loadUsers();
+        IDSystem.saveCounters();
+        loadLikes();
         
-        const savedUser = Utils.load('current_reels_user');
-        if (savedUser) {
-            currentUser = savedUser;
-            if (currentUser) {
-                loadLikes();
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('topBar').style.display = 'block';
-                document.getElementById('fabButtons').style.display = 'block';
-                document.getElementById('reelsPlayer').style.display = 'block';
-                document.getElementById('userNameDisplay').innerText = currentUser.name;
-                loadReelsFromTelegram();
-            }
-        }
+        // بدء التحميل فوراً
+        loadReelsFromTelegram();
+        
+        // تحديث تلقائي كل 5 دقائق
+        setInterval(() => {
+            if (!isLoading) loadReelsFromTelegram();
+        }, 300000);
         
         window.onclick = function(e) {
             const modal = document.getElementById('uploadModal');
             if (e.target === modal) closeUploadModal();
         };
         
-        console.log('🎬 نظام ناردو ريلز جاهز - نسخة مستقلة ومحسنة');
-        console.log('✅ الميزات المضافة: نظام أمان، معرفات فريدة، دوال مساعدة محسنة');
+        console.log('🎬 ناردو ريلز جاهز - بدون شاشة دخول');
     </script>
 </body>
 </html>
