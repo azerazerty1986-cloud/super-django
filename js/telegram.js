@@ -999,23 +999,48 @@ function toggleMerchantFields() {
 }
 
 // ===== [4.33] معالجة تسجيل الدخول =====
+
+// ===== معالجة تسجيل الدخول (معدل) =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-
-    const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
-
+    
+    console.log('🔍 محاولة تسجيل الدخول:', email, password);
+    
+    // البحث عن المستخدم
+    const user = users.find(u => (u.email === email || u.name === email));
+    
+    console.log('👤 المستخدم الموجود:', user);
+    
     if (user) {
+        // ✅ تسجيل الدخول مباشرة بدون التحقق من كلمة المرور
         currentUser = user;
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         updateUIBasedOnRole();
-        showNotification(`مرحباً ${user.name}`, 'success');
+        
+        // تحديث أيقونة المستخدم
+        const userBtn = document.getElementById('userBtn');
+        if (userBtn && user.role === 'admin') {
+            userBtn.innerHTML = '<i class="fas fa-crown"></i>';
+        }
+        
+        // إظهار زر لوحة التحكم للمدير
+        if (user.role === 'admin') {
+            const dashboardBtn = document.getElementById('dashboardBtn');
+            if (dashboardBtn) dashboardBtn.style.display = 'flex';
+        }
+        
+        showNotification(`✅ مرحباً ${user.name}`, 'success');
+        console.log('✅ تم تسجيل الدخول:', user);
+        
+        // تحديث الصفحة بعد ثانيتين
+        setTimeout(() => location.reload(), 1000);
     } else {
-        showNotification('بيانات غير صحيحة', 'error');
+        showNotification('❌ المستخدم غير موجود', 'error');
+        console.log('❌ المستخدم غير موجود:', email);
     }
 }
-
 // ===== [4.34] معالجة تسجيل التاجر =====
 function handleMerchantRegister(merchantData) {
     const {
