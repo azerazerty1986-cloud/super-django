@@ -1,3 +1,4 @@
+
 /* ================================================================== */
 /* ===== [05] الملف: 05-app.js - التطبيق الرئيسي ===== */
 /* ================================================================== */
@@ -6,7 +7,7 @@ const App = {
     products: [],
     
     async init() {
-        console.log('🚀 بدء تشغيل ناردو برو...');
+        console.log('?? بدء تشغيل ناردو برو...');
         
         Auth.init();
         Cart.init();
@@ -167,7 +168,7 @@ const App = {
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                         <h2 style="color:var(--gold);">${product.name}</h2>
                         <span style="background:var(--glass); padding:5px 15px; border-radius:30px; font-size:12px;">
-                            🆔 ${product.productId || product.id}
+                            ?? ${product.productId || product.id}
                         </span>
                     </div>
                     <p>${product.description || 'منتج عالي الجودة'}</p>
@@ -286,11 +287,11 @@ const App = {
                 Utils.save('products', this.products);
                 this.displayProducts();
                 
-                Utils.showNotification(`✅ تم إضافة المنتج - المعرف: ${productId}`, 'success');
+                Utils.showNotification(`? تم إضافة المنتج - المعرف: ${productId}`, 'success');
                 this.closeModal('productModal');
                 
             } else {
-                Utils.showNotification('❌ فشل الإرسال إلى تلغرام', 'error');
+                Utils.showNotification('? فشل الإرسال إلى تلغرام', 'error');
             }
         }
     },
@@ -299,7 +300,7 @@ const App = {
     
     // فتح نافذة إضافة منتج من الأيقونة
     openAddProductForm() {
-        console.log('📝 محاولة فتح نافذة إضافة منتج من الأيقونة');
+        console.log('?? محاولة فتح نافذة إضافة منتج من الأيقونة');
         
         if (!Auth.currentUser) {
             Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
@@ -324,9 +325,9 @@ const App = {
             const preview = document.getElementById('newImagePreview');
             if (preview) preview.innerHTML = '';
             
-            console.log('✅ تم فتح نافذة إضافة منتج');
+            console.log('? تم فتح نافذة إضافة منتج');
         } else {
-            console.error('❌ addProductModal غير موجود');
+            console.error('? addProductModal غير موجود');
             Utils.showNotification('النافذة غير موجودة', 'error');
         }
     },
@@ -418,11 +419,11 @@ const App = {
                 Utils.save('products', this.products);
                 this.displayProducts();
                 
-                Utils.showNotification(`✅ تم إضافة المنتج - المعرف: ${productId}`, 'success');
+                Utils.showNotification(`? تم إضافة المنتج - المعرف: ${productId}`, 'success');
                 this.closeAddProductForm();
                 
             } else {
-                Utils.showNotification('❌ فشل الإرسال إلى تلغرام', 'error');
+                Utils.showNotification('? فشل الإرسال إلى تلغرام', 'error');
             }
         }
     },
@@ -442,7 +443,7 @@ const App = {
             return `
             <div class="product-card" onclick="App.showProductDetail('${p.productId || p.id}')">
                 <div style="position:absolute; top:10px; left:10px; background:var(--gold); color:black; padding:3px 10px; border-radius:20px; font-size:10px; z-index:10;">
-                    🆔 ${shortId}
+                    ?? ${shortId}
                 </div>
                 <div class="product-gallery">
                     <img src="${p.image}" alt="${p.name}">
@@ -541,4 +542,3 @@ const App = {
 
 window.App = App;
 document.addEventListener('DOMContentLoaded', () => App.init());
-
