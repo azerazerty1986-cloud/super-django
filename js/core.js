@@ -150,8 +150,8 @@ const IDSystem = {
         content_creator: 4000,
         customer: 5000,
         product: 1,
-        order: 1,
-        reel: 1
+        order: 1
+        // تم حذف reel: 1
     },
     
     prefixes: {
@@ -162,6 +162,7 @@ const IDSystem = {
         content_creator: 'CRE',
         customer: 'CUS',
         product: 'PRD'
+        // تم حذف reel: 'REL'
     },
     
     loadCounters() {
@@ -440,50 +441,29 @@ ${code}
     }
 };
 
-// ===== [1.7] تهيئة الأنظمة =====
-window.CONFIG = CONFIG;
-window.Security = SecuritySystem;
-window.IDSystem = IDSystem;
-window.Fingerprint = FingerprintSystem;
-window.Utils = Utils;
-window.TelegramAuth = TelegramAuth;
-
-SecuritySystem.generateCSRFToken();
-Fingerprint.init();
-IDSystem.loadCounters();
-TelegramAuth.loadPendingVerifications();
-setInterval(() => TelegramAuth.cleanupExpiredCodes(), 60000);
-
-// ===== نظام البيانات الموحدة (GlobalData) =====
+// ===== [1.7] نظام البيانات الموحدة (المنتجات فقط) =====
 const GlobalData = {
     products: null,
-    reels: null,
     lastFetch: 0,
     fetching: false,
     
     // تحميل فوري من sessionStorage
     loadFromSession() {
         const savedProducts = sessionStorage.getItem('global_products');
-        const savedReels = sessionStorage.getItem('global_reels');
         
         if (savedProducts) {
             this.products = JSON.parse(savedProducts);
             console.log(`📦 تحميل فوري: ${this.products.length} منتج`);
         }
         
-        if (savedReels) {
-            this.reels = JSON.parse(savedReels);
-            console.log(`🎬 تحميل فوري: ${this.reels.length} ريلز`);
-        }
-        
-        return { products: this.products, reels: this.reels };
+        return { products: this.products };
     },
     
-    // جلب الكل من تلغرام
+    // جلب المنتجات من تلغرام
     async fetchAll() {
         if (this.fetching) {
             while (this.fetching) await new Promise(r => setTimeout(r, 100));
-            return { products: this.products, reels: this.reels };
+            return { products: this.products };
         }
         
         this.fetching = true;
@@ -494,7 +474,6 @@ const GlobalData = {
             const data = await response.json();
             
             const products = [];
-            const reels = [];
             
             for (const update of (data.result || []).reverse()) {
                 const post = update.channel_post || update.message;
@@ -502,7 +481,7 @@ const GlobalData = {
                 
                 const text = post.caption || '';
                 
-                // المنتجات
+                // المنتجات فقط
                 if (post.photo && (text.includes('🟣') || text.includes('منتج'))) {
                     let name = 'منتج', price = 1000, merchant = 'المتجر';
                     const lines = text.split('\n');
@@ -533,50 +512,20 @@ const GlobalData = {
                         createdAt: new Date(post.date * 1000).toISOString()
                     });
                 }
-                
-                // الريلز
-                else if (post.video) {
-                    let title = 'ريلز', publisher = 'ناردو برو';
-                    const lines = text.split('\n');
-                    for (let line of lines) {
-                        if (line.includes('🎬')) title = line.replace('🎬', '').trim() || title;
-                        if (line.includes('👤')) publisher = line.replace('👤', '').trim() || publisher;
-                    }
-                    
-                    let videoUrl = null;
-                    if (post.video) {
-                        const fileRes = await fetch(`${CONFIG.telegram.apiUrl}${CONFIG.telegram.botToken}/getFile?file_id=${post.video.file_id}`);
-                        const fileData = await fileRes.json();
-                        if (fileData.ok) {
-                            videoUrl = `https://api.telegram.org/file/bot${CONFIG.telegram.botToken}/${fileData.result.file_path}`;
-                        }
-                    }
-                    
-                    reels.push({
-                        id: post.message_id,
-                        title: SecuritySystem.sanitize(title),
-                        videoUrl: videoUrl,
-                        publisher: SecuritySystem.sanitize(publisher),
-                        serialNumber: text.match(/NARD-[A-Z0-9-]+/i)?.[0] || null,
-                        date: new Date(post.date * 1000).toISOString()
-                    });
-                }
             }
             
             this.products = products;
-            this.reels = reels;
             this.lastFetch = Date.now();
             
             // حفظ في sessionStorage
             sessionStorage.setItem('global_products', JSON.stringify(products));
-            sessionStorage.setItem('global_reels', JSON.stringify(reels));
             
-            console.log(`✅ جلب جديد: ${products.length} منتج, ${reels.length} ريلز`);
-            return { products, reels };
+            console.log(`✅ جلب جديد: ${products.length} منتج`);
+            return { products };
             
         } catch(error) {
             console.error('❌ خطأ في الجلب:', error);
-            return { products: this.products || [], reels: this.reels || [] };
+            return { products: this.products || [] };
         } finally {
             this.fetching = false;
         }
@@ -602,35 +551,28 @@ const GlobalData = {
         return this.products || [];
     },
     
-    // الحصول على الريلز (مع عرض فوري)
-    async getReels() {
-        if (this.reels) {
-            return this.reels;
-        }
-        
-        const saved = sessionStorage.getItem('global_reels');
-        if (saved) {
-            this.reels = JSON.parse(saved);
-            return this.reels;
-        }
-        
-        if (!this.fetching) {
-            this.fetchAll();
-        }
-        
-        await new Promise(r => setTimeout(r, 500));
-        return this.reels || [];
-    },
-    
     // تحديث يدوي
     async refresh() {
         sessionStorage.removeItem('global_products');
-        sessionStorage.removeItem('global_reels');
         this.products = null;
-        this.reels = null;
         return await this.fetchAll();
     }
 };
+
+// ===== [1.8] تهيئة الأنظمة =====
+window.CONFIG = CONFIG;
+window.Security = SecuritySystem;
+window.IDSystem = IDSystem;
+window.Fingerprint = FingerprintSystem;
+window.Utils = Utils;
+window.TelegramAuth = TelegramAuth;
+window.GlobalData = GlobalData;
+
+SecuritySystem.generateCSRFToken();
+Fingerprint.init();
+IDSystem.loadCounters();
+TelegramAuth.loadPendingVerifications();
+setInterval(() => TelegramAuth.cleanupExpiredCodes(), 60000);
 
 // تهيئة فورية
 GlobalData.loadFromSession();
@@ -640,11 +582,6 @@ window.addEventListener('beforeunload', () => {
     if (GlobalData.products) {
         sessionStorage.setItem('global_products', JSON.stringify(GlobalData.products));
     }
-    if (GlobalData.reels) {
-        sessionStorage.setItem('global_reels', JSON.stringify(GlobalData.reels));
-    }
 });
 
-window.GlobalData = GlobalData;
-console.log('✅ نظام الأمان والتوثيق جاهز');
-
+console.log('✅ نظام الأمان والتوثيق جاهز (نسخة المنتجات فقط)');
