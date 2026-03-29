@@ -805,6 +805,245 @@
     <script src="js/app.js"></script>
 
     <script>
+        // ========== إعدادات تليجرام ==========
+        const TELEGRAM = {
+            botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
+            channelId: '-1003822964890',
+            apiUrl: 'https://api.telegram.org/bot'
+        };
+        
+        // ========== متغيرات الريلز ==========
+        let allReels = [];
+        let specialReels = [];
+        let currentPlayingVideo = null;
+        
+        // ========== استخراج المعرف الخاص ==========
+        function extractSerialFromCaption(caption) {
+            if (!caption) return null;
+            let match = caption.match(/🔑\s*NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
+            if (match) return match[1];
+            match = caption.match(/\b(NARD-[A-Z0-9-]+)\b/i);
+            return match ? match[1] : null;
+        }
+        
+        // ========== جلب جميع الريلز ==========
+        async function fetchAllReels() {
+            try {
+                const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const reels = [];
+                
+                if (data.ok && data.result) {
+                    const updates = [...data.result].reverse();
+                    
+                    for (const update of updates) {
+                        const post = update.channel_post || update.message;
+                        if (!post || !post.video) continue;
+                        
+                        const caption = post.caption || '';
+                        const serial = extractSerialFromCaption(caption);
+                        
+                        let title = '🎬 ريلز';
+                        const titleMatch = caption.match(/🎬\s*(.+?)(?:\n|$)/);
+                        if (titleMatch) title = titleMatch[1];
+                        
+                        let publisher = 'ناردو برو';
+                        const publisherMatch = caption.match(/👤\s*(.+?)(?:\n|$)/);
+                        if (publisherMatch) publisher = publisherMatch[1];
+                        
+                        const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${post.video.file_id}`);
+                        const fileData = await fileRes.json();
+                        
+                        if (fileData.ok) {
+                            const videoUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                            
+                            reels.push({
+                                id: post.message_id,
+                                title: title,
+                                videoUrl: videoUrl,
+                                publisher: publisher,
+                                serialNumber: serial,
+                                views: 0,
+                                likes: 0,
+                                date: new Date(post.date * 1000).toISOString()
+                            });
+                        }
+                    }
+                }
+                return reels;
+            } catch (error) {
+                console.error('خطأ:', error);
+                return [];
+            }
+        }
+        
+        // ========== تحميل وعرض الريلز ==========
+        async function loadAllReelsData() {
+            const specialContainer = document.getElementById('specialReelsContainer');
+            const allContainer = document.getElementById('allReelsGrid');
+            
+            if (specialContainer) specialContainer.innerHTML = `<div class="loading-reels"><i class="fas fa-spinner fa-spin"></i><p>🔄 جاري التحميل...</p></div>`;
+            if (allContainer) allContainer.innerHTML = `<div class="loading-reels"><i class="fas fa-spinner fa-spin"></i><p>🔄 جاري التحميل...</p></div>`;
+            
+            allReels = await fetchAllReels();
+            specialReels = allReels.filter(r => r.serialNumber && r.serialNumber.startsWith('NARD-'));
+            
+            displaySpecialReels();
+            displayAllReels();
+            
+            localStorage.setItem('nardoo_reels_all', JSON.stringify(allReels));
+        }
+        
+        function displaySpecialReels() {
+            const container = document.getElementById('specialReelsContainer');
+            if (!container) return;
+            
+            if (!specialReels || specialReels.length === 0) {
+                container.innerHTML = `<div class="no-reels-message"><i class="fas fa-star"></i><p>✨ لا توجد ريلز مميزة بعد</p><p>الريلز التي تحمل المعرف NARD- فقط تظهر هنا</p></div>`;
+                return;
+            }
+            
+            const sorted = [...specialReels].reverse();
+            container.innerHTML = sorted.map(r => `
+                <div class="reel-video-card" onclick="openReelPlayer('${r.id}', true)">
+                    <div class="reel-video-placeholder">
+                        <i class="fas fa-play-circle"></i>
+                        <div class="reel-play-overlay"><i class="fas fa-play"></i></div>
+                        ${r.serialNumber ? `<div class="serial-badge-top"><i class="fas fa-key"></i> ${escapeHtml(r.serialNumber)}</div>` : ''}
+                    </div>
+                    <div class="reel-video-overlay">
+                        <div class="reel-video-info">
+                            <span class="reel-video-title">🎬 ${escapeHtml(r.title)}</span>
+                            <span class="reel-video-views"><i class="fas fa-eye"></i> ${r.views || 0}</span>
+                        </div>
+                        <div class="reel-video-publisher"><i class="fas fa-user"></i> ${escapeHtml(r.publisher)}</div>
+                        ${r.serialNumber ? `<div class="reel-serial-badge"><i class="fas fa-fingerprint"></i> ${escapeHtml(r.serialNumber)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function displayAllReels() {
+            const grid = document.getElementById('allReelsGrid');
+            if (!grid) return;
+            
+            if (!allReels || allReels.length === 0) {
+                grid.innerHTML = `<div class="no-reels-message" style="grid-column:1/-1"><i class="fas fa-film"></i><p>📹 لا توجد ريلز متاحة حالياً</p></div>`;
+                return;
+            }
+            
+            const sorted = [...allReels].reverse();
+            grid.innerHTML = sorted.map(r => {
+                const hasSerial = r.serialNumber && r.serialNumber.startsWith('NARD-');
+                return `
+                    <div class="all-reels-card ${hasSerial ? 'special-reel-card' : ''}" onclick="openReelPlayer('${r.id}', false)">
+                        <div class="all-reels-thumb">
+                            <i class="fas fa-play-circle"></i>
+                            ${hasSerial ? '<div class="special-badge-small"><i class="fas fa-crown"></i> مميز</div>' : ''}
+                        </div>
+                        <div class="all-reels-info">
+                            <div class="all-reels-title">${hasSerial ? '<i class="fas fa-star" style="color:gold"></i> ' : '🎬 '}${escapeHtml(r.title)}</div>
+                            <div class="all-reels-meta"><i class="fas fa-user"></i> ${escapeHtml(r.publisher)}</div>
+                            <div class="all-reels-meta"><i class="fas fa-eye"></i> ${r.views || 0}</div>
+                            ${hasSerial ? `<div class="all-reels-meta special-serial"><i class="fas fa-fingerprint"></i> ${escapeHtml(r.serialNumber)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // ========== مشغل الفيديو ==========
+        function openReelPlayer(startId, isSpecial) {
+            const source = isSpecial ? specialReels : allReels;
+            if (!source || source.length === 0) return;
+            
+            const modal = document.createElement('div');
+            modal.className = 'full-reel-player';
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'close-full-player';
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.onclick = () => modal.remove();
+            modal.appendChild(closeBtn);
+            
+            for (const r of source) {
+                const item = document.createElement('div');
+                item.className = 'full-reel-item';
+                item.setAttribute('data-id', r.id);
+                item.innerHTML = `
+                    <video src="${r.videoUrl}" muted loop playsinline preload="auto"></video>
+                    <div class="full-reel-info">
+                        <div class="full-reel-title">🎬 ${escapeHtml(r.title)}</div>
+                        <div class="full-reel-publisher"><i class="fas fa-user"></i> ${escapeHtml(r.publisher)}</div>
+                        <div class="full-reel-views"><i class="fas fa-eye"></i> ${r.views || 0}</div>
+                        ${r.serialNumber ? `<div class="full-reel-serial"><i class="fas fa-key"></i> 🔐 ${escapeHtml(r.serialNumber)}</div>` : ''}
+                    </div>
+                    <div class="full-reel-actions">
+                        <div class="full-reel-action" onclick="likeReel('${r.id}')"><i class="far fa-heart"></i><span>${r.likes || 0}</span></div>
+                        <div class="full-reel-action" onclick="shareReel('${r.videoUrl}')"><i class="fas fa-share-alt"></i><span>مشاركة</span></div>
+                    </div>
+                `;
+                modal.appendChild(item);
+            }
+            
+            document.body.appendChild(modal);
+            setTimeout(() => {
+                const target = document.querySelector(`.full-reel-item[data-id="${startId}"]`);
+                if (target) target.scrollIntoView({ behavior: 'instant' });
+                modal.addEventListener('scroll', () => playVisibleVideo(modal));
+                playVisibleVideo(modal);
+            }, 100);
+        }
+        
+        function playVisibleVideo(modal) {
+            const items = modal.querySelectorAll('.full-reel-item');
+            if (!items.length) return;
+            const center = modal.getBoundingClientRect().top + modal.clientHeight / 2;
+            let active = null;
+            let min = Infinity;
+            items.forEach(item => {
+                const rect = item.getBoundingClientRect();
+                const dist = Math.abs(rect.top + rect.height/2 - center);
+                if (dist < min) { min = dist; active = item; }
+            });
+            if (active) {
+                const vid = active.querySelector('video');
+                if (vid) {
+                    if (currentPlayingVideo && currentPlayingVideo !== vid) currentPlayingVideo.pause();
+                    vid.play().catch(e => console.log);
+                    currentPlayingVideo = vid;
+                }
+            }
+        }
+        
+        function likeReel(reelId) {
+            const reel = allReels.find(r => r.id == reelId);
+            if (reel) {
+                reel.likes = (reel.likes || 0) + 1;
+                localStorage.setItem('nardoo_reels_all', JSON.stringify(allReels));
+                showToastMessage('❤️ تم الإعجاب');
+                displayAllReels();
+                displaySpecialReels();
+            }
+        }
+        
+        function shareReel(url) {
+            navigator.clipboard.writeText(url);
+            showToastMessage('📎 تم نسخ رابط الفيديو');
+        }
+        
+        function refreshSpecialReels() {
+            loadAllReelsData();
+            showToastMessage('🔄 جاري تحديث الريلز المميزة');
+        }
+        
+        function refreshAllReels() {
+            loadAllReelsData();
+            showToastMessage('🔄 جاري تحديث جميع الريلز');
+        }
+        
         // ========== دوال مساعدة ==========
         function escapeHtml(text) {
             if (!text) return '';
@@ -836,4 +1075,6 @@
     </script>
 </body>
 </html>
+
+
 
