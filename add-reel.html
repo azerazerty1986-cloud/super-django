@@ -1,3 +1,4 @@
+اساس add
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -270,6 +271,7 @@
                 إضافة ريلز جديد
             </h1>
 
+            <!-- منطقة رفع الفيديو -->
             <div class="upload-area" onclick="document.getElementById('videoFile').click()">
                 <i class="fas fa-cloud-upload-alt"></i>
                 <p>اضغط لرفع الفيديو</p>
@@ -277,11 +279,13 @@
             </div>
             <input type="file" id="videoFile" accept="video/*" style="display: none;" onchange="previewVideo(this)">
 
+            <!-- معاينة الفيديو -->
             <div id="videoPreview" class="video-preview">
                 <video id="previewVideo" controls></video>
                 <button class="remove-video" onclick="removeVideo()">✕</button>
             </div>
 
+            <!-- معلومات الفيديو -->
             <div class="input-group">
                 <label><i class="fas fa-heading"></i> عنوان الريلز *</label>
                 <input type="text" id="videoTitle" placeholder="أدخل عنوان الريلز..." value="ريلز رائع">
@@ -297,12 +301,14 @@
                 <textarea id="videoHashtags" placeholder="#ريلز #ناردو #تيك_توك" rows="2"></textarea>
             </div>
 
+            <!-- عرض المعرف الذي سيتم إنشاؤه -->
             <div class="serial-info" id="serialInfo">
                 <i class="fas fa-fingerprint"></i> 
                 🔐 سيتم إنشاء معرف سري تلقائياً عند الرفع<br>
                 <small style="color: #aaa;">الصيغة: NARD-YYYYMMDD-HHMMSS-XXXX</small>
             </div>
 
+            <!-- أزرار الإجراءات -->
             <button class="btn" id="uploadBtn" onclick="uploadVideo()">
                 <i class="fab fa-telegram"></i> رفع ونشر للجميع
             </button>
@@ -311,12 +317,10 @@
     </div>
 
     <script>
-        // ========== إعدادات تليجرام (موحدة) ==========
-        const TELEGRAM = {
-            botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
-            channelId: '-1003822964890',
-            apiUrl: 'https://api.telegram.org/bot'
-        };
+        // ========== إعدادات تليجرام (متوافقة مع index.html) ==========
+        const BOT_TOKEN = '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw';
+        const CHANNEL_ID = '-1003822964890';
+        const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
         let selectedFile = null;
         let currentUser = null;
@@ -339,7 +343,7 @@
             }
         }
 
-        // ========== إنشاء معرف فريد ==========
+        // ========== دالة إنشاء معرف فريد بصيغة NARD-YYYYMMDD-HHMMSS-XXXX ==========
         function generateSerialNumber() {
             const now = new Date();
             const year = now.getFullYear();
@@ -357,12 +361,14 @@
             if (input.files && input.files[0]) {
                 const file = input.files[0];
                 
+                // التحقق من الحجم
                 if (file.size > 50 * 1024 * 1024) {
                     showToast("❌ حجم الفيديو كبير جداً (الحد الأقصى 50MB)");
                     input.value = '';
                     return;
                 }
                 
+                // التحقق من النوع
                 if (!file.type.startsWith('video/')) {
                     showToast("❌ يرجى اختيار ملف فيديو صالح (MP4)");
                     input.value = '';
@@ -376,6 +382,7 @@
                 previewVideo.src = url;
                 preview.style.display = 'block';
                 
+                // تحديث معلومات المعرف
                 const serial = generateSerialNumber();
                 document.getElementById('serialInfo').innerHTML = `
                     <i class="fas fa-fingerprint"></i> 
@@ -423,44 +430,17 @@
             if (overlay) overlay.remove();
         }
 
-        function showToast(msg) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        // ========== دالة التحقق من وصول الفيديو ==========
-        async function verifyTelegramUpload() {
-            setTimeout(async () => {
-                try {
-                    const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=1`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    
-                    if (data.ok && data.result && data.result.length > 0) {
-                        const lastUpdate = data.result[data.result.length - 1];
-                        const post = lastUpdate.channel_post || lastUpdate.message;
-                        if (post && post.video) {
-                            console.log('✅ تم تأكيد وصول الفيديو');
-                        }
-                    }
-                } catch(e) {
-                    console.log('⚠️ فشل التحقق');
-                }
-            }, 5000);
-        }
-
-        // ========== رفع الفيديو ==========
+        // ========== رفع الفيديو إلى تلغرام ==========
         async function uploadVideo() {
+            // التحقق من وجود فيديو
             if (!selectedFile) {
                 showToast("❌ يرجى اختيار فيديو أولاً");
                 return;
             }
 
+            // التحقق من تسجيل الدخول
             if (!currentUser || currentUser.name === 'زائر') {
-                showToast("❌ يرجى تسجيل الدخول أولاً");
+                showToast("❌ يرجى تسجيل الدخول أولاً لإضافة ريلز");
                 setTimeout(() => {
                     window.location.href = 'index.html';
                 }, 2000);
@@ -473,18 +453,11 @@
                 return;
             }
 
-            const publisher = document.getElementById('videoPublisher').value.trim() || currentUser.name;
+            const publisher = document.getElementById('videoPublisher').value.trim() || currentUser.name || 'ناردو برو';
             const hashtags = document.getElementById('videoHashtags').value.trim();
+
+            // إنشاء المعرف الخاص (NARD-SERIAL)
             const serial = generateSerialNumber();
-
-            // ✅ الكابتشن بالشكل الصحيح الذي تتعرف عليه index.html
-            let caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${serial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز`;
-            
-            if (hashtags) {
-                caption += `\n\n${hashtags}`;
-            }
-
-            console.log('📝 الكابتشن المرسل:', caption);
 
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
@@ -493,8 +466,16 @@
             showLoading("جاري رفع الفيديو إلى تلغرام...");
             updateProgress(30);
 
+            // بناء الكابشن بالصيغة المطلوبة ليتعرف عليها index.html
+            // الصيغة: 🎬 العنوان\n👤 الناشر\n🔑 NARD-SERIAL: المعرف\n📅 التاريخ
+            let caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${serial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز`;
+            
+            if (hashtags) {
+                caption += `\n\n${hashtags}`;
+            }
+
             const formData = new FormData();
-            formData.append('chat_id', TELEGRAM.channelId);
+            formData.append('chat_id', CHANNEL_ID);
             formData.append('video', selectedFile);
             formData.append('caption', caption);
             formData.append('supports_streaming', 'true');
@@ -502,7 +483,7 @@
             try {
                 updateProgress(60);
                 
-                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, {
+                const response = await fetch(`${API_URL}/sendVideo`, {
                     method: 'POST',
                     body: formData
                 });
@@ -515,35 +496,24 @@
                     updateProgress(100);
                     showToast(`✅ تم الرفع بنجاح! المعرف: ${serial}`);
                     
-                    // حفظ نسخة احتياطية في localStorage
-                    const backupReels = JSON.parse(localStorage.getItem('nardoo_reels_backup') || '[]');
-                    backupReels.unshift({
-                        id: data.result.message_id,
-                        title: title,
-                        publisher: publisher,
-                        serialNumber: serial,
-                        date: new Date().toISOString()
-                    });
-                    localStorage.setItem('nardoo_reels_backup', JSON.stringify(backupReels.slice(0, 50)));
-                    
+                    // عرض رسالة نجاح مع المعرف
                     const serialInfo = document.getElementById('serialInfo');
                     serialInfo.className = 'serial-info success';
                     serialInfo.innerHTML = `
                         <i class="fas fa-check-circle"></i> 
                         ✅ تم الرفع بنجاح!<br>
-                        🔑 المعرف السري: <strong style="color: gold; font-size: 18px;">${serial}</strong><br>
-                        📢 سيظهر الريلز في القسم المميز خلال 30 ثانية<br>
-                        <small>🔍 تأكد من وجود 🔑 NARD-SERIAL: ${serial} في تعليق الفيديو</small>
+                        🔑 المعرف السري: <strong style="color: gold; font-size: 14px;">${serial}</strong><br>
+                        📢 سيظهر الريلز في القسم المميز خلال 30 ثانية
                     `;
                     
-                    verifyTelegramUpload();
-                    
+                    // إعادة تعيين النموذج
                     selectedFile = null;
                     document.getElementById('videoPreview').style.display = 'none';
                     document.getElementById('videoFile').value = '';
                     document.getElementById('videoTitle').value = 'ريلز رائع';
                     document.getElementById('videoHashtags').value = '';
                     
+                    // توجيه المستخدم للصفحة الرئيسية بعد 3 ثواني
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 3000);
@@ -566,9 +536,19 @@
             }
         }
 
+        // ========== عرض الإشعارات ==========
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         // ========== تهيئة الصفحة ==========
         loadCurrentUser();
         
+        // إذا كان المستخدم زائر، عرض رسالة
         if (!currentUser || currentUser.name === 'زائر') {
             setTimeout(() => {
                 showToast("⚠️ يرجى تسجيل الدخول لإضافة ريلز");
@@ -579,3 +559,4 @@
     </script>
 </body>
 </html>
+
