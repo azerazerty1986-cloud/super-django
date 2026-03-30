@@ -18,154 +18,200 @@ const CartSystem = {
     
     // التهيئة
     init() {
-        this.items = Utils.load('nardoo_cart', []);
-        this.updateCounter();
-        this.addCheckoutModal();
-        this.addCartStyles();
-        console.log('✅ نظام السلة جاهز');
+        try {
+            // تحميل السلة من التخزين المحلي
+            const saved = localStorage.getItem('nardoo_cart');
+            if (saved) {
+                this.items = JSON.parse(saved);
+            } else {
+                this.items = [];
+            }
+            this.updateCounter();
+            this.addCheckoutModal();
+            this.addCartStyles();
+            console.log('✅ نظام السلة جاهز، عدد العناصر:', this.items.length);
+        } catch(e) {
+            console.error('خطأ في تهيئة السلة:', e);
+            this.items = [];
+        }
     },
     
     // إضافة للسلة
     add(product) {
-        // التأكد من وجود المنتج
-        if (!product || product.stock <= 0) {
-            Utils.showNotification('المنتج غير متوفر', 'error');
-            return false;
-        }
-        
-        const existing = this.items.find(i => i.productId === product.id || i.productId === product.productId);
-        
-        // الحصول على الصورة بشكل صحيح
-        const productImage = (product.images && product.images[0]) || product.image || CONFIG.defaultImage;
-        
-        if (existing) {
-            if (existing.quantity < product.stock) {
-                existing.quantity++;
-                Utils.showNotification(`✅ تم زيادة كمية ${product.name}`, 'success');
-            } else {
-                Utils.showNotification('الكمية غير متوفرة', 'warning');
+        try {
+            // التأكد من وجود المنتج
+            if (!product) {
+                this.showMessage('المنتج غير موجود', 'error');
                 return false;
             }
-        } else {
-            this.items.push({
-                productId: product.id || product.productId,
-                name: product.name,
-                price: product.price,
-                quantity: 1,
-                merchantId: product.merchantId,
-                merchantName: product.merchantName,
-                image: productImage,
-                images: product.images,
-                stock: product.stock
-            });
-            Utils.showNotification(`✅ تم إضافة ${product.name} للسلة`, 'success');
+            
+            if (product.stock !== undefined && product.stock <= 0) {
+                this.showMessage('المنتج غير متوفر', 'error');
+                return false;
+            }
+            
+            const productId = product.id || product.productId;
+            if (!productId) {
+                this.showMessage('معرف المنتج غير صالح', 'error');
+                return false;
+            }
+            
+            const existing = this.items.find(i => i.productId === productId);
+            
+            // الحصول على الصورة
+            const productImage = (product.images && product.images[0]) || product.image || CONFIG.defaultImage;
+            
+            if (existing) {
+                if (existing.quantity < (product.stock || 999)) {
+                    existing.quantity++;
+                    this.showMessage(`✅ تم زيادة كمية ${product.name}`, 'success');
+                } else {
+                    this.showMessage('الكمية غير متوفرة', 'warning');
+                    return false;
+                }
+            } else {
+                this.items.push({
+                    productId: productId,
+                    name: product.name || 'منتج',
+                    price: product.price || 0,
+                    quantity: 1,
+                    merchantId: product.merchantId || 'unknown',
+                    merchantName: product.merchantName || 'المتجر',
+                    image: productImage,
+                    stock: product.stock || 999
+                });
+                this.showMessage(`✅ تم إضافة ${product.name} للسلة`, 'success');
+            }
+            
+            this.save();
+            return true;
+        } catch(e) {
+            console.error('خطأ في الإضافة:', e);
+            this.showMessage('حدث خطأ أثناء الإضافة', 'error');
+            return false;
         }
-        
-        this.save();
-        return true;
     },
     
     // تحديث الكمية
     update(productId, newQuantity) {
-        if (newQuantity <= 0) {
-            this.remove(productId);
-            return;
-        }
-        
-        const item = this.items.find(i => i.productId === productId);
-        
-        if (item && newQuantity <= (item.stock || 999)) {
-            item.quantity = newQuantity;
-            this.save();
-            Utils.showNotification('🔄 تم تحديث الكمية', 'info');
-        } else {
-            Utils.showNotification('الكمية غير متوفرة', 'warning');
+        try {
+            if (newQuantity <= 0) {
+                this.remove(productId);
+                return;
+            }
+            
+            const item = this.items.find(i => i.productId === productId);
+            if (item) {
+                if (newQuantity <= (item.stock || 999)) {
+                    item.quantity = newQuantity;
+                    this.save();
+                    this.showMessage('🔄 تم تحديث الكمية', 'info');
+                } else {
+                    this.showMessage('الكمية غير متوفرة', 'warning');
+                }
+            }
+        } catch(e) {
+            console.error('خطأ في التحديث:', e);
         }
     },
     
     // حذف من السلة
     remove(productId) {
-        const item = this.items.find(i => i.productId === productId);
-        if (item) {
-            this.items = this.items.filter(i => i.productId !== productId);
-            this.save();
-            Utils.showNotification(`🗑️ تم حذف ${item.name} من السلة`, 'info');
+        try {
+            const item = this.items.find(i => i.productId === productId);
+            if (item) {
+                this.items = this.items.filter(i => i.productId !== productId);
+                this.save();
+                this.showMessage(`🗑️ تم حذف ${item.name} من السلة`, 'info');
+            }
+        } catch(e) {
+            console.error('خطأ في الحذف:', e);
         }
     },
     
     // حفظ السلة
     save() {
-        Utils.save('nardoo_cart', this.items);
-        this.updateCounter();
-        this.display();
+        try {
+            localStorage.setItem('nardoo_cart', JSON.stringify(this.items));
+            this.updateCounter();
+            this.display();
+        } catch(e) {
+            console.error('خطأ في الحفظ:', e);
+        }
     },
     
     // تحديث العداد
     updateCounter() {
-        const count = this.items.reduce((sum, i) => sum + i.quantity, 0);
-        
-        // تحديث عداد السلة في الشريط العلوي
-        const cartCounter = document.getElementById('cartCounter');
-        if (cartCounter) cartCounter.textContent = count;
-        
-        // تحديث العداد الثابت
-        const fixedCartCounter = document.getElementById('fixedCartCounter');
-        if (fixedCartCounter) fixedCartCounter.textContent = count;
+        try {
+            const count = this.items.reduce((sum, i) => sum + i.quantity, 0);
+            
+            // تحديث عداد السلة في الشريط العلوي
+            const cartCounter = document.getElementById('cartCounter');
+            if (cartCounter) cartCounter.textContent = count;
+            
+            // تحديث العداد الثابت
+            const fixedCartCounter = document.getElementById('fixedCartCounter');
+            if (fixedCartCounter) fixedCartCounter.textContent = count;
+        } catch(e) {
+            console.error('خطأ في تحديث العداد:', e);
+        }
     },
     
-    // عرض السلة في الشريط الجانبي
+    // عرض السلة
     display() {
-        const container = document.getElementById('cartItems');
-        const totalSpan = document.getElementById('cartTotal');
-        if (!container) return;
-        
-        if (this.items.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; padding:60px 20px;">
-                    <i class="fas fa-shopping-cart" style="font-size: 60px; color: var(--gold); margin-bottom: 20px;"></i>
-                    <p style="color: var(--text-secondary);">السلة فارغة</p>
-                    <button onclick="toggleCart()" style="margin-top: 15px; background: var(--gold); border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer;">
-                        مواصلة التسوق
-                    </button>
-                </div>
-            `;
-            if (totalSpan) totalSpan.textContent = `0 ${CONFIG.currency}`;
-            return;
-        }
-        
-        let total = 0;
-        container.innerHTML = this.items.map(item => {
-            const itemTotal = item.price * item.quantity;
-            total += itemTotal;
+        try {
+            const container = document.getElementById('cartItems');
+            const totalSpan = document.getElementById('cartTotal');
+            if (!container) return;
             
-            const productImage = item.image || CONFIG.defaultImage;
-            
-            return `
-                <div class="cart-item">
-                    <div class="cart-item-image">
-                        <img src="${productImage}" 
-                             alt="${item.name}" 
-                             onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
+            if (this.items.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:60px 20px;">
+                        <i class="fas fa-shopping-cart" style="font-size: 60px; color: var(--gold, #D4AF37); margin-bottom: 20px;"></i>
+                        <p style="color: var(--text-secondary, #666);">السلة فارغة</p>
+                        <button onclick="toggleCart()" style="margin-top: 15px; background: var(--gold, #D4AF37); border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; color: white;">
+                            مواصلة التسوق
+                        </button>
                     </div>
-                    <div class="cart-item-details">
-                        <div class="cart-item-title">${this.escapeHtml(item.name)}</div>
-                        <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
-                        <div class="cart-item-quantity">
-                            <button class="quantity-btn" onclick="CartSystem.update('${item.productId}', ${item.quantity - 1})">-</button>
-                            <span>${item.quantity}</span>
-                            <button class="quantity-btn" onclick="CartSystem.update('${item.productId}', ${item.quantity + 1})">+</button>
-                            <button class="quantity-btn btn-remove" onclick="CartSystem.remove('${item.productId}')">×</button>
+                `;
+                if (totalSpan) totalSpan.textContent = `0 ${CONFIG.currency}`;
+                return;
+            }
+            
+            let total = 0;
+            container.innerHTML = this.items.map(item => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                const productImage = item.image || CONFIG.defaultImage;
+                
+                return `
+                    <div class="cart-item">
+                        <div class="cart-item-image">
+                            <img src="${productImage}" 
+                                 alt="${this.escapeHtml(item.name)}" 
+                                 onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
+                        </div>
+                        <div class="cart-item-details">
+                            <div class="cart-item-title">${this.escapeHtml(item.name)}</div>
+                            <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+                            <div class="cart-item-quantity">
+                                <button class="quantity-btn" onclick="CartSystem.update('${item.productId}', ${item.quantity - 1})">-</button>
+                                <span>${item.quantity}</span>
+                                <button class="quantity-btn" onclick="CartSystem.update('${item.productId}', ${item.quantity + 1})">+</button>
+                                <button class="quantity-btn btn-remove" onclick="CartSystem.remove('${item.productId}')">×</button>
+                            </div>
+                        </div>
+                        <div class="cart-item-total">
+                            ${itemTotal.toLocaleString()} دج
                         </div>
                     </div>
-                    <div class="cart-item-total">
-                        ${itemTotal.toLocaleString()} دج
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} ${CONFIG.currency}`;
-        return total;
+                `;
+            }).join('');
+            
+            if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} ${CONFIG.currency}`;
+        } catch(e) {
+            console.error('خطأ في عرض السلة:', e);
+        }
     },
     
     // إضافة نافذة إتمام الطلب
@@ -219,7 +265,7 @@ const CartSystem = {
                         
                         <div id="loginRequiredMsg" class="login-required" style="display: none;">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <p>يرجى <a href="#" onclick="if(typeof openLoginModal === 'function') openLoginModal(); else alert('يرجى تسجيل الدخول'); return false;">تسجيل الدخول</a> لإكمال الطلب</p>
+                            <p>يرجى <a href="#" onclick="CartSystem.showLogin(); return false;">تسجيل الدخول</a> لإكمال الطلب</p>
                         </div>
                         
                         <div id="customerFormFields">
@@ -331,14 +377,287 @@ const CartSystem = {
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     },
     
-    // إضافة أنماط CSS للسلة
+    // فتح نافذة تسجيل الدخول
+    showLogin() {
+        this.closeCheckout();
+        if (typeof openLoginModal === 'function') {
+            openLoginModal();
+        } else {
+            this.showMessage('يرجى تسجيل الدخول أولاً', 'warning');
+        }
+    },
+    
+    // فتح نافذة إتمام الطلب
+    openCheckout() {
+        try {
+            if (this.items.length === 0) {
+                this.showMessage('السلة فارغة', 'warning');
+                return;
+            }
+            
+            const modal = document.getElementById('checkoutModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                this.populateCheckoutModal();
+            } else {
+                this.showMessage('نافذة الطلب غير متاحة', 'error');
+            }
+        } catch(e) {
+            console.error('خطأ في فتح النافذة:', e);
+            this.showMessage('حدث خطأ', 'error');
+        }
+    },
+    
+    // تعبئة بيانات نافذة إتمام الطلب
+    populateCheckoutModal() {
+        try {
+            const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            const shipping = CONFIG.shipping || 200;
+            const total = subtotal + shipping;
+            
+            const itemsList = document.getElementById('checkoutItemsList');
+            if (itemsList) {
+                itemsList.innerHTML = this.items.map(item => {
+                    const productImage = item.image || CONFIG.defaultImage;
+                    
+                    return `
+                        <div class="checkout-item">
+                            <div class="checkout-item-image">
+                                <img src="${productImage}" 
+                                     alt="${this.escapeHtml(item.name)}" 
+                                     onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
+                            </div>
+                            <div class="checkout-item-details">
+                                <div class="checkout-item-name">${this.escapeHtml(item.name)}</div>
+                                <div class="checkout-item-price">${item.price.toLocaleString()} دج × ${item.quantity}</div>
+                            </div>
+                            <div class="checkout-item-total">
+                                ${(item.price * item.quantity).toLocaleString()} دج
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            const subtotalEl = document.getElementById('checkoutSubtotal');
+            const shippingEl = document.getElementById('checkoutShipping');
+            const totalEl = document.getElementById('checkoutTotal');
+            
+            if (subtotalEl) subtotalEl.textContent = `${subtotal.toLocaleString()} دج`;
+            if (shippingEl) shippingEl.textContent = `${shipping.toLocaleString()} دج`;
+            if (totalEl) totalEl.textContent = `${total.toLocaleString()} دج`;
+            
+            // التحقق من تسجيل الدخول
+            const isLoggedIn = (typeof Auth !== 'undefined' && Auth.currentUser);
+            
+            if (isLoggedIn) {
+                const nameInput = document.getElementById('customerName');
+                const phoneInput = document.getElementById('customerPhone');
+                
+                if (nameInput) nameInput.value = Auth.currentUser.name || '';
+                if (phoneInput) phoneInput.value = Auth.currentUser.phone || '';
+                
+                const loginRequiredMsg = document.getElementById('loginRequiredMsg');
+                const customerFormFields = document.getElementById('customerFormFields');
+                
+                if (loginRequiredMsg) loginRequiredMsg.style.display = 'none';
+                if (customerFormFields) customerFormFields.style.display = 'block';
+            } else {
+                const loginRequiredMsg = document.getElementById('loginRequiredMsg');
+                const customerFormFields = document.getElementById('customerFormFields');
+                
+                if (loginRequiredMsg) loginRequiredMsg.style.display = 'flex';
+                if (customerFormFields) customerFormFields.style.display = 'none';
+            }
+        } catch(e) {
+            console.error('خطأ في تعبئة النافذة:', e);
+        }
+    },
+    
+    // إتمام الطلب
+    completeOrder() {
+        try {
+            // التحقق من تسجيل الدخول
+            const isLoggedIn = (typeof Auth !== 'undefined' && Auth.currentUser);
+            
+            if (!isLoggedIn) {
+                this.showMessage('يرجى تسجيل الدخول أولاً', 'warning');
+                this.closeCheckout();
+                this.showLogin();
+                return;
+            }
+            
+            // الحصول على بيانات النموذج
+            const customerName = document.getElementById('customerName')?.value.trim();
+            const customerPhone = document.getElementById('customerPhone')?.value.trim();
+            const customerAddress = document.getElementById('customerAddress')?.value.trim();
+            const orderNotes = document.getElementById('orderNotes')?.value.trim();
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+            
+            // التحقق من صحة البيانات
+            if (!customerName || !customerPhone || !customerAddress) {
+                this.showMessage('يرجى تعبئة جميع البيانات المطلوبة', 'error');
+                return;
+            }
+            
+            // التحقق من صحة رقم الهاتف
+            const phoneRegex = /^0[567]\d{8}$/;
+            if (!phoneRegex.test(customerPhone)) {
+                this.showMessage('رقم الهاتف غير صحيح (مثال: 05XXXXXXXX)', 'error');
+                return;
+            }
+            
+            // حساب المجاميع
+            const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            const shipping = CONFIG.shipping || 200;
+            const total = subtotal + shipping;
+            
+            // إنشاء رسالة الطلب
+            let message = '🛍️ *طلب جديد - ناردو برو* 🛍️\n\n';
+            message += `👤 *العميل:* ${customerName}\n`;
+            message += `📞 *الهاتف:* ${customerPhone}\n`;
+            message += `📍 *العنوان:* ${customerAddress}\n`;
+            message += `💳 *طريقة الدفع:* ${this.getPaymentMethodName(paymentMethod)}\n\n`;
+            message += `📦 *المنتجات:*\n`;
+            message += `────────────────\n`;
+            
+            this.items.forEach(item => {
+                message += `• ${item.name}\n`;
+                message += `  الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج\n`;
+                message += `  المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                message += `────────────────\n`;
+            });
+            
+            message += `\n💰 *المجموع الفرعي:* ${subtotal.toLocaleString()} دج\n`;
+            message += `🚚 *رسوم التوصيل:* ${shipping.toLocaleString()} دج\n`;
+            message += `💵 *الإجمالي:* ${total.toLocaleString()} دج\n`;
+            
+            if (orderNotes) {
+                message += `\n📝 *ملاحظات:*\n${orderNotes}\n`;
+            }
+            
+            const orderNumber = this.generateOrderNumber();
+            message += `\n⏰ *تاريخ الطلب:* ${new Date().toLocaleString('ar-DZ')}\n`;
+            message += `🆔 *رقم الطلب:* ${orderNumber}\n`;
+            
+            // فتح واتساب
+            const phoneNumber = CONFIG.phone.replace(/[^0-9]/g, '');
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+            
+            // حفظ الطلب
+            this.saveOrder({
+                orderNumber: orderNumber,
+                customer: { name: customerName, phone: customerPhone, address: customerAddress },
+                items: JSON.parse(JSON.stringify(this.items)),
+                subtotal: subtotal,
+                shipping: shipping,
+                total: total,
+                notes: orderNotes,
+                paymentMethod: paymentMethod,
+                date: new Date().toISOString(),
+                status: 'pending'
+            });
+            
+            // تفريغ السلة
+            this.clear();
+            
+            // إغلاق النافذة
+            this.closeCheckout();
+            
+            // عرض رسالة نجاح
+            this.showMessage('✅ تم إرسال طلبك بنجاح! سنتواصل معك قريباً', 'success');
+            
+        } catch(e) {
+            console.error('خطأ في إتمام الطلب:', e);
+            this.showMessage('حدث خطأ أثناء إرسال الطلب', 'error');
+        }
+    },
+    
+    // الحصول على اسم طريقة الدفع
+    getPaymentMethodName(method) {
+        const methods = {
+            'cash': 'الدفع عند الاستلام',
+            'cib': 'الدفع عبر CIB',
+            'edahabia': 'الدفع عبر Edahabia'
+        };
+        return methods[method] || method;
+    },
+    
+    // إنشاء رقم طلب
+    generateOrderNumber() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `NARD-${timestamp}-${random}`;
+    },
+    
+    // حفظ الطلب
+    saveOrder(order) {
+        try {
+            const orders = localStorage.getItem('nardoo_orders');
+            const ordersList = orders ? JSON.parse(orders) : [];
+            ordersList.unshift(order);
+            if (ordersList.length > 100) ordersList.pop();
+            localStorage.setItem('nardoo_orders', JSON.stringify(ordersList));
+        } catch(e) {
+            console.error('خطأ في حفظ الطلب:', e);
+        }
+    },
+    
+    // إغلاق نافذة إتمام الطلب
+    closeCheckout() {
+        const modal = document.getElementById('checkoutModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+    
+    // تفريغ السلة
+    clear() {
+        this.items = [];
+        this.save();
+    },
+    
+    // عرض رسالة
+    showMessage(message, type = 'info') {
+        try {
+            if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                Utils.showNotification(message, type);
+            } else if (typeof showNotification === 'function') {
+                showNotification(message, type);
+            } else {
+                // إنشاء رسالة منبثقة بسيطة
+                const toast = document.createElement('div');
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: ${type === 'error' ? '#f44336' : type === 'success' ? '#4caf50' : '#ff9800'};
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 50px;
+                    z-index: 100000;
+                    font-size: 14px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                `;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        } catch(e) {
+            console.log(message);
+        }
+    },
+    
+    // إضافة أنماط CSS
     addCartStyles() {
         if (document.getElementById('cart-system-styles')) return;
         
         const styles = document.createElement('style');
         styles.id = 'cart-system-styles';
         styles.textContent = `
-        /* ===== السلة الجانبية ===== */
+        /* أنماط السلة الجانبية */
         .cart-sidebar {
             position: fixed;
             top: 0;
@@ -501,7 +820,7 @@ const CartSystem = {
             box-shadow: 0 5px 15px rgba(212,175,55,0.3);
         }
         
-        /* ===== نافذة إتمام الطلب ===== */
+        /* أنماط نافذة إتمام الطلب */
         .checkout-modal {
             position: fixed;
             top: 0;
@@ -825,6 +1144,7 @@ const CartSystem = {
             color: #D4AF37;
             text-decoration: none;
             font-weight: 600;
+            cursor: pointer;
         }
         
         .checkout-actions {
@@ -939,240 +1259,12 @@ const CartSystem = {
         document.head.appendChild(styles);
     },
     
-    // فتح نافذة إتمام الطلب
-    openCheckout() {
-        if (this.items.length === 0) {
-            Utils.showNotification('السلة فارغة', 'warning');
-            return;
-        }
-        
-        const modal = document.getElementById('checkoutModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            this.populateCheckoutModal();
-        }
-    },
-    
-    // تعبئة بيانات نافذة إتمام الطلب
-    populateCheckoutModal() {
-        const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const shipping = CONFIG.shipping || 200;
-        const total = subtotal + shipping;
-        
-        const itemsList = document.getElementById('checkoutItemsList');
-        if (itemsList) {
-            itemsList.innerHTML = this.items.map(item => {
-                const productImage = item.image || CONFIG.defaultImage;
-                
-                return `
-                    <div class="checkout-item">
-                        <div class="checkout-item-image">
-                            <img src="${productImage}" 
-                                 alt="${item.name}" 
-                                 onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
-                        </div>
-                        <div class="checkout-item-details">
-                            <div class="checkout-item-name">${this.escapeHtml(item.name)}</div>
-                            <div class="checkout-item-price">${item.price.toLocaleString()} دج × ${item.quantity}</div>
-                        </div>
-                        <div class="checkout-item-total">
-                            ${(item.price * item.quantity).toLocaleString()} دج
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        const subtotalEl = document.getElementById('checkoutSubtotal');
-        const shippingEl = document.getElementById('checkoutShipping');
-        const totalEl = document.getElementById('checkoutTotal');
-        
-        if (subtotalEl) subtotalEl.textContent = `${subtotal.toLocaleString()} دج`;
-        if (shippingEl) shippingEl.textContent = `${shipping.toLocaleString()} دج`;
-        if (totalEl) totalEl.textContent = `${total.toLocaleString()} دج`;
-        
-        // محاولة تعبئة بيانات المستخدم إذا كان مسجلاً
-        try {
-            if (typeof Auth !== 'undefined' && Auth.currentUser) {
-                const nameInput = document.getElementById('customerName');
-                const phoneInput = document.getElementById('customerPhone');
-                
-                if (nameInput) nameInput.value = Auth.currentUser.name || '';
-                if (phoneInput) phoneInput.value = Auth.currentUser.phone || '';
-                
-                document.getElementById('loginRequiredMsg').style.display = 'none';
-                document.getElementById('customerFormFields').style.display = 'block';
-            } else {
-                document.getElementById('loginRequiredMsg').style.display = 'flex';
-                document.getElementById('customerFormFields').style.display = 'none';
-            }
-        } catch(e) {
-            document.getElementById('loginRequiredMsg').style.display = 'flex';
-            document.getElementById('customerFormFields').style.display = 'none';
-        }
-    },
-    
-    // إتمام الطلب
-    completeOrder() {
-        // التحقق من تسجيل الدخول
-        const isLoggedIn = (typeof Auth !== 'undefined' && Auth.currentUser);
-        
-        if (!isLoggedIn) {
-            Utils.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
-            this.closeCheckout();
-            if (typeof openLoginModal === 'function') {
-                openLoginModal();
-            }
-            return;
-        }
-        
-        // الحصول على بيانات النموذج
-        const customerName = document.getElementById('customerName')?.value.trim();
-        const customerPhone = document.getElementById('customerPhone')?.value.trim();
-        const customerAddress = document.getElementById('customerAddress')?.value.trim();
-        const orderNotes = document.getElementById('orderNotes')?.value.trim();
-        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-        
-        // التحقق من صحة البيانات
-        if (!customerName || !customerPhone || !customerAddress) {
-            Utils.showNotification('يرجى تعبئة جميع البيانات المطلوبة', 'error');
-            return;
-        }
-        
-        // التحقق من صحة رقم الهاتف الجزائري
-        const phoneRegex = /^0[567]\d{8}$/;
-        if (!phoneRegex.test(customerPhone)) {
-            Utils.showNotification('رقم الهاتف غير صحيح (مثال: 05XXXXXXXX)', 'error');
-            return;
-        }
-        
-        // حساب المجاميع
-        const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const shipping = CONFIG.shipping || 200;
-        const total = subtotal + shipping;
-        
-        // إنشاء رسالة الطلب
-        let message = '🛍️ *طلب جديد - ناردو برو* 🛍️\n\n';
-        message += `👤 *العميل:* ${customerName}\n`;
-        message += `📞 *الهاتف:* ${customerPhone}\n`;
-        message += `📍 *العنوان:* ${customerAddress}\n`;
-        message += `💳 *طريقة الدفع:* ${this.getPaymentMethodName(paymentMethod)}\n\n`;
-        message += `📦 *المنتجات:*\n`;
-        message += `────────────────\n`;
-        
-        this.items.forEach(item => {
-            message += `• ${item.name}\n`;
-            message += `  الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج\n`;
-            message += `  المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
-            message += `────────────────\n`;
-        });
-        
-        message += `\n💰 *المجموع الفرعي:* ${subtotal.toLocaleString()} دج\n`;
-        message += `🚚 *رسوم التوصيل:* ${shipping.toLocaleString()} دج\n`;
-        message += `💵 *الإجمالي:* ${total.toLocaleString()} دج\n`;
-        
-        if (orderNotes) {
-            message += `\n📝 *ملاحظات:*\n${orderNotes}\n`;
-        }
-        
-        message += `\n⏰ *تاريخ الطلب:* ${new Date().toLocaleString('ar-DZ')}\n`;
-        message += `🆔 *رقم الطلب:* ${this.generateOrderNumber()}\n`;
-        
-        // فتح واتساب
-        const phoneNumber = CONFIG.phone.replace(/[^0-9]/g, '');
-        window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
-        
-        // حفظ الطلب
-        this.saveOrder({
-            orderNumber: this.generateOrderNumber(),
-            customer: { name: customerName, phone: customerPhone, address: customerAddress },
-            items: JSON.parse(JSON.stringify(this.items)),
-            subtotal: subtotal,
-            shipping: shipping,
-            total: total,
-            notes: orderNotes,
-            paymentMethod: paymentMethod,
-            date: new Date().toISOString(),
-            status: 'pending'
-        });
-        
-        // تفريغ السلة
-        this.clear();
-        
-        // إغلاق النافذة
-        this.closeCheckout();
-        
-        // عرض رسالة نجاح
-        Utils.showNotification('✅ تم إرسال طلبك بنجاح! سنتواصل معك قريباً', 'success');
-    },
-    
-    // الحصول على اسم طريقة الدفع
-    getPaymentMethodName(method) {
-        const methods = {
-            'cash': 'الدفع عند الاستلام',
-            'cib': 'الدفع عبر CIB',
-            'edahabia': 'الدفع عبر Edahabia'
-        };
-        return methods[method] || method;
-    },
-    
-    // إنشاء رقم طلب
-    generateOrderNumber() {
-        const timestamp = Date.now().toString().slice(-8);
-        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        return `NARD-${timestamp}-${random}`;
-    },
-    
-    // حفظ الطلب
-    saveOrder(order) {
-        const orders = Utils.load('nardoo_orders', []);
-        orders.unshift(order);
-        if (orders.length > 100) orders.pop();
-        Utils.save('nardoo_orders', orders);
-    },
-    
-    // إغلاق نافذة إتمام الطلب
-    closeCheckout() {
-        const modal = document.getElementById('checkoutModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-    },
-    
-    // تفريغ السلة
-    clear() {
-        this.items = [];
-        this.save();
-    },
-    
-    // الحصول على عدد العناصر
-    getCount() {
-        return this.items.reduce((sum, i) => sum + i.quantity, 0);
-    },
-    
-    // الحصول على المجموع الكلي
-    getTotal() {
-        return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    },
-    
     // تفريغ النص من HTML
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    },
-    
-    // الحصول على الوقت المنقضي
-    getTimeAgo(dateString) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = Math.floor((now - date) / 1000);
-        
-        if (diff < 60) return 'الآن';
-        if (diff < 3600) return `${Math.floor(diff / 60)} دقيقة`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)} ساعة`;
-        return `${Math.floor(diff / 86400)} يوم`;
     }
 };
 
@@ -1181,9 +1273,16 @@ window.Cart = CartSystem;
 
 // تهيئة السلة عند تحميل الصفحة
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => CartSystem.init());
+    document.addEventListener('DOMContentLoaded', () => {
+        CartSystem.init();
+        console.log('✅ نظام السلة متكامل وجاهز للعمل');
+    });
 } else {
     CartSystem.init();
+    console.log('✅ نظام السلة متكامل وجاهز للعمل');
 }
 
-console.log('✅ نظام السلة المتكامل جاهز');
+// إضافة دالة مساعدة للوصول من أي مكان
+window.addToCartGlobal = function(product) {
+    return CartSystem.add(product);
+};
