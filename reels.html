@@ -688,9 +688,17 @@
                             let title = '🎬 ريلز';
                             const titleMatch = caption.match(/🎬 (.+?)(?:\n|$)/);
                             if (titleMatch) title = titleMatch[1];
+                            
+                            // *** التعديل الأهم: استخراج اسم الناشر من التوقيع في التسمية التوضيحية ***
                             let publisher = 'مستخدم';
+                            // البحث عن سطر "👤" في النص
                             const publisherMatch = caption.match(/👤 (.+?)(?:\n|$)/);
-                            if (publisherMatch) publisher = publisherMatch[1];
+                            if (publisherMatch && publisherMatch[1].trim() !== '') {
+                                publisher = publisherMatch[1].trim();
+                            } else {
+                                // في حال عدم وجود توقيع، نعرض اسم القناة كاسم الناشر
+                                publisher = 'قناة ناردو';
+                            }
                             
                             const fileId = post.video.file_id;
                             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
@@ -702,7 +710,7 @@
                                     telegramId: messageId,
                                     title: title,
                                     videoUrl: videoUrl,
-                                    publisher: publisher,
+                                    publisher: publisher, // اسم الناشر الحقيقي من التوقيع
                                     views: post.views || 0,
                                     likes: 0, // سنحافظ على الإعجابات محلياً فقط
                                     createdAt: new Date(post.date * 1000).toISOString(),
@@ -862,6 +870,7 @@
                 const formData = new FormData();
                 formData.append('chat_id', TELEGRAM.channelId);
                 formData.append('video', selectedVideoFile);
+                // *** التعديل الأهم: إضافة اسم الناشر الحقيقي في التسمية التوضيحية ***
                 formData.append('caption', `🎬 ${title}\n👤 ${currentUser.name}\n📅 ${new Date().toLocaleString('ar-EG')}\n\n✅ تم الرفع عبر ناردو ريلز`);
                 
                 const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendVideo`, {
@@ -1029,7 +1038,7 @@
             const modal = document.getElementById('uploadModal');
             if (e.target === modal) closeUploadModal();
         };
-        console.log('🎬 ناردو ريلز | بدون نافذة دخول | تخزين تليجرام شامل');
+        console.log('🎬 ناردو ريلز | بدون نافذة دخول | تخزين تليجرام شامل | اسم الناشر من الحساب');
     </script>
 </body>
 </html>
