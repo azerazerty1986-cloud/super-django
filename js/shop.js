@@ -1,252 +1,18 @@
 /* ================================================================== */
-/* ===== [03] الملف: 03-shop.js - نظام المتجر والمنتجات ===== */
+/* ===== [03] الملف: 03-shop.js - نظام السلة المتكامل ===== */
 /* ================================================================== */
 
-// ===== [3.1] نظام المنتجات =====
-const ShopSystem = {
-    products: [],
-    currentFilter: 'all',
-    searchTerm: '',
-    sortBy: 'newest',
-    
-    // تحميل المنتجات
-    async loadProducts() {
-        // محاولة جلب من تلغرام أولاً
-        if (window.Telegram) {
-            this.products = await Telegram.fetchProducts();
-        } else {
-            this.products = Utils.load('nardoo_products', []);
-        }
-        
-        // إذا لم توجد منتجات، أنشئ منتجات افتراضية
-        if (this.products.length === 0) {
-            this.createDefaultProducts();
-        }
-        
-        this.displayProducts();
-        return this.products;
-    },
-    
-    // إنشاء منتجات افتراضية مع صور
-    createDefaultProducts() {
-        const merchantId = 'MER_001001';
-        
-        this.products = [
-            {
-                id: IDSystem.generateProductId(merchantId),
-                productId: IDSystem.generateProductId(merchantId),
-                name: 'زعتر فلسطيني',
-                price: 500,
-                category: 'spices',
-                stock: 50,
-                minStock: 10,
-                maxStock: 100,
-                merchantId: merchantId,
-                merchantName: 'المتجر الرئيسي',
-                description: 'زعتر فلسطيني أصلي 100%',
-                images: ['https://via.placeholder.com/300x300?text=Zaatar'],
-                rating: 4.5,
-                soldCount: 150,
-                createdAt: new Date().toISOString(),
-                dateStr: 'الآن'
-            },
-            {
-                id: IDSystem.generateProductId(merchantId),
-                productId: IDSystem.generateProductId(merchantId),
-                name: 'كريم ترطيب',
-                price: 1200,
-                category: 'cosmetic',
-                stock: 30,
-                minStock: 5,
-                maxStock: 50,
-                merchantId: merchantId,
-                merchantName: 'المتجر الرئيسي',
-                description: 'كريم ترطيب للبشرة',
-                images: ['https://via.placeholder.com/300x300?text=Cream'],
-                rating: 4.3,
-                soldCount: 75,
-                createdAt: new Date().toISOString(),
-                dateStr: 'الآن'
-            },
-            {
-                id: IDSystem.generateProductId(merchantId),
-                productId: IDSystem.generateProductId(merchantId),
-                name: 'بخور عود',
-                price: 1500,
-                category: 'other',
-                stock: 15,
-                minStock: 3,
-                maxStock: 30,
-                merchantId: merchantId,
-                merchantName: 'المتجر الرئيسي',
-                description: 'بخور عود فاخر',
-                images: ['https://via.placeholder.com/300x300?text=Oud'],
-                rating: 4.8,
-                soldCount: 45,
-                createdAt: new Date().toISOString(),
-                dateStr: 'الآن'
-            }
-        ];
-        
-        this.saveProducts();
-    },
-    
-    // حفظ المنتجات
-    saveProducts() {
-        Utils.save('nardoo_products', this.products);
-    },
-    
-    // عرض المنتجات
-    displayProducts() {
-        const container = document.getElementById('productsContainer');
-        if (!container) return;
-        
-        let filtered = this.filterProducts();
-        filtered = this.sortProducts(filtered);
-        
-        if (filtered.length === 0) {
-            container.innerHTML = this.getEmptyStateHTML();
-            return;
-        }
-        
-        container.innerHTML = filtered.map(p => this.getProductCardHTML(p)).join('');
-    },
-    
-    // تصفية المنتجات
-    filterProducts() {
-        let filtered = this.products.filter(p => p.stock > 0);
-        
-        if (this.currentFilter !== 'all') {
-            filtered = filtered.filter(p => p.category === this.currentFilter);
-        }
-        
-        if (this.searchTerm) {
-            const term = this.searchTerm.toLowerCase();
-            filtered = filtered.filter(p => 
-                p.name.toLowerCase().includes(term) ||
-                (p.description && p.description.toLowerCase().includes(term))
-            );
-        }
-        
-        return filtered;
-    },
-    
-    // ترتيب المنتجات
-    sortProducts(products) {
-        const sorts = {
-            'newest': (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-            'price_low': (a, b) => a.price - b.price,
-            'price_high': (a, b) => b.price - a.price,
-            'name': (a, b) => a.name.localeCompare(b.name),
-            'rating': (a, b) => (b.rating || 0) - (a.rating || 0)
-        };
-        
-        return products.sort(sorts[this.sortBy] || sorts.newest);
-    },
-    
-    // HTML لبطاقة المنتج
-    getProductCardHTML(product) {
-        const mainImage = product.images && product.images.length > 0 ? product.images[0] : CONFIG.defaultImage;
-        const categoryName = this.getCategoryName(product.category);
-        const stockClass = this.getStockClass(product.stock);
-        const stockText = this.getStockText(product.stock);
-        
-        return `
-        <div class="product-card" onclick="App.showProductDetail('${product.id}')">
-            <div class="product-time-badge">
-                <i class="far fa-clock"></i> ${product.dateStr || Utils.getTimeAgo(product.createdAt)}
-            </div>
-            <div class="product-gallery">
-                <img src="${mainImage}" alt="${product.name}" onerror="this.src='${CONFIG.defaultImage}'">
-                ${product.images && product.images.length > 1 ? 
-                    `<span class="image-counter"><i class="fas fa-images"></i> ${product.images.length}</span>` : ''}
-            </div>
-            <div class="product-info">
-                <span class="product-category">${categoryName}</span>
-                <h3 class="product-title">${product.name}</h3>
-                <div class="product-merchant-info">
-                    <i class="fas fa-store"></i> ${product.merchantName}
-                    <small>(${product.merchantId})</small>
-                </div>
-                <div class="product-price">${product.price.toLocaleString()} <small>دج</small></div>
-                <div class="product-stock ${stockClass}">${stockText}</div>
-                <div class="product-actions">
-                    <button class="add-to-cart" 
-                            onclick="event.stopPropagation(); App.addToCart('${product.id}')"
-                            ${product.stock <= 0 ? 'disabled' : ''}>
-                        <i class="fas fa-shopping-cart"></i> أضف للسلة
-                    </button>
-                </div>
-            </div>
-        </div>`;
-    },
-    
-    // HTML للحالة الفارغة
-    getEmptyStateHTML() {
-        const canAdd = Auth.currentUser && 
-                       (Auth.currentUser.role === 'admin' || Auth.currentUser.role === 'merchant');
-        
-        return `
-            <div style="grid-column:1/-1; text-align:center; padding:80px 20px;">
-                <i class="fas fa-box-open" style="font-size:80px; color:var(--gold); margin-bottom:20px;"></i>
-                <h3 style="color:var(--gold);">لا توجد منتجات</h3>
-                ${canAdd ? 
-                    '<button class="btn-gold" onclick="App.openAddProductModal()"><i class="fas fa-plus"></i> إضافة منتج جديد</button>' : 
-                    '<p style="color:var(--text-secondary);">سجل دخول كتاجر لإضافة منتجات</p>'}
-            </div>
-        `;
-    },
-    
-    // اسم القسم
-    getCategoryName(cat) {
-        const names = {
-            promo: 'برموسيو',
-            spices: 'توابل',
-            cosmetic: 'كوسمتيك',
-            other: 'أخرى'
-        };
-        return names[cat] || cat;
-    },
-    
-    // كلاس المخزون
-    getStockClass(stock) {
-        if (stock <= 0) return 'out-of-stock';
-        if (stock < 5) return 'low-stock';
-        return 'in-stock';
-    },
-    
-    // نص المخزون
-    getStockText(stock) {
-        if (stock <= 0) return 'غير متوفر';
-        if (stock < 5) return `كمية محدودة (${stock})`;
-        return `متوفر (${stock})`;
-    },
-    
-    // تغيير التصفية
-    filter(category) {
-        this.currentFilter = category;
-        this.displayProducts();
-    },
-    
-    // بحث
-    search(term) {
-        this.searchTerm = term;
-        this.displayProducts();
-    },
-    
-    // تغيير الترتيب
-    setSort(sortBy) {
-        this.sortBy = sortBy;
-        this.displayProducts();
-    },
-    
-    // الحصول على منتج
-    getProduct(productId) {
-        return this.products.find(p => p.id === productId || p.productId === productId);
-    }
-};
+// ===== التأكد من وجود CONFIG =====
+if (typeof CONFIG === 'undefined') {
+    window.CONFIG = {
+        currency: 'دج',
+        shipping: 200,
+        phone: '2135622448',
+        defaultImage: 'https://via.placeholder.com/300x300?text=No+Image'
+    };
+}
 
-// ===== [3.2] نظام السلة المتطور مع نافذة إتمام الطلب =====
+// ===== نظام السلة المتطور =====
 const CartSystem = {
     items: [],
     
@@ -255,17 +21,19 @@ const CartSystem = {
         this.items = Utils.load('nardoo_cart', []);
         this.updateCounter();
         this.addCheckoutModal();
+        this.addCartStyles();
+        console.log('✅ نظام السلة جاهز');
     },
     
     // إضافة للسلة
-    add(productId) {
-        const product = ShopSystem.getProduct(productId);
+    add(product) {
+        // التأكد من وجود المنتج
         if (!product || product.stock <= 0) {
             Utils.showNotification('المنتج غير متوفر', 'error');
             return false;
         }
         
-        const existing = this.items.find(i => i.productId === productId);
+        const existing = this.items.find(i => i.productId === product.id || i.productId === product.productId);
         
         // الحصول على الصورة بشكل صحيح
         const productImage = (product.images && product.images[0]) || product.image || CONFIG.defaultImage;
@@ -273,25 +41,27 @@ const CartSystem = {
         if (existing) {
             if (existing.quantity < product.stock) {
                 existing.quantity++;
+                Utils.showNotification(`✅ تم زيادة كمية ${product.name}`, 'success');
             } else {
                 Utils.showNotification('الكمية غير متوفرة', 'warning');
                 return false;
             }
         } else {
             this.items.push({
-                productId: productId,
+                productId: product.id || product.productId,
                 name: product.name,
                 price: product.price,
                 quantity: 1,
                 merchantId: product.merchantId,
                 merchantName: product.merchantName,
                 image: productImage,
-                images: product.images
+                images: product.images,
+                stock: product.stock
             });
+            Utils.showNotification(`✅ تم إضافة ${product.name} للسلة`, 'success');
         }
         
         this.save();
-        Utils.showNotification('✅ تمت الإضافة للسلة');
         return true;
     },
     
@@ -303,11 +73,11 @@ const CartSystem = {
         }
         
         const item = this.items.find(i => i.productId === productId);
-        const product = ShopSystem.getProduct(productId);
         
-        if (item && product && newQuantity <= product.stock) {
+        if (item && newQuantity <= (item.stock || 999)) {
             item.quantity = newQuantity;
             this.save();
+            Utils.showNotification('🔄 تم تحديث الكمية', 'info');
         } else {
             Utils.showNotification('الكمية غير متوفرة', 'warning');
         }
@@ -315,9 +85,12 @@ const CartSystem = {
     
     // حذف من السلة
     remove(productId) {
-        this.items = this.items.filter(i => i.productId !== productId);
-        this.save();
-        Utils.showNotification('🗑️ تم الحذف من السلة', 'info');
+        const item = this.items.find(i => i.productId === productId);
+        if (item) {
+            this.items = this.items.filter(i => i.productId !== productId);
+            this.save();
+            Utils.showNotification(`🗑️ تم حذف ${item.name} من السلة`, 'info');
+        }
     },
     
     // حفظ السلة
@@ -347,7 +120,15 @@ const CartSystem = {
         if (!container) return;
         
         if (this.items.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:40px;">🛒 السلة فارغة</div>';
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px;">
+                    <i class="fas fa-shopping-cart" style="font-size: 60px; color: var(--gold); margin-bottom: 20px;"></i>
+                    <p style="color: var(--text-secondary);">السلة فارغة</p>
+                    <button onclick="toggleCart()" style="margin-top: 15px; background: var(--gold); border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer;">
+                        مواصلة التسوق
+                    </button>
+                </div>
+            `;
             if (totalSpan) totalSpan.textContent = `0 ${CONFIG.currency}`;
             return;
         }
@@ -357,8 +138,7 @@ const CartSystem = {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
             
-            // تحسين عرض الصورة مع fallback
-            const productImage = item.image || (item.images && item.images[0]) || CONFIG.defaultImage;
+            const productImage = item.image || CONFIG.defaultImage;
             
             return `
                 <div class="cart-item">
@@ -368,13 +148,13 @@ const CartSystem = {
                              onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
                     </div>
                     <div class="cart-item-details">
-                        <div class="cart-item-title">${item.name}</div>
+                        <div class="cart-item-title">${this.escapeHtml(item.name)}</div>
                         <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
                         <div class="cart-item-quantity">
-                            <button class="quantity-btn" onclick="App.updateCartItem('${item.productId}', ${item.quantity - 1})">-</button>
+                            <button class="quantity-btn" onclick="CartSystem.update('${item.productId}', ${item.quantity - 1})">-</button>
                             <span>${item.quantity}</span>
-                            <button class="quantity-btn" onclick="App.updateCartItem('${item.productId}', ${item.quantity + 1})">+</button>
-                            <button class="quantity-btn btn-remove" onclick="App.removeFromCart('${item.productId}')">×</button>
+                            <button class="quantity-btn" onclick="CartSystem.update('${item.productId}', ${item.quantity + 1})">+</button>
+                            <button class="quantity-btn btn-remove" onclick="CartSystem.remove('${item.productId}')">×</button>
                         </div>
                     </div>
                     <div class="cart-item-total">
@@ -388,9 +168,8 @@ const CartSystem = {
         return total;
     },
     
-    // إضافة نافذة إتمام الطلب إلى الصفحة
+    // إضافة نافذة إتمام الطلب
     addCheckoutModal() {
-        // التحقق من وجود النافذة مسبقاً
         if (document.getElementById('checkoutModal')) return;
         
         const modalHTML = `
@@ -422,7 +201,7 @@ const CartSystem = {
                             </div>
                             <div class="total-row">
                                 <span>رسوم التوصيل:</span>
-                                <span id="checkoutShipping">0 دج</span>
+                                <span id="checkoutShipping">${CONFIG.shipping} دج</span>
                             </div>
                             <div class="total-row grand-total">
                                 <span>الإجمالي:</span>
@@ -440,7 +219,7 @@ const CartSystem = {
                         
                         <div id="loginRequiredMsg" class="login-required" style="display: none;">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <p>يرجى <a href="#" onclick="App.showLoginModal(); return false;">تسجيل الدخول</a> لإكمال الطلب</p>
+                            <p>يرجى <a href="#" onclick="if(typeof openLoginModal === 'function') openLoginModal(); else alert('يرجى تسجيل الدخول'); return false;">تسجيل الدخول</a> لإكمال الطلب</p>
                         </div>
                         
                         <div id="customerFormFields">
@@ -485,7 +264,7 @@ const CartSystem = {
                                 </label>
                                 <textarea id="orderNotes" 
                                           rows="2" 
-                                          placeholder="أي ملاحظات إضافية للطلب (مثل: وقت التوصيل المناسب، تعليمات خاصة)"
+                                          placeholder="أي ملاحظات إضافية للطلب"
                                           class="form-control"></textarea>
                             </div>
                         </div>
@@ -550,16 +329,178 @@ const CartSystem = {
         `;
         
         document.body.insertAdjacentHTML('beforeend', modalHTML);
-        this.addCheckoutStyles();
     },
     
-    // إضافة أنماط CSS للنافذة
-    addCheckoutStyles() {
-        if (document.getElementById('checkout-modal-styles')) return;
+    // إضافة أنماط CSS للسلة
+    addCartStyles() {
+        if (document.getElementById('cart-system-styles')) return;
         
         const styles = document.createElement('style');
-        styles.id = 'checkout-modal-styles';
+        styles.id = 'cart-system-styles';
         styles.textContent = `
+        /* ===== السلة الجانبية ===== */
+        .cart-sidebar {
+            position: fixed;
+            top: 0;
+            left: -400px;
+            width: 380px;
+            height: 100vh;
+            background: var(--bg-primary, #fff);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.2);
+            z-index: 10001;
+            transition: left 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            direction: rtl;
+        }
+        
+        .cart-sidebar.active {
+            left: 0;
+        }
+        
+        .cart-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #D4AF37, #B8860B);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .cart-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        .close-cart {
+            cursor: pointer;
+            font-size: 24px;
+            transition: transform 0.3s;
+        }
+        
+        .close-cart:hover {
+            transform: rotate(90deg);
+        }
+        
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .cart-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(212,175,55,0.2);
+            align-items: center;
+        }
+        
+        .cart-item-image {
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #f0f0f0;
+        }
+        
+        .cart-item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .cart-item-details {
+            flex: 1;
+        }
+        
+        .cart-item-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .cart-item-price {
+            color: #D4AF37;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        
+        .cart-item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .quantity-btn {
+            background: rgba(212,175,55,0.2);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #D4AF37;
+        }
+        
+        .quantity-btn:hover {
+            background: #D4AF37;
+            color: white;
+        }
+        
+        .btn-remove {
+            background: rgba(248,113,113,0.2);
+            color: #f87171;
+        }
+        
+        .btn-remove:hover {
+            background: #f87171;
+            color: white;
+        }
+        
+        .cart-item-total {
+            font-weight: bold;
+            color: #D4AF37;
+            min-width: 80px;
+            text-align: left;
+        }
+        
+        .cart-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(212,175,55,0.3);
+            background: var(--bg-secondary, #f9f9f9);
+        }
+        
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #D4AF37;
+        }
+        
+        .checkout-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #D4AF37, #B8860B);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .checkout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212,175,55,0.3);
+        }
+        
         /* ===== نافذة إتمام الطلب ===== */
         .checkout-modal {
             position: fixed;
@@ -938,88 +879,6 @@ const CartSystem = {
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
         
-        /* تحسين عرض الصور في السلة الجانبية */
-        .cart-item-image {
-            width: 70px;
-            height: 70px;
-            border-radius: 10px;
-            overflow: hidden;
-            flex-shrink: 0;
-            background: #f0f0f0;
-        }
-        
-        .cart-item-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .cart-item {
-            display: flex;
-            gap: 12px;
-            padding: 12px;
-            margin-bottom: 12px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(212,175,55,0.2);
-            align-items: center;
-        }
-        
-        .cart-item-details {
-            flex: 1;
-        }
-        
-        .cart-item-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        .cart-item-price {
-            color: #D4AF37;
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
-        
-        .cart-item-quantity {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .quantity-btn {
-            background: rgba(212,175,55,0.2);
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: #D4AF37;
-        }
-        
-        .quantity-btn:hover {
-            background: #D4AF37;
-            color: white;
-        }
-        
-        .btn-remove {
-            background: rgba(248,113,113,0.2);
-            color: #f87171;
-        }
-        
-        .btn-remove:hover {
-            background: #f87171;
-            color: white;
-        }
-        
-        .cart-item-total {
-            font-weight: bold;
-            color: #D4AF37;
-            min-width: 80px;
-            text-align: left;
-        }
-        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -1037,6 +896,11 @@ const CartSystem = {
         }
         
         @media (max-width: 768px) {
+            .cart-sidebar {
+                width: 100%;
+                left: -100%;
+            }
+            
             .checkout-container {
                 width: 95%;
                 max-height: 95vh;
@@ -1091,17 +955,14 @@ const CartSystem = {
     
     // تعبئة بيانات نافذة إتمام الطلب
     populateCheckoutModal() {
-        // حساب المجاميع
         const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const shipping = (CONFIG.shipping !== undefined) ? CONFIG.shipping : 200;
+        const shipping = CONFIG.shipping || 200;
         const total = subtotal + shipping;
         
-        // عرض المنتجات في الملخص مع تحسين الصور
         const itemsList = document.getElementById('checkoutItemsList');
         if (itemsList) {
             itemsList.innerHTML = this.items.map(item => {
-                // الحصول على الصورة بشكل صحيح
-                const productImage = item.image || (item.images && item.images[0]) || CONFIG.defaultImage;
+                const productImage = item.image || CONFIG.defaultImage;
                 
                 return `
                     <div class="checkout-item">
@@ -1111,7 +972,7 @@ const CartSystem = {
                                  onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
                         </div>
                         <div class="checkout-item-details">
-                            <div class="checkout-item-name">${item.name}</div>
+                            <div class="checkout-item-name">${this.escapeHtml(item.name)}</div>
                             <div class="checkout-item-price">${item.price.toLocaleString()} دج × ${item.quantity}</div>
                         </div>
                         <div class="checkout-item-total">
@@ -1122,7 +983,6 @@ const CartSystem = {
             }).join('');
         }
         
-        // تحديث المجاميع
         const subtotalEl = document.getElementById('checkoutSubtotal');
         const shippingEl = document.getElementById('checkoutShipping');
         const totalEl = document.getElementById('checkoutTotal');
@@ -1131,34 +991,33 @@ const CartSystem = {
         if (shippingEl) shippingEl.textContent = `${shipping.toLocaleString()} دج`;
         if (totalEl) totalEl.textContent = `${total.toLocaleString()} دج`;
         
-        // تعبئة بيانات المستخدم إذا كان مسجلاً
-        const isLoggedIn = Auth.currentUser && Auth.currentUser.userId;
-        
-        if (isLoggedIn) {
-            const nameInput = document.getElementById('customerName');
-            const phoneInput = document.getElementById('customerPhone');
-            
-            if (nameInput) nameInput.value = Auth.currentUser.name || '';
-            if (phoneInput) phoneInput.value = Auth.currentUser.phone || '';
-            
-            const loginRequiredMsg = document.getElementById('loginRequiredMsg');
-            const customerFormFields = document.getElementById('customerFormFields');
-            
-            if (loginRequiredMsg) loginRequiredMsg.style.display = 'none';
-            if (customerFormFields) customerFormFields.style.display = 'block';
-        } else {
-            const loginRequiredMsg = document.getElementById('loginRequiredMsg');
-            const customerFormFields = document.getElementById('customerFormFields');
-            
-            if (loginRequiredMsg) loginRequiredMsg.style.display = 'flex';
-            if (customerFormFields) customerFormFields.style.display = 'none';
+        // محاولة تعبئة بيانات المستخدم إذا كان مسجلاً
+        try {
+            if (typeof Auth !== 'undefined' && Auth.currentUser) {
+                const nameInput = document.getElementById('customerName');
+                const phoneInput = document.getElementById('customerPhone');
+                
+                if (nameInput) nameInput.value = Auth.currentUser.name || '';
+                if (phoneInput) phoneInput.value = Auth.currentUser.phone || '';
+                
+                document.getElementById('loginRequiredMsg').style.display = 'none';
+                document.getElementById('customerFormFields').style.display = 'block';
+            } else {
+                document.getElementById('loginRequiredMsg').style.display = 'flex';
+                document.getElementById('customerFormFields').style.display = 'none';
+            }
+        } catch(e) {
+            document.getElementById('loginRequiredMsg').style.display = 'flex';
+            document.getElementById('customerFormFields').style.display = 'none';
         }
     },
     
     // إتمام الطلب
     completeOrder() {
         // التحقق من تسجيل الدخول
-        if (!Auth.currentUser || !Auth.currentUser.userId) {
+        const isLoggedIn = (typeof Auth !== 'undefined' && Auth.currentUser);
+        
+        if (!isLoggedIn) {
             Utils.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
             this.closeCheckout();
             if (typeof openLoginModal === 'function') {
@@ -1183,13 +1042,13 @@ const CartSystem = {
         // التحقق من صحة رقم الهاتف الجزائري
         const phoneRegex = /^0[567]\d{8}$/;
         if (!phoneRegex.test(customerPhone)) {
-            Utils.showNotification('رقم الهاتف غير صحيح (مثال: 05XXXXXXXX أو 06XXXXXXXX أو 07XXXXXXXX)', 'error');
+            Utils.showNotification('رقم الهاتف غير صحيح (مثال: 05XXXXXXXX)', 'error');
             return;
         }
         
         // حساب المجاميع
         const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const shipping = (CONFIG.shipping !== undefined) ? CONFIG.shipping : 200;
+        const shipping = CONFIG.shipping || 200;
         const total = subtotal + shipping;
         
         // إنشاء رسالة الطلب
@@ -1219,28 +1078,11 @@ const CartSystem = {
         message += `\n⏰ *تاريخ الطلب:* ${new Date().toLocaleString('ar-DZ')}\n`;
         message += `🆔 *رقم الطلب:* ${this.generateOrderNumber()}\n`;
         
-        // الحصول على رقم الهاتف من CONFIG
-        const phoneNumber = (CONFIG.phone) ? CONFIG.phone.replace(/[^0-9]/g, '') : '2135622448';
-        
         // فتح واتساب
+        const phoneNumber = CONFIG.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
         
-        // إرسال للتلغرام إذا كان متاحاً
-        if (window.Telegram && Telegram.sendOrder) {
-            Telegram.sendOrder({
-                customer: customerName,
-                phone: customerPhone,
-                address: customerAddress,
-                items: this.items,
-                subtotal: subtotal,
-                shipping: shipping,
-                total: total,
-                notes: orderNotes,
-                paymentMethod: paymentMethod
-            });
-        }
-        
-        // حفظ الطلب في سجل الطلبات
+        // حفظ الطلب
         this.saveOrder({
             orderNumber: this.generateOrderNumber(),
             customer: { name: customerName, phone: customerPhone, address: customerAddress },
@@ -1285,7 +1127,6 @@ const CartSystem = {
     saveOrder(order) {
         const orders = Utils.load('nardoo_orders', []);
         orders.unshift(order);
-        // الاحتفاظ بآخر 100 طلب فقط
         if (orders.length > 100) orders.pop();
         Utils.save('nardoo_orders', orders);
     },
@@ -1302,14 +1143,47 @@ const CartSystem = {
     clear() {
         this.items = [];
         this.save();
+    },
+    
+    // الحصول على عدد العناصر
+    getCount() {
+        return this.items.reduce((sum, i) => sum + i.quantity, 0);
+    },
+    
+    // الحصول على المجموع الكلي
+    getTotal() {
+        return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    },
+    
+    // تفريغ النص من HTML
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+    
+    // الحصول على الوقت المنقضي
+    getTimeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        
+        if (diff < 60) return 'الآن';
+        if (diff < 3600) return `${Math.floor(diff / 60)} دقيقة`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)} ساعة`;
+        return `${Math.floor(diff / 86400)} يوم`;
     }
 };
 
-// ===== [3.3] تهيئة الأنظمة =====
-window.Shop = ShopSystem;
+// ===== تهيئة النظام =====
 window.Cart = CartSystem;
 
-// تهيئة السلة
-CartSystem.init();
+// تهيئة السلة عند تحميل الصفحة
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => CartSystem.init());
+} else {
+    CartSystem.init();
+}
 
-console.log('✅ نظام المتجر جاهز مع نافذة إتمام الطلب المتطورة');
+console.log('✅ نظام السلة المتكامل جاهز');
