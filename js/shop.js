@@ -27,7 +27,7 @@ const ShopSystem = {
         return this.products;
     },
     
-    // إنشاء منتجات افتراضية
+    // إنشاء منتجات افتراضية مع صور
     createDefaultProducts() {
         const merchantId = 'MER_001001';
         
@@ -44,7 +44,7 @@ const ShopSystem = {
                 merchantId: merchantId,
                 merchantName: 'المتجر الرئيسي',
                 description: 'زعتر فلسطيني أصلي 100%',
-                images: [CONFIG.defaultImage],
+                images: ['https://via.placeholder.com/300x300?text=Zaatar'],
                 rating: 4.5,
                 soldCount: 150,
                 createdAt: new Date().toISOString(),
@@ -62,7 +62,7 @@ const ShopSystem = {
                 merchantId: merchantId,
                 merchantName: 'المتجر الرئيسي',
                 description: 'كريم ترطيب للبشرة',
-                images: [CONFIG.defaultImage],
+                images: ['https://via.placeholder.com/300x300?text=Cream'],
                 rating: 4.3,
                 soldCount: 75,
                 createdAt: new Date().toISOString(),
@@ -80,7 +80,7 @@ const ShopSystem = {
                 merchantId: merchantId,
                 merchantName: 'المتجر الرئيسي',
                 description: 'بخور عود فاخر',
-                images: [CONFIG.defaultImage],
+                images: ['https://via.placeholder.com/300x300?text=Oud'],
                 rating: 4.8,
                 soldCount: 45,
                 createdAt: new Date().toISOString(),
@@ -267,6 +267,9 @@ const CartSystem = {
         
         const existing = this.items.find(i => i.productId === productId);
         
+        // الحصول على الصورة بشكل صحيح
+        const productImage = (product.images && product.images[0]) || product.image || CONFIG.defaultImage;
+        
         if (existing) {
             if (existing.quantity < product.stock) {
                 existing.quantity++;
@@ -282,7 +285,8 @@ const CartSystem = {
                 quantity: 1,
                 merchantId: product.merchantId,
                 merchantName: product.merchantName,
-                image: product.images ? product.images[0] : product.image
+                image: productImage,
+                images: product.images
             });
         }
         
@@ -352,10 +356,16 @@ const CartSystem = {
         container.innerHTML = this.items.map(item => {
             const itemTotal = item.price * item.quantity;
             total += itemTotal;
+            
+            // تحسين عرض الصورة مع fallback
+            const productImage = item.image || (item.images && item.images[0]) || CONFIG.defaultImage;
+            
             return `
                 <div class="cart-item">
                     <div class="cart-item-image">
-                        <img src="${item.image || CONFIG.defaultImage}" alt="${item.name}" onerror="this.src='${CONFIG.defaultImage}'">
+                        <img src="${productImage}" 
+                             alt="${item.name}" 
+                             onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
                     </div>
                     <div class="cart-item-details">
                         <div class="cart-item-title">${item.name}</div>
@@ -702,6 +712,8 @@ const CartSystem = {
             height: 60px;
             border-radius: 10px;
             overflow: hidden;
+            flex-shrink: 0;
+            background: #f0f0f0;
         }
         
         .checkout-item-image img {
@@ -926,6 +938,88 @@ const CartSystem = {
             box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
         
+        /* تحسين عرض الصور في السلة الجانبية */
+        .cart-item-image {
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #f0f0f0;
+        }
+        
+        .cart-item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .cart-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(212,175,55,0.2);
+            align-items: center;
+        }
+        
+        .cart-item-details {
+            flex: 1;
+        }
+        
+        .cart-item-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .cart-item-price {
+            color: #D4AF37;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        
+        .cart-item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .quantity-btn {
+            background: rgba(212,175,55,0.2);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #D4AF37;
+        }
+        
+        .quantity-btn:hover {
+            background: #D4AF37;
+            color: white;
+        }
+        
+        .btn-remove {
+            background: rgba(248,113,113,0.2);
+            color: #f87171;
+        }
+        
+        .btn-remove:hover {
+            background: #f87171;
+            color: white;
+        }
+        
+        .cart-item-total {
+            font-weight: bold;
+            color: #D4AF37;
+            min-width: 80px;
+            text-align: left;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -965,6 +1059,16 @@ const CartSystem = {
             .checkout-actions {
                 flex-direction: column;
             }
+            
+            .cart-item {
+                flex-wrap: wrap;
+            }
+            
+            .cart-item-total {
+                width: 100%;
+                text-align: left;
+                padding-top: 5px;
+            }
         }
         `;
         
@@ -992,23 +1096,30 @@ const CartSystem = {
         const shipping = (CONFIG.shipping !== undefined) ? CONFIG.shipping : 200;
         const total = subtotal + shipping;
         
-        // عرض المنتجات في الملخص
+        // عرض المنتجات في الملخص مع تحسين الصور
         const itemsList = document.getElementById('checkoutItemsList');
         if (itemsList) {
-            itemsList.innerHTML = this.items.map(item => `
-                <div class="checkout-item">
-                    <div class="checkout-item-image">
-                        <img src="${item.image || CONFIG.defaultImage}" alt="${item.name}" onerror="this.src='${CONFIG.defaultImage}'">
+            itemsList.innerHTML = this.items.map(item => {
+                // الحصول على الصورة بشكل صحيح
+                const productImage = item.image || (item.images && item.images[0]) || CONFIG.defaultImage;
+                
+                return `
+                    <div class="checkout-item">
+                        <div class="checkout-item-image">
+                            <img src="${productImage}" 
+                                 alt="${item.name}" 
+                                 onerror="this.src='${CONFIG.defaultImage}'; this.onerror=null;">
+                        </div>
+                        <div class="checkout-item-details">
+                            <div class="checkout-item-name">${item.name}</div>
+                            <div class="checkout-item-price">${item.price.toLocaleString()} دج × ${item.quantity}</div>
+                        </div>
+                        <div class="checkout-item-total">
+                            ${(item.price * item.quantity).toLocaleString()} دج
+                        </div>
                     </div>
-                    <div class="checkout-item-details">
-                        <div class="checkout-item-name">${item.name}</div>
-                        <div class="checkout-item-price">${item.price.toLocaleString()} دج × ${item.quantity}</div>
-                    </div>
-                    <div class="checkout-item-total">
-                        ${(item.price * item.quantity).toLocaleString()} دج
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // تحديث المجاميع
