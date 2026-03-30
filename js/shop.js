@@ -1,5 +1,5 @@
 /* ================================================================== */
-/* ===== [03] الملف: 03-shop.js - نظام السلة المتكامل (واجهة احترافية) ===== */
+/* ===== [03] shop.js - نظام السلة المتكامل (نسخة محسنة) ===== */
 /* ================================================================== */
 
 // ===== التأكد من وجود CONFIG =====
@@ -12,23 +12,102 @@ if (typeof CONFIG === 'undefined') {
     };
 }
 
+// ===== إضافة المتغيرات الأساسية للتصميم =====
+const addBaseStyles = () => {
+    if (document.getElementById('base-cart-styles')) return;
+    
+    const styles = document.createElement('style');
+    styles.id = 'base-cart-styles';
+    styles.textContent = `
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --accent-color: #D4AF37;
+            --accent-hover: #B8860B;
+            --danger-color: #ff6b6b;
+            --success-color: #4ade80;
+            --warning-color: #fbbf24;
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* تحسين شريط التمرير */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-hover);
+        }
+    `;
+    
+    document.head.appendChild(styles);
+};
+
 // ===== نظام السلة المتطور بواجهة احترافية =====
 const CartSystem = {
     items: [],
+    isSidebarOpen: false,
     
     // التهيئة
     init() {
+        addBaseStyles();
         this.items = Utils.load('nardoo_cart', []);
         this.updateCounter();
         this.addCheckoutModal();
         this.addCartStyles();
         this.initCartSidebar();
+        this.setupGlobalEventListeners();
         console.log('✅ نظام السلة الجاهز بواجهة احترافية');
+    },
+    
+    // إعداد مستمعات الأحداث العامة
+    setupGlobalEventListeners() {
+        // إغلاق السلة عند الضغط على ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeCartSidebar();
+                this.closeCheckout();
+            }
+        });
+        
+        // إغلاق السلة عند الضغط خارجها
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('cartSidebar');
+            const cartButton = e.target.closest('.cart-toggle-btn, .fixed-cart, .action-btn');
+            
+            if (sidebar && sidebar.classList.contains('open') && !cartButton && !sidebar.contains(e.target)) {
+                this.closeCartSidebar();
+            }
+        });
     },
     
     // تهيئة السلة الجانبية
     initCartSidebar() {
-        // البحث عن السلة الجانبية الموجودة أو إنشاؤها
         let cartSidebar = document.getElementById('cartSidebar');
         if (!cartSidebar) {
             this.createCartSidebar();
@@ -47,25 +126,14 @@ const CartSystem = {
                     </div>
                     <h3>سلة التسوق</h3>
                 </div>
-                <button class="cart-close-btn" onclick="toggleCart()">
+                <button class="cart-close-btn" onclick="CartSystem.closeCartSidebar()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <div class="cart-sidebar-content">
+            <div class="cart-sidebar-content" id="cartSidebarContent">
                 <div class="cart-items-container" id="cartItems">
-                    <div class="empty-cart-modern">
-                        <div class="empty-cart-animation">
-                            <i class="fas fa-shopping-cart"></i>
-                            <div class="empty-cart-pulse"></div>
-                        </div>
-                        <h4>سلة فارغة</h4>
-                        <p>أضف بعض المنتجات الرائعة إلى سلتك</p>
-                        <button class="btn-continue-shopping" onclick="toggleCart()">
-                            <i class="fas fa-arrow-right"></i>
-                            مواصلة التسوق
-                        </button>
-                    </div>
+                    ${this.getEmptyCartHTML()}
                 </div>
             </div>
             
@@ -94,6 +162,31 @@ const CartSystem = {
         `;
         
         document.body.insertAdjacentHTML('beforeend', sidebarHTML);
+        
+        // إضافة overlay للسلة
+        const overlay = document.createElement('div');
+        overlay.id = 'cartSidebarOverlay';
+        overlay.className = 'cart-sidebar-overlay';
+        overlay.onclick = () => this.closeCartSidebar();
+        document.body.appendChild(overlay);
+    },
+    
+    // HTML للسلة الفارغة
+    getEmptyCartHTML() {
+        return `
+            <div class="empty-cart-modern">
+                <div class="empty-cart-animation">
+                    <i class="fas fa-shopping-cart"></i>
+                    <div class="empty-cart-pulse"></div>
+                </div>
+                <h4>سلة فارغة</h4>
+                <p>أضف بعض المنتجات الرائعة إلى سلتك</p>
+                <button class="btn-continue-shopping" onclick="CartSystem.closeCartSidebar()">
+                    <i class="fas fa-arrow-right"></i>
+                    مواصلة التسوق
+                </button>
+            </div>
+        `;
     },
     
     // إضافة للسلة مع تأثير
@@ -103,7 +196,7 @@ const CartSystem = {
             return false;
         }
         
-        const existing = this.items.find(i => i.productId === product.id || i.productId === product.productId);
+        const existing = this.items.find(i => i.productId === (product.id || product.productId));
         const productImage = (product.images && product.images[0]) || product.image || CONFIG.defaultImage;
         
         if (existing) {
@@ -145,7 +238,7 @@ const CartSystem = {
         document.body.appendChild(flyingItem);
         
         const startPos = { x: window.event?.clientX || window.innerWidth / 2, y: window.event?.clientY || window.innerHeight / 2 };
-        const cartIcon = document.querySelector('.fixed-cart, .action-btn .fa-shopping-cart')?.closest('button');
+        const cartIcon = document.querySelector('.fixed-cart, .cart-toggle-btn, .action-btn .fa-shopping-cart')?.closest('button');
         
         if (cartIcon) {
             const endPos = cartIcon.getBoundingClientRect();
@@ -161,7 +254,7 @@ const CartSystem = {
     
     // تأثير أيقونة السلة
     animateCartIcon() {
-        const cartIcon = document.querySelector('.fixed-cart, .action-btn .fa-shopping-cart');
+        const cartIcon = document.querySelector('.fixed-cart, .cart-toggle-btn, .action-btn .fa-shopping-cart');
         if (cartIcon) {
             cartIcon.classList.add('cart-bump');
             setTimeout(() => cartIcon.classList.remove('cart-bump'), 300);
@@ -170,6 +263,10 @@ const CartSystem = {
     
     // إشعار عائم
     showFloatingNotification(message, type = 'success') {
+        // إزالة الإشعارات القديمة
+        const oldNotifications = document.querySelectorAll('.floating-notification');
+        oldNotifications.forEach(n => n.remove());
+        
         const notification = document.createElement('div');
         notification.className = `floating-notification ${type}`;
         notification.innerHTML = `
@@ -249,20 +346,7 @@ const CartSystem = {
         if (!container) return;
         
         if (this.items.length === 0) {
-            container.innerHTML = `
-                <div class="empty-cart-modern">
-                    <div class="empty-cart-animation">
-                        <i class="fas fa-shopping-cart"></i>
-                        <div class="empty-cart-pulse"></div>
-                    </div>
-                    <h4>سلة فارغة</h4>
-                    <p>أضف بعض المنتجات الرائعة إلى سلتك</p>
-                    <button class="btn-continue-shopping" onclick="toggleCart()">
-                        <i class="fas fa-arrow-right"></i>
-                        مواصلة التسوق
-                    </button>
-                </div>
-            `;
+            container.innerHTML = this.getEmptyCartHTML();
             return;
         }
         
@@ -405,7 +489,7 @@ const CartSystem = {
                             <i class="fas fa-lock"></i>
                             <div>
                                 <strong>تسجيل الدخول مطلوب</strong>
-                                <p>يرجى <a href="#" onclick="App.openLoginModal(); return false;">تسجيل الدخول</a> لإكمال الطلب</p>
+                                <p>يرجى <a href="#" onclick="App?.openLoginModal(); return false;">تسجيل الدخول</a> لإكمال الطلب</p>
                             </div>
                         </div>
                         
@@ -512,7 +596,7 @@ const CartSystem = {
     // تحديث سعر التوصيل
     updateShippingPrice() {
         const address = document.getElementById('customerAddress')?.value;
-        if (!address) return;
+        if (!address) return CONFIG.shipping || 200;
         
         const zone = this.detectZone(address);
         let shippingPrice = CONFIG.shipping || 200;
@@ -538,7 +622,13 @@ const CartSystem = {
         
         const styles = document.createElement('style');
         styles.id = 'cart-system-styles';
-        styles.textContent = `
+        styles.textContent = this.getCartStyles();
+        document.head.appendChild(styles);
+    },
+    
+    // الحصول على أنماط CSS
+    getCartStyles() {
+        return `
             /* السلة الجانبية الحديثة */
             .cart-sidebar-modern {
                 position: fixed;
@@ -559,6 +649,26 @@ const CartSystem = {
                 right: 0;
             }
             
+            /* Overlay للسلة */
+            .cart-sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(4px);
+                z-index: 10000;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+            
+            .cart-sidebar-modern.open ~ .cart-sidebar-overlay {
+                opacity: 1;
+                visibility: visible;
+            }
+            
             .cart-sidebar-header {
                 padding: 20px 25px;
                 background: linear-gradient(135deg, #1a1a2e, #0f0f1a);
@@ -566,6 +676,7 @@ const CartSystem = {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-shrink: 0;
             }
             
             .cart-header-title {
@@ -620,6 +731,9 @@ const CartSystem = {
                 cursor: pointer;
                 color: var(--text-secondary);
                 transition: all 0.3s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .cart-close-btn:hover {
@@ -644,6 +758,11 @@ const CartSystem = {
                 margin-bottom: 12px;
                 transition: all 0.3s;
                 animation: slideIn 0.3s ease;
+            }
+            
+            .cart-item-modern:hover {
+                background: rgba(255, 255, 255, 0.08);
+                transform: translateX(-5px);
             }
             
             .cart-item-modern.removing {
@@ -734,11 +853,15 @@ const CartSystem = {
                 background: rgba(212, 175, 55, 0.2);
                 color: #D4AF37;
                 transition: all 0.3s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .qty-btn:hover {
                 background: #D4AF37;
                 color: #000;
+                transform: scale(1.05);
             }
             
             .qty-value {
@@ -830,11 +953,13 @@ const CartSystem = {
                 color: #D4AF37;
                 cursor: pointer;
                 transition: all 0.3s;
+                font-size: 14px;
             }
             
             .btn-continue-shopping:hover {
                 background: #D4AF37;
                 color: #000;
+                transform: translateY(-2px);
             }
             
             /* خالص السلة */
@@ -842,6 +967,7 @@ const CartSystem = {
                 padding: 20px;
                 border-top: 1px solid rgba(212, 175, 55, 0.3);
                 background: rgba(0, 0, 0, 0.3);
+                flex-shrink: 0;
             }
             
             .cart-summary-modern {
@@ -992,6 +1118,11 @@ const CartSystem = {
                 animation: fadeIn 0.3s ease;
             }
             
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
             .checkout-overlay-modern {
                 position: absolute;
                 top: 0;
@@ -1034,6 +1165,7 @@ const CartSystem = {
                 align-items: center;
                 gap: 15px;
                 border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+                flex-shrink: 0;
             }
             
             .checkout-header-icon-modern {
@@ -1064,6 +1196,9 @@ const CartSystem = {
                 cursor: pointer;
                 color: var(--text-secondary);
                 transition: all 0.3s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             .checkout-close-modern:hover {
@@ -1132,6 +1267,7 @@ const CartSystem = {
                 border-radius: 10px;
                 overflow: hidden;
                 background: rgba(255, 255, 255, 0.1);
+                flex-shrink: 0;
             }
             
             .checkout-item-image-modern img {
@@ -1164,6 +1300,7 @@ const CartSystem = {
             .checkout-item-total-modern {
                 font-weight: 700;
                 color: #D4AF37;
+                font-size: 14px;
             }
             
             .order-total-modern {
@@ -1229,6 +1366,10 @@ const CartSystem = {
                 background: rgba(255, 255, 255, 0.15);
             }
             
+            .input-modern::placeholder {
+                color: rgba(255, 255, 255, 0.3);
+            }
+            
             .form-group-modern small {
                 display: block;
                 margin-top: 5px;
@@ -1290,6 +1431,7 @@ const CartSystem = {
                 opacity: 0;
                 transition: all 0.3s;
                 color: #D4AF37;
+                font-size: 18px;
             }
             
             .payment-method-modern input:checked + .payment-method-content .check-icon {
@@ -1328,12 +1470,17 @@ const CartSystem = {
                 font-weight: 600;
             }
             
+            .login-required-modern a:hover {
+                text-decoration: underline;
+            }
+            
             .checkout-actions-modern {
                 display: flex;
                 gap: 15px;
                 padding: 20px;
                 background: rgba(0, 0, 0, 0.3);
                 border-top: 1px solid rgba(212, 175, 55, 0.3);
+                flex-shrink: 0;
             }
             
             .btn-cancel-modern, .btn-complete-modern {
@@ -1371,6 +1518,7 @@ const CartSystem = {
                 box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
             }
             
+            /* تحسينات للشاشات الصغيرة */
             @media (max-width: 768px) {
                 .cart-sidebar-modern {
                     width: 100%;
@@ -1405,17 +1553,42 @@ const CartSystem = {
                     justify-content: space-between;
                     width: 100%;
                 }
+                
+                .cart-item-image-modern {
+                    width: 100%;
+                    height: 120px;
+                }
+                
+                .floating-notification {
+                    bottom: 20px;
+                    right: 20px;
+                    left: 20px;
+                    text-align: center;
+                    justify-content: center;
+                }
             }
         `;
-        
-        document.head.appendChild(styles);
     },
     
     // فتح السلة الجانبية
     showCartSidebar() {
         const sidebar = document.getElementById('cartSidebar');
-        if (sidebar) {
+        if (sidebar && !sidebar.classList.contains('open')) {
             sidebar.classList.add('open');
+            this.isSidebarOpen = true;
+            // منع تمرير الصفحة
+            document.body.style.overflow = 'hidden';
+        }
+    },
+    
+    // إغلاق السلة الجانبية
+    closeCartSidebar() {
+        const sidebar = document.getElementById('cartSidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+            this.isSidebarOpen = false;
+            // إعادة تمرير الصفحة
+            document.body.style.overflow = '';
         }
     },
     
@@ -1426,10 +1599,25 @@ const CartSystem = {
             return;
         }
         
+        // إغلاق السلة الجانبية أولاً
+        this.closeCartSidebar();
+        
         const modal = document.getElementById('checkoutModal');
         if (modal) {
             modal.style.display = 'flex';
             this.populateCheckoutModal();
+            // منع تمرير الصفحة
+            document.body.style.overflow = 'hidden';
+        }
+    },
+    
+    // إغلاق نافذة إتمام الطلب
+    closeCheckout() {
+        const modal = document.getElementById('checkoutModal');
+        if (modal) {
+            modal.style.display = 'none';
+            // إعادة تمرير الصفحة
+            document.body.style.overflow = '';
         }
     },
     
@@ -1471,27 +1659,30 @@ const CartSystem = {
         if (totalEl) totalEl.textContent = `${(subtotal + shipping).toLocaleString()} دج`;
         
         // تعبئة بيانات المستخدم
-        try {
-            if (typeof Auth !== 'undefined' && Auth.currentUser) {
+        const isLoggedIn = typeof Auth !== 'undefined' && Auth.currentUser;
+        
+        const loginRequiredMsg = document.getElementById('loginRequiredMsg');
+        const customerFormFields = document.getElementById('customerFormFields');
+        
+        if (loginRequiredMsg && customerFormFields) {
+            if (isLoggedIn && Auth.currentUser) {
+                loginRequiredMsg.style.display = 'none';
+                customerFormFields.style.display = 'block';
+                
                 const nameInput = document.getElementById('customerName');
                 const phoneInput = document.getElementById('customerPhone');
                 if (nameInput) nameInput.value = Auth.currentUser.name || '';
                 if (phoneInput) phoneInput.value = Auth.currentUser.phone || '';
-                document.getElementById('loginRequiredMsg').style.display = 'none';
-                document.getElementById('customerFormFields').style.display = 'block';
             } else {
-                document.getElementById('loginRequiredMsg').style.display = 'flex';
-                document.getElementById('customerFormFields').style.display = 'none';
+                loginRequiredMsg.style.display = 'flex';
+                customerFormFields.style.display = 'none';
             }
-        } catch(e) {
-            document.getElementById('loginRequiredMsg').style.display = 'flex';
-            document.getElementById('customerFormFields').style.display = 'none';
         }
     },
     
     // إتمام الطلب
     async completeOrder() {
-        const isLoggedIn = (typeof Auth !== 'undefined' && Auth.currentUser);
+        const isLoggedIn = typeof Auth !== 'undefined' && Auth.currentUser;
         
         if (!isLoggedIn) {
             this.showFloatingNotification('يرجى تسجيل الدخول أولاً', 'warning');
@@ -1682,7 +1873,7 @@ const CartSystem = {
         for (const [merchantId, group] of Object.entries(merchantGroups)) {
             message += `\n🏪 التاجر ${merchantIndex}: ${group.merchantName}\n`;
             group.items.forEach(item => {
-                message += `   • ${item.name} (${item.quantity} × ${item.price} دج)\n`;
+                message += `   • ${item.name} (${item.quantity} × ${item.price.toLocaleString()} دج)\n`;
             });
             message += `   💰 المجموع: ${group.subtotal.toLocaleString()} دج\n`;
             merchantIndex++;
@@ -1718,11 +1909,6 @@ const CartSystem = {
         Utils.save('nardoo_orders', orders);
     },
     
-    closeCheckout() {
-        const modal = document.getElementById('checkoutModal');
-        if (modal) modal.style.display = 'none';
-    },
-    
     clear() {
         this.items = [];
         this.save();
@@ -1755,7 +1941,11 @@ window.Cart = CartSystem;
 window.toggleCart = function() {
     const sidebar = document.getElementById('cartSidebar');
     if (sidebar) {
-        sidebar.classList.toggle('open');
+        if (sidebar.classList.contains('open')) {
+            CartSystem.closeCartSidebar();
+        } else {
+            CartSystem.showCartSidebar();
+        }
     }
 };
 
