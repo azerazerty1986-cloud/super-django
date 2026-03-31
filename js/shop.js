@@ -1,5 +1,5 @@
 /* ================================================================== */
-/* ===== [03] shop.js - نظام السلة المتكامل (نسخة نهائية) ===== */
+/* ===== [03] shop.js - نظام السلة المتكامل (نسخة كاملة) ===== */
 /* ================================================================== */
 
 // ===== التأكد من وجود CONFIG =====
@@ -21,9 +21,10 @@ const CartSystem = {
         this.items = this.loadCart();
         this.updateCounter();
         this.createCartSidebar();
+        this.createCheckoutModal();
         this.addCartStyles();
         this.setupEventListeners();
-        console.log('✅ نظام السلة جاهز');
+        console.log('✅ نظام السلة جاهز مع تقسيم حسب التجار');
     },
     
     // تحميل السلة
@@ -37,6 +38,28 @@ const CartSystem = {
         localStorage.setItem('nardoo_cart', JSON.stringify(this.items));
         this.updateCounter();
         this.updateCartDisplay();
+    },
+    
+    // تجميع المنتجات حسب التاجر
+    groupItemsByMerchant() {
+        const groups = {};
+        this.items.forEach(item => {
+            const merchantId = item.merchantId || item.merchantName;
+            const merchantName = item.merchantName || 'ناردو برو';
+            
+            if (!groups[merchantId]) {
+                groups[merchantId] = {
+                    merchantId: merchantId,
+                    merchantName: merchantName,
+                    merchantPhone: item.merchantPhone || null,
+                    items: [],
+                    subtotal: 0
+                };
+            }
+            groups[merchantId].items.push(item);
+            groups[merchantId].subtotal += item.price * item.quantity;
+        });
+        return groups;
     },
     
     // إضافة منتج للسلة
@@ -62,7 +85,9 @@ const CartSystem = {
                 name: product.name,
                 price: product.price,
                 quantity: 1,
+                merchantId: product.merchantId || product.merchantName,
                 merchantName: product.merchantName,
+                merchantPhone: product.merchantPhone || null,
                 image: product.image || (product.images && product.images[0]) || CONFIG.defaultImage,
                 stock: product.stock
             });
@@ -111,7 +136,7 @@ const CartSystem = {
         if (footer) footer.style.display = count > 0 ? 'block' : 'none';
     },
     
-    // عرض السلة
+    // عرض السلة مع تجميع حسب التجار
     updateCartDisplay() {
         const container = document.getElementById('cartItemsContainer');
         if (!container) return;
@@ -128,33 +153,55 @@ const CartSystem = {
             return;
         }
         
+        // تجميع المنتجات حسب التاجر
+        const merchantGroups = this.groupItemsByMerchant();
         let subtotal = 0;
-        container.innerHTML = this.items.map(item => {
-            const itemTotal = item.price * item.quantity;
-            subtotal += itemTotal;
-            
-            return `
-                <div class="cart-item">
-                    <img src="${item.image}" alt="${item.name}" onerror="this.src='${CONFIG.defaultImage}'">
-                    <div class="cart-item-info">
-                        <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
-                        <div class="cart-item-merchant">${this.escapeHtml(item.merchantName)}</div>
-                        <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+        
+        let groupsHTML = '';
+        for (const [merchantId, group] of Object.entries(merchantGroups)) {
+            groupsHTML += `
+                <div class="merchant-group">
+                    <div class="merchant-header">
+                        <i class="fas fa-store"></i>
+                        <span>${this.escapeHtml(group.merchantName)}</span>
+                        <span class="merchant-total">${group.subtotal.toLocaleString()} دج</span>
                     </div>
-                    <div class="cart-item-actions">
-                        <div class="quantity-control">
-                            <button onclick="CartSystem.update(${item.productId}, ${item.quantity - 1})">-</button>
-                            <span>${item.quantity}</span>
-                            <button onclick="CartSystem.update(${item.productId}, ${item.quantity + 1})">+</button>
+                    <div class="merchant-items">
+            `;
+            
+            group.items.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                subtotal += itemTotal;
+                
+                groupsHTML += `
+                    <div class="cart-item">
+                        <img src="${item.image}" alt="${item.name}" onerror="this.src='${CONFIG.defaultImage}'">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
+                            <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
                         </div>
-                        <div class="cart-item-total">${itemTotal.toLocaleString()} دج</div>
-                        <button class="remove-btn" onclick="CartSystem.remove(${item.productId})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="cart-item-actions">
+                            <div class="quantity-control">
+                                <button onclick="CartSystem.update(${item.productId}, ${item.quantity - 1})">-</button>
+                                <span>${item.quantity}</span>
+                                <button onclick="CartSystem.update(${item.productId}, ${item.quantity + 1})">+</button>
+                            </div>
+                            <div class="cart-item-total">${itemTotal.toLocaleString()} دج</div>
+                            <button class="remove-btn" onclick="CartSystem.remove(${item.productId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            groupsHTML += `
                     </div>
                 </div>
             `;
-        }).join('');
+        }
+        
+        container.innerHTML = groupsHTML;
         
         const shipping = CONFIG.shipping || 200;
         const total = subtotal + shipping;
@@ -183,11 +230,11 @@ const CartSystem = {
             </div>
             <div class="cart-footer" id="cartFooter" style="display: none;">
                 <div class="cart-summary">
-                    <div><span>المجموع:</span><span id="cartSubtotal">0 دج</span></div>
-                    <div><span>التوصيل:</span><span id="cartShipping">${CONFIG.shipping} دج</span></div>
+                    <div><span>المجموع الفرعي:</span><span id="cartSubtotal">0 دج</span></div>
+                    <div><span>رسوم التوصيل:</span><span id="cartShipping">${CONFIG.shipping} دج</span></div>
                     <div class="total"><span>الإجمالي:</span><span id="cartTotalAmount">0 دج</span></div>
                 </div>
-                <button class="checkout-btn" onclick="CartSystem.checkout()">
+                <button class="checkout-btn" onclick="CartSystem.openCheckout()">
                     <i class="fas fa-credit-card"></i> إتمام الطلب
                 </button>
             </div>
@@ -196,6 +243,405 @@ const CartSystem = {
         `;
         
         document.body.insertAdjacentHTML('beforeend', html);
+    },
+    
+    // إنشاء نافذة إتمام الطلب
+    createCheckoutModal() {
+        if (document.getElementById('checkoutModal')) return;
+        
+        const modalHTML = `
+        <div id="checkoutModal" class="checkout-modal" style="display: none;">
+            <div class="checkout-overlay" onclick="CartSystem.closeCheckout()"></div>
+            <div class="checkout-container">
+                <div class="checkout-header">
+                    <h2><i class="fas fa-clipboard-list"></i> إتمام الطلب</h2>
+                    <button class="checkout-close" onclick="CartSystem.closeCheckout()">&times;</button>
+                </div>
+                
+                <div class="checkout-content">
+                    <!-- ملخص الطلب حسب التجار -->
+                    <div class="checkout-section">
+                        <h3><i class="fas fa-receipt"></i> ملخص الطلب</h3>
+                        <div id="checkoutSummary"></div>
+                    </div>
+                    
+                    <!-- معلومات العميل -->
+                    <div class="checkout-section">
+                        <h3><i class="fas fa-user-circle"></i> معلومات العميل</h3>
+                        <div class="form-group">
+                            <label>الاسم الكامل</label>
+                            <input type="text" id="customerName" placeholder="أدخل اسمك الكامل" class="checkout-input">
+                        </div>
+                        <div class="form-group">
+                            <label>رقم الهاتف</label>
+                            <input type="tel" id="customerPhone" placeholder="05XXXXXXXX" class="checkout-input">
+                            <small>مثال: 0555123456</small>
+                        </div>
+                        <div class="form-group">
+                            <label>عنوان التوصيل</label>
+                            <textarea id="customerAddress" rows="3" placeholder="الولاية، البلدية، الحي، الشارع، رقم البيت" class="checkout-input"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>ملاحظات إضافية</label>
+                            <textarea id="orderNotes" rows="2" placeholder="أي ملاحظات للطلب" class="checkout-input"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- طريقة الدفع -->
+                    <div class="checkout-section">
+                        <h3><i class="fas fa-credit-card"></i> طريقة الدفع</h3>
+                        <div class="payment-methods">
+                            <label class="payment-method">
+                                <input type="radio" name="paymentMethod" value="cash" checked>
+                                <div class="payment-method-content">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <span>الدفع عند الاستلام</span>
+                                </div>
+                            </label>
+                            <label class="payment-method">
+                                <input type="radio" name="paymentMethod" value="cib">
+                                <div class="payment-method-content">
+                                    <i class="fas fa-credit-card"></i>
+                                    <span>الدفع عبر CIB</span>
+                                </div>
+                            </label>
+                            <label class="payment-method">
+                                <input type="radio" name="paymentMethod" value="edahabia">
+                                <div class="payment-method-content">
+                                    <i class="fas fa-mobile-alt"></i>
+                                    <span>الدفع عبر Edahabia</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="checkout-actions">
+                    <button class="btn-cancel" onclick="CartSystem.closeCheckout()">إلغاء</button>
+                    <button class="btn-confirm" onclick="CartSystem.completeOrder()">تأكيد الطلب</button>
+                </div>
+            </div>
+        </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    },
+    
+    // فتح نافذة إتمام الطلب
+    openCheckout() {
+        if (this.items.length === 0) {
+            this.showNotification('السلة فارغة', 'warning');
+            return;
+        }
+        
+        // التحقق من تسجيل الدخول
+        if (typeof currentUser === 'undefined' || !currentUser) {
+            this.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
+            if (typeof openLoginModal === 'function') openLoginModal();
+            return;
+        }
+        
+        const modal = document.getElementById('checkoutModal');
+        if (modal) {
+            this.populateCheckoutSummary();
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            // تعبئة بيانات المستخدم
+            const nameInput = document.getElementById('customerName');
+            const phoneInput = document.getElementById('customerPhone');
+            if (nameInput) nameInput.value = currentUser.name || '';
+            if (phoneInput) phoneInput.value = currentUser.phone || '';
+        }
+    },
+    
+    // تعبئة ملخص الطلب في نافذة الدفع
+    populateCheckoutSummary() {
+        const container = document.getElementById('checkoutSummary');
+        if (!container) return;
+        
+        const merchantGroups = this.groupItemsByMerchant();
+        let subtotal = 0;
+        
+        let html = '';
+        for (const [merchantId, group] of Object.entries(merchantGroups)) {
+            html += `
+                <div class="checkout-merchant-group">
+                    <div class="checkout-merchant-header">
+                        <i class="fas fa-store"></i>
+                        <strong>${this.escapeHtml(group.merchantName)}</strong>
+                    </div>
+                    <div class="checkout-items">
+            `;
+            
+            group.items.forEach(item => {
+                const itemTotal = item.price * item.quantity;
+                subtotal += itemTotal;
+                
+                html += `
+                    <div class="checkout-item">
+                        <span>${this.escapeHtml(item.name)}</span>
+                        <span>${item.quantity} × ${item.price.toLocaleString()} دج</span>
+                        <span class="checkout-item-total">${itemTotal.toLocaleString()} دج</span>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                    <div class="checkout-merchant-total">
+                        <span>مجموع التاجر:</span>
+                        <span>${group.subtotal.toLocaleString()} دج</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        const shipping = CONFIG.shipping || 200;
+        const total = subtotal + shipping;
+        
+        html += `
+            <div class="checkout-total-summary">
+                <div class="summary-line">
+                    <span>المجموع الفرعي:</span>
+                    <span>${subtotal.toLocaleString()} دج</span>
+                </div>
+                <div class="summary-line">
+                    <span>رسوم التوصيل:</span>
+                    <span>${shipping.toLocaleString()} دج</span>
+                </div>
+                <div class="summary-line total">
+                    <span>الإجمالي:</span>
+                    <span>${total.toLocaleString()} دج</span>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    },
+    
+    // إتمام الطلب
+    async completeOrder() {
+        // التحقق من تسجيل الدخول
+        if (typeof currentUser === 'undefined' || !currentUser) {
+            this.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
+            this.closeCheckout();
+            if (typeof openLoginModal === 'function') openLoginModal();
+            return;
+        }
+        
+        // جلب البيانات
+        const customerName = document.getElementById('customerName')?.value.trim();
+        const customerPhone = document.getElementById('customerPhone')?.value.trim();
+        const customerAddress = document.getElementById('customerAddress')?.value.trim();
+        const orderNotes = document.getElementById('orderNotes')?.value.trim();
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+        
+        // التحقق من البيانات
+        if (!customerName || !customerPhone || !customerAddress) {
+            this.showNotification('يرجى تعبئة جميع البيانات المطلوبة', 'error');
+            return;
+        }
+        
+        // التحقق من رقم الهاتف
+        const phoneRegex = /^0[567]\d{8}$/;
+        if (!phoneRegex.test(customerPhone)) {
+            this.showNotification('رقم الهاتف غير صحيح (مثال: 0555123456)', 'error');
+            return;
+        }
+        
+        // حساب المجاميع
+        const merchantGroups = this.groupItemsByMerchant();
+        const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const shipping = CONFIG.shipping || 200;
+        const total = subtotal + shipping;
+        const orderNumber = this.generateOrderNumber();
+        
+        this.showNotification('📦 جاري إرسال الطلب...', 'info');
+        
+        // إرسال رسائل للتجار عبر واتساب
+        let merchantsNotified = 0;
+        for (const [merchantId, group] of Object.entries(merchantGroups)) {
+            // إنشاء رسالة لكل تاجر
+            const merchantMessage = this.generateMerchantOrderMessage({
+                merchant: group,
+                customer: { name: customerName, phone: customerPhone, address: customerAddress },
+                orderNumber: `${orderNumber}-${merchantId.slice(-4)}`,
+                paymentMethod: paymentMethod,
+                notes: orderNotes,
+                shippingPrice: shipping
+            });
+            
+            // البحث عن رقم هاتف التاجر
+            let merchantPhone = null;
+            
+            // محاولة جلب رقم التاجر من نظام المستخدمين
+            if (typeof users !== 'undefined' && users) {
+                const merchantUser = users.find(u => 
+                    u.name === group.merchantName || 
+                    u.storeName === group.merchantName ||
+                    u.id == merchantId
+                );
+                if (merchantUser && merchantUser.phone) {
+                    merchantPhone = merchantUser.phone.replace(/[^0-9]/g, '');
+                }
+            }
+            
+            // استخدام الرقم المخزن مع المنتج
+            if (!merchantPhone && group.merchantPhone) {
+                merchantPhone = group.merchantPhone.replace(/[^0-9]/g, '');
+            }
+            
+            // إرسال الرسالة إذا كان الرقم موجوداً
+            if (merchantPhone) {
+                window.open(`https://wa.me/${merchantPhone}?text=${encodeURIComponent(merchantMessage)}`, '_blank');
+                merchantsNotified++;
+                await this.sleep(500); // تأخير بين الفتحات
+            } else {
+                console.log(`⚠️ لا يوجد رقم هاتف للتاجر: ${group.merchantName}`);
+            }
+        }
+        
+        // إنشاء رسالة الإدارة
+        const adminMessage = this.generateAdminOrderMessage({
+            customer: { name: customerName, phone: customerPhone, address: customerAddress },
+            orderNumber: orderNumber,
+            paymentMethod: paymentMethod,
+            notes: orderNotes,
+            merchantGroups: merchantGroups,
+            subtotal: subtotal,
+            shipping: shipping,
+            total: total
+        });
+        
+        // إرسال رسالة للإدارة
+        const adminPhone = CONFIG.phone.replace(/[^0-9]/g, '');
+        window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(adminMessage)}`, '_blank');
+        
+        // حفظ الطلب في localStorage
+        this.saveOrder({
+            orderNumber: orderNumber,
+            customer: { name: customerName, phone: customerPhone, address: customerAddress },
+            merchantGroups: merchantGroups,
+            subtotal: subtotal,
+            shipping: shipping,
+            total: total,
+            notes: orderNotes,
+            paymentMethod: paymentMethod,
+            date: new Date().toISOString(),
+            status: 'pending'
+        });
+        
+        // تفريغ السلة
+        this.items = [];
+        this.saveCart();
+        this.closeCheckout();
+        this.closeCartSidebar();
+        
+        // إشعار النجاح
+        this.showNotification(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${orderNumber}\nتم إشعار ${merchantsNotified} تاجر`, 'success');
+    },
+    
+    // إنشاء رسالة للتاجر
+    generateMerchantOrderMessage(data) {
+        const { merchant, customer, orderNumber, paymentMethod, notes, shippingPrice } = data;
+        
+        const paymentMethodName = {
+            'cash': 'الدفع عند الاستلام',
+            'cib': 'الدفع عبر CIB',
+            'edahabia': 'الدفع عبر Edahabia'
+        }[paymentMethod] || paymentMethod;
+        
+        let message = `🛍️ *طلب جديد - ناردو برو* 🛍️\n\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        message += `📦 *طلب للتاجر:* ${merchant.merchantName}\n`;
+        message += `🆔 *رقم الطلب:* ${orderNumber}\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        message += `👤 *معلومات العميل:*\n`;
+        message += `   📛 الاسم: ${customer.name}\n`;
+        message += `   📞 الهاتف: ${customer.phone}\n`;
+        message += `   📍 العنوان: ${customer.address}\n`;
+        message += `   💳 الدفع: ${paymentMethodName}\n\n`;
+        message += `📦 *المنتجات المطلوبة:*\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        
+        merchant.items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            message += `• ${item.name}\n`;
+            message += `  الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج\n`;
+            message += `  المجموع: ${itemTotal.toLocaleString()} دج\n`;
+            message += `────────────────\n`;
+        });
+        
+        message += `\n💰 *المجموع الفرعي:* ${merchant.subtotal.toLocaleString()} دج\n`;
+        if (notes) message += `\n📝 *ملاحظات:*\n${notes}\n`;
+        message += `\n⏰ *تاريخ الطلب:* ${new Date().toLocaleString('ar-DZ')}\n`;
+        message += `✨ *ناردو برو* ✨`;
+        
+        return message;
+    },
+    
+    // إنشاء رسالة للإدارة
+    generateAdminOrderMessage(data) {
+        const { customer, orderNumber, paymentMethod, notes, merchantGroups, subtotal, shipping, total } = data;
+        
+        const paymentMethodName = {
+            'cash': 'الدفع عند الاستلام',
+            'cib': 'الدفع عبر CIB',
+            'edahabia': 'الدفع عبر Edahabia'
+        }[paymentMethod] || paymentMethod;
+        
+        let message = `🏪 *طلب جديد - نظام إدارة الطلبات* 🏪\n\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        message += `🆔 *رقم الطلب:* ${orderNumber}\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        message += `👤 *معلومات العميل:*\n`;
+        message += `   📛 ${customer.name}\n`;
+        message += `   📞 ${customer.phone}\n`;
+        message += `   📍 ${customer.address}\n`;
+        message += `   💳 ${paymentMethodName}\n\n`;
+        message += `📦 *تفاصيل الطلب:*\n`;
+        
+        let merchantIndex = 1;
+        for (const [merchantId, group] of Object.entries(merchantGroups)) {
+            message += `\n🏪 التاجر ${merchantIndex}: ${group.merchantName}\n`;
+            group.items.forEach(item => {
+                message += `   • ${item.name} (${item.quantity} × ${item.price.toLocaleString()} دج)\n`;
+            });
+            message += `   💰 المجموع: ${group.subtotal.toLocaleString()} دج\n`;
+            merchantIndex++;
+        }
+        
+        message += `\n💰 *المجموع:* ${subtotal.toLocaleString()} دج + ${shipping.toLocaleString()} دج = ${total.toLocaleString()} دج\n`;
+        if (notes) message += `\n📝 ملاحظات: ${notes}\n`;
+        message += `\n⏰ ${new Date().toLocaleString('ar-DZ')}\n`;
+        message += `✨ ناردو برو ✨`;
+        
+        return message;
+    },
+    
+    // إنشاء رقم طلب
+    generateOrderNumber() {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `NARD-${timestamp}-${random}`;
+    },
+    
+    // حفظ الطلب
+    saveOrder(order) {
+        const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
+        orders.unshift(order);
+        if (orders.length > 100) orders.pop();
+        localStorage.setItem('nardoo_orders', JSON.stringify(orders));
+    },
+    
+    // إغلاق نافذة الدفع
+    closeCheckout() {
+        const modal = document.getElementById('checkoutModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
     },
     
     // فتح السلة
@@ -221,86 +667,6 @@ const CartSystem = {
         }
     },
     
-    // إتمام الطلب
-    async checkout() {
-        if (this.items.length === 0) {
-            this.showNotification('السلة فارغة', 'warning');
-            return;
-        }
-        
-        if (!currentUser) {
-            this.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
-            if (typeof openLoginModal === 'function') openLoginModal();
-            return;
-        }
-        
-        const name = currentUser.name;
-        const phone = prompt('رقم الهاتف:', currentUser.phone || '');
-        if (!phone) return;
-        
-        const address = prompt('عنوان التوصيل:', '');
-        if (!address) return;
-        
-        const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const shipping = CONFIG.shipping || 200;
-        const total = subtotal + shipping;
-        
-        // إنشاء رسالة الطلب
-        let message = `🛍️ *طلب جديد - ناردو برو*\n━━━━━━━━━━━━━━━━━━\n`;
-        message += `👤 *العميل:* ${name}\n`;
-        message += `📞 *الهاتف:* ${phone}\n`;
-        message += `📍 *العنوان:* ${address}\n━━━━━━━━━━━━━━━━━━\n`;
-        message += `📦 *المنتجات:*\n`;
-        
-        this.items.forEach(item => {
-            message += `• ${item.name} x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
-        });
-        
-        message += `━━━━━━━━━━━━━━━━━━\n`;
-        message += `💰 *المجموع:* ${subtotal.toLocaleString()} دج\n`;
-        message += `🚚 *التوصيل:* ${shipping.toLocaleString()} دج\n`;
-        message += `💎 *الإجمالي:* ${total.toLocaleString()} دج\n`;
-        message += `━━━━━━━━━━━━━━━━━━\n`;
-        message += `⏰ ${new Date().toLocaleString('ar-DZ')}`;
-        
-        // إرسال إلى تلغرام
-        try {
-            await fetch(`https://api.telegram.org/bot${TELEGRAM?.botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM?.channelId || CONFIG.telegramChannel,
-                    text: message,
-                    parse_mode: 'Markdown'
-                })
-            });
-            
-            // إرسال للتجار عبر واتساب
-            const merchants = {};
-            this.items.forEach(item => {
-                if (item.merchantName && !merchants[item.merchantName]) {
-                    merchants[item.merchantName] = [];
-                }
-                if (merchants[item.merchantName]) {
-                    merchants[item.merchantName].push(item);
-                }
-            });
-            
-            Object.entries(merchants).forEach(([merchant, items]) => {
-                const msg = `🛍️ طلب جديد من ${name}: ${items.map(i => `${i.name} x${i.quantity}`).join('، ')}`;
-                // يمكن إضافة واتساب للتاجر هنا
-            });
-            
-            this.showNotification('✓ تم إرسال الطلب بنجاح', 'success');
-            this.items = [];
-            this.saveCart();
-            this.closeCartSidebar();
-            
-        } catch (error) {
-            this.showNotification('فشل إرسال الطلب', 'error');
-        }
-    },
-    
     // إشعار
     showNotification(message, type = 'success') {
         const notification = document.createElement('div');
@@ -311,7 +677,7 @@ const CartSystem = {
         setTimeout(() => {
             notification.classList.add('fade-out');
             setTimeout(() => notification.remove(), 300);
-        }, 2500);
+        }, 3000);
     },
     
     // إضافة أنماط CSS
@@ -325,8 +691,8 @@ const CartSystem = {
             .cart-sidebar {
                 position: fixed;
                 top: 0;
-                right: -400px;
-                width: 400px;
+                right: -450px;
+                width: 450px;
                 height: 100vh;
                 background: var(--bg-primary, #0f0f1a);
                 z-index: 10001;
@@ -336,9 +702,7 @@ const CartSystem = {
                 box-shadow: -5px 0 20px rgba(0,0,0,0.3);
             }
             
-            .cart-sidebar.open {
-                right: 0;
-            }
+            .cart-sidebar.open { right: 0; }
             
             .cart-overlay {
                 position: fixed;
@@ -372,10 +736,7 @@ const CartSystem = {
                 color: var(--gold, #D4AF37);
             }
             
-            .cart-header h3 i {
-                margin-left: 10px;
-            }
-            
+            .cart-header h3 i { margin-left: 10px; }
             .cart-header span {
                 background: var(--gold, #D4AF37);
                 color: #000;
@@ -393,9 +754,7 @@ const CartSystem = {
                 color: var(--text-secondary, #888);
             }
             
-            .close-cart:hover {
-                color: var(--gold, #D4AF37);
-            }
+            .close-cart:hover { color: var(--gold, #D4AF37); }
             
             .cart-content {
                 flex: 1;
@@ -403,45 +762,54 @@ const CartSystem = {
                 padding: 20px;
             }
             
+            /* مجموعة التاجر */
+            .merchant-group {
+                background: rgba(255,255,255,0.05);
+                border-radius: 16px;
+                margin-bottom: 20px;
+                overflow: hidden;
+            }
+            
+            .merchant-header {
+                background: rgba(212,175,55,0.1);
+                padding: 12px 15px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                border-bottom: 1px solid rgba(212,175,55,0.3);
+                font-weight: bold;
+            }
+            
+            .merchant-header i { color: var(--gold, #D4AF37); }
+            .merchant-header span:first-of-type { flex: 1; }
+            .merchant-total { color: var(--gold, #D4AF37); }
+            
+            .merchant-items { padding: 10px; }
+            
             .cart-item {
                 display: flex;
                 gap: 15px;
-                padding: 15px;
-                background: rgba(255,255,255,0.05);
+                padding: 12px;
+                background: rgba(255,255,255,0.03);
                 border-radius: 12px;
-                margin-bottom: 15px;
+                margin-bottom: 10px;
             }
             
             .cart-item img {
-                width: 80px;
-                height: 80px;
+                width: 70px;
+                height: 70px;
                 object-fit: cover;
                 border-radius: 10px;
             }
             
-            .cart-item-info {
-                flex: 1;
-            }
-            
+            .cart-item-info { flex: 1; }
             .cart-item-name {
                 font-weight: bold;
                 margin-bottom: 5px;
             }
+            .cart-item-price { font-size: 13px; color: var(--text-secondary, #888); }
             
-            .cart-item-merchant {
-                font-size: 12px;
-                color: var(--gold, #D4AF37);
-                margin-bottom: 5px;
-            }
-            
-            .cart-item-price {
-                font-size: 14px;
-                color: var(--text-secondary, #888);
-            }
-            
-            .cart-item-actions {
-                text-align: right;
-            }
+            .cart-item-actions { text-align: right; }
             
             .quantity-control {
                 display: flex;
@@ -463,6 +831,7 @@ const CartSystem = {
                 font-weight: bold;
                 color: var(--gold, #D4AF37);
                 margin-bottom: 8px;
+                font-size: 14px;
             }
             
             .remove-btn {
@@ -470,17 +839,13 @@ const CartSystem = {
                 border: none;
                 color: #ff6b6b;
                 cursor: pointer;
-                font-size: 16px;
+                font-size: 14px;
             }
             
             .cart-footer {
                 padding: 20px;
                 border-top: 1px solid rgba(255,255,255,0.1);
                 background: var(--bg-secondary, #1a1a2e);
-            }
-            
-            .cart-summary {
-                margin-bottom: 20px;
             }
             
             .cart-summary > div {
@@ -528,15 +893,6 @@ const CartSystem = {
                 margin-bottom: 20px;
             }
             
-            .empty-cart h4 {
-                margin-bottom: 10px;
-            }
-            
-            .empty-cart p {
-                color: var(--text-secondary, #888);
-                margin-bottom: 20px;
-            }
-            
             .btn-continue {
                 background: rgba(212,175,55,0.2);
                 border: 1px solid var(--gold, #D4AF37);
@@ -546,6 +902,247 @@ const CartSystem = {
                 cursor: pointer;
             }
             
+            /* نافذة إتمام الطلب */
+            .checkout-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 100000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .checkout-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.85);
+                backdrop-filter: blur(8px);
+            }
+            
+            .checkout-container {
+                position: relative;
+                width: 90%;
+                max-width: 800px;
+                max-height: 90vh;
+                background: var(--bg-primary, #0f0f1a);
+                border-radius: 24px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                border: 1px solid rgba(212,175,55,0.3);
+                z-index: 1;
+            }
+            
+            .checkout-header {
+                padding: 20px;
+                background: var(--bg-secondary, #1a1a2e);
+                border-bottom: 1px solid rgba(212,175,55,0.3);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .checkout-header h2 {
+                margin: 0;
+                color: var(--gold, #D4AF37);
+                font-size: 20px;
+            }
+            
+            .checkout-header h2 i { margin-left: 10px; }
+            
+            .checkout-close {
+                background: none;
+                border: none;
+                font-size: 28px;
+                cursor: pointer;
+                color: var(--text-secondary, #888);
+            }
+            
+            .checkout-close:hover { color: var(--gold, #D4AF37); }
+            
+            .checkout-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+            }
+            
+            .checkout-section {
+                background: rgba(255,255,255,0.05);
+                border-radius: 16px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .checkout-section h3 {
+                margin: 0 0 15px 0;
+                color: var(--gold, #D4AF37);
+                font-size: 16px;
+            }
+            
+            .checkout-section h3 i { margin-left: 8px; }
+            
+            .checkout-merchant-group {
+                margin-bottom: 20px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                padding-bottom: 15px;
+            }
+            
+            .checkout-merchant-header {
+                font-size: 16px;
+                margin-bottom: 10px;
+                color: var(--gold, #D4AF37);
+            }
+            
+            .checkout-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                font-size: 14px;
+            }
+            
+            .checkout-item-total { color: var(--gold, #D4AF37); }
+            
+            .checkout-merchant-total {
+                display: flex;
+                justify-content: space-between;
+                padding-top: 10px;
+                margin-top: 10px;
+                border-top: 1px dashed rgba(255,255,255,0.1);
+                font-weight: bold;
+            }
+            
+            .checkout-total-summary {
+                background: rgba(212,175,55,0.1);
+                border-radius: 12px;
+                padding: 15px;
+                margin-top: 15px;
+            }
+            
+            .summary-line {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+            }
+            
+            .summary-line.total {
+                font-size: 18px;
+                font-weight: bold;
+                color: var(--gold, #D4AF37);
+                border-top: 1px solid rgba(212,175,55,0.3);
+                margin-top: 8px;
+                padding-top: 12px;
+            }
+            
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-size: 13px;
+                color: var(--text-secondary, #888);
+            }
+            
+            .checkout-input {
+                width: 100%;
+                padding: 12px;
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 10px;
+                color: var(--text-primary, #fff);
+                font-size: 14px;
+            }
+            
+            .checkout-input:focus {
+                outline: none;
+                border-color: var(--gold, #D4AF37);
+            }
+            
+            .form-group small {
+                display: block;
+                margin-top: 5px;
+                font-size: 11px;
+                color: var(--text-secondary, #888);
+            }
+            
+            .payment-methods {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .payment-method {
+                cursor: pointer;
+            }
+            
+            .payment-method input { display: none; }
+            
+            .payment-method-content {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 15px;
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 12px;
+                transition: all 0.3s;
+            }
+            
+            .payment-method input:checked + .payment-method-content {
+                border-color: var(--gold, #D4AF37);
+                background: rgba(212,175,55,0.1);
+            }
+            
+            .payment-method-content i {
+                font-size: 20px;
+                color: var(--gold, #D4AF37);
+            }
+            
+            .checkout-actions {
+                display: flex;
+                gap: 15px;
+                padding: 20px;
+                border-top: 1px solid rgba(212,175,55,0.3);
+            }
+            
+            .btn-cancel, .btn-confirm {
+                flex: 1;
+                padding: 12px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+            
+            .btn-cancel {
+                background: rgba(255,255,255,0.1);
+                color: var(--text-secondary, #888);
+            }
+            
+            .btn-cancel:hover {
+                background: rgba(255,255,255,0.2);
+            }
+            
+            .btn-confirm {
+                background: linear-gradient(135deg, #D4AF37, #B8860B);
+                color: white;
+            }
+            
+            .btn-confirm:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(212,175,55,0.4);
+            }
+            
+            /* الإشعارات */
             .cart-notification {
                 position: fixed;
                 bottom: 30px;
@@ -562,6 +1159,7 @@ const CartSystem = {
             .cart-notification.success i { color: #4ade80; }
             .cart-notification.error i { color: #f87171; }
             .cart-notification.warning i { color: #fbbf24; }
+            .cart-notification.info i { color: #60a5fa; }
             
             .cart-notification.fade-out {
                 animation: fadeOut 0.3s ease forwards;
@@ -577,10 +1175,9 @@ const CartSystem = {
             }
             
             @media (max-width: 768px) {
-                .cart-sidebar {
-                    width: 100%;
-                    right: -100%;
-                }
+                .cart-sidebar { width: 100%; right: -100%; }
+                .checkout-container { width: 95%; max-height: 95vh; }
+                .checkout-actions { flex-direction: column; }
             }
         `;
         
@@ -592,6 +1189,7 @@ const CartSystem = {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.closeCartSidebar();
+                this.closeCheckout();
             }
         });
     },
@@ -612,6 +1210,11 @@ const CartSystem = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+    
+    // تأخير
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 };
 
@@ -627,4 +1230,4 @@ if (document.readyState === 'loading') {
     CartSystem.init();
 }
 
-console.log('✅ نظام السلة جاهز');
+console.log('✅ نظام السلة المتكامل جاهز مع تقسيم حسب التجار وإتمام الطلب');
