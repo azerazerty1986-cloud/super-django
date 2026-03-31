@@ -1,4 +1,4 @@
-             <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -805,91 +805,99 @@
     <script src="js/app.js"></script>
     
     <script>
-        // ==================== إضافة نظام المدير ====================
+        // ==================== نظام المستخدمين والمدير ====================
         
-        // متغير المستخدم الحالي
-        let currentAdminUser = null;
+        let currentUser = null;
         
-        // تحميل المستخدمين من localStorage
-        function loadAdminUsers() {
-            const saved = localStorage.getItem('nardoo_users');
-            if (saved) {
-                const users = JSON.parse(saved);
-                const adminExists = users.find(u => u.role === 'admin');
-                if (!adminExists) {
-                    users.push({
+        // التأكد من وجود المستخدمين الافتراضيين
+        function initUsers() {
+            let users = localStorage.getItem('nardoo_users');
+            if (!users) {
+                const defaultUsers = [
+                    {
                         id: 1,
                         name: 'azer',
                         email: 'azer@admin.com',
                         password: '123456',
                         role: 'admin',
-                        phone: '',
+                        phone: '0555000000',
                         createdAt: new Date().toISOString()
-                    });
-                    localStorage.setItem('nardoo_users', JSON.stringify(users));
-                }
-                return users;
-            } else {
-                const users = [{
-                    id: 1,
-                    name: 'azer',
-                    email: 'azer@admin.com',
-                    password: '123456',
-                    role: 'admin',
-                    phone: '',
-                    createdAt: new Date().toISOString()
-                }];
-                localStorage.setItem('nardoo_users', JSON.stringify(users));
-                return users;
+                    },
+                    {
+                        id: 2,
+                        name: 'تاجر تجريبي',
+                        email: 'merchant@nardoo.com',
+                        password: 'm123',
+                        role: 'merchant_approved',
+                        phone: '0555111111',
+                        storeName: 'متجر التجريبي',
+                        status: 'approved',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                localStorage.setItem('nardoo_users', JSON.stringify(defaultUsers));
+                console.log('✅ تم إنشاء المستخدمين الافتراضيين');
+                return defaultUsers;
             }
+            return JSON.parse(users);
         }
         
-        // دالة تسجيل الدخول المعدلة
+        // دالة تسجيل الدخول
         function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            const users = loadAdminUsers();
+            
+            console.log('🔍 محاولة تسجيل الدخول:', email);
+            
+            const users = initUsers();
             const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
             
             if (user) {
-                currentAdminUser = user;
-                localStorage.setItem('current_admin_user', JSON.stringify(user));
+                currentUser = user;
+                localStorage.setItem('current_user', JSON.stringify(user));
                 closeModal('loginModal');
                 
-                // تحديث واجهة المستخدم
-                const userBtn = document.getElementById('userBtn');
-                if (userBtn) {
-                    if (user.role === 'admin') {
-                        userBtn.innerHTML = '<i class="fas fa-crown"></i>';
-                    } else if (user.role === 'merchant_approved') {
-                        userBtn.innerHTML = '<i class="fas fa-store"></i>';
-                    } else {
-                        userBtn.innerHTML = '<i class="fas fa-user"></i>';
-                    }
-                }
+                // تحديث الواجهة
+                updateUIAfterLogin(user);
                 
-                // إظهار زر لوحة التحكم للمدير
-                const dashboardBtn = document.getElementById('dashboardBtn');
-                if (dashboardBtn && user.role === 'admin') {
-                    dashboardBtn.style.display = 'flex';
-                }
+                showNotification(`✅ مرحباً ${user.name} ${user.role === 'admin' ? '👑' : ''}`, 'success');
                 
-                // إضافة زر إضافة منتج في القائمة للمدير
-                if (user.role === 'admin') {
-                    const navMenu = document.getElementById('mainNav');
-                    if (navMenu && !document.getElementById('adminAddProductBtn')) {
-                        const addBtn = document.createElement('a');
-                        addBtn.className = 'nav-link';
-                        addBtn.id = 'adminAddProductBtn';
-                        addBtn.setAttribute('onclick', 'showAddProductModal()');
-                        addBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة منتج';
-                        navMenu.appendChild(addBtn);
-                    }
-                }
-                
-                showNotification(`مرحباً ${user.name} ${user.role === 'admin' ? '👑' : ''}`, 'success');
+                // إعادة تحميل الصفحة بعد ثانية
+                setTimeout(() => location.reload(), 500);
             } else {
-                showNotification('بيانات غير صحيحة', 'error');
+                showNotification('❌ اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
+            }
+        }
+        
+        // دالة تحديث الواجهة بعد تسجيل الدخول
+        function updateUIAfterLogin(user) {
+            const userBtn = document.getElementById('userBtn');
+            if (userBtn) {
+                if (user.role === 'admin') {
+                    userBtn.innerHTML = '<i class="fas fa-crown"></i>';
+                } else if (user.role === 'merchant_approved') {
+                    userBtn.innerHTML = '<i class="fas fa-store"></i>';
+                } else {
+                    userBtn.innerHTML = '<i class="fas fa-user"></i>';
+                }
+            }
+            
+            const dashboardBtn = document.getElementById('dashboardBtn');
+            if (dashboardBtn && user.role === 'admin') {
+                dashboardBtn.style.display = 'flex';
+            }
+            
+            // إضافة زر إضافة منتج
+            if (user.role === 'admin' || user.role === 'merchant_approved') {
+                const navMenu = document.getElementById('mainNav');
+                if (navMenu && !document.getElementById('adminAddProductBtn')) {
+                    const addBtn = document.createElement('a');
+                    addBtn.className = 'nav-link';
+                    addBtn.id = 'adminAddProductBtn';
+                    addBtn.setAttribute('onclick', 'showAddProductModal()');
+                    addBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إضافة منتج';
+                    navMenu.appendChild(addBtn);
+                }
             }
         }
         
@@ -902,28 +910,26 @@
             const isMerchant = document.getElementById('isMerchant').checked;
             
             if (!name || !email || !password) {
-                showNotification('املأ جميع الحقول', 'error');
+                showNotification('❌ املأ جميع الحقول المطلوبة', 'error');
                 return;
             }
             
-            const users = loadAdminUsers();
+            const users = initUsers();
             
-            // التحقق من وجود المستخدم
             if (users.find(u => u.email === email)) {
-                showNotification('البريد الإلكتروني مستخدم بالفعل', 'error');
+                showNotification('❌ البريد الإلكتروني مستخدم بالفعل', 'error');
                 return;
             }
             
-            // التحقق من وجود أي مستخدمين (أول مستخدم يصبح مدير)
-            const isFirstUser = users.length === 0;
             let role = 'customer';
+            let message = '✅ تم التسجيل بنجاح';
             
-            if (isFirstUser) {
+            if (users.length === 0) {
                 role = 'admin';
-                showNotification('✨ أنت أول مستخدم! تم تعيينك كمدير', 'success');
+                message = '✨ أنت أول مستخدم! تم تعيينك كمدير';
             } else if (isMerchant) {
                 role = 'merchant_pending';
-                showNotification('📋 تم إرسال طلب التسجيل إلى المدير', 'info');
+                message = '📋 تم إرسال طلب التسجيل إلى المدير';
             }
             
             const newUser = {
@@ -936,7 +942,7 @@
                 createdAt: new Date().toISOString()
             };
             
-            if (isMerchant && !isFirstUser) {
+            if (isMerchant && role === 'merchant_pending') {
                 newUser.storeName = document.getElementById('storeName').value || 'متجر ' + name;
                 newUser.merchantLevel = document.getElementById('merchantLevel').value;
                 newUser.description = document.getElementById('merchantDesc').value;
@@ -946,7 +952,7 @@
             users.push(newUser);
             localStorage.setItem('nardoo_users', JSON.stringify(users));
             
-            showNotification('✅ تم التسجيل بنجاح', 'success');
+            showNotification(message, 'success');
             switchAuthTab('login');
             
             // تنظيف النموذج
@@ -954,31 +960,40 @@
             document.getElementById('merchantFields').style.display = 'none';
         }
         
-        // دالة فتح لوحة التحكم للمدير
+        // دالة فتح لوحة تحكم المدير
         function openDashboard() {
-            if (!currentAdminUser || currentAdminUser.role !== 'admin') {
-                showNotification('غير مصرح لك - فقط المدير', 'error');
+            const currentUser = JSON.parse(localStorage.getItem('current_user'));
+            
+            if (!currentUser || currentUser.role !== 'admin') {
+                showNotification('❌ غير مصرح - فقط المدير', 'error');
                 return;
             }
             
-            const users = loadAdminUsers();
+            const users = initUsers();
             const pendingMerchants = users.filter(u => u.role === 'merchant_pending');
             const approvedMerchants = users.filter(u => u.role === 'merchant_approved');
             const products = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
             
-            // إنشاء لوحة التحكم إذا لم تكن موجودة
             let dashboardSection = document.getElementById('adminDashboardSection');
             if (!dashboardSection) {
                 dashboardSection = document.createElement('div');
                 dashboardSection.id = 'adminDashboardSection';
                 dashboardSection.className = 'container';
                 dashboardSection.style.marginTop = '30px';
-                document.querySelector('.products-grid').insertAdjacentElement('beforebegin', dashboardSection);
+                const productsGrid = document.querySelector('.products-grid');
+                if (productsGrid) {
+                    productsGrid.insertAdjacentElement('beforebegin', dashboardSection);
+                } else {
+                    document.querySelector('.container').appendChild(dashboardSection);
+                }
             }
             
             dashboardSection.innerHTML = `
                 <div style="background: var(--glass); border-radius: 20px; padding: 30px; margin: 20px 0; border: 2px solid var(--gold);">
-                    <h2 style="color: var(--gold); margin-bottom: 20px;"><i class="fas fa-chart-line"></i> لوحة تحكم المدير</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: var(--gold);"><i class="fas fa-chart-line"></i> لوحة تحكم المدير</h2>
+                        <button class="btn-outline-gold" onclick="closeDashboard()">✕ إغلاق</button>
+                    </div>
                     
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
                         <div style="background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px; text-align: center;">
@@ -999,12 +1014,12 @@
                     </div>
                     
                     <div style="background: rgba(255,215,0,0.05); border-radius: 15px; padding: 20px;">
-                        <h3 style="color: var(--gold); margin-bottom: 15px;">طلبات التجار (${pendingMerchants.length})</h3>
+                        <h3 style="color: var(--gold); margin-bottom: 15px;">📋 طلبات التجار (${pendingMerchants.length})</h3>
                         ${pendingMerchants.length > 0 ? pendingMerchants.map(m => `
                             <div style="border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; padding: 15px; margin: 10px 0;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                     <div>
-                                        <h4 style="color: var(--gold); margin: 0 0 5px 0;">${m.storeName || m.name}</h4>
+                                        <h4 style="color: var(--gold); margin: 0 0 5px 0;">🏪 ${m.storeName || m.name}</h4>
                                         <p><i class="fas fa-user"></i> ${m.name}</p>
                                         <p><i class="fas fa-envelope"></i> ${m.email}</p>
                                         <p><i class="fas fa-phone"></i> ${m.phone || 'غير متوفر'}</p>
@@ -1019,12 +1034,8 @@
                                     </div>
                                 </div>
                             </div>
-                        `).join('') : '<p style="color: var(--text-secondary);">لا توجد طلبات جديدة</p>'}
+                        `).join('') : '<p style="color: var(--text-secondary); text-align: center;">✨ لا توجد طلبات جديدة</p>'}
                     </div>
-                    
-                    <button class="btn-outline-gold" onclick="closeDashboard()" style="margin-top: 20px;">
-                        <i class="fas fa-times"></i> إغلاق لوحة التحكم
-                    </button>
                 </div>
             `;
             
@@ -1039,45 +1050,46 @@
         }
         
         function approveMerchant(id) {
-            const users = loadAdminUsers();
+            const users = initUsers();
             const user = users.find(u => u.id == id);
             if (user && user.role === 'merchant_pending') {
                 user.role = 'merchant_approved';
                 user.status = 'approved';
                 localStorage.setItem('nardoo_users', JSON.stringify(users));
                 showNotification(`✅ تمت الموافقة على التاجر ${user.name}`, 'success');
-                openDashboard(); // تحديث لوحة التحكم
+                openDashboard();
             }
         }
         
         function rejectMerchant(id) {
-            const users = loadAdminUsers();
+            const users = initUsers();
             const user = users.find(u => u.id == id);
             if (user && user.role === 'merchant_pending') {
                 user.role = 'customer';
                 user.status = 'rejected';
                 localStorage.setItem('nardoo_users', JSON.stringify(users));
                 showNotification(`❌ تم رفض التاجر ${user.name}`, 'info');
-                openDashboard(); // تحديث لوحة التحكم
+                openDashboard();
             }
         }
         
         function showAddProductModal() {
-            if (!currentAdminUser) {
+            const currentUser = JSON.parse(localStorage.getItem('current_user'));
+            if (!currentUser) {
                 showNotification('يجب تسجيل الدخول أولاً', 'warning');
                 openLoginModal();
                 return;
             }
-            if (currentAdminUser.role === 'admin' || currentAdminUser.role === 'merchant_approved') {
-                openModal('productModal');
+            if (currentUser.role === 'admin' || currentUser.role === 'merchant_approved') {
+                document.getElementById('productModal').style.display = 'flex';
             } else {
                 showNotification('غير مصرح لك بإضافة منتجات', 'error');
             }
         }
         
         // دوال مساعدة
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
+        function openLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
         }
         
         function closeModal(modalId) {
@@ -1099,12 +1111,12 @@
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'toastContainer';
-                container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+                container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;';
                 document.body.appendChild(container);
             }
             const toast = document.createElement('div');
             const colors = { success: '#4ade80', error: '#f87171', warning: '#fbbf24', info: '#60a5fa' };
-            toast.style.cssText = `background: ${colors[type]}; color: #1a1a2e; padding: 12px 20px; border-radius: 10px; margin-bottom: 10px; font-weight: bold; animation: slideIn 0.3s ease;`;
+            toast.style.cssText = `background: ${colors[type]}; color: #1a1a2e; padding: 12px 20px; border-radius: 10px; font-weight: bold; animation: slideIn 0.3s ease;`;
             toast.textContent = message;
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
@@ -1123,30 +1135,24 @@
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         function scrollToBottom() { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }
         
+        function toggleCart() {
+            document.getElementById('cartSidebar').classList.toggle('open');
+        }
+        
         // تحميل المستخدم الحالي
         function loadCurrentUser() {
-            const saved = localStorage.getItem('current_admin_user');
+            const saved = localStorage.getItem('current_user');
             if (saved) {
-                currentAdminUser = JSON.parse(saved);
-                const userBtn = document.getElementById('userBtn');
-                if (userBtn) {
-                    userBtn.innerHTML = currentAdminUser.role === 'admin' ? '<i class="fas fa-crown"></i>' : 
-                                        currentAdminUser.role === 'merchant_approved' ? '<i class="fas fa-store"></i>' : 
-                                        '<i class="fas fa-user"></i>';
-                }
-                const dashboardBtn = document.getElementById('dashboardBtn');
-                if (dashboardBtn && currentAdminUser.role === 'admin') {
-                    dashboardBtn.style.display = 'flex';
-                }
+                currentUser = JSON.parse(saved);
+                updateUIAfterLogin(currentUser);
             }
         }
         
         // تهيئة الصفحة
         document.addEventListener('DOMContentLoaded', function() {
-            loadAdminUsers();
+            initUsers();
             loadCurrentUser();
             
-            // إخفاء اللودر
             setTimeout(() => {
                 const loader = document.getElementById('loader');
                 if (loader) {
@@ -1156,10 +1162,10 @@
             }, 1000);
         });
         
-        // تصدير الدوال للنطاق العام
+        // تصدير الدوال
         window.handleLogin = handleLogin;
         window.handleRegister = handleRegister;
-        window.openLoginModal = () => openModal('loginModal');
+        window.openLoginModal = openLoginModal;
         window.closeModal = closeModal;
         window.switchAuthTab = switchAuthTab;
         window.toggleMerchantFields = toggleMerchantFields;
@@ -1170,9 +1176,9 @@
         window.toggleTheme = toggleTheme;
         window.scrollToTop = scrollToTop;
         window.scrollToBottom = scrollToBottom;
-        window.toggleCart = () => document.getElementById('cartSidebar').classList.toggle('open');
+        window.toggleCart = toggleCart;
         window.filterProducts = (cat) => { if(window.App) App.filterProducts(cat); };
         window.searchProducts = () => { if(window.App) App.searchProducts(); };
     </script>
 </body> 
-</html>                        
+</html>
