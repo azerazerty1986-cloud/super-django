@@ -254,8 +254,8 @@ function createLoginModal() {
                             <i class="fas fa-key"></i> بيانات الدخول:
                         </p>
                         <p style="margin: 5px 0 0; font-size: 16px; font-weight: bold;">
-                            اسم المستخدم: <span style="color: var(--gold);">azer</span> | 
-                            كلمة المرور: <span style="color: var(--gold);">123456</span>
+                            اسم المستخدم: <span style="color: var(--gold);">aaaa</span> | 
+                            كلمة المرور: <span style="color: var(--gold);">aaaa</span>
                         </p>
                     </div>
                 </div>
@@ -1166,8 +1166,8 @@ function showDashboardOverview() {
         
         <div style="background: var(--glass); padding: 25px; border-radius: 15px;">
             <h4 style="color: var(--gold);">معلومات الدخول</h4>
-            <p>✅ اسم المستخدم: <strong style="color: var(--gold);">azer</strong></p>
-            <p>✅ كلمة المرور: <strong style="color: var(--gold);">123456</strong></p>
+            <p>✅ اسم المستخدم: <strong style="color: var(--gold);">aaaa</strong></p>
+            <p>✅ كلمة المرور: <strong style="color: var(--gold);">aaaaa</strong></p>
             <p>✅ يمكنك إضافة وحذف وتعديل المنتجات بعد تسجيل الدخول</p>
         </div>
     `;
