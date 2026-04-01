@@ -1,6 +1,6 @@
 /* ================================================================== */
-/* ===== [03] shop.js - نظام السلة المتكامل (نسخة كاملة) ===== */
-/* ===== مع زر إضافة للسلة على المنتجات ===== */
+/* ===== [03] shop.js - نظام السلة المتكامل ===== */
+/* ===== مع زر إضافة للسلة لكل منتج ===== */
 /* ================================================================== */
 
 // ===== التأكد من وجود CONFIG =====
@@ -26,7 +26,7 @@ const CartSystem = {
         this.addCartStyles();
         this.setupEventListeners();
         this.addCartButtonToNav();
-        console.log('✅ نظام السلة جاهز مع زر إضافة للسلة');
+        console.log('✅ نظام السلة جاهز');
     },
     
     // ===== تحميل السلة =====
@@ -45,12 +45,10 @@ const CartSystem = {
     // ===== إضافة زر السلة في القائمة العلوية =====
     addCartButtonToNav() {
         let navMenu = document.getElementById('mainNav');
-        
         if (!navMenu) {
             setTimeout(() => this.addCartButtonToNav(), 500);
             return;
         }
-        
         if (document.getElementById('cartNavBtn')) return;
         
         const cartBtn = document.createElement('a');
@@ -61,23 +59,14 @@ const CartSystem = {
         cartBtn.innerHTML = `
             <i class="fas fa-shopping-cart"></i>
             <span>السلة</span>
-            <span id="cartCounter" class="cart-badge" style="
-                background: var(--gold, #D4AF37);
-                color: black;
-                border-radius: 50%;
-                padding: 2px 8px;
-                font-size: 12px;
-                margin-right: 5px;
-                display: inline-block;
-            ">0</span>
+            <span id="cartCounter" style="background:var(--gold);color:black;border-radius:50%;padding:2px 8px;font-size:12px;margin-right:5px;">0</span>
         `;
-        
         navMenu.appendChild(cartBtn);
         this.updateCounter();
     },
     
-    // ===== إضافة منتج للسلة (متوافق مع بيانات المنتج من تلغرام) =====
-    add(product) {
+    // ===== إضافة منتج للسلة (الدالة الرئيسية) =====
+    addToCart(product) {
         if (!product) {
             this.showNotification('المنتج غير موجود', 'error');
             return false;
@@ -88,8 +77,7 @@ const CartSystem = {
             return false;
         }
         
-        const productId = product.id || product.productId;
-        const existing = this.items.find(i => i.productId === productId);
+        const existing = this.items.find(i => i.productId === product.id);
         
         if (existing) {
             if (existing.quantity < (product.stock || 999)) {
@@ -101,13 +89,11 @@ const CartSystem = {
             }
         } else {
             this.items.push({
-                productId: productId,
+                productId: product.id,
                 name: product.name,
                 price: product.price,
                 quantity: 1,
-                merchantId: product.merchantName || product.merchantId || 'ناردو برو',
                 merchantName: product.merchantName || 'ناردو برو',
-                merchantPhone: product.merchantPhone || null,
                 image: product.image || (product.images && product.images[0]) || CONFIG.defaultImage,
                 stock: product.stock || 999
             });
@@ -119,29 +105,10 @@ const CartSystem = {
         return true;
     },
     
-    // ===== دالة مساعدة لإضافة منتج من نظام المنتجات الرئيسي =====
-    addProduct(productData) {
-        if (!productData) {
-            this.showNotification('بيانات المنتج غير صحيحة', 'error');
-            return false;
-        }
-        
-        const cartProduct = {
-            id: productData.id || productData.productId,
-            name: productData.name,
-            price: productData.price,
-            stock: productData.stock,
-            merchantName: productData.merchantName || productData.merchant,
-            image: productData.image || (productData.images && productData.images[0]) || CONFIG.defaultImage
-        };
-        
-        return this.add(cartProduct);
-    },
-    
     // ===== تحديث الكمية =====
-    update(productId, newQuantity) {
+    updateQuantity(productId, newQuantity) {
         if (newQuantity <= 0) {
-            this.remove(productId);
+            this.removeItem(productId);
             return;
         }
         
@@ -155,7 +122,7 @@ const CartSystem = {
     },
     
     // ===== حذف منتج =====
-    remove(productId) {
+    removeItem(productId) {
         const item = this.items.find(i => i.productId === productId);
         if (item) {
             this.items = this.items.filter(i => i.productId !== productId);
@@ -178,29 +145,7 @@ const CartSystem = {
         if (footer) footer.style.display = count > 0 ? 'block' : 'none';
     },
     
-    // ===== تجميع المنتجات حسب التاجر =====
-    groupItemsByMerchant() {
-        const groups = {};
-        this.items.forEach(item => {
-            const merchantId = item.merchantId || item.merchantName;
-            const merchantName = item.merchantName || 'ناردو برو';
-            
-            if (!groups[merchantId]) {
-                groups[merchantId] = {
-                    merchantId: merchantId,
-                    merchantName: merchantName,
-                    merchantPhone: item.merchantPhone || null,
-                    items: [],
-                    subtotal: 0
-                };
-            }
-            groups[merchantId].items.push(item);
-            groups[merchantId].subtotal += item.price * item.quantity;
-        });
-        return groups;
-    },
-    
-    // ===== عرض السلة مع تجميع حسب التجار =====
+    // ===== عرض السلة =====
     updateCartDisplay() {
         const container = document.getElementById('cartItemsContainer');
         if (!container) return;
@@ -217,54 +162,37 @@ const CartSystem = {
             return;
         }
         
-        const merchantGroups = this.groupItemsByMerchant();
         let subtotal = 0;
+        let itemsHTML = '';
         
-        let groupsHTML = '';
-        for (const [merchantId, group] of Object.entries(merchantGroups)) {
-            groupsHTML += `
-                <div class="merchant-group">
-                    <div class="merchant-header">
-                        <i class="fas fa-store"></i>
-                        <span>${this.escapeHtml(group.merchantName)}</span>
-                        <span class="merchant-total">${group.subtotal.toLocaleString()} دج</span>
-                    </div>
-                    <div class="merchant-items">
-            `;
+        this.items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            subtotal += itemTotal;
             
-            group.items.forEach(item => {
-                const itemTotal = item.price * item.quantity;
-                subtotal += itemTotal;
-                
-                groupsHTML += `
-                    <div class="cart-item">
-                        <img src="${item.image}" alt="${item.name}" onerror="this.src='${CONFIG.defaultImage}'">
-                        <div class="cart-item-info">
-                            <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
-                            <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
-                        </div>
-                        <div class="cart-item-actions">
-                            <div class="quantity-control">
-                                <button onclick="CartSystem.update(${item.productId}, ${item.quantity - 1})">-</button>
-                                <span>${item.quantity}</span>
-                                <button onclick="CartSystem.update(${item.productId}, ${item.quantity + 1})">+</button>
-                            </div>
-                            <div class="cart-item-total">${itemTotal.toLocaleString()} دج</div>
-                            <button class="remove-btn" onclick="CartSystem.remove(${item.productId})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+            itemsHTML += `
+                <div class="cart-item">
+                    <img src="${item.image}" alt="${item.name}" onerror="this.src='${CONFIG.defaultImage}'">
+                    <div class="cart-item-info">
+                        <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
+                        <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+                        <div class="cart-item-merchant"><i class="fas fa-store"></i> ${item.merchantName}</div>
                     </div>
-                `;
-            });
-            
-            groupsHTML += `
+                    <div class="cart-item-actions">
+                        <div class="quantity-control">
+                            <button onclick="CartSystem.updateQuantity(${item.productId}, ${item.quantity - 1})">-</button>
+                            <span>${item.quantity}</span>
+                            <button onclick="CartSystem.updateQuantity(${item.productId}, ${item.quantity + 1})">+</button>
+                        </div>
+                        <div class="cart-item-total">${itemTotal.toLocaleString()} دج</div>
+                        <button class="remove-btn" onclick="CartSystem.removeItem(${item.productId})">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </div>
             `;
-        }
+        });
         
-        container.innerHTML = groupsHTML;
+        container.innerHTML = itemsHTML;
         
         const shipping = CONFIG.shipping || 800;
         const total = subtotal + shipping;
@@ -418,47 +346,27 @@ const CartSystem = {
         const container = document.getElementById('checkoutSummary');
         if (!container) return;
         
-        const merchantGroups = this.groupItemsByMerchant();
         let subtotal = 0;
+        let itemsHTML = '';
         
-        let html = '';
-        for (const [merchantId, group] of Object.entries(merchantGroups)) {
-            html += `
-                <div class="checkout-merchant-group">
-                    <div class="checkout-merchant-header">
-                        <i class="fas fa-store"></i>
-                        <strong>${this.escapeHtml(group.merchantName)}</strong>
-                    </div>
-                    <div class="checkout-items">
-            `;
+        this.items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            subtotal += itemTotal;
             
-            group.items.forEach(item => {
-                const itemTotal = item.price * item.quantity;
-                subtotal += itemTotal;
-                
-                html += `
-                    <div class="checkout-item">
-                        <span>${this.escapeHtml(item.name)}</span>
-                        <span>${item.quantity} × ${item.price.toLocaleString()} دج</span>
-                        <span class="checkout-item-total">${itemTotal.toLocaleString()} دج</span>
-                    </div>
-                `;
-            });
-            
-            html += `
-                    </div>
-                    <div class="checkout-merchant-total">
-                        <span>مجموع التاجر:</span>
-                        <span>${group.subtotal.toLocaleString()} دج</span>
-                    </div>
+            itemsHTML += `
+                <div class="checkout-item">
+                    <span>${this.escapeHtml(item.name)}</span>
+                    <span>${item.quantity} × ${item.price.toLocaleString()} دج</span>
+                    <span class="checkout-item-total">${itemTotal.toLocaleString()} دج</span>
                 </div>
             `;
-        }
+        });
         
         const shipping = CONFIG.shipping || 800;
         const total = subtotal + shipping;
         
-        html += `
+        container.innerHTML = `
+            <div class="checkout-items-list">${itemsHTML}</div>
             <div class="checkout-total-summary">
                 <div class="summary-line">
                     <span>المجموع الفرعي:</span>
@@ -474,8 +382,6 @@ const CartSystem = {
                 </div>
             </div>
         `;
-        
-        container.innerHTML = html;
     },
     
     // ===== إتمام الطلب =====
@@ -504,7 +410,6 @@ const CartSystem = {
             return;
         }
         
-        const merchantGroups = this.groupItemsByMerchant();
         const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
         const shipping = CONFIG.shipping || 800;
         const total = subtotal + shipping;
@@ -512,152 +417,53 @@ const CartSystem = {
         
         this.showNotification('📦 جاري إرسال الطلب...', 'info');
         
-        let merchantsNotified = 0;
-        for (const [merchantId, group] of Object.entries(merchantGroups)) {
-            const merchantMessage = this.generateMerchantOrderMessage({
-                merchant: group,
-                customer: { name: customerName, phone: customerPhone, address: customerAddress },
-                orderNumber: `${orderNumber}-${merchantId.slice(-4)}`,
-                paymentMethod: paymentMethod,
-                notes: orderNotes,
-                shippingPrice: shipping
-            });
-            
-            let merchantPhone = null;
-            
-            if (typeof users !== 'undefined' && users) {
-                const merchantUser = users.find(u => 
-                    u.name === group.merchantName || 
-                    u.storeName === group.merchantName ||
-                    u.id == merchantId
-                );
-                if (merchantUser && merchantUser.phone) {
-                    merchantPhone = merchantUser.phone.replace(/[^0-9]/g, '');
-                }
-            }
-            
-            if (!merchantPhone && group.merchantPhone) {
-                merchantPhone = group.merchantPhone.replace(/[^0-9]/g, '');
-            }
-            
-            if (merchantPhone) {
-                window.open(`https://wa.me/${merchantPhone}?text=${encodeURIComponent(merchantMessage)}`, '_blank');
-                merchantsNotified++;
-                await this.sleep(500);
-            }
-        }
+        // إنشاء رسالة الطلب
+        let orderMessage = `🛍️ *طلب جديد - ناردو برو* 🛍️\n\n`;
+        orderMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        orderMessage += `🆔 *رقم الطلب:* ${orderNumber}\n`;
+        orderMessage += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        orderMessage += `👤 *معلومات العميل:*\n`;
+        orderMessage += `   📛 ${customerName}\n`;
+        orderMessage += `   📞 ${customerPhone}\n`;
+        orderMessage += `   📍 ${customerAddress}\n\n`;
+        orderMessage += `📦 *المنتجات:*\n`;
         
-        const adminMessage = this.generateAdminOrderMessage({
-            customer: { name: customerName, phone: customerPhone, address: customerAddress },
-            orderNumber: orderNumber,
-            paymentMethod: paymentMethod,
-            notes: orderNotes,
-            merchantGroups: merchantGroups,
-            subtotal: subtotal,
-            shipping: shipping,
-            total: total
+        this.items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            orderMessage += `   • ${item.name} (${item.quantity} × ${item.price.toLocaleString()} دج) = ${itemTotal.toLocaleString()} دج\n`;
         });
         
-        const adminPhone = CONFIG.phone.replace(/[^0-9]/g, '');
-        window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(adminMessage)}`, '_blank');
+        orderMessage += `\n💰 *المجموع:* ${subtotal.toLocaleString()} دج\n`;
+        orderMessage += `🚚 *التوصيل:* ${shipping.toLocaleString()} دج\n`;
+        orderMessage += `💵 *الإجمالي:* ${total.toLocaleString()} دج\n`;
+        if (orderNotes) orderMessage += `\n📝 *ملاحظات:* ${orderNotes}\n`;
+        orderMessage += `\n⏰ ${new Date().toLocaleString('ar-DZ')}\n`;
+        orderMessage += `✨ ناردو برو ✨`;
         
+        // إرسال رسالة واتساب
+        const adminPhone = CONFIG.phone.replace(/[^0-9]/g, '');
+        window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(orderMessage)}`, '_blank');
+        
+        // حفظ الطلب
         this.saveOrder({
             orderNumber: orderNumber,
             customer: { name: customerName, phone: customerPhone, address: customerAddress },
-            merchantGroups: merchantGroups,
+            items: [...this.items],
             subtotal: subtotal,
             shipping: shipping,
             total: total,
             notes: orderNotes,
             paymentMethod: paymentMethod,
-            date: new Date().toISOString(),
-            status: 'pending'
+            date: new Date().toISOString()
         });
         
+        // تفريغ السلة
         this.items = [];
         this.saveCart();
         this.closeCheckout();
         this.closeCartSidebar();
         
         this.showNotification(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${orderNumber}`, 'success');
-    },
-    
-    // ===== إنشاء رسالة للتاجر =====
-    generateMerchantOrderMessage(data) {
-        const { merchant, customer, orderNumber, paymentMethod, notes, shippingPrice } = data;
-        
-        const paymentMethodName = {
-            'cash': 'الدفع عند الاستلام',
-            'cib': 'الدفع عبر CIB',
-            'edahabia': 'الدفع عبر Edahabia'
-        }[paymentMethod] || paymentMethod;
-        
-        let message = `🛍️ *طلب جديد - ناردو برو* 🛍️\n\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        message += `📦 *طلب للتاجر:* ${merchant.merchantName}\n`;
-        message += `🆔 *رقم الطلب:* ${orderNumber}\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-        message += `👤 *معلومات العميل:*\n`;
-        message += `   📛 الاسم: ${customer.name}\n`;
-        message += `   📞 الهاتف: ${customer.phone}\n`;
-        message += `   📍 العنوان: ${customer.address}\n`;
-        message += `   💳 الدفع: ${paymentMethodName}\n\n`;
-        message += `📦 *المنتجات المطلوبة:*\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        
-        merchant.items.forEach(item => {
-            const itemTotal = item.price * item.quantity;
-            message += `• ${item.name}\n`;
-            message += `  الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج\n`;
-            message += `  المجموع: ${itemTotal.toLocaleString()} دج\n`;
-            message += `────────────────\n`;
-        });
-        
-        message += `\n💰 *المجموع الفرعي:* ${merchant.subtotal.toLocaleString()} دج\n`;
-        if (notes) message += `\n📝 *ملاحظات:*\n${notes}\n`;
-        message += `\n⏰ *تاريخ الطلب:* ${new Date().toLocaleString('ar-DZ')}\n`;
-        message += `✨ *ناردو برو* ✨`;
-        
-        return message;
-    },
-    
-    // ===== إنشاء رسالة للإدارة =====
-    generateAdminOrderMessage(data) {
-        const { customer, orderNumber, paymentMethod, notes, merchantGroups, subtotal, shipping, total } = data;
-        
-        const paymentMethodName = {
-            'cash': 'الدفع عند الاستلام',
-            'cib': 'الدفع عبر CIB',
-            'edahabia': 'الدفع عبر Edahabia'
-        }[paymentMethod] || paymentMethod;
-        
-        let message = `🏪 *طلب جديد - نظام إدارة الطلبات* 🏪\n\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        message += `🆔 *رقم الطلب:* ${orderNumber}\n`;
-        message += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-        message += `👤 *معلومات العميل:*\n`;
-        message += `   📛 ${customer.name}\n`;
-        message += `   📞 ${customer.phone}\n`;
-        message += `   📍 ${customer.address}\n`;
-        message += `   💳 ${paymentMethodName}\n\n`;
-        message += `📦 *تفاصيل الطلب:*\n`;
-        
-        let merchantIndex = 1;
-        for (const [merchantId, group] of Object.entries(merchantGroups)) {
-            message += `\n🏪 التاجر ${merchantIndex}: ${group.merchantName}\n`;
-            group.items.forEach(item => {
-                message += `   • ${item.name} (${item.quantity} × ${item.price.toLocaleString()} دج)\n`;
-            });
-            message += `   💰 المجموع: ${group.subtotal.toLocaleString()} دج\n`;
-            merchantIndex++;
-        }
-        
-        message += `\n💰 *المجموع:* ${subtotal.toLocaleString()} دج + ${shipping.toLocaleString()} دج = ${total.toLocaleString()} دج\n`;
-        if (notes) message += `\n📝 ملاحظات: ${notes}\n`;
-        message += `\n⏰ ${new Date().toLocaleString('ar-DZ')}\n`;
-        message += `✨ ناردو برو ✨`;
-        
-        return message;
     },
     
     // ===== إنشاء رقم طلب =====
@@ -711,7 +517,8 @@ const CartSystem = {
     showNotification(message, type = 'success') {
         const notification = document.createElement('div');
         notification.className = `cart-notification ${type}`;
-        notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
+        const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+        notification.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
         document.body.appendChild(notification);
         
         setTimeout(() => {
@@ -762,10 +569,7 @@ const CartSystem = {
                 justify-content: space-between;
                 align-items: center;
             }
-            .cart-header h3 {
-                margin: 0;
-                color: var(--gold, #D4AF37);
-            }
+            .cart-header h3 { margin: 0; color: var(--gold, #D4AF37); }
             .close-cart {
                 background: none;
                 border: none;
@@ -774,30 +578,11 @@ const CartSystem = {
                 color: var(--text-secondary, #888);
             }
             .cart-content { flex: 1; overflow-y: auto; padding: 20px; }
-            .merchant-group {
-                background: rgba(255,255,255,0.05);
-                border-radius: 16px;
-                margin-bottom: 20px;
-                overflow: hidden;
-            }
-            .merchant-header {
-                background: rgba(212,175,55,0.1);
-                padding: 12px 15px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                border-bottom: 1px solid rgba(212,175,55,0.3);
-                font-weight: bold;
-            }
-            .merchant-header i { color: var(--gold, #D4AF37); }
-            .merchant-header span:first-of-type { flex: 1; }
-            .merchant-total { color: var(--gold, #D4AF37); }
-            .merchant-items { padding: 10px; }
             .cart-item {
                 display: flex;
                 gap: 15px;
                 padding: 12px;
-                background: rgba(255,255,255,0.03);
+                background: rgba(255,255,255,0.05);
                 border-radius: 12px;
                 margin-bottom: 10px;
             }
@@ -810,11 +595,13 @@ const CartSystem = {
             .cart-item-info { flex: 1; }
             .cart-item-name { font-weight: bold; margin-bottom: 5px; }
             .cart-item-price { font-size: 13px; color: var(--text-secondary, #888); }
+            .cart-item-merchant { font-size: 11px; color: var(--gold, #D4AF37); margin-top: 5px; }
             .cart-item-actions { text-align: right; }
             .quantity-control {
                 display: flex;
                 gap: 8px;
                 margin-bottom: 8px;
+                justify-content: flex-end;
             }
             .quantity-control button {
                 width: 28px;
@@ -954,31 +741,13 @@ const CartSystem = {
                 color: var(--gold, #D4AF37);
                 font-size: 16px;
             }
-            .checkout-merchant-group {
-                margin-bottom: 20px;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
-                padding-bottom: 15px;
-            }
-            .checkout-merchant-header {
-                font-size: 16px;
-                margin-bottom: 10px;
-                color: var(--gold, #D4AF37);
-            }
             .checkout-item {
                 display: flex;
                 justify-content: space-between;
                 padding: 8px 0;
-                font-size: 14px;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
             }
             .checkout-item-total { color: var(--gold, #D4AF37); }
-            .checkout-merchant-total {
-                display: flex;
-                justify-content: space-between;
-                padding-top: 10px;
-                margin-top: 10px;
-                border-top: 1px dashed rgba(255,255,255,0.1);
-                font-weight: bold;
-            }
             .checkout-total-summary {
                 background: rgba(212,175,55,0.1);
                 border-radius: 12px;
@@ -1099,34 +868,19 @@ const CartSystem = {
         });
     },
     
-    // ===== الحصول على عدد المنتجات =====
-    getCount() {
-        return this.items.reduce((sum, i) => sum + i.quantity, 0);
-    },
-    
-    // ===== الحصول على المجموع =====
-    getTotal() {
-        return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    },
-    
     // ===== تنظيف النص =====
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    },
-    
-    // ===== تأخير =====
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 };
 
 // ===== تصدير الدوال للاستخدام العام =====
 window.Cart = CartSystem;
 window.toggleCart = () => CartSystem.showCartSidebar();
-window.addToCart = (product) => CartSystem.addProduct(product);
+window.addToCart = (product) => CartSystem.addToCart(product);
 
 // ===== تهيئة السلة =====
 if (document.readyState === 'loading') {
@@ -1135,4 +889,4 @@ if (document.readyState === 'loading') {
     CartSystem.init();
 }
 
-console.log('✅ نظام السلة المتكامل جاهز مع زر إضافة للسلة');
+console.log('✅ نظام السلة المتكامل جاهز');
