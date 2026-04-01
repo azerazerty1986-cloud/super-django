@@ -1,546 +1,562 @@
 
-/* ================================================================== */
-/* ===== [05] الملف: 05-app.js - التطبيق الرئيسي ===== */
-/* ================================================================== */
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>إضافة ريلز | ناردو برو</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-const App = {
-    products: [],
-    
-    async init() {
-        console.log('?? بدء تشغيل ناردو برو...');
-        
-        Auth.init();
-        Cart.init();
-        
-        await this.loadProducts();
-        Auth.updateUI();
-        
-        this.startTypingEffect();
-        this.startClock();
-        this.setupEventListeners();
-        
-        setTimeout(() => {
-            const loader = document.getElementById('loader');
-            if (loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 500);
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #0a0f1a, #0f1420);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 25px;
+            padding: 25px;
+            border: 1px solid rgba(255,215,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: gold;
+            text-align: center;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255,215,0,0.5);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            background: rgba(255,215,0,0.05);
+        }
+
+        .upload-area:hover {
+            border-color: gold;
+            background: rgba(255,215,0,0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-area i {
+            font-size: 50px;
+            color: gold;
+            margin-bottom: 10px;
+        }
+
+        .video-preview {
+            display: none;
+            margin-bottom: 20px;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .video-preview video {
+            width: 100%;
+            max-height: 300px;
+        }
+
+        .remove-video {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,0,0,0.7);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: gold;
+            font-weight: 600;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 10px;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: gold;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, gold, #ffb347);
+            color: black;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .serial-info {
+            background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05));
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-family: monospace;
+            font-size: 12px;
+            direction: ltr;
+            border: 1px solid rgba(255,215,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .serial-info i {
+            color: gold;
+            margin-left: 8px;
+        }
+
+        .serial-info.success {
+            background: rgba(0,255,0,0.2);
+            border-color: green;
+            color: #90ff90;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: gold;
+            text-decoration: none;
+            text-align: center;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: gold;
+            color: black;
+            padding: 12px 24px;
+            border-radius: 50px;
+            z-index: 2000;
+            font-weight: bold;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
             }
-        }, 1000);
-    },
-    
-    async loadProducts() {
-        if (window.Telegram) {
-            this.products = await Telegram.fetchProducts();
-        } else {
-            this.products = Utils.load('products', []);
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
         }
-        this.displayProducts();
-    },
-    
-    setupEventListeners() {
-        window.addEventListener('scroll', this.handleScroll.bind(this));
-        window.addEventListener('click', this.handleClick.bind(this));
-    },
-    
-    handleScroll() {
-        const btn = document.getElementById('quickTopBtn');
-        if (btn) btn.classList.toggle('show', window.scrollY > 300);
-    },
-    
-    handleClick(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.classList.remove('show');
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            flex-direction: column;
+            gap: 20px;
         }
-    },
-    
-    openLoginModal() {
-        Utils.openModal('loginModal');
-    },
-    
-    closeModal(modalId) {
-        Utils.closeModal(modalId);
-    },
-    
-    switchAuthTab(tab) {
-        document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
-        document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
-    },
-    
-    toggleRoleFields() {
-        const fields = document.getElementById('roleFields');
-        if (fields) {
-            fields.style.display = document.getElementById('requestRole').checked ? 'block' : 'none';
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,215,0,0.3);
+            border-top-color: gold;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
-    },
-    
-    handleLogin() {
-        const username = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        const result = Auth.login(username, password);
-        
-        if (result.success) {
-            this.closeModal('loginModal');
-            Auth.updateUI();
-            Utils.showNotification(`مرحباً ${result.user.name} - معرفك: ${result.user.userId}`);
-            setTimeout(() => location.reload(), 500);
-        } else {
-            Utils.showNotification(result.message, 'error');
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
-    },
-    
-    handleRegister() {
-        const name = document.getElementById('regName').value;
-        const email = document.getElementById('regEmail').value;
-        const password = document.getElementById('regPassword').value;
-        const phone = document.getElementById('regPhone').value;
-        const requestRole = document.getElementById('requestRole').checked;
-        
-        if (!name || !email || !password) {
-            Utils.showNotification('الرجاء ملء جميع الحقول', 'error');
-            return;
+
+        .progress-bar {
+            width: 80%;
+            max-width: 300px;
+            height: 4px;
+            background: rgba(255,215,0,0.3);
+            border-radius: 2px;
+            overflow: hidden;
         }
-        
-        let role = 'customer';
-        let roleData = {};
-        
-        if (requestRole) {
-            role = document.getElementById('requestedRole').value;
-            roleData = {
-                storeName: document.getElementById('storeName')?.value,
-                specialization: document.getElementById('specialization')?.value,
-                workArea: document.getElementById('workArea')?.value,
-                vehicleType: document.getElementById('vehicleType')?.value,
-                experience: document.getElementById('experience')?.value
-            };
+
+        .progress-fill {
+            height: 100%;
+            background: gold;
+            width: 0%;
+            transition: width 0.3s;
         }
-        
-        const userData = { 
-            name, 
-            email, 
-            password, 
-            phone, 
-            role,
-            ...roleData
-        };
-        
-        const result = Auth.register(userData);
-        
-        if (result.success) {
-            Utils.showNotification(result.message, 'success');
-            this.switchAuthTab('login');
-            document.getElementById('registerForm')?.reset();
-        } else {
-            Utils.showNotification(result.message, 'error');
+
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .card { padding: 20px; }
         }
-    },
-    
-    filterProducts(category) {
-        let filtered = this.products;
-        if (category !== 'all') {
-            filtered = this.products.filter(p => p.category === category);
-        }
-        this.displayProducts(filtered);
-        
-        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-        event.target.classList.add('active');
-    },
-    
-    searchProducts() {
-        const term = document.getElementById('searchInput').value;
-        const filtered = this.products.filter(p => 
-            p.name.toLowerCase().includes(term.toLowerCase())
-        );
-        this.displayProducts(filtered);
-    },
-    
-    showProductDetail(productId) {
-        const product = this.products.find(p => p.id === productId || p.productId === productId);
-        if (!product) return;
-        
-        const ownerId = product.productId ? product.productId.split('_PRD_')[0] : 'غير معروف';
-        
-        document.getElementById('productDetailContent').innerHTML = `
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
-                <div>
-                    <img src="${product.image}" style="width:100%; border-radius:20px; border:3px solid var(--gold);">
-                </div>
-                <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h2 style="color:var(--gold);">${product.name}</h2>
-                        <span style="background:var(--glass); padding:5px 15px; border-radius:30px; font-size:12px;">
-                            ?? ${product.productId || product.id}
-                        </span>
-                    </div>
-                    <p>${product.description || 'منتج عالي الجودة'}</p>
-                    
-                    <div style="background:var(--glass); padding:15px; border-radius:15px; margin:20px 0;">
-                        <p><i class="fas fa-store"></i> ${product.merchantName}</p>
-                        <p style="color:var(--gold-light); font-size:12px; margin-top:5px;">
-                            معرف الناشر: ${ownerId}
-                        </p>
-                    </div>
-                    
-                    <div style="font-size:36px; color:var(--gold); font-weight:800; margin-bottom:20px;">
-                        ${product.price} دج
-                    </div>
-                    
-                    <button class="btn-gold" onclick="App.addToCart('${product.id}'); App.closeModal('productDetailModal');">
-                        أضف للسلة
-                    </button>
-                </div>
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>
+                <i class="fab fa-telegram"></i>
+                إضافة ريلز جديد
+            </h1>
+
+            <!-- منطقة رفع الفيديو -->
+            <div class="upload-area" onclick="document.getElementById('videoFile').click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>اضغط لرفع الفيديو</p>
+                <small>MP4 - الحد الأقصى 50MB</small>
             </div>
-        `;
-        
-        Utils.openModal('productDetailModal');
-    },
-    
-    // ===== [معدل] فتح نافذة إضافة منتج (للنافذة القديمة) =====
-    openAddProductModal() {
-        if (!Auth.currentUser) {
-            Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
-            this.openLoginModal();
-            return;
-        }
-        
-        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
-        if (!allowedRoles.includes(Auth.currentUser.role)) {
-            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
-            return;
-        }
-        
-        Utils.openModal('productModal');
-    },
-    
-    handleImageUpload(event) {
-        const preview = document.getElementById('imagePreview');
-        preview.innerHTML = '';
-        
-        for (let file of event.target.files) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
-            };
-            reader.readAsDataURL(file);
-        }
-    },
-    
-    // ===== [معدل] حفظ المنتج - المنتج يأخذ معرف صاحبه + رقم تسلسلي =====
-    async saveProduct() {
-        if (!Auth.currentUser) {
-            Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
-            return;
-        }
-        
-        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
-        if (!allowedRoles.includes(Auth.currentUser.role)) {
-            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
-            return;
-        }
-        
-        const name = document.getElementById('productName')?.value;
-        const category = document.getElementById('productCategory')?.value;
-        const price = parseInt(document.getElementById('productPrice')?.value);
-        const stock = parseInt(document.getElementById('productStock')?.value);
-        const description = document.getElementById('productDescription')?.value;
-        const imageFile = document.getElementById('productImages').files[0];
-        
-        if (!name || !category || !price || !stock) {
-            Utils.showNotification('الرجاء ملء جميع الحقول', 'error');
-            return;
-        }
+            <input type="file" id="videoFile" accept="video/*" style="display: none;" onchange="previewVideo(this)">
 
-        if (!imageFile) {
-            Utils.showNotification('الرجاء اختيار صورة للمنتج', 'error');
-            return;
-        }
-
-        Utils.showNotification('جاري رفع المنتج...', 'info');
-
-        // المنتج يأخذ معرف صاحبه + رقم تسلسلي
-        const productId = `${Auth.currentUser.userId}_PRD_${Date.now().toString().slice(-6)}`;
-        
-        const product = {
-            productId: productId,
-            name: name,
-            category: category,
-            price: price,
-            stock: stock,
-            description: description || '',
-            merchantName: Auth.currentUser.storeName || Auth.currentUser.name,
-            merchantId: Auth.currentUser.userId
-        };
-
-        if (window.Telegram) {
-            const result = await Telegram.addProductWithPhoto(product, imageFile);
-            
-            if (result.success) {
-                const newProduct = {
-                    ...product,
-                    id: productId,
-                    telegramId: result.messageId,
-                    image: result.photoUrl || CONFIG.defaultImage,
-                    images: result.photoUrl ? [result.photoUrl] : [],
-                    createdAt: new Date().toISOString()
-                };
-                
-                this.products.push(newProduct);
-                Utils.save('products', this.products);
-                this.displayProducts();
-                
-                Utils.showNotification(`? تم إضافة المنتج - المعرف: ${productId}`, 'success');
-                this.closeModal('productModal');
-                
-            } else {
-                Utils.showNotification('? فشل الإرسال إلى تلغرام', 'error');
-            }
-        }
-    },
-    
-    // ===== [جديد] دوال أيقونة إضافة المنتج (للأيقونة الخضراء) =====
-    
-    // فتح نافذة إضافة منتج من الأيقونة
-    openAddProductForm() {
-        console.log('?? محاولة فتح نافذة إضافة منتج من الأيقونة');
-        
-        if (!Auth.currentUser) {
-            Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
-            this.openLoginModal();
-            return;
-        }
-        
-        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
-        if (!allowedRoles.includes(Auth.currentUser.role)) {
-            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
-            return;
-        }
-        
-        const modal = document.getElementById('addProductModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            modal.classList.add('show');
-            
-            const form = document.getElementById('addProductForm');
-            if (form) form.reset();
-            
-            const preview = document.getElementById('newImagePreview');
-            if (preview) preview.innerHTML = '';
-            
-            console.log('? تم فتح نافذة إضافة منتج');
-        } else {
-            console.error('? addProductModal غير موجود');
-            Utils.showNotification('النافذة غير موجودة', 'error');
-        }
-    },
-    
-    // إغلاق نافذة إضافة منتج من الأيقونة
-    closeAddProductForm() {
-        const modal = document.getElementById('addProductModal');
-        if (modal) {
-            modal.style.display = 'none';
-            modal.classList.remove('show');
-        }
-    },
-    
-    // رفع الصور للنموذج الجديد
-    handleNewImageUpload(event) {
-        const preview = document.getElementById('newImagePreview');
-        if (!preview) return;
-        
-        preview.innerHTML = '';
-        for (let file of event.target.files) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                preview.innerHTML += `<img src="${e.target.result}" class="preview-image">`;
-            };
-            reader.readAsDataURL(file);
-        }
-    },
-    
-    // حفظ المنتج الجديد (للأيقونة)
-    async saveNewProduct() {
-        if (!Auth.currentUser) {
-            Utils.showNotification('يجب تسجيل الدخول أولاً', 'error');
-            this.openLoginModal();
-            return;
-        }
-        
-        const allowedRoles = ['admin', 'merchant', 'distributor', 'content_creator'];
-        if (!allowedRoles.includes(Auth.currentUser.role)) {
-            Utils.showNotification('غير مصرح لك بإضافة منتجات', 'error');
-            return;
-        }
-        
-        const name = document.getElementById('newProductName')?.value;
-        const category = document.getElementById('newProductCategory')?.value;
-        const price = parseInt(document.getElementById('newProductPrice')?.value);
-        const stock = parseInt(document.getElementById('newProductStock')?.value);
-        const description = document.getElementById('newProductDescription')?.value;
-        const imageFile = document.getElementById('newProductImages').files[0];
-        
-        if (!name || !category || !price || !stock) {
-            Utils.showNotification('الرجاء ملء جميع الحقول', 'error');
-            return;
-        }
-
-        if (!imageFile) {
-            Utils.showNotification('الرجاء اختيار صورة للمنتج', 'error');
-            return;
-        }
-
-        Utils.showNotification('جاري رفع المنتج...', 'info');
-
-        const productId = `${Auth.currentUser.userId}_PRD_${Date.now().toString().slice(-6)}`;
-        
-        const product = {
-            productId: productId,
-            name: name,
-            category: category,
-            price: price,
-            stock: stock,
-            description: description || '',
-            merchantName: Auth.currentUser.storeName || Auth.currentUser.name,
-            merchantId: Auth.currentUser.userId
-        };
-
-        if (window.Telegram) {
-            const result = await Telegram.addProductWithPhoto(product, imageFile);
-            
-            if (result.success) {
-                const newProduct = {
-                    ...product,
-                    id: productId,
-                    telegramId: result.messageId,
-                    image: result.photoUrl || CONFIG.defaultImage,
-                    images: result.photoUrl ? [result.photoUrl] : [],
-                    createdAt: new Date().toISOString()
-                };
-                
-                this.products.push(newProduct);
-                Utils.save('products', this.products);
-                this.displayProducts();
-                
-                Utils.showNotification(`? تم إضافة المنتج - المعرف: ${productId}`, 'success');
-                this.closeAddProductForm();
-                
-            } else {
-                Utils.showNotification('? فشل الإرسال إلى تلغرام', 'error');
-            }
-        }
-    },
-    
-    displayProducts() {
-        const container = document.getElementById('productsContainer');
-        if (!container) return;
-        
-        if (this.products.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:50px;">لا توجد منتجات</div>';
-            return;
-        }
-        
-        container.innerHTML = this.products.map(p => {
-            const shortId = p.productId ? p.productId.substring(0, 12) + '...' : 'ID';
-            
-            return `
-            <div class="product-card" onclick="App.showProductDetail('${p.productId || p.id}')">
-                <div style="position:absolute; top:10px; left:10px; background:var(--gold); color:black; padding:3px 10px; border-radius:20px; font-size:10px; z-index:10;">
-                    ?? ${shortId}
-                </div>
-                <div class="product-gallery">
-                    <img src="${p.image}" alt="${p.name}">
-                </div>
-                <div class="product-info">
-                    <h3 class="product-title">${p.name}</h3>
-                    <div class="product-price">${p.price} دج</div>
-                    <button class="add-to-cart" onclick="event.stopPropagation(); App.addToCart('${p.productId || p.id}')">
-                        أضف للسلة
-                    </button>
-                </div>
+            <!-- معاينة الفيديو -->
+            <div id="videoPreview" class="video-preview">
+                <video id="previewVideo" controls></video>
+                <button class="remove-video" onclick="removeVideo()">✕</button>
             </div>
-        `}).join('');
-    },
-    
-    addToCart(productId) {
-        Utils.showNotification('تمت الإضافة للسلة');
-    },
-    
-    toggleCart() {
-        document.getElementById('cartSidebar').classList.toggle('open');
-    },
-    
-    checkout() {
-        alert('تم التوجيه إلى واتساب');
-    },
-    
-    openDashboard() {
-        if (!Auth.currentUser || Auth.currentUser.role !== 'admin') {
-            Utils.showNotification('غير مصرح', 'error');
-            return;
+
+            <!-- معلومات الفيديو -->
+            <div class="input-group">
+                <label><i class="fas fa-heading"></i> عنوان الريلز *</label>
+                <input type="text" id="videoTitle" placeholder="أدخل عنوان الريلز..." value="ريلز رائع">
+            </div>
+
+            <div class="input-group">
+                <label><i class="fas fa-user"></i> اسم الناشر *</label>
+                <input type="text" id="videoPublisher" placeholder="اسم الناشر..." value="ناردو برو">
+            </div>
+
+            <div class="input-group">
+                <label><i class="fas fa-tag"></i> هاشتاجات (اختياري)</label>
+                <textarea id="videoHashtags" placeholder="#ريلز #ناردو #تيك_توك" rows="2"></textarea>
+            </div>
+
+            <!-- عرض المعرف الذي سيتم إنشاؤه -->
+            <div class="serial-info" id="serialInfo">
+                <i class="fas fa-fingerprint"></i> 
+                🔐 سيتم إنشاء معرف سري تلقائياً عند الرفع<br>
+                <small style="color: #aaa;">الصيغة: NARD-YYYYMMDD-HHMMSS-XXXX</small>
+            </div>
+
+            <!-- أزرار الإجراءات -->
+            <button class="btn" id="uploadBtn" onclick="uploadVideo()">
+                <i class="fab fa-telegram"></i> رفع ونشر للجميع
+            </button>
+            <a href="index.html" class="back-link">← العودة للرئيسية</a>
+        </div>
+    </div>
+
+    <script>
+        // ========== إعدادات تليجرام (متوافقة مع index.html) ==========
+        const BOT_TOKEN = '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4';
+        const CHANNEL_ID = '-1003822964890';
+        const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
+
+        let selectedFile = null;
+        let currentUser = null;
+
+        // ========== تحميل المستخدم الحالي ==========
+        function loadCurrentUser() {
+            try {
+                const savedUser = localStorage.getItem('current_user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    const publisherInput = document.getElementById('videoPublisher');
+                    if (currentUser.name && currentUser.name !== 'زائر') {
+                        publisherInput.value = currentUser.name;
+                    }
+                } else {
+                    currentUser = { id: 0, name: 'زائر', role: 'guest' };
+                }
+            } catch(e) {
+                currentUser = { id: 0, name: 'زائر', role: 'guest' };
+            }
         }
-        document.getElementById('dashboardSection').style.display = 'block';
-    },
-    
-    playReel(reelId) {
-        window.open(`07-reels.html?id=${reelId}`, '_blank');
-    },
-    
-    scrollToTop() {
-        Utils.scrollToTop();
-    },
-    
-    scrollToBottom() {
-        Utils.scrollToBottom();
-    },
-    
-    toggleTheme() {
-        document.body.classList.toggle('light-mode');
-        const toggle = document.getElementById('themeToggle');
-        toggle.innerHTML = toggle.innerHTML.includes('moon') ? 
-            '<i class="fas fa-sun"></i><span>نهاري</span>' : 
-            '<i class="fas fa-moon"></i><span>ليلي</span>';
-    },
-    
-    startTypingEffect() {
-        const texts = ['ناردو برو', 'تسوق آمن', 'جودة عالية'];
-        let index = 0, charIndex = 0;
-        const element = document.getElementById('typing-text');
-        
-        if (!element) return;
-        
-        const type = () => {
-            if (charIndex < texts[index].length) {
-                element.textContent += texts[index].charAt(charIndex);
-                charIndex++;
-                setTimeout(type, 100);
-            } else {
-                setTimeout(erase, 2000);
-            }
-        };
-        
-        const erase = () => {
-            if (element.textContent.length > 0) {
-                element.textContent = element.textContent.slice(0, -1);
-                setTimeout(erase, 50);
-            } else {
-                index = (index + 1) % texts.length;
-                charIndex = 0;
-                setTimeout(type, 500);
-            }
-        };
-        
-        type();
-    },
-    
-    startClock() {
-        setInterval(() => {
+
+        // ========== دالة إنشاء معرف فريد بصيغة NARD-YYYYMMDD-HHMMSS-XXXX ==========
+        function generateSerialNumber() {
             const now = new Date();
-            document.getElementById('marqueeHours').textContent = now.getHours().toString().padStart(2, '0');
-            document.getElementById('marqueeMinutes').textContent = now.getMinutes().toString().padStart(2, '0');
-            document.getElementById('marqueeSeconds').textContent = now.getSeconds().toString().padStart(2, '0');
-        }, 1000);
-    }
-};
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            return `NARD-${year}${month}${day}-${hours}${minutes}${seconds}-${random}`;
+        }
 
-window.App = App;
-document.addEventListener('DOMContentLoaded', () => App.init());
+        // ========== عرض المعاينة ==========
+        function previewVideo(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // التحقق من الحجم
+                if (file.size > 50 * 1024 * 1024) {
+                    showToast("❌ حجم الفيديو كبير جداً (الحد الأقصى 50MB)");
+                    input.value = '';
+                    return;
+                }
+                
+                // التحقق من النوع
+                if (!file.type.startsWith('video/')) {
+                    showToast("❌ يرجى اختيار ملف فيديو صالح (MP4)");
+                    input.value = '';
+                    return;
+                }
 
+                selectedFile = file;
+                const url = URL.createObjectURL(file);
+                const preview = document.getElementById('videoPreview');
+                const previewVideo = document.getElementById('previewVideo');
+                previewVideo.src = url;
+                preview.style.display = 'block';
+                
+                // تحديث معلومات المعرف
+                const serial = generateSerialNumber();
+                document.getElementById('serialInfo').innerHTML = `
+                    <i class="fas fa-fingerprint"></i> 
+                    🔐 المعرف السري الذي سيتم إنشاؤه:<br>
+                    <strong style="color: gold; font-size: 14px;">${serial}</strong>
+                `;
+            }
+        }
+
+        // ========== إزالة الفيديو ==========
+        function removeVideo() {
+            selectedFile = null;
+            document.getElementById('videoPreview').style.display = 'none';
+            document.getElementById('videoFile').value = '';
+            document.getElementById('previewVideo').src = '';
+            document.getElementById('serialInfo').innerHTML = `
+                <i class="fas fa-fingerprint"></i> 
+                🔐 سيتم إنشاء معرف سري تلقائياً عند الرفع<br>
+                <small style="color: #aaa;">الصيغة: NARD-YYYYMMDD-HHMMSS-XXXX</small>
+            `;
+        }
+
+        // ========== عرض مؤشر التحميل ==========
+        function showLoading(message) {
+            const overlay = document.createElement('div');
+            overlay.id = 'loadingOverlay';
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p>${message}</p>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function updateProgress(percent) {
+            const fill = document.getElementById('progressFill');
+            if (fill) fill.style.width = percent + '%';
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.remove();
+        }
+
+        // ========== رفع الفيديو إلى تلغرام ==========
+        async function uploadVideo() {
+            // التحقق من وجود فيديو
+            if (!selectedFile) {
+                showToast("❌ يرجى اختيار فيديو أولاً");
+                return;
+            }
+
+            // التحقق من تسجيل الدخول
+            if (!currentUser || currentUser.name === 'زائر') {
+                showToast("❌ يرجى تسجيل الدخول أولاً لإضافة ريلز");
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+                return;
+            }
+
+            const title = document.getElementById('videoTitle').value.trim();
+            if (!title) {
+                showToast("❌ يرجى إدخال عنوان الريلز");
+                return;
+            }
+
+            const publisher = document.getElementById('videoPublisher').value.trim() || currentUser.name || 'ناردو برو';
+            const hashtags = document.getElementById('videoHashtags').value.trim();
+
+            // إنشاء المعرف الخاص (NARD-SERIAL)
+            const serial = generateSerialNumber();
+
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> جاري الرفع...';
+            
+            showLoading("جاري رفع الفيديو إلى تلغرام...");
+            updateProgress(30);
+
+            // بناء الكابشن بالصيغة المطلوبة ليتعرف عليها index.html
+            // الصيغة: 🎬 العنوان\n👤 الناشر\n🔑 NARD-SERIAL: المعرف\n📅 التاريخ
+            let caption = `🎬 ${title}\n👤 ${publisher}\n🔑 NARD-SERIAL: ${serial}\n📅 ${new Date().toLocaleString('ar-EG')}\n✅ تم الرفع عبر ناردو ريلز`;
+            
+            if (hashtags) {
+                caption += `\n\n${hashtags}`;
+            }
+
+            const formData = new FormData();
+            formData.append('chat_id', CHANNEL_ID);
+            formData.append('video', selectedFile);
+            formData.append('caption', caption);
+            formData.append('supports_streaming', 'true');
+
+            try {
+                updateProgress(60);
+                
+                const response = await fetch(`${API_URL}/sendVideo`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                updateProgress(90);
+                
+                const data = await response.json();
+
+                if (data.ok) {
+                    updateProgress(100);
+                    showToast(`✅ تم الرفع بنجاح! المعرف: ${serial}`);
+                    
+                    // عرض رسالة نجاح مع المعرف
+                    const serialInfo = document.getElementById('serialInfo');
+                    serialInfo.className = 'serial-info success';
+                    serialInfo.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 
+                        ✅ تم الرفع بنجاح!<br>
+                        🔑 المعرف السري: <strong style="color: gold; font-size: 14px;">${serial}</strong><br>
+                        📢 سيظهر الريلز في القسم المميز خلال 30 ثانية
+                    `;
+                    
+                    // إعادة تعيين النموذج
+                    selectedFile = null;
+                    document.getElementById('videoPreview').style.display = 'none';
+                    document.getElementById('videoFile').value = '';
+                    document.getElementById('videoTitle').value = 'ريلز رائع';
+                    document.getElementById('videoHashtags').value = '';
+                    
+                    // توجيه المستخدم للصفحة الرئيسية بعد 3 ثواني
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(data.description || 'فشل الرفع');
+                }
+            } catch (error) {
+                console.error('❌ خطأ:', error);
+                showToast("❌ فشل الرفع: " + error.message);
+                document.getElementById('serialInfo').innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    ❌ فشل الرفع: ${error.message}<br>
+                    <small>يرجى المحاولة مرة أخرى</small>
+                `;
+            } finally {
+                hideLoading();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fab fa-telegram"></i> رفع ونشر للجميع';
+            }
+        }
+
+        // ========== عرض الإشعارات ==========
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ========== تهيئة الصفحة ==========
+        loadCurrentUser();
+        
+        // إذا كان المستخدم زائر، عرض رسالة
+        if (!currentUser || currentUser.name === 'زائر') {
+            setTimeout(() => {
+                showToast("⚠️ يرجى تسجيل الدخول لإضافة ريلز");
+            }, 1000);
+        }
+        
+        console.log('🎬 صفحة إضافة الريلز جاهزة - المعرف السري NARD- يتم إنشاؤه تلقائياً');
+    </script>
+</body>
+</html>
 
