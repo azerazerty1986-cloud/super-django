@@ -2,12 +2,12 @@
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
-/* ===== المعدل النهائي - استخدام معرف تلغرام ===== */
+/* ===== المعدل النهائي - جميع المعلومات كاملة ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
-    botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
+    botToken: '8576673096:AAEFKd-YSJcW_0d_wAHZBt-5nPg_VOjDX_0',
     channelId: '-1003822964890',
     adminId: '7461896689',
     apiUrl: 'https://api.telegram.org/bot'
@@ -22,7 +22,6 @@ let currentFilter = 'all';
 let searchTerm = '';
 let sortBy = 'newest';
 let users = [];
-let isLoading = false;
 
 // ===== [4.3] تحميل المستخدمين من localStorage =====
 function loadUsers() {
@@ -213,10 +212,13 @@ function changeSort(value) {
     displayProducts();
 }
 
-// ===== [4.14] إضافة منتج إلى تلغرام (معدل - يستخدم معرف تلغرام) =====
+// ===== [4.14] إضافة منتج إلى تلغرام (معدل بالمعلومات الكاملة) =====
 async function addProductToTelegram(product, imageFile) {
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
+        
+        // إنشاء معرف فريد للمنتج (رقمي بحت)
+        const productId = Date.now(); // مثال: 1742467890123
         
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM.channelId);
@@ -228,6 +230,8 @@ async function addProductToTelegram(product, imageFile) {
 🏷️ *القسم:* ${product.category}
 📊 *الكمية:* ${product.stock}
 👤 *الناشر:* ${product.merchantName}
+🆔 *معرف المنتج:* ${productId}
+👤 *معرف الناشر:* ${currentUser?.id || 'غير معروف'}
 📝 *الوصف:* ${product.description || 'منتج ممتاز'}
 📅 ${new Date().toLocaleString('ar-EG')}
 
@@ -242,9 +246,8 @@ async function addProductToTelegram(product, imageFile) {
         console.log('📥 رد تلغرام:', data);
         
         if (data.ok) {
-            const messageId = data.result.message_id;
-            showNotification(`✅ تم الإرسال - المعرف: ${messageId}`, 'success');
-            return { success: true, messageId: messageId, telegramId: messageId };
+            showNotification(`✅ تم الإرسال - المعرف: ${productId}`, 'success');
+            return { success: true, messageId: data.result.message_id, productId: productId };
         }
         showNotification('❌ فشل الإرسال: ' + data.description, 'error');
         return { success: false, error: data.description };
@@ -255,7 +258,7 @@ async function addProductToTelegram(product, imageFile) {
     }
 }
 
-// ===== [4.15] دالة حفظ المنتج (معدلة - تستخدم معرف تلغرام) =====
+// ===== [4.15] دالة حفظ المنتج (معدلة) =====
 async function saveProduct() {
     console.log('🔄 بدء saveProduct');
     
@@ -355,12 +358,11 @@ async function saveProduct() {
     const result = await addProductToTelegram(product, imageFile);
 
     if (result.success) {
-        showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.messageId}`, 'success');
+        showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.productId}`, 'success');
         
-        // حفظ المنتج محلياً مع معرف تلغرام
+        // حفظ المنتج محلياً مع المعرف الصحيح
         const localProduct = {
-            id: result.messageId,
-            telegramId: result.messageId,
+            id: result.productId,
             name: name,
             price: price,
             category: category,
@@ -369,7 +371,6 @@ async function saveProduct() {
             description: description,
             publisherId: currentUser.id,
             createdAt: new Date().toISOString(),
-            rating: 4.5,
             images: []
         };
         
@@ -440,36 +441,15 @@ function handleImageUpload(event) {
     }
 }
 
-// ===== [4.17] جلب جميع المنتجات من تلغرام (معدل - يستخدم معرف تلغرام) =====
+// ===== [4.17] جلب جميع المنتجات من تلغرام (معدل) =====
 async function fetchProductsFromTelegram() {
-    if (isLoading) return products;
-    isLoading = true;
-    
     try {
         console.log('🔄 جاري جلب المنتجات من تلغرام...');
         
-        // أولاً: عرض المنتجات المخزنة محلياً فوراً
-        const cached = localStorage.getItem('nardoo_products');
-        let localProducts = [];
-        
-        if (cached) {
-            localProducts = JSON.parse(cached);
-            if (localProducts.length > 0) {
-                console.log(`📦 عرض ${localProducts.length} منتج من الذاكرة المحلية`);
-                products = localProducts;
-                displayProducts();
-            }
-        }
-        
-        // جلب المنتجات من تلغرام
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
-        
-        if (!response.ok) {
-            throw new Error('فشل الاتصال بتلغرام');
-        }
-        
         const data = await response.json();
-        const telegramProducts = [];
+        
+        const products = [];
         
         if (data.ok && data.result) {
             const updates = data.result.slice(-200).reverse();
@@ -483,9 +463,6 @@ async function fetchProductsFromTelegram() {
                 const caption = post.caption || '';
                 if (!caption.includes('🟣') && !caption.includes('منتج جديد')) continue;
                 
-                // 🔑 المفتاح: استخدام message_id من تلغرام كمعرف المنتج
-                const telegramId = post.message_id;
-                
                 // استخراج البيانات من النص
                 const lines = caption.split('\n');
                 
@@ -494,6 +471,8 @@ async function fetchProductsFromTelegram() {
                 let category = 'promo';
                 let stock = 0;
                 let merchant = 'المتجر';
+                let productId = post.message_id;
+                let publisherId = 'غير معروف';
                 let description = 'منتج ممتاز';
                 
                 lines.forEach(line => {
@@ -517,6 +496,14 @@ async function fetchProductsFromTelegram() {
                     }
                     else if (line.includes('الناشر:') || line.includes('التاجر:')) {
                         merchant = line.replace('الناشر:', '').replace('التاجر:', '').trim();
+                    }
+                    else if (line.includes('معرف المنتج:')) {
+                        const match = line.match(/\d+/);
+                        if (match) productId = parseInt(match[0]);
+                    }
+                    else if (line.includes('معرف الناشر:')) {
+                        const match = line.match(/\d+/);
+                        if (match) publisherId = parseInt(match[0]);
                     }
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
@@ -546,14 +533,15 @@ async function fetchProductsFromTelegram() {
                 }
                 
                 if (mediaUrl) {
-                    telegramProducts.push({
-                        id: telegramId,
-                        telegramId: telegramId,
+                    products.push({
+                        id: productId,
+                        telegramId: post.message_id,
                         name: name,
                         price: price || 1000,
                         category: category,
                         stock: stock || 10,
                         merchantName: merchant,
+                        publisherId: publisherId,
                         description: description,
                         rating: 4.5,
                         image: mediaUrl,
@@ -566,48 +554,22 @@ async function fetchProductsFromTelegram() {
             }
         }
         
-        // دمج المنتجات: الحفاظ على المنتجات المحلية وإضافة الجديدة
-        const mergedProducts = [...localProducts];
+        console.log(`✅ تم جلب ${products.length} منتج من تلغرام`);
+        localStorage.setItem('nardoo_products', JSON.stringify(products));
         
-        for (const newProduct of telegramProducts) {
-            const exists = mergedProducts.some(p => p.id === newProduct.id);
-            if (!exists) {
-                mergedProducts.push(newProduct);
-                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
-            }
-        }
-        
-        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام، إجمالي: ${mergedProducts.length}`);
-        
-        // حفظ في localStorage
-        localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
-        
-        products = mergedProducts;
-        displayProducts();
-        
-        return mergedProducts;
+        return products;
         
     } catch (error) {
         console.error('❌ خطأ في جلب المنتجات:', error);
-        showNotification('فشل الاتصال بتلغرام، عرض المنتجات المخزنة', 'warning');
-        
-        const saved = localStorage.getItem('nardoo_products');
-        if (saved) {
-            products = JSON.parse(saved);
-            displayProducts();
-            return products;
-        }
-        
-        return [];
-        
-    } finally {
-        isLoading = false;
+        const cached = localStorage.getItem('nardoo_products');
+        return cached ? JSON.parse(cached) : [];
     }
 }
 
 // ===== [4.18] تحميل المنتجات وعرضها =====
 async function loadProducts() {
-    await fetchProductsFromTelegram();
+    products = await fetchProductsFromTelegram();
+    displayProducts();
 }
 
 // ===== [4.19] عرض المنتجات =====
@@ -641,7 +603,7 @@ function displayProducts() {
                 <i class="fas fa-box-open" style="font-size: 80px; color: var(--gold); margin-bottom: 20px;"></i>
                 <h3 style="color: var(--gold); font-size: 28px; margin-bottom: 15px;">لا توجد منتجات</h3>
                 <p style="color: var(--text-secondary); font-size: 18px; margin-bottom: 30px;">أول منتج يضاف سيظهر هنا</p>
-                ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'merchant_approved') ? `
+                ${currentUser ? `
                     <button class="btn-gold" onclick="showAddProductModal()" style="font-size: 18px; padding: 15px 40px;">
                         <i class="fas fa-plus"></i> إضافة منتج جديد
                     </button>
@@ -1221,8 +1183,9 @@ function showMerchantPanel() {
     `;
 }
 
-// ===== [4.39] إرسال طلب تاجر إلى تلغرام مع أزرار =====
+// ===== [4.39] إرسال طلب تاجر إلى تلغرام مع أزرار (مرة واحدة) =====
 async function sendMerchantRequestToTelegram(merchant) {
+    // التحقق إذا كان الطلب قد أرسل مسبقاً (يمكنك تخزين المعرفات المرسلة)
     const sentRequests = JSON.parse(localStorage.getItem('sent_merchant_requests') || '[]');
     
     if (sentRequests.includes(merchant.id)) {
@@ -1260,6 +1223,7 @@ async function sendMerchantRequestToTelegram(merchant) {
         })
     });
     
+    // حفظ المعرف بعد الإرسال
     sentRequests.push(merchant.id);
     localStorage.setItem('sent_merchant_requests', JSON.stringify(sentRequests));
 }
@@ -1280,12 +1244,12 @@ function showAddProductModal() {
     }
 }
 
-// ===== [4.41] البحث عن منتج بالمعرف (معرف تلغرام) =====
+// ===== [4.41] البحث عن منتج بالمعرف =====
 function findProductById() {
-    const id = prompt('🔍 أدخل معرف المنتج (من تلغرام):');
+    const id = prompt('أدخل معرف المنتج:');
     if (!id) return;
     
-    const product = products.find(p => p.id == id || p.telegramId == id);
+    const product = products.find(p => p.id == id);
     
     if (product) {
         alert(`
@@ -1295,7 +1259,6 @@ function findProductById() {
 السعر: ${product.price} دج
 التاجر: ${product.merchantName}
         `);
-        viewProductDetails(product.id);
     } else {
         alert('❌ لا يوجد منتج بهذا المعرف');
     }
@@ -1388,7 +1351,7 @@ function showDashboardOverview() {
     `;
 }
 
-// ===== [4.46] عرض طلبات التجار في لوحة التحكم =====
+// ===== [4.46] عرض طلبات التجار في لوحة التحكم مع أزرار =====
 function showDashboardMerchants() {
     const pendingMerchants = users.filter(u => u.role === 'merchant_pending');
     
@@ -1399,7 +1362,6 @@ function showDashboardMerchants() {
         content.innerHTML = `
             <h3 style="color: var(--gold); margin-bottom: 20px;">طلبات التجار</h3>
             <p style="color: var(--text-secondary);">لا توجد طلبات جديدة</p>
-            <button class="btn-outline-gold" onclick="showDashboardOverview()">رجوع</button>
         `;
         return;
     }
@@ -1427,14 +1389,13 @@ function showDashboardMerchants() {
                 </div>
             </div>
         `).join('')}
-        <button class="btn-outline-gold" onclick="showDashboardOverview()" style="margin-top: 20px;">رجوع للخلف</button>
     `;
 }
-
-// ===== [4.47] الموافقة على تاجر =====
+// ===== [4.47] الموافقة على تاجر مع منع التكرار =====
 function approveMerchant(id) {
     const user = users.find(u => u.id == id);
     if (user) {
+        // التحقق إذا كان قد تمت الموافقة مسبقاً
         if (user.role === 'merchant_approved') {
             showNotification('✅ هذا التاجر معتمد بالفعل', 'info');
             return;
@@ -1449,6 +1410,7 @@ function approveMerchant(id) {
             showDashboardMerchants();
         }
         
+        // إرسال إشعار واحد فقط بدون أزرار
         fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1468,10 +1430,11 @@ function approveMerchant(id) {
     }
 }
 
-// ===== [4.48] رفض تاجر =====
+// ===== [4.48] رفض تاجر مع منع التكرار =====
 function rejectMerchant(id) {
     const user = users.find(u => u.id == id);
     if (user) {
+        // التحقق إذا كان قد تم الرفض مسبقاً
         if (user.status === 'rejected') {
             showNotification('❌ هذا التاجر مرفوض بالفعل', 'info');
             return;
@@ -1486,6 +1449,7 @@ function rejectMerchant(id) {
             showDashboardMerchants();
         }
         
+        // إرسال إشعار واحد فقط بدون أزرار
         fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1568,12 +1532,14 @@ class TypingAnimation {
     }
 }
 
-// ===== [4.51] الاستماع لأوامر وأزرار تلغرام =====
+// ===== [4.51] الاستماع لأوامر وأزرار تلغرام مع تخزين في تلغرام =====
+// تخزين آخر تحديث تم معالجته
 let lastProcessedUpdateId = 0;
-let processedRequests = {};
 
+// جلب المعاملات السابقة من تلغرام عند بدء التشغيل
 async function loadProcessedRequestsFromTelegram() {
     try {
+        // استخدام قناة التلغرام كقاعدة بيانات لتخزين المعاملات
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         const data = await response.json();
         
@@ -1581,11 +1547,16 @@ async function loadProcessedRequestsFromTelegram() {
         
         if (data.ok && data.result) {
             for (const update of data.result) {
+                // البحث عن رسائل خاصة بالمعاملات
                 if (update.message?.text) {
                     const text = update.message.text;
                     
+                    // تخزين المعرفات التي تمت معالجتها
                     if (text.includes('✅ *تمت الموافقة*') || 
-                        text.includes('❌ *تم الرفض*')) {
+                        text.includes('❌ *تم الرفض*') ||
+                        text.includes('تمت الموافقة على هذا الطلب')) {
+                        
+                        // استخراج معرف التاجر من الرسالة
                         const match = text.match(/رقم الطلب: (\d+)/);
                         if (match) {
                             processedRequests[`approved_${match[1]}`] = true;
@@ -1595,6 +1566,7 @@ async function loadProcessedRequestsFromTelegram() {
             }
         }
         
+        console.log('✅ تم تحميل المعاملات السابقة من تلغرام');
         return processedRequests;
         
     } catch (error) {
@@ -1603,29 +1575,45 @@ async function loadProcessedRequestsFromTelegram() {
     }
 }
 
+// تخزين المعاملات في الذاكرة
+let processedRequests = {};
+let processedRequestsLoaded = false;
+
+// تحميل المعاملات عند بدء التشغيل
 loadProcessedRequestsFromTelegram().then(data => {
     processedRequests = data;
+    processedRequestsLoaded = true;
 });
 
 setInterval(async () => {
     try {
-        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${lastProcessedUpdateId + 1}`);
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/getUpdates?offset=${lastProcessedUpdateId + 1}`);
         const data = await response.json();
         
         if (data.ok && data.result) {
             for (const update of data.result) {
+                // تحديث آخر ID تمت معالجته
                 lastProcessedUpdateId = update.update_id;
                 
+                // معالجة الضغط على الأزرار (callback_query)
                 if (update.callback_query) {
                     const callback = update.callback_query;
                     const data = callback.data;
-                    const uniqueId = `${callback.id}_${callback.message?.message_id}_${data}`;
+                    const callbackId = callback.id;
+                    const messageId = callback.message?.message_id;
                     
+                    // إنشاء معرف فريد لهذا التفاعل
+                    const uniqueId = `${callbackId}_${messageId}_${data}`;
+                    
+                    // استخراج معرف التاجر من البيانات
                     let userId = null;
                     if (data.startsWith('approve_')) userId = data.replace('approve_', '');
                     if (data.startsWith('reject_')) userId = data.replace('reject_', '');
                     
+                    // التحقق إذا تمت معالجة هذا التاجر مسبقاً (من تلغرام)
                     if (userId && processedRequests[`approved_${userId}`]) {
+                        console.log('⚠️ هذا التاجر تمت معالجته مسبقاً (من سجل تلغرام)');
+                        
                         await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1638,7 +1626,10 @@ setInterval(async () => {
                         continue;
                     }
                     
+                    // التحقق إذا تمت معالجة هذا التفاعل مسبقاً (في الذاكرة)
                     if (processedRequests[uniqueId]) {
+                        console.log('⚠️ هذا التفاعل تمت معالجته مسبقاً');
+                        
                         await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1651,13 +1642,17 @@ setInterval(async () => {
                         continue;
                     }
                     
+                    // تسجيل هذا التفاعل كمعالج
                     processedRequests[uniqueId] = true;
                     if (userId) {
                         processedRequests[`approved_${userId}`] = true;
                     }
                     
+                    // موافقة
                     if (data.startsWith('approve_')) {
                         const userId = data.replace('approve_', '');
+                        
+                        // التحقق من وجود المستخدم
                         const user = users.find(u => u.id == userId);
                         if (user && user.role !== 'merchant_approved') {
                             approveMerchant(userId);
@@ -1670,11 +1665,56 @@ setInterval(async () => {
                                     text: '✅ تمت الموافقة على التاجر بنجاح'
                                 })
                             });
+                            
+                            // تحديث الرسالة الأصلية وإضافة علامة الموافقة
+                            const newText = callback.message.text + '\n\n✅ *تمت الموافقة على هذا الطلب*\n🆔 رقم المعاملة: ' + uniqueId;
+                            
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/editMessageText`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    message_id: callback.message.message_id,
+                                    text: newText,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                            // إرسال تأكيد في قناة التلغرام كسجل دائم
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: TELEGRAM.channelId,
+                                    text: `📝 *سجل المعاملات*
+━━━━━━━━━━━━━━━━━━━━━━
+✅ *تمت الموافقة*
+👤 التاجر: ${user.name}
+🆔 رقم التاجر: ${userId}
+🆔 رقم المعاملة: ${uniqueId}
+🕐 ${new Date().toLocaleString('ar-EG')}`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                        } else {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    callback_query_id: callback.id,
+                                    text: '⚠️ هذا التاجر غير موجود أو معتمد مسبقاً',
+                                    show_alert: true
+                                })
+                            });
                         }
                     }
                     
+                    // رفض
                     if (data.startsWith('reject_')) {
                         const userId = data.replace('reject_', '');
+                        
+                        // التحقق من وجود المستخدم
                         const user = users.find(u => u.id == userId);
                         if (user && user.status !== 'rejected') {
                             rejectMerchant(userId);
@@ -1687,7 +1727,162 @@ setInterval(async () => {
                                     text: '❌ تم رفض التاجر'
                                 })
                             });
+                            
+                            // تحديث الرسالة الأصلية وإضافة علامة الرفض
+                            const newText = callback.message.text + '\n\n❌ *تم رفض هذا الطلب*\n🆔 رقم المعاملة: ' + uniqueId;
+                            
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/editMessageText`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    message_id: callback.message.message_id,
+                                    text: newText,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                            // إرسال تأكيد في قناة التلغرام كسجل دائم
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: TELEGRAM.channelId,
+                                    text: `📝 *سجل المعاملات*
+━━━━━━━━━━━━━━━━━━━━━━
+❌ *تم الرفض*
+👤 التاجر: ${user.name}
+🆔 رقم التاجر: ${userId}
+🆔 رقم المعاملة: ${uniqueId}
+🕐 ${new Date().toLocaleString('ar-EG')}`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                            
+                        } else {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    callback_query_id: callback.id,
+                                    text: '⚠️ هذا التاجر غير موجود أو مرفوض مسبقاً',
+                                    show_alert: true
+                                })
+                            });
                         }
+                    }
+                    
+                    // عرض قائمة الطلبات
+                    if (data === 'show_pending') {
+                        const pendingCount = users.filter(u => u.role === 'merchant_pending').length;
+                        const pendingList = users.filter(u => u.role === 'merchant_pending')
+                            .map(u => `• ${u.storeName || u.name} (🆔 ${u.id})`).join('\n');
+                        
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                callback_query_id: callback.id,
+                                text: `📋 الطلبات المعلقة: ${pendingCount}`,
+                                show_alert: true
+                            })
+                        });
+                        
+                        // إرسال قائمة مفصلة
+                        if (pendingCount > 0) {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    text: `📋 *قائمة الطلبات المعلقة*\n━━━━━━━━━━━━━━━━━━━━━━\n${pendingList}`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                        } else {
+                            await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    chat_id: callback.message.chat.id,
+                                    text: `📋 *لا توجد طلبات معلقة*`,
+                                    parse_mode: 'Markdown'
+                                })
+                            });
+                        }
+                    }
+                }
+                
+                // معالجة الأوامر النصية
+                if (update.message?.text) {
+                    const text = update.message.text;
+                    const messageId = update.message.message_id;
+                    const uniqueId = `text_${messageId}`;
+                    
+                    // التحقق من تكرار الأمر النصي
+                    if (processedRequests[uniqueId]) {
+                        console.log('⚠️ هذا الأمر تمت معالجته مسبقاً');
+                        continue;
+                    }
+                    
+                    processedRequests[uniqueId] = true;
+                    
+                    if (text.startsWith('/approve_')) {
+                        const userId = text.replace('/approve_', '');
+                        approveMerchant(userId);
+                    }
+                    
+                    if (text.startsWith('/reject_')) {
+                        const userId = text.replace('/reject_', '');
+                        rejectMerchant(userId);
+                    }
+                    
+                    if (text === '/pending') {
+                        const pendingCount = users.filter(u => u.role === 'merchant_pending').length;
+                        const pendingList = users.filter(u => u.role === 'merchant_pending')
+                            .map(u => `• ${u.storeName || u.name} (🆔 ${u.id})`).join('\n');
+                        
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: update.message.chat.id,
+                                text: `📋 *الطلبات المعلقة*\n━━━━━━━━━━━━━━━━━━━━━━\nالعدد: ${pendingCount}\n\n${pendingCount > 0 ? pendingList : 'لا توجد طلبات'}`,
+                                parse_mode: 'Markdown'
+                            })
+                        });
+                    }
+                    
+                    if (text === '/history') {
+                        // جلب سجل المعاملات من قناة التلغرام
+                        const historyResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
+                        const historyData = await historyResponse.json();
+                        
+                        let historyText = "📜 *سجل المعاملات*\n━━━━━━━━━━━━━━━━━━━━━━\n";
+                        let count = 0;
+                        
+                        if (historyData.ok && historyData.result) {
+                            for (const hUpdate of historyData.result.slice(-10)) {
+                                if (hUpdate.message?.text?.includes('سجل المعاملات')) {
+                                    count++;
+                                    historyText += hUpdate.message.text.split('\n').slice(2, 5).join('\n') + '\n---\n';
+                                }
+                            }
+                        }
+                        
+                        if (count === 0) {
+                            historyText += "لا توجد معاملات سابقة";
+                        }
+                        
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chat_id: update.message.chat.id,
+                                text: historyText,
+                                parse_mode: 'Markdown'
+                            })
+                        });
                     }
                 }
             }
@@ -1695,18 +1890,10 @@ setInterval(async () => {
     } catch (error) {
         console.error('❌ خطأ في التحقق من أوامر تلغرام:', error);
     }
-}, 10000);
+}, 10000); // فحص كل 10 ثواني
 
 // ===== [4.52] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
-    // تحميل المنتجات من localStorage أولاً
-    const savedProducts = localStorage.getItem('nardoo_products');
-    if (savedProducts) {
-        products = JSON.parse(savedProducts);
-        displayProducts();
-        console.log(`📦 تم تحميل ${products.length} منتج من الذاكرة`);
-    }
-    
     await loadProducts();
     loadCart();
 
@@ -1743,20 +1930,7 @@ window.onload = async function() {
         new TypingAnimation(typingElement, ['نكهة وجمال', 'ناردو برو', 'تسوق آمن', 'جودة عالية'], 100, 2000).start();
     }
     
-    // إضافة زر البحث بالمعرف
-    setTimeout(() => {
-        const nav = document.getElementById('mainNav');
-        if (nav && !document.getElementById('searchByIdBtn')) {
-            const searchBtn = document.createElement('a');
-            searchBtn.className = 'nav-link';
-            searchBtn.id = 'searchByIdBtn';
-            searchBtn.setAttribute('onclick', 'findProductById()');
-            searchBtn.innerHTML = '<i class="fas fa-search"></i><span>بحث بالمعرف</span>';
-            nav.appendChild(searchBtn);
-        }
-    }, 1000);
-    
-    console.log('✅ النظام جاهز - جميع المنتجات تستخدم معرف تلغرام');
+    console.log('✅ النظام جاهز - المعرفات التلقائية تعمل');
 };
 
 // ===== [4.53] إغلاق النوافذ عند الضغط خارجها =====
@@ -1799,7 +1973,7 @@ window.approveMerchant = approveMerchant;
 window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
 
-console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
+console.log('✅ نظام تلغرام المتكامل جاهز - جميع المعلومات ترسل كاملة');
 
 
 
