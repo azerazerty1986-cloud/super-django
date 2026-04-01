@@ -214,4 +214,6 @@ const Auth = {
 };
 
 window.Auth = Auth;
-console.log('? نظام المصادقة مع التوثيق
+console.log('? نظام المصادقة مع التوثيق الثنائي جاهز');
+
+
