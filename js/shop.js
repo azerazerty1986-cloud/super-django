@@ -1,6 +1,6 @@
 /* ================================================================== */
-/* ===== chop.js - نظام السلة المتكامل (نسخة موحدة) ===== */
-/* ===== يجمع جميع وظائف السلة مع التوافق مع index.html و telegram.js ===== */
+/* ===== chop.js - نظام السلة المتكامل (النسخة النهائية العاملة) ===== */
+/* ===== يدعم التقسيم حسب التجار، إتمام الطلب، واتساب، تلغرام ===== */
 /* ================================================================== */
 
 // ===== [1] التأكد من وجود CONFIG =====
@@ -19,26 +19,37 @@ const CartSystem = {
     
     // ===== التهيئة =====
     init() {
+        console.log('🔄 [chop.js] تهيئة نظام السلة...');
         this.items = this.loadCart();
         this.updateCounter();
         this.createCartSidebar();
         this.createCheckoutModal();
         this.addCartStyles();
         this.setupEventListeners();
-        console.log('✅ chop.js - نظام السلة جاهز');
+        console.log('✅ [chop.js] نظام السلة جاهز، عدد العناصر:', this.items.length);
     },
     
-    // ===== تحميل السلة =====
+    // ===== تحميل السلة من localStorage =====
     loadCart() {
-        const saved = localStorage.getItem('nardoo_cart');
-        return saved ? JSON.parse(saved) : [];
+        try {
+            const saved = localStorage.getItem('nardoo_cart');
+            return saved ? JSON.parse(saved) : [];
+        } catch(e) {
+            console.error('خطأ في تحميل السلة:', e);
+            return [];
+        }
     },
     
-    // ===== حفظ السلة =====
+    // ===== حفظ السلة في localStorage =====
     saveCart() {
-        localStorage.setItem('nardoo_cart', JSON.stringify(this.items));
-        this.updateCounter();
-        this.updateCartDisplay();
+        try {
+            localStorage.setItem('nardoo_cart', JSON.stringify(this.items));
+            this.updateCounter();
+            this.updateCartDisplay();
+            console.log('💾 [chop.js] تم حفظ السلة، عدد العناصر:', this.items.length);
+        } catch(e) {
+            console.error('خطأ في حفظ السلة:', e);
+        }
     },
     
     // ===== تجميع المنتجات حسب التاجر =====
@@ -63,9 +74,17 @@ const CartSystem = {
         return groups;
     },
     
-    // ===== إضافة منتج للسلة =====
+    // ===== إضافة منتج للسلة (الوظيفة الرئيسية) =====
     add(product) {
-        if (!product || product.stock <= 0) {
+        console.log('➕ [chop.js] إضافة منتج:', product);
+        
+        // التحقق من صحة المنتج
+        if (!product) {
+            this.showNotification('المنتج غير صالح', 'error');
+            return false;
+        }
+        
+        if (product.stock <= 0) {
             this.showNotification('المنتج غير متوفر', 'error');
             return false;
         }
@@ -81,7 +100,8 @@ const CartSystem = {
                 return false;
             }
         } else {
-            this.items.push({
+            // إضافة منتج جديد
+            const newItem = {
                 productId: product.id,
                 name: product.name,
                 price: product.price,
@@ -89,9 +109,10 @@ const CartSystem = {
                 merchantId: product.merchantId || product.merchantName,
                 merchantName: product.merchantName || 'ناردو برو',
                 merchantPhone: product.merchantPhone || null,
-                image: product.image || (product.images && product.images[0]) || CONFIG.defaultImage,
+                image: this.getProductImage(product),
                 stock: product.stock
-            });
+            };
+            this.items.push(newItem);
             this.showNotification(`✓ تم إضافة ${product.name} للسلة`, 'success');
         }
         
@@ -100,47 +121,68 @@ const CartSystem = {
         return true;
     },
     
-    // ===== تحديث الكمية =====
+    // ===== الحصول على صورة المنتج =====
+    getProductImage(product) {
+        if (product.image) return product.image;
+        if (product.images && product.images.length > 0) return product.images[0];
+        return CONFIG.defaultImage;
+    },
+    
+    // ===== تحديث كمية منتج =====
     update(productId, newQuantity) {
         if (newQuantity <= 0) {
             this.remove(productId);
             return;
         }
         
-        const item = this.items.find(i => i.productId === productId);
-        if (item && newQuantity <= (item.stock || 999)) {
-            item.quantity = newQuantity;
-            this.saveCart();
-        } else {
-            this.showNotification('الكمية غير متوفرة', 'warning');
+        const item = this.items.find(i => i.productId == productId);
+        if (item) {
+            if (newQuantity <= (item.stock || 999)) {
+                item.quantity = newQuantity;
+                this.saveCart();
+            } else {
+                this.showNotification('الكمية غير متوفرة', 'warning');
+            }
         }
     },
     
-    // ===== حذف منتج =====
+    // ===== حذف منتج من السلة =====
     remove(productId) {
-        const item = this.items.find(i => i.productId === productId);
+        const item = this.items.find(i => i.productId == productId);
         if (item) {
-            this.items = this.items.filter(i => i.productId !== productId);
+            this.items = this.items.filter(i => i.productId != productId);
             this.saveCart();
             this.showNotification(`✓ تم حذف ${item.name} من السلة`, 'info');
         }
     },
     
-    // ===== تحديث العداد =====
+    // ===== تحديث عداد السلة =====
     updateCounter() {
         const count = this.items.reduce((sum, i) => sum + i.quantity, 0);
         
-        const counters = document.querySelectorAll('#cartCounter, #fixedCartCounter, #cartSidebarCount');
-        counters.forEach(c => { if (c) c.textContent = count; });
+        // تحديث جميع عدادات السلة
+        const cartCounter = document.getElementById('cartCounter');
+        const fixedCartCounter = document.getElementById('fixedCartCounter');
+        const cartSidebarCount = document.getElementById('cartSidebarCount');
         
-        const footer = document.getElementById('cartFooter');
-        if (footer) footer.style.display = count > 0 ? 'block' : 'none';
+        if (cartCounter) cartCounter.textContent = count;
+        if (fixedCartCounter) fixedCartCounter.textContent = count;
+        if (cartSidebarCount) cartSidebarCount.textContent = count;
+        
+        // إظهار/إخفاء footer السلة
+        const cartFooter = document.getElementById('cartFooter');
+        if (cartFooter) cartFooter.style.display = count > 0 ? 'block' : 'none';
+        
+        console.log('📊 [chop.js] تحديث العداد:', count);
     },
     
-    // ===== عرض السلة مع تجميع حسب التجار =====
+    // ===== عرض محتويات السلة =====
     updateCartDisplay() {
         const container = document.getElementById('cartItemsContainer');
-        if (!container) return;
+        if (!container) {
+            console.log('⚠️ [chop.js] عنصر cartItemsContainer غير موجود');
+            return;
+        }
         
         if (this.items.length === 0) {
             container.innerHTML = `
@@ -206,13 +248,13 @@ const CartSystem = {
         const shipping = CONFIG.shipping || 200;
         const total = subtotal + shipping;
         
-        const subtotalEl = document.getElementById('cartSubtotal');
-        const shippingEl = document.getElementById('cartShipping');
-        const totalEl = document.getElementById('cartTotalAmount');
+        const cartSubtotal = document.getElementById('cartSubtotal');
+        const cartShipping = document.getElementById('cartShipping');
+        const cartTotalAmount = document.getElementById('cartTotalAmount');
         
-        if (subtotalEl) subtotalEl.textContent = `${subtotal.toLocaleString()} دج`;
-        if (shippingEl) shippingEl.textContent = `${shipping.toLocaleString()} دج`;
-        if (totalEl) totalEl.textContent = `${total.toLocaleString()} دج`;
+        if (cartSubtotal) cartSubtotal.textContent = `${subtotal.toLocaleString()} دج`;
+        if (cartShipping) cartShipping.textContent = `${shipping.toLocaleString()} دج`;
+        if (cartTotalAmount) cartTotalAmount.textContent = `${total.toLocaleString()} دج`;
     },
     
     // ===== إنشاء السلة الجانبية =====
@@ -243,6 +285,7 @@ const CartSystem = {
         `;
         
         document.body.insertAdjacentHTML('beforeend', html);
+        console.log('✅ [chop.js] تم إنشاء السلة الجانبية');
     },
     
     // ===== إنشاء نافذة إتمام الطلب =====
@@ -322,6 +365,7 @@ const CartSystem = {
         `;
         
         document.body.insertAdjacentHTML('beforeend', modalHTML);
+        console.log('✅ [chop.js] تم إنشاء نافذة إتمام الطلب');
     },
     
     // ===== فتح نافذة إتمام الطلب =====
@@ -331,7 +375,7 @@ const CartSystem = {
             return;
         }
         
-        // التحقق من تسجيل الدخول عبر telegram.js
+        // التحقق من تسجيل الدخول
         if (typeof currentUser === 'undefined' || !currentUser) {
             this.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
             if (typeof openLoginModal === 'function') openLoginModal();
@@ -344,6 +388,7 @@ const CartSystem = {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             
+            // تعبئة بيانات المستخدم
             const nameInput = document.getElementById('customerName');
             const phoneInput = document.getElementById('customerPhone');
             if (nameInput && currentUser.name) nameInput.value = currentUser.name;
@@ -469,6 +514,7 @@ const CartSystem = {
             
             let merchantPhone = null;
             
+            // البحث عن رقم التاجر
             if (typeof users !== 'undefined' && users) {
                 const merchantUser = users.find(u => 
                     u.name === group.merchantName || 
@@ -488,8 +534,6 @@ const CartSystem = {
                 window.open(`https://wa.me/${merchantPhone}?text=${encodeURIComponent(merchantMessage)}`, '_blank');
                 merchantsNotified++;
                 await this.sleep(500);
-            } else {
-                console.log(`⚠️ لا يوجد رقم هاتف للتاجر: ${group.merchantName}`);
             }
         }
         
@@ -507,21 +551,6 @@ const CartSystem = {
         
         const adminPhone = CONFIG.phone.replace(/[^0-9]/g, '');
         window.open(`https://wa.me/${adminPhone}?text=${encodeURIComponent(adminMessage)}`, '_blank');
-        
-        // إرسال إلى تلغرام إذا كان موجوداً
-        if (typeof TELEGRAM !== 'undefined' && TELEGRAM.botToken) {
-            try {
-                await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: TELEGRAM.channelId,
-                        text: adminMessage,
-                        parse_mode: 'Markdown'
-                    })
-                });
-            } catch(e) { console.log('تلغرام:', e); }
-        }
         
         // حفظ الطلب
         this.saveOrder({
@@ -633,10 +662,14 @@ const CartSystem = {
     
     // ===== حفظ الطلب =====
     saveOrder(order) {
-        const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
-        orders.unshift(order);
-        if (orders.length > 100) orders.pop();
-        localStorage.setItem('nardoo_orders', JSON.stringify(orders));
+        try {
+            const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
+            orders.unshift(order);
+            if (orders.length > 100) orders.pop();
+            localStorage.setItem('nardoo_orders', JSON.stringify(orders));
+        } catch(e) {
+            console.error('خطأ في حفظ الطلب:', e);
+        }
     },
     
     // ===== إغلاق نافذة الدفع =====
@@ -671,16 +704,43 @@ const CartSystem = {
         }
     },
     
-    // ===== إشعار =====
+    // ===== عرض إشعار =====
     showNotification(message, type = 'success') {
+        console.log(`📢 [chop.js] إشعار: ${message} (${type})`);
+        
+        // محاولة استخدام showNotification من telegram.js
+        if (typeof window.showNotification === 'function') {
+            window.showNotification(message, type);
+            return;
+        }
+        
+        // إنشاء إشعار مخصص
         const notification = document.createElement('div');
         notification.className = `cart-notification ${type}`;
-        const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+        const icon = type === 'success' ? 'fa-check-circle' : 
+                     type === 'error' ? 'fa-exclamation-circle' : 
+                     type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
         notification.innerHTML = `<i class="fas ${icon}"></i> ${message}`;
+        
+        // إضافة أنماط للإشعار
+        notification.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : type === 'warning' ? '#fbbf24' : '#60a5fa'};
+            color: black;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 10002;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease;
+        `;
+        
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.classList.add('fade-out');
+            notification.style.animation = 'fadeOut 0.3s ease forwards';
             setTimeout(() => notification.remove(), 300);
         }, 3000);
     },
@@ -707,6 +767,7 @@ const CartSystem = {
                 box-shadow: -5px 0 20px rgba(0,0,0,0.3);
             }
             .cart-sidebar.open { right: 0; }
+            
             .cart-overlay {
                 position: fixed;
                 top: 0;
@@ -720,6 +781,7 @@ const CartSystem = {
                 transition: all 0.3s ease;
             }
             .cart-overlay.show { opacity: 1; visibility: visible; }
+            
             .cart-header {
                 padding: 20px;
                 background: var(--bg-secondary, #1a1a2e);
@@ -746,7 +808,9 @@ const CartSystem = {
                 color: var(--text-secondary, #888);
             }
             .close-cart:hover { color: var(--gold, #D4AF37); }
+            
             .cart-content { flex: 1; overflow-y: auto; padding: 20px; }
+            
             .merchant-group {
                 background: rgba(255,255,255,0.05);
                 border-radius: 16px;
@@ -766,6 +830,7 @@ const CartSystem = {
             .merchant-header span:first-of-type { flex: 1; }
             .merchant-total { color: var(--gold, #D4AF37); }
             .merchant-items { padding: 10px; }
+            
             .cart-item {
                 display: flex;
                 gap: 15px;
@@ -784,6 +849,7 @@ const CartSystem = {
             .cart-item-name { font-weight: bold; margin-bottom: 5px; }
             .cart-item-price { font-size: 13px; color: var(--text-secondary, #888); }
             .cart-item-actions { text-align: right; }
+            
             .quantity-control {
                 display: flex;
                 gap: 8px;
@@ -811,6 +877,7 @@ const CartSystem = {
                 cursor: pointer;
                 font-size: 14px;
             }
+            
             .cart-footer {
                 padding: 20px;
                 border-top: 1px solid rgba(255,255,255,0.1);
@@ -829,6 +896,7 @@ const CartSystem = {
                 margin-top: 8px;
                 padding-top: 12px;
             }
+            
             .checkout-btn {
                 width: 100%;
                 padding: 14px;
@@ -845,6 +913,7 @@ const CartSystem = {
                 transform: translateY(-2px);
                 box-shadow: 0 5px 15px rgba(212,175,55,0.4);
             }
+            
             .empty-cart {
                 text-align: center;
                 padding: 60px 20px;
@@ -863,6 +932,8 @@ const CartSystem = {
                 color: var(--gold, #D4AF37);
                 cursor: pointer;
             }
+            
+            /* نافذة إتمام الطلب */
             .checkout-modal {
                 position: fixed;
                 top: 0;
@@ -914,6 +985,7 @@ const CartSystem = {
                 color: var(--text-secondary, #888);
             }
             .checkout-close:hover { color: var(--gold, #D4AF37); }
+            
             .checkout-content { flex: 1; overflow-y: auto; padding: 20px; }
             .checkout-section {
                 background: rgba(255,255,255,0.05);
@@ -927,6 +999,7 @@ const CartSystem = {
                 font-size: 16px;
             }
             .checkout-section h3 i { margin-left: 8px; }
+            
             .checkout-merchant-group {
                 margin-bottom: 20px;
                 border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -971,6 +1044,7 @@ const CartSystem = {
                 margin-top: 8px;
                 padding-top: 12px;
             }
+            
             .form-group { margin-bottom: 15px; }
             .form-group label {
                 display: block;
@@ -997,6 +1071,7 @@ const CartSystem = {
                 font-size: 11px;
                 color: var(--text-secondary, #888);
             }
+            
             .payment-methods { display: flex; flex-direction: column; gap: 10px; }
             .payment-method { cursor: pointer; }
             .payment-method input { display: none; }
@@ -1018,6 +1093,7 @@ const CartSystem = {
                 font-size: 20px;
                 color: var(--gold, #D4AF37);
             }
+            
             .checkout-actions {
                 display: flex;
                 gap: 15px;
@@ -1047,23 +1123,16 @@ const CartSystem = {
                 transform: translateY(-2px);
                 box-shadow: 0 5px 15px rgba(212,175,55,0.4);
             }
+            
+            /* الإشعارات */
             .cart-notification {
                 position: fixed;
                 bottom: 30px;
                 right: 30px;
-                background: var(--bg-secondary, #1a1a2e);
-                border-right: 4px solid var(--gold, #D4AF37);
-                padding: 12px 20px;
-                border-radius: 10px;
                 z-index: 10002;
                 animation: slideUp 0.3s ease;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             }
-            .cart-notification.success i { color: #4ade80; }
-            .cart-notification.error i { color: #f87171; }
-            .cart-notification.warning i { color: #fbbf24; }
-            .cart-notification.info i { color: #60a5fa; }
-            .cart-notification.fade-out { animation: fadeOut 0.3s ease forwards; }
+            
             @keyframes slideUp {
                 from { opacity: 0; transform: translateY(20px); }
                 to { opacity: 1; transform: translateY(0); }
@@ -1071,6 +1140,7 @@ const CartSystem = {
             @keyframes fadeOut {
                 to { opacity: 0; transform: translateY(-20px); }
             }
+            
             @media (max-width: 768px) {
                 .cart-sidebar { width: 100%; right: -100%; }
                 .checkout-container { width: 95%; max-height: 95vh; }
@@ -1079,6 +1149,7 @@ const CartSystem = {
         `;
         
         document.head.appendChild(styles);
+        console.log('✅ [chop.js] تم إضافة أنماط CSS');
     },
     
     // ===== مستمعات الأحداث =====
@@ -1089,6 +1160,7 @@ const CartSystem = {
                 this.closeCheckout();
             }
         });
+        console.log('✅ [chop.js] تم إعداد مستمعات الأحداث');
     },
     
     // ===== الحصول على عدد المنتجات =====
@@ -1124,11 +1196,36 @@ window.updateCartItem = (productId, quantity) => CartSystem.update(productId, qu
 window.removeFromCart = (productId) => CartSystem.remove(productId);
 window.checkoutCart = () => CartSystem.openCheckout();
 
-// ===== [4] تهيئة السلة =====
+// ===== [4] دالة مساعدة للإضافة من telegram.js =====
+window.addToCartFromProduct = function(productId) {
+    if (typeof products !== 'undefined') {
+        const product = products.find(p => p.id == productId);
+        if (product) {
+            console.log('🛒 إضافة منتج من telegram.js:', product);
+            CartSystem.add({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                stock: product.stock,
+                merchantName: product.merchantName,
+                merchantId: product.merchantName,
+                merchantPhone: product.merchantPhone || null,
+                images: product.images || [product.image],
+                image: product.image || (product.images && product.images[0]) || CONFIG.defaultImage
+            });
+        } else {
+            CartSystem.showNotification('المنتج غير موجود', 'error');
+        }
+    } else {
+        CartSystem.showNotification('نظام المنتجات غير متاح', 'error');
+    }
+};
+
+// ===== [5] تهيئة السلة =====
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => CartSystem.init());
 } else {
     CartSystem.init();
 }
 
-console.log('✅ chop.js - نظام السلة المتكامل جاهز مع تقسيم حسب التجار وإتمام الطلب');
+console.log('✅ chop.js - نظام السلة المتكامل جاهز مع تقسيم حسب التجار');
