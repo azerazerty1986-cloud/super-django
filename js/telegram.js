@@ -24,53 +24,53 @@ let users = [];
 let isLoading = false;
 let isAuthenticated = false;
 
-// بيانات الدخول
+// بيانات الدخول الصحيحة
 const ADMIN_USERNAME = 'azer';
 const ADMIN_PASSWORD = '123456';
 
-// ===== [4.3] تعطيل المصادقة - تعيين مستخدم مدير تلقائياً بعد التحقق =====
-function initDefaultUser() {
-    if (!isAuthenticated) return;
-    
-    currentUser = {
-        id: 1,
-        name: 'مدير النظام',
-        email: 'admin@nardoo.com',
-        role: 'admin',
-        phone: '0000000000',
-        storeName: 'ناردو برو',
-        merchantLevel: '5',
-        status: 'approved',
-        createdAt: new Date().toISOString()
-    };
-    
-    localStorage.setItem('current_user', JSON.stringify(currentUser));
-    
-    const savedUsers = localStorage.getItem('nardoo_users');
-    if (savedUsers) {
-        users = JSON.parse(savedUsers);
-        const adminExists = users.find(u => u.role === 'admin');
-        if (!adminExists) {
-            users.unshift(currentUser);
-            localStorage.setItem('nardoo_users', JSON.stringify(users));
-        }
-    } else {
-        users = [currentUser];
-        localStorage.setItem('nardoo_users', JSON.stringify(users));
-    }
-    
-    console.log('✅ تم تفعيل وضع المدير');
+// ===== [4.3] التحقق من بيانات الدخول =====
+function checkLogin(username, password) {
+    return (username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
 }
 
-// ===== [4.4] دالة تسجيل الدخول =====
-function login(username, password) {
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+// ===== [4.4] تسجيل الدخول =====
+function doLogin(username, password) {
+    if (checkLogin(username, password)) {
         isAuthenticated = true;
-        initDefaultUser();
+        
+        currentUser = {
+            id: 1,
+            name: 'مدير النظام',
+            username: 'azer',
+            email: 'admin@nardoo.com',
+            role: 'admin',
+            phone: '0000000000',
+            storeName: 'ناردو برو',
+            merchantLevel: '5',
+            status: 'approved',
+            createdAt: new Date().toISOString()
+        };
+        
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
         localStorage.setItem('nardoo_auth', 'true');
-        showNotification('✅ تم تسجيل الدخول بنجاح', 'success');
+        
+        const savedUsers = localStorage.getItem('nardoo_users');
+        if (savedUsers) {
+            users = JSON.parse(savedUsers);
+            const adminExists = users.find(u => u.role === 'admin');
+            if (!adminExists) {
+                users.unshift(currentUser);
+                localStorage.setItem('nardoo_users', JSON.stringify(users));
+            }
+        } else {
+            users = [currentUser];
+            localStorage.setItem('nardoo_users', JSON.stringify(users));
+        }
+        
+        showNotification('✅ مرحباً بك مدير النظام', 'success');
         closeModal('loginModal');
-        updateUIBasedOnRole();
+        updateUIAfterLogin();
+        
         return true;
     } else {
         showNotification('❌ اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
@@ -78,13 +78,21 @@ function login(username, password) {
     }
 }
 
-// ===== [4.5] دالة تسجيل الخروج =====
-function logout() {
+// ===== [4.5] تسجيل الخروج =====
+function doLogout() {
     isAuthenticated = false;
     currentUser = null;
     localStorage.removeItem('current_user');
     localStorage.removeItem('nardoo_auth');
-    
+    hideAdminElements();
+    showNotification('🔒 تم تسجيل الخروج', 'info');
+    setTimeout(() => {
+        openLoginModal();
+    }, 500);
+}
+
+// ===== [4.6] إخفاء عناصر المدير =====
+function hideAdminElements() {
     const adminElements = document.querySelectorAll('.admin-only');
     adminElements.forEach(el => el.style.display = 'none');
     
@@ -103,47 +111,230 @@ function logout() {
         userBtn.setAttribute('onclick', 'openLoginModal()');
         userBtn.classList.remove('admin-only');
     }
-    
-    showNotification('🔒 تم تسجيل الخروج', 'info');
-    openLoginModal();
 }
 
-// ===== [4.6] تحميل المستخدمين من localStorage =====
-function loadUsers() {
-    const saved = localStorage.getItem('nardoo_users');
-    if (saved) {
-        users = JSON.parse(saved);
-    } else {
-        users = [
-            { 
-                id: 1, 
-                name: 'مدير النظام', 
-                email: 'admin@nardoo.com', 
-                password: '', 
-                role: 'admin',
-                phone: '0000000000',
-                storeName: 'ناردو برو',
-                createdAt: new Date().toISOString()
-            }
-        ];
-        localStorage.setItem('nardoo_users', JSON.stringify(users));
+// ===== [4.7] إظهار عناصر المدير =====
+function showAdminElements() {
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(el => el.style.display = 'flex');
+    
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    if (dashboardBtn) dashboardBtn.style.display = 'flex';
+    
+    const merchantPanel = document.getElementById('merchantPanelContainer');
+    if (merchantPanel) merchantPanel.style.display = 'block';
+}
+
+// ===== [4.8] تحديث الواجهة بعد تسجيل الدخول =====
+function updateUIAfterLogin() {
+    const userBtn = document.getElementById('userBtn');
+    if (userBtn) {
+        userBtn.innerHTML = '<i class="fas fa-crown"></i><span>مدير النظام</span>';
+        userBtn.setAttribute('onclick', 'doLogout()');
+        userBtn.classList.add('admin-only');
+    }
+    
+    showAdminElements();
+    
+    const navMenu = document.getElementById('mainNav');
+    if (navMenu && !document.getElementById('adminAddProductBtn')) {
+        const addBtn = document.createElement('a');
+        addBtn.className = 'nav-link admin-only';
+        addBtn.id = 'adminAddProductBtn';
+        addBtn.setAttribute('onclick', 'showAddProductModal()');
+        addBtn.innerHTML = '<i class="fas fa-plus-circle"></i><span>إضافة منتج</span>';
+        navMenu.appendChild(addBtn);
+    }
+    
+    showAdminPanel();
+    loadProducts();
+}
+
+// ===== [4.9] عرض لوحة المدير =====
+function showAdminPanel() {
+    if (!currentUser || !isAuthenticated) return;
+    
+    const totalProducts = products.length;
+    const availableProducts = products.filter(p => p.stock > 0).length;
+    const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+    
+    const panel = document.getElementById('merchantPanelContainer');
+    if (!panel) return;
+    
+    panel.style.display = 'block';
+    panel.innerHTML = `
+        <div style="background: var(--glass); border: 2px solid var(--gold); border-radius: 20px; padding: 30px; margin: 20px 0;">
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; flex-wrap: wrap;">
+                <i class="fas fa-crown" style="font-size: 50px; color: var(--gold);"></i>
+                <div style="flex: 1;">
+                    <h2 style="color: var(--gold); margin: 0;">ناردو برو</h2>
+                    <p style="color: var(--text-secondary);">✅ مرحباً مدير النظام (azer) - صلاحيات كاملة</p>
+                </div>
+                <button onclick="doLogout()" style="background: rgba(255,100,100,0.2); border: 1px solid #ff6b6b; padding: 8px 15px; border-radius: 8px; cursor: pointer; color: #ff6b6b;">
+                    <i class="fas fa-sign-out-alt"></i> تسجيل خروج
+                </button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
+                    <div style="font-size: 40px; color: var(--gold);">${totalProducts}</div>
+                    <div>إجمالي المنتجات</div>
+                </div>
+                <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
+                    <div style="font-size: 40px; color: var(--gold);">${availableProducts}</div>
+                    <div>المنتجات المتاحة</div>
+                </div>
+                <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
+                    <div style="font-size: 40px; color: var(--gold);">${totalValue.toLocaleString()} دج</div>
+                    <div>قيمة المخزون</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn-gold" onclick="showAddProductModal()">
+                    <i class="fas fa-plus"></i> إضافة منتج جديد
+                </button>
+                <button class="btn-outline-gold" onclick="filterProducts('all')">
+                    <i class="fas fa-box"></i> عرض كل المنتجات
+                </button>
+                <button class="btn-outline-gold" onclick="openDashboard()">
+                    <i class="fas fa-chart-line"></i> لوحة التحكم
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// ===== [4.10] التحقق من الصلاحية =====
+function requireAuth() {
+    if (!isAuthenticated) {
+        showNotification('❌ الرجاء تسجيل الدخول أولاً', 'warning');
+        openLoginModal();
+        return false;
+    }
+    return true;
+}
+
+// ===== [4.11] إنشاء نافذة تسجيل الدخول =====
+function createLoginModal() {
+    const oldModal = document.getElementById('loginModal');
+    if (oldModal) oldModal.remove();
+    
+    const modalHTML = `
+        <div id="loginModal" class="modal" style="display: flex; z-index: 10000;">
+            <div class="modal-content" style="max-width: 400px; background: var(--bg-primary); border-radius: 20px;">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border); padding: 20px; text-align: center;">
+                    <i class="fas fa-crown" style="font-size: 50px; color: var(--gold);"></i>
+                    <h2 style="margin: 10px 0 0; color: var(--gold);">ناردو برو</h2>
+                    <button class="modal-close" onclick="closeModal('loginModal')" style="position: absolute; left: 20px; top: 20px;">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 30px;">
+                    <p style="text-align: center; margin-bottom: 25px; color: var(--text-secondary);">
+                        أدخل بيانات الدخول للوصول إلى لوحة التحكم
+                    </p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold;">اسم المستخدم:</label>
+                        <input type="text" id="loginUsername" placeholder="أدخل اسم المستخدم" 
+                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 16px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold;">كلمة المرور:</label>
+                        <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" 
+                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 16px;">
+                    </div>
+                    
+                    <button onclick="submitLogin()" class="btn-gold" style="width: 100%; padding: 12px; font-size: 18px;">
+                        <i class="fas fa-sign-in-alt"></i> دخول
+                    </button>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,215,0,0.1); border-radius: 10px; text-align: center;">
+                        <p style="margin: 0; font-size: 14px; color: var(--gold);">
+                            <i class="fas fa-key"></i> بيانات الدخول:
+                        </p>
+                        <p style="margin: 5px 0 0; font-size: 16px; font-weight: bold;">
+                            اسم المستخدم: <span style="color: var(--gold);">azer</span> | 
+                            كلمة المرور: <span style="color: var(--gold);">123456</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    const passwordInput = document.getElementById('loginPassword');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') submitLogin();
+        });
+    }
+    
+    const usernameInput = document.getElementById('loginUsername');
+    if (usernameInput) {
+        usernameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') submitLogin();
+        });
     }
 }
-loadUsers();
 
-// ===== [4.7] تحميل السلة =====
+// ===== [4.12] تنفيذ تسجيل الدخول =====
+function submitLogin() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (doLogin(username, password)) {
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+    }
+}
+
+// ===== [4.13] فتح نافذة تسجيل الدخول =====
+function openLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        const usernameInput = document.getElementById('loginUsername');
+        if (usernameInput) {
+            usernameInput.value = '';
+            usernameInput.focus();
+        }
+        const passwordInput = document.getElementById('loginPassword');
+        if (passwordInput) passwordInput.value = '';
+    } else {
+        createLoginModal();
+    }
+}
+
+// ===== [4.14] التحقق من حالة تسجيل الدخول عند التحميل =====
+function checkAuthOnLoad() {
+    const savedAuth = localStorage.getItem('nardoo_auth');
+    const savedUser = localStorage.getItem('current_user');
+    
+    if (savedAuth === 'true' && savedUser) {
+        isAuthenticated = true;
+        currentUser = JSON.parse(savedUser);
+        updateUIAfterLogin();
+        return true;
+    }
+    return false;
+}
+
+// ===== [4.15] تحميل السلة =====
 function loadCart() {
     const saved = localStorage.getItem('nardoo_cart');
     cart = saved ? JSON.parse(saved) : [];
     updateCartCounter();
 }
 
-// ===== [4.8] حفظ السلة =====
+// ===== [4.16] حفظ السلة =====
 function saveCart() {
     localStorage.setItem('nardoo_cart', JSON.stringify(cart));
 }
 
-// ===== [4.9] تحديث عداد السلة =====
+// ===== [4.17] تحديث عداد السلة =====
 function updateCartCounter() {
     const count = cart.reduce((sum, item) => sum + item.quantity, 0);
     const counter = document.getElementById('cartCounter');
@@ -153,7 +344,7 @@ function updateCartCounter() {
     if (fixedCounter) fixedCounter.textContent = count;
 }
 
-// ===== [4.10] دوال المساعدة والإشعارات =====
+// ===== [4.18] دوال المساعدة والإشعارات =====
 function showNotification(message, type = 'info') {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -173,7 +364,6 @@ function showNotification(message, type = 'info') {
     }
     
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
     toast.style.cssText = `
         background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : type === 'warning' ? '#fbbf24' : '#60a5fa'};
         color: black;
@@ -186,30 +376,12 @@ function showNotification(message, type = 'info') {
         min-width: 250px;
         z-index: 10000;
     `;
-    toast.innerHTML = `<div class="toast-message">${message}</div>`;
+    toast.innerHTML = `<div>${message}</div>`;
     container.appendChild(toast);
-    
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ===== [4.11] دالة مساعدة لجلب رابط الملف من تلغرام =====
-async function getTelegramFileUrl(fileId) {
-    try {
-        const response = await fetch(
-            `https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${fileId}`
-        );
-        const data = await response.json();
-        
-        if (data.ok && data.result) {
-            return `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${data.result.file_path}`;
-        }
-    } catch (error) {
-        console.error('❌ خطأ في جلب رابط الملف:', error);
-    }
-    return null;
-}
-
-// ===== [4.12] دالة الحصول على اسم القسم =====
+// ===== [4.19] دالة الحصول على اسم القسم =====
 function getCategoryName(category) {
     const names = {
         'promo': 'برموسيو',
@@ -220,7 +392,7 @@ function getCategoryName(category) {
     return names[category] || 'أخرى';
 }
 
-// ===== [4.13] دالة حساب الوقت المنقضي =====
+// ===== [4.20] دالة حساب الوقت المنقضي =====
 function getTimeAgo(dateString) {
     if (!dateString) return '';
     
@@ -244,7 +416,7 @@ function getTimeAgo(dateString) {
     return 'منذ وقت';
 }
 
-// ===== [4.14] دالة توليد النجوم =====
+// ===== [4.21] دالة توليد النجوم =====
 function generateStars(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -266,7 +438,7 @@ function generateStars(rating) {
     return starsHTML;
 }
 
-// ===== [4.15] دالة الفرز =====
+// ===== [4.22] دالة الفرز =====
 function sortProducts(productsArray) {
     switch(sortBy) {
         case 'newest':
@@ -282,18 +454,15 @@ function sortProducts(productsArray) {
     }
 }
 
-// ===== [4.16] تغيير طريقة الفرز =====
+// ===== [4.23] تغيير طريقة الفرز =====
 function changeSort(value) {
     sortBy = value;
     displayProducts();
 }
 
-// ===== [4.17] إضافة منتج إلى تلغرام =====
+// ===== [4.24] إضافة منتج إلى تلغرام =====
 async function addProductToTelegram(product, imageFile) {
-    if (!isAuthenticated) {
-        showNotification('الرجاء تسجيل الدخول أولاً', 'error');
-        return { success: false, error: 'غير مصرح' };
-    }
+    if (!requireAuth()) return { success: false, error: 'غير مصرح' };
     
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
@@ -335,14 +504,9 @@ async function addProductToTelegram(product, imageFile) {
     }
 }
 
-// ===== [4.18] دالة حفظ المنتج =====
+// ===== [4.25] دالة حفظ المنتج =====
 async function saveProduct() {
-    if (!isAuthenticated) {
-        showNotification('الرجاء تسجيل الدخول أولاً', 'error');
-        return;
-    }
-    
-    console.log('🔄 بدء saveProduct');
+    if (!requireAuth()) return;
     
     const nameInput = document.getElementById('productName');
     const categorySelect = document.getElementById('productCategory');
@@ -352,7 +516,6 @@ async function saveProduct() {
     const imageInput = document.getElementById('productImages');
 
     if (!nameInput || !categorySelect || !priceInput || !stockInput || !imageInput) {
-        console.error('❌ بعض حقول النموذج غير موجودة');
         showNotification('خطأ في النموذج', 'error');
         return;
     }
@@ -367,12 +530,6 @@ async function saveProduct() {
     if (!name) {
         showNotification('الرجاء إدخال اسم المنتج', 'error');
         nameInput.focus();
-        return;
-    }
-
-    if (!category) {
-        showNotification('الرجاء اختيار القسم', 'error');
-        categorySelect.focus();
         return;
     }
 
@@ -418,7 +575,7 @@ async function saveProduct() {
     const result = await addProductToTelegram(product, imageFile);
 
     if (result.success) {
-        showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.messageId}`, 'success');
+        showNotification(`✅ تم إضافة المنتج بنجاح`, 'success');
         
         const localProduct = {
             id: result.messageId,
@@ -453,19 +610,16 @@ async function saveProduct() {
         
         setTimeout(async () => {
             await loadProducts();
+            showAdminPanel();
         }, 2000);
     }
 }
 
-// ===== [4.19] معالجة رفع الصور =====
+// ===== [4.26] معالجة رفع الصور =====
 function handleImageUpload(event) {
     const files = event.target.files;
     const preview = document.getElementById('imagePreview');
-    
-    if (!preview) {
-        console.error('❌ عنصر المعاينة غير موجود');
-        return;
-    }
+    if (!preview) return;
     
     preview.innerHTML = '';
 
@@ -490,36 +644,24 @@ function handleImageUpload(event) {
         };
         reader.readAsDataURL(file);
     }
-    
-    if (files.length > 0) {
-        showNotification(`تم اختيار ${files.length} صورة`, 'success');
-    }
 }
 
-// ===== [4.20] جلب جميع المنتجات من تلغرام =====
+// ===== [4.27] جلب جميع المنتجات من تلغرام =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
     
     try {
-        console.log('🔄 جاري جلب المنتجات من تلغرام...');
-        
         const cached = localStorage.getItem('nardoo_products');
-        let localProducts = [];
-        
         if (cached) {
-            localProducts = JSON.parse(cached);
-            if (localProducts.length > 0) {
-                console.log(`📦 عرض ${localProducts.length} منتج من الذاكرة المحلية`);
-                products = localProducts;
-                displayProducts();
-            }
+            products = JSON.parse(cached);
+            displayProducts();
         }
         
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         
         if (!response.ok) {
-            throw new Error('فشل الاتصال بتلغرام');
+            throw new Error('فشل الاتصال');
         }
         
         const data = await response.json();
@@ -531,13 +673,10 @@ async function fetchProductsFromTelegram() {
             for (const update of updates) {
                 const post = update.channel_post || update.message;
                 if (!post) continue;
-                
                 if (!post.photo && !post.video) continue;
                 
                 const caption = post.caption || '';
                 if (!caption.includes('🟣') && !caption.includes('منتج جديد')) continue;
-                
-                const telegramId = post.message_id;
                 
                 const lines = caption.split('\n');
                 
@@ -549,7 +688,7 @@ async function fetchProductsFromTelegram() {
                 let description = 'منتج ممتاز';
                 
                 lines.forEach(line => {
-                    if (line.includes('المنتج:') || line.includes('📦 *المنتج:*')) {
+                    if (line.includes('المنتج:')) {
                         name = line.replace('المنتج:', '').replace('📦 *المنتج:*', '').replace(/[*🟣]/g, '').trim();
                     }
                     else if (line.includes('السعر:')) {
@@ -567,16 +706,12 @@ async function fetchProductsFromTelegram() {
                         const match = line.match(/\d+/);
                         if (match) stock = parseInt(match[0]);
                     }
-                    else if (line.includes('الناشر:') || line.includes('التاجر:')) {
-                        merchant = line.replace('الناشر:', '').replace('التاجر:', '').trim();
-                    }
-                    else if (line.includes('الوصف:')) {
-                        description = line.replace('الوصف:', '').trim();
+                    else if (line.includes('الناشر:')) {
+                        merchant = line.replace('الناشر:', '').trim();
                     }
                 });
                 
-                let mediaUrl = null;
-                let images = [];
+                let images = ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"];
                 
                 if (post.photo) {
                     const fileId = post.photo[post.photo.length - 1].file_id;
@@ -586,93 +721,63 @@ async function fetchProductsFromTelegram() {
                     const fileData = await fileResponse.json();
                     
                     if (fileData.ok) {
-                        mediaUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                        images = [mediaUrl];
+                        images = [`https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`];
                     }
                 }
                 
-                if (images.length === 0) {
-                    images = ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"];
-                    mediaUrl = images[0];
-                }
-                
-                if (mediaUrl) {
-                    telegramProducts.push({
-                        id: telegramId,
-                        telegramId: telegramId,
-                        name: name,
-                        price: price || 1000,
-                        category: category,
-                        stock: stock || 10,
-                        merchantName: merchant,
-                        description: description,
-                        rating: 4.5,
-                        image: mediaUrl,
-                        images: images,
-                        telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${post.message_id}`,
-                        createdAt: new Date(post.date * 1000).toISOString(),
-                        dateStr: getTimeAgo(post.date)
-                    });
-                }
+                telegramProducts.push({
+                    id: post.message_id,
+                    telegramId: post.message_id,
+                    name: name,
+                    price: price || 1000,
+                    category: category,
+                    stock: stock || 10,
+                    merchantName: merchant,
+                    description: description,
+                    rating: 4.5,
+                    images: images,
+                    createdAt: new Date(post.date * 1000).toISOString()
+                });
             }
         }
         
-        const mergedProducts = [...localProducts];
+        const mergedProducts = [...products];
         
         for (const newProduct of telegramProducts) {
             const exists = mergedProducts.some(p => p.id === newProduct.id);
             if (!exists) {
                 mergedProducts.push(newProduct);
-                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
             }
         }
         
-        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام، إجمالي: ${mergedProducts.length}`);
-        
         localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
-        
         products = mergedProducts;
         displayProducts();
         
         return mergedProducts;
         
     } catch (error) {
-        console.error('❌ خطأ في جلب المنتجات:', error);
-        showNotification('فشل الاتصال بتلغرام، عرض المنتجات المخزنة', 'warning');
-        
-        const saved = localStorage.getItem('nardoo_products');
-        if (saved) {
-            products = JSON.parse(saved);
-            displayProducts();
-            return products;
-        }
-        
-        return [];
+        console.error('خطأ:', error);
+        return products;
         
     } finally {
         isLoading = false;
     }
 }
 
-// ===== [4.21] تحميل المنتجات وعرضها =====
+// ===== [4.28] تحميل المنتجات =====
 async function loadProducts() {
     await fetchProductsFromTelegram();
 }
 
-// ===== [4.22] عرض المنتجات =====
+// ===== [4.29] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
 
     let filtered = products.filter(p => p.stock > 0);
     
-    if (currentFilter === 'my_products' && currentUser?.role === 'merchant_approved') {
-        filtered = filtered.filter(p => 
-            p.merchantName === currentUser.storeName || 
-            p.merchantName === currentUser.name
-        );
-    }
-    else if (currentFilter !== 'all') {
+    if (currentFilter !== 'all') {
         filtered = filtered.filter(p => p.category === currentFilter);
     }
 
@@ -688,9 +793,9 @@ function displayProducts() {
         container.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px;">
                 <i class="fas fa-box-open" style="font-size: 80px; color: var(--gold); margin-bottom: 20px;"></i>
-                <h3 style="color: var(--gold); font-size: 28px; margin-bottom: 15px;">لا توجد منتجات</h3>
-                <p style="color: var(--text-secondary); font-size: 18px; margin-bottom: 30px;">أول منتج يضاف سيظهر هنا</p>
-                ${isAuthenticated ? '<button class="btn-gold" onclick="showAddProductModal()" style="font-size: 18px; padding: 15px 40px;"><i class="fas fa-plus"></i> إضافة منتج جديد</button>' : '<p style="color: var(--text-secondary);">الرجاء تسجيل الدخول لإضافة المنتجات</p>'}
+                <h3 style="color: var(--gold); font-size: 28px;">لا توجد منتجات</h3>
+                <p style="color: var(--text-secondary);">أول منتج يضاف سيظهر هنا</p>
+                ${isAuthenticated ? '<button class="btn-gold" onclick="showAddProductModal()">إضافة منتج جديد</button>' : ''}
             </div>
         `;
         return;
@@ -700,9 +805,7 @@ function displayProducts() {
         const stockClass = product.stock <= 0 ? 'out-of-stock' : product.stock < 5 ? 'low-stock' : 'in-stock';
         const stockText = product.stock <= 0 ? 'غير متوفر' : product.stock < 5 ? `كمية محدودة (${product.stock})` : `متوفر (${product.stock})`;
         
-        const imageUrl = product.images && product.images.length > 0 
-            ? product.images[0] 
-            : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
+        const imageUrl = product.images && product.images.length > 0 ? product.images[0] : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
 
         let categoryIcon = 'fas fa-tag';
         if (product.category === 'promo') categoryIcon = 'fas fa-fire';
@@ -715,10 +818,6 @@ function displayProducts() {
             <div class="product-card" onclick="viewProductDetails(${product.id})">
                 <div class="product-time-badge">
                     <i class="far fa-clock"></i> ${timeAgo}
-                </div>
-                
-                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:12px; font-weight:bold; z-index:10;">
-                    🆔 ${product.id}
                 </div>
                 
                 <div class="product-gallery">
@@ -757,20 +856,20 @@ function displayProducts() {
     }).join('');
 }
 
-// ===== [4.23] فلترة المنتجات =====
+// ===== [4.30] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
     displayProducts();
 }
 
-// ===== [4.24] البحث عن المنتجات =====
+// ===== [4.31] البحث عن المنتجات =====
 function searchProducts() {
     const input = document.getElementById('searchInput');
     searchTerm = input ? input.value : '';
     displayProducts();
 }
 
-// ===== [4.25] إضافة منتج إلى السلة =====
+// ===== [4.32] إضافة منتج إلى السلة =====
 function addToCart(productId) {
     const product = products.find(p => p.id == productId);
     if (!product || product.stock <= 0) {
@@ -802,7 +901,7 @@ function addToCart(productId) {
     showNotification('تمت الإضافة إلى السلة', 'success');
 }
 
-// ===== [4.26] تبديل عرض السلة =====
+// ===== [4.33] تبديل عرض السلة =====
 function toggleCart() {
     const sidebar = document.getElementById('cartSidebar');
     if (sidebar) {
@@ -811,7 +910,7 @@ function toggleCart() {
     }
 }
 
-// ===== [4.27] تحديث عرض السلة =====
+// ===== [4.34] تحديث عرض السلة =====
 function updateCartDisplay() {
     const itemsDiv = document.getElementById('cartItems');
     const totalSpan = document.getElementById('cartTotal');
@@ -837,9 +936,7 @@ function updateCartDisplay() {
                         <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity - 1})">-</button>
                         <span>${item.quantity}</span>
                         <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity + 1})">+</button>
-                        <button class="quantity-btn" onclick="removeFromCart(${item.productId})" style="background: #f87171; color: white;">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <button class="quantity-btn" onclick="removeFromCart(${item.productId})" style="background: #f87171;">🗑️</button>
                     </div>
                 </div>
             </div>
@@ -849,7 +946,7 @@ function updateCartDisplay() {
     if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} دج`;
 }
 
-// ===== [4.28] تحديث كمية منتج في السلة =====
+// ===== [4.35] تحديث كمية منتج في السلة =====
 function updateCartItem(productId, newQuantity) {
     const item = cart.find(i => i.productId == productId);
     const product = products.find(p => p.id == productId);
@@ -870,26 +967,25 @@ function updateCartItem(productId, newQuantity) {
     updateCartDisplay();
 }
 
-// ===== [4.29] إزالة منتج من السلة =====
+// ===== [4.36] إزالة منتج من السلة =====
 function removeFromCart(productId) {
     cart = cart.filter(i => i.productId != productId);
     saveCart();
     updateCartCounter();
     updateCartDisplay();
-    showNotification('تمت إزالة المنتج', 'info');
 }
 
-// ===== [4.30] إتمام الشراء =====
+// ===== [4.37] إتمام الشراء =====
 async function checkoutCart() {
     if (cart.length === 0) {
         showNotification('السلة فارغة', 'warning');
         return;
     }
 
-    const customerPhone = prompt('رقم الهاتف:', currentUser?.phone || '');
+    const customerPhone = prompt('رقم الهاتف:');
     if (!customerPhone) return;
     
-    const customerAddress = prompt('عنوان التوصيل:', '');
+    const customerAddress = prompt('عنوان التوصيل:');
     if (!customerAddress) return;
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -924,22 +1020,6 @@ ${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity}
         })
     });
 
-    const merchants = {};
-    cart.forEach(item => {
-        const merchant = users.find(u => u.name === item.merchantName || u.storeName === item.merchantName);
-        if (merchant?.phone) {
-            if (!merchants[merchant.phone]) {
-                merchants[merchant.phone] = [];
-            }
-            merchants[merchant.phone].push(item);
-        }
-    });
-
-    Object.entries(merchants).forEach(([phone, items]) => {
-        const msg = `🛍️ لديك طلب جديد من ${order.customerName}: ${items.map(i => i.name).join('، ')}`;
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-    });
-
     cart = [];
     saveCart();
     updateCartCounter();
@@ -948,7 +1028,7 @@ ${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity}
     showNotification('✅ تم إرسال الطلب بنجاح', 'success');
 }
 
-// ===== [4.31] عرض تفاصيل المنتج =====
+// ===== [4.38] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
     const product = products.find(p => p.id == productId);
     if (!product) return;
@@ -956,9 +1036,7 @@ function viewProductDetails(productId) {
     const modal = document.getElementById('productDetailModal');
     const content = document.getElementById('productDetailContent');
 
-    const imageUrl = product.images && product.images.length > 0 
-        ? product.images[0] 
-        : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
+    const imageUrl = product.images && product.images.length > 0 ? product.images[0] : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
 
     content.innerHTML = `
         <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
@@ -968,21 +1046,17 @@ function viewProductDetails(productId) {
                     <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
                 </div>
                 <div>
-                    <p style="color: #888; margin-bottom: 10px;">🆔 المعرف: ${product.id}</p>
-                    <p style="color: #888; margin-bottom: 10px;">👤 الناشر: ${product.merchantName}</p>
-                    <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
+                    <p>🆔 المعرف: ${product.id}</p>
+                    <p>👤 الناشر: ${product.merchantName}</p>
+                    <p>${product.description || 'منتج عالي الجودة'}</p>
                     
-                    <div class="product-rating" style="margin-bottom: 20px;">
+                    <div class="product-rating" style="margin: 20px 0;">
                         <div class="stars-container">${generateStars(product.rating || 4.5)}</div>
-                        <span class="rating-value">${(product.rating || 4.5).toFixed(1)}</span>
+                        <span>${(product.rating || 4.5).toFixed(1)}</span>
                     </div>
                     
-                    <div style="margin-bottom: 20px;">
+                    <div style="margin: 20px 0;">
                         <span style="font-size: 32px; color: var(--gold);">${product.price.toLocaleString()} دج</span>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <span>${product.stock} قطعة متوفرة</span>
                     </div>
                     
                     <div style="display: flex; gap: 15px;">
@@ -1001,265 +1075,35 @@ function viewProductDetails(productId) {
     modal.style.display = 'flex';
 }
 
-// ===== [4.32] فتح نافذة تسجيل الدخول =====
-function openLoginModal() {
-    let modal = document.getElementById('loginModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        const usernameInput = document.getElementById('loginUsername');
-        if (usernameInput) {
-            usernameInput.value = '';
-            usernameInput.focus();
-        }
-        const passwordInput = document.getElementById('loginPassword');
-        if (passwordInput) passwordInput.value = '';
-    } else {
-        createLoginModal();
-    }
-}
-
-// ===== [4.33] إنشاء نافذة تسجيل الدخول =====
-function createLoginModal() {
-    const modalHTML = `
-        <div id="loginModal" class="modal" style="display: flex; z-index: 10000;">
-            <div class="modal-content" style="max-width: 400px;">
-                <div class="modal-header">
-                    <h2><i class="fas fa-lock"></i> تسجيل الدخول</h2>
-                    <button class="modal-close" onclick="closeModal('loginModal')">&times;</button>
-                </div>
-                <div class="modal-body" style="padding: 30px;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <i class="fas fa-crown" style="font-size: 60px; color: var(--gold);"></i>
-                        <h3 style="margin-top: 15px;">ناردو برو</h3>
-                        <p style="color: var(--text-secondary);">أدخل بيانات الدخول للوصول إلى لوحة التحكم</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 10px;">اسم المستخدم:</label>
-                        <input type="text" id="loginUsername" placeholder="أدخل اسم المستخدم" 
-                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: var(--bg-input); color: var(--text);">
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 10px;">كلمة المرور:</label>
-                        <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" 
-                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: var(--bg-input); color: var(--text);">
-                    </div>
-                    
-                    <button onclick="handleFormLogin()" class="btn-gold" style="width: 100%; padding: 12px;">
-                        <i class="fas fa-sign-in-alt"></i> دخول
-                    </button>
-                    
-                    <div style="margin-top: 20px; text-align: center; font-size: 12px; color: var(--text-secondary);">
-                        <i class="fas fa-shield-alt"></i> بيانات الدخول: azer / 123456
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    if (!document.getElementById('loginModal')) {
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
-}
-
-// ===== [4.34] معالجة تسجيل الدخول من النموذج =====
-function handleFormLogin() {
-    const usernameInput = document.getElementById('loginUsername');
-    const passwordInput = document.getElementById('loginPassword');
-    const username = usernameInput ? usernameInput.value : '';
-    const password = passwordInput ? passwordInput.value : '';
-    
-    if (login(username, password)) {
-        if (usernameInput) usernameInput.value = '';
-        if (passwordInput) passwordInput.value = '';
-        loadProducts();
-        updateUIBasedOnRole();
-    } else {
-        if (passwordInput) passwordInput.value = '';
-        passwordInput.focus();
-    }
-}
-
-// ===== [4.35] إغلاق النوافذ =====
+// ===== [4.39] إغلاق النوافذ =====
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.style.display = 'none';
 }
 
-// ===== [4.36] تبديل علامات التبويب في المصادقة =====
-function switchAuthTab(tab) {
-    showNotification('بيانات الدخول: azer / 123456', 'info');
-}
-
-// ===== [4.37] إظهار/إخفاء حقول التاجر =====
-function toggleMerchantFields() {
-    // معطل
-}
-
-// ===== [4.38] معالجة تسجيل الدخول القديم =====
-function handleLogin() {
-    openLoginModal();
-}
-
-// ===== [4.39] معالجة تسجيل التاجر =====
-function handleMerchantRegister(merchantData) {
-    showNotification('بيانات الدخول: azer / 123456', 'info');
-    return false;
-}
-
-// ===== [4.40] معالجة تسجيل المستخدم العادي =====
-function handleRegister() {
-    showNotification('بيانات الدخول: azer / 123456', 'info');
-}
-
-// ===== [4.41] تحديث الواجهة حسب دور المستخدم =====
-function updateUIBasedOnRole() {
-    if (!currentUser || !isAuthenticated) return;
-
-    const userBtn = document.getElementById('userBtn');
-    if (userBtn) {
-        userBtn.innerHTML = '<i class="fas fa-crown"></i><span>مدير النظام</span>';
-        userBtn.setAttribute('onclick', 'logout()');
-        userBtn.classList.add('admin-only');
-    }
-
-    const dashboardBtn = document.getElementById('dashboardBtn');
-    if (dashboardBtn) {
-        dashboardBtn.style.display = 'flex';
-        dashboardBtn.classList.add('admin-only');
-    }
-    
-    const merchantPanel = document.getElementById('merchantPanelContainer');
-    if (merchantPanel) {
-        merchantPanel.style.display = 'block';
-        merchantPanel.classList.add('admin-only');
-    }
-    
-    const oldAddBtn = document.getElementById('adminAddProductBtn');
-    if (oldAddBtn) oldAddBtn.remove();
-    
-    const oldMyProductsBtn = document.getElementById('myProductsBtn');
-    if (oldMyProductsBtn) oldMyProductsBtn.remove();
-
-    showMerchantPanel();
-    
-    const navMenu = document.getElementById('mainNav');
-    if (navMenu && !document.getElementById('adminAddProductBtn')) {
-        const addBtn = document.createElement('a');
-        addBtn.className = 'nav-link admin-only';
-        addBtn.id = 'adminAddProductBtn';
-        addBtn.setAttribute('onclick', 'showAddProductModal()');
-        addBtn.innerHTML = '<i class="fas fa-plus-circle"></i><span>إضافة منتج</span>';
-        navMenu.appendChild(addBtn);
-    }
-}
-
-// ===== [4.42] عرض منتجات التاجر =====
-function viewMyProducts() {
-    if (!isAuthenticated) {
-        showNotification('الرجاء تسجيل الدخول أولاً', 'error');
-        return;
-    }
-    currentFilter = 'my_products';
-    displayProducts();
-}
-
-// ===== [4.43] عرض لوحة التاجر =====
-function showMerchantPanel() {
-    if (!currentUser || !isAuthenticated) return;
-    
-    const merchantProducts = products.filter(p => 
-        p.merchantName === currentUser.storeName || 
-        p.merchantName === currentUser.name
-    );
-    
-    const totalValue = merchantProducts.reduce((sum, p) => sum + (p.price * p.stock), 0);
-    
-    const panel = document.getElementById('merchantPanelContainer');
-    if (!panel) return;
-    
-    panel.style.display = 'block';
-    panel.innerHTML = `
-        <div style="background: var(--glass); border: 2px solid var(--gold); border-radius: 20px; padding: 30px; margin: 20px 0;">
-            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
-                <i class="fas fa-crown" style="font-size: 50px; color: var(--gold);"></i>
-                <div>
-                    <h2 style="color: var(--gold); margin: 0;">${currentUser.storeName || currentUser.name}</h2>
-                    <p style="color: var(--text-secondary);">✅ مرحباً مدير النظام - صلاحيات كاملة</p>
-                </div>
-                <button onclick="logout()" style="margin-right: auto; background: rgba(255,100,100,0.2); border: 1px solid #ff6b6b; padding: 8px 15px; border-radius: 8px; cursor: pointer;">
-                    <i class="fas fa-sign-out-alt"></i> تسجيل خروج
-                </button>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
-                <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
-                    <div style="font-size: 40px; color: var(--gold);">${products.length}</div>
-                    <div>إجمالي المنتجات</div>
-                </div>
-                <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
-                    <div style="font-size: 40px; color: var(--gold);">${products.filter(p => p.stock > 0).length}</div>
-                    <div>المنتجات المتاحة</div>
-                </div>
-                <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
-                    <div style="font-size: 40px; color: var(--gold);">${totalValue.toLocaleString()} دج</div>
-                    <div>قيمة المخزون</div>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button class="btn-gold" onclick="showAddProductModal()">
-                    <i class="fas fa-plus"></i> إضافة منتج جديد
-                </button>
-                <button class="btn-outline-gold" onclick="viewMyProducts()">
-                    <i class="fas fa-box"></i> عرض منتجاتي
-                </button>
-                <button class="btn-outline-gold" onclick="openDashboard()">
-                    <i class="fas fa-chart-line"></i> لوحة التحكم
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-// ===== [4.44] إرسال طلب تاجر إلى تلغرام =====
-async function sendMerchantRequestToTelegram(merchant) {
-    console.log('نظام المصادقة: azer / 123456');
-}
-
-// ===== [4.45] إظهار نافذة إضافة منتج =====
+// ===== [4.40] إظهار نافذة إضافة منتج =====
 function showAddProductModal() {
-    if (!isAuthenticated) {
-        showNotification('الرجاء تسجيل الدخول أولاً', 'error');
-        return;
-    }
+    if (!requireAuth()) return;
     const modal = document.getElementById('productModal');
     if (modal) modal.style.display = 'flex';
 }
 
-// ===== [4.46] البحث عن منتج بالمعرف =====
+// ===== [4.41] البحث عن منتج بالمعرف =====
 function findProductById() {
-    const id = prompt('🔍 أدخل معرف المنتج (من تلغرام):');
+    const id = prompt('🔍 أدخل معرف المنتج:');
     if (!id) return;
     
     const product = products.find(p => p.id == id || p.telegramId == id);
     
     if (product) {
-        alert(`
-🔍 المنتج موجود:
-المعرف: ${product.id}
-الاسم: ${product.name}
-السعر: ${product.price} دج
-التاجر: ${product.merchantName}
-        `);
+        alert(`المنتج: ${product.name}\nالسعر: ${product.price} دج`);
         viewProductDetails(product.id);
     } else {
         alert('❌ لا يوجد منتج بهذا المعرف');
     }
 }
 
-// ===== [4.47] دوال التمرير =====
+// ===== [4.42] دوال التمرير =====
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1268,31 +1112,20 @@ function scrollToBottom() {
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
 }
 
-function toggleQuickTopButton() {
-    const quickTopBtn = document.getElementById('quickTopBtn');
-    if (!quickTopBtn) return;
-    quickTopBtn.classList.toggle('show', window.scrollY > 300);
-}
-
-// ===== [4.48] تبديل الثيم =====
+// ===== [4.43] تبديل الثيم =====
 function toggleTheme() {
     isDarkMode = !isDarkMode;
     document.body.classList.toggle('light-mode', !isDarkMode);
     const toggle = document.getElementById('themeToggle');
     if (toggle) {
-        toggle.innerHTML = isDarkMode ? 
-            '<i class="fas fa-moon"></i><span>ليلي</span>' : 
-            '<i class="fas fa-sun"></i><span>نهاري</span>';
+        toggle.innerHTML = isDarkMode ? '<i class="fas fa-moon"></i><span>ليلي</span>' : '<i class="fas fa-sun"></i><span>نهاري</span>';
     }
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ===== [4.49] فتح لوحة تحكم المدير =====
+// ===== [4.44] فتح لوحة التحكم =====
 function openDashboard() {
-    if (!isAuthenticated) {
-        showNotification('الرجاء تسجيل الدخول أولاً', 'error');
-        return;
-    }
+    if (!requireAuth()) return;
     const section = document.getElementById('dashboardSection');
     if (section) {
         section.style.display = 'block';
@@ -1301,39 +1134,38 @@ function openDashboard() {
     }
 }
 
-// ===== [4.50] عرض نظرة عامة في لوحة التحكم =====
+// ===== [4.45] عرض نظرة عامة =====
 function showDashboardOverview() {
-    const pendingMerchants = users.filter(u => u.role === 'merchant_pending').length;
-    const approvedMerchants = users.filter(u => u.role === 'merchant_approved').length;
-    
     const content = document.getElementById('dashboardContent');
     if (!content) return;
+    
+    const totalProducts = products.length;
+    const availableProducts = products.filter(p => p.stock > 0).length;
+    const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
     
     content.innerHTML = `
         <h3 style="color: var(--gold); margin-bottom: 30px;">نظرة عامة</h3>
         
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
             <div style="background: var(--glass); padding: 25px; border-radius: 15px; text-align: center;">
-                <i class="fas fa-box" style="font-size: 40px; color: var(--gold); margin-bottom: 15px;"></i>
-                <div style="font-size: 36px; font-weight: bold;">${products.length}</div>
-                <div style="color: var(--text-secondary);">إجمالي المنتجات</div>
+                <i class="fas fa-box" style="font-size: 40px; color: var(--gold);"></i>
+                <div style="font-size: 36px; font-weight: bold;">${totalProducts}</div>
+                <div>إجمالي المنتجات</div>
             </div>
-            
             <div style="background: var(--glass); padding: 25px; border-radius: 15px; text-align: center;">
-                <i class="fas fa-users" style="font-size: 40px; color: var(--gold); margin-bottom: 15px;"></i>
-                <div style="font-size: 36px; font-weight: bold;">${users.length}</div>
-                <div style="color: var(--text-secondary);">إجمالي المستخدمين</div>
+                <i class="fas fa-check-circle" style="font-size: 40px; color: var(--gold);"></i>
+                <div style="font-size: 36px; font-weight: bold;">${availableProducts}</div>
+                <div>المنتجات المتاحة</div>
             </div>
-            
             <div style="background: var(--glass); padding: 25px; border-radius: 15px; text-align: center;">
-                <i class="fas fa-store" style="font-size: 40px; color: var(--gold); margin-bottom: 15px;"></i>
-                <div style="font-size: 36px; font-weight: bold;">${approvedMerchants}</div>
-                <div style="color: var(--text-secondary);">التجار المعتمدين</div>
+                <i class="fas fa-dollar-sign" style="font-size: 40px; color: var(--gold);"></i>
+                <div style="font-size: 36px; font-weight: bold;">${totalValue.toLocaleString()} دج</div>
+                <div>قيمة المخزون</div>
             </div>
         </div>
         
         <div style="background: var(--glass); padding: 25px; border-radius: 15px;">
-            <h4 style="color: var(--gold); margin-bottom: 20px;">معلومات الدخول</h4>
+            <h4 style="color: var(--gold);">معلومات الدخول</h4>
             <p>✅ اسم المستخدم: <strong style="color: var(--gold);">azer</strong></p>
             <p>✅ كلمة المرور: <strong style="color: var(--gold);">123456</strong></p>
             <p>✅ يمكنك إضافة وحذف وتعديل المنتجات بعد تسجيل الدخول</p>
@@ -1341,49 +1173,7 @@ function showDashboardOverview() {
     `;
 }
 
-// ===== [4.51] عرض طلبات التجار في لوحة التحكم =====
-function showDashboardMerchants() {
-    const content = document.getElementById('dashboardContent');
-    if (!content) return;
-    
-    content.innerHTML = `
-        <h3 style="color: var(--gold); margin-bottom: 20px;">طلبات التجار</h3>
-        <p style="color: var(--text-secondary);">بيانات الدخول: azer / 123456</p>
-        <button class="btn-outline-gold" onclick="showDashboardOverview()">رجوع</button>
-    `;
-}
-
-// ===== [4.52] الموافقة على تاجر =====
-function approveMerchant(id) {
-    showNotification('نظام المصادقة: azer / 123456', 'info');
-}
-
-// ===== [4.53] رفض تاجر =====
-function rejectMerchant(id) {
-    showNotification('نظام المصادقة: azer / 123456', 'info');
-}
-
-// ===== [4.54] إرسال إشعار عام =====
-async function sendNotificationToTelegram(text) {
-    const message = `
-🟡 *إشعار*
-━━━━━━━━━━━━━━━━━━━━━━
-${text}
-🕐 ${new Date().toLocaleString('ar-EG')}
-    `;
-
-    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: TELEGRAM.channelId,
-            text: message,
-            parse_mode: 'Markdown'
-        })
-    });
-}
-
-// ===== [4.55] تأثيرات الكتابة =====
+// ===== [4.46] تأثيرات الكتابة =====
 class TypingAnimation {
     constructor(element, texts, speed = 100, delay = 2000) {
         this.element = element;
@@ -1427,64 +1217,37 @@ class TypingAnimation {
     }
 }
 
-// ===== [4.56] حفظ حالة المصادقة =====
-function saveAuthStatus(status) {
-    localStorage.setItem('nardoo_auth', status ? 'true' : 'false');
-}
-
-// ===== [4.57] التحقق من حالة المصادقة =====
-function checkAuthStatus() {
-    const savedAuth = localStorage.getItem('nardoo_auth');
-    if (savedAuth === 'true') {
-        isAuthenticated = true;
-        initDefaultUser();
-        updateUIBasedOnRole();
-        return true;
-    }
-    return false;
-}
-
-// ===== [4.58] التهيئة عند تحميل الصفحة =====
+// ===== [4.47] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
     createLoginModal();
     
-    const isLoggedIn = checkAuthStatus();
+    const isLoggedIn = checkAuthOnLoad();
     
-    if (isLoggedIn) {
-        const savedProducts = localStorage.getItem('nardoo_products');
-        if (savedProducts) {
-            products = JSON.parse(savedProducts);
-            displayProducts();
-            console.log(`📦 تم تحميل ${products.length} منتج`);
-        }
-        
-        await loadProducts();
-        loadCart();
-        updateUIBasedOnRole();
-    } else {
-        openLoginModal();
-        
-        const savedProducts = localStorage.getItem('nardoo_products');
-        if (savedProducts) {
-            products = JSON.parse(savedProducts);
-            displayProducts();
-        }
-        await loadProducts();
-        loadCart();
+    const savedProducts = localStorage.getItem('nardoo_products');
+    if (savedProducts) {
+        products = JSON.parse(savedProducts);
+        displayProducts();
     }
-
+    
+    await loadProducts();
+    loadCart();
+    
+    if (!isLoggedIn) {
+        setTimeout(() => {
+            openLoginModal();
+        }, 500);
+    }
+    
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         isDarkMode = savedTheme === 'dark';
         document.body.classList.toggle('light-mode', !isDarkMode);
         const toggle = document.getElementById('themeToggle');
         if (toggle) {
-            toggle.innerHTML = isDarkMode ? 
-                '<i class="fas fa-moon"></i><span>ليلي</span>' : 
-                '<i class="fas fa-sun"></i><span>نهاري</span>';
+            toggle.innerHTML = isDarkMode ? '<i class="fas fa-moon"></i><span>ليلي</span>' : '<i class="fas fa-sun"></i><span>نهاري</span>';
         }
     }
-
+    
     setTimeout(() => {
         const loader = document.getElementById('loader');
         if (loader) {
@@ -1492,8 +1255,6 @@ window.onload = async function() {
             setTimeout(() => loader.style.display = 'none', 500);
         }
     }, 1000);
-    
-    window.addEventListener('scroll', toggleQuickTopButton);
     
     const typingElement = document.getElementById('typing-text');
     if (typingElement) {
@@ -1515,14 +1276,14 @@ window.onload = async function() {
     console.log('✅ النظام جاهز - اسم المستخدم: azer | كلمة المرور: 123456');
 };
 
-// ===== [4.59] إغلاق النوافذ عند الضغط خارجها =====
+// ===== [4.48] إغلاق النوافذ عند الضغط خارجها =====
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 };
 
-// ===== [4.60] تصدير الدوال =====
+// ===== [4.49] تصدير الدوال =====
 window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
@@ -1539,10 +1300,6 @@ window.removeFromCart = removeFromCart;
 window.checkoutCart = checkoutCart;
 window.viewProductDetails = viewProductDetails;
 window.openLoginModal = openLoginModal;
-window.switchAuthTab = switchAuthTab;
-window.toggleMerchantFields = toggleMerchantFields;
-window.handleLogin = handleLogin;
-window.handleRegister = handleRegister;
 window.showAddProductModal = showAddProductModal;
 window.findProductById = findProductById;
 window.scrollToTop = scrollToTop;
@@ -1550,11 +1307,8 @@ window.scrollToBottom = scrollToBottom;
 window.toggleTheme = toggleTheme;
 window.openDashboard = openDashboard;
 window.showDashboardOverview = showDashboardOverview;
-window.showDashboardMerchants = showDashboardMerchants;
-window.approveMerchant = approveMerchant;
-window.rejectMerchant = rejectMerchant;
-window.viewMyProducts = viewMyProducts;
-window.handleFormLogin = handleFormLogin;
-window.logout = logout;
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.submitLogin = submitLogin;
 
-console.log('✅ نظام تلغرام المتكامل جاهز - اسم المستخدم: azer | كلمة المرور: 123456');
+console.log('✅ نظام تلغرام المتكامل جاهز - بيانات الدخول: azer / 123456');
