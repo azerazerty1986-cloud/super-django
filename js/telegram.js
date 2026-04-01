@@ -1,7 +1,7 @@
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
-/* ===== المعدل النهائي - مصادقة بكلمة سر واحدة ===== */
+/* ===== المعدل النهائي - مصادقة باسم azer وكلمة 123456 ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
@@ -22,27 +22,31 @@ let searchTerm = '';
 let sortBy = 'newest';
 let users = [];
 let isLoading = false;
-let isAuthenticated = false; // متغير حالة المصادقة
+let isAuthenticated = false;
 
-// كلمة السر المطلوبة
-const REQUIRED_PASSWORD = 'azer 123456';
+// بيانات الدخول
+const ADMIN_CREDENTIALS = {
+    username: 'azer',
+    password: '123456'
+};
 
-// ===== [4.3] التحقق من كلمة السر =====
-function verifyPassword(password) {
-    return password === REQUIRED_PASSWORD;
+// ===== [4.3] التحقق من بيانات الدخول =====
+function verifyCredentials(username, password) {
+    return username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password;
 }
 
 // ===== [4.4] تسجيل الدخول =====
-function login(password) {
-    if (verifyPassword(password)) {
+function login(username, password) {
+    if (verifyCredentials(username, password)) {
         isAuthenticated = true;
         initDefaultUser();
-        showNotification('✅ تم تسجيل الدخول بنجاح', 'success');
+        saveAuthStatus(true);
+        showNotification('✅ مرحباً بك في لوحة التحكم', 'success');
         closeModal('loginModal');
         updateUIBasedOnRole();
         return true;
     } else {
-        showNotification('❌ كلمة السر غير صحيحة', 'error');
+        showNotification('❌ اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
         return false;
     }
 }
@@ -50,6 +54,7 @@ function login(password) {
 // ===== [4.5] تسجيل الخروج =====
 function logout() {
     isAuthenticated = false;
+    saveAuthStatus(false);
     currentUser = null;
     localStorage.removeItem('current_user');
     
@@ -74,9 +79,10 @@ function logout() {
     if (userBtn) {
         userBtn.innerHTML = '<i class="fas fa-user"></i><span>تسجيل الدخول</span>';
         userBtn.setAttribute('onclick', 'openLoginModal()');
+        userBtn.classList.remove('admin-only');
     }
     
-    showNotification('🔒 تم تسجيل الخروج', 'info');
+    showNotification('🔒 تم تسجيل الخروج بنجاح', 'info');
     openLoginModal();
 }
 
@@ -84,12 +90,12 @@ function logout() {
 function initDefaultUser() {
     if (!isAuthenticated) return;
     
-    // تعيين مستخدم مدير بشكل دائم
     currentUser = {
         id: 1,
         name: 'مدير النظام',
+        username: 'azer',
         email: 'admin@nardoo.com',
-        role: 'admin',  // صلاحيات كاملة
+        role: 'admin',
         phone: '0000000000',
         storeName: 'ناردو برو',
         merchantLevel: '5',
@@ -97,10 +103,8 @@ function initDefaultUser() {
         createdAt: new Date().toISOString()
     };
     
-    // حفظ المستخدم في localStorage
     localStorage.setItem('current_user', JSON.stringify(currentUser));
     
-    // إضافة المستخدم إلى قائمة المستخدمين إذا لم يكن موجوداً
     const savedUsers = localStorage.getItem('nardoo_users');
     if (savedUsers) {
         users = JSON.parse(savedUsers);
@@ -114,10 +118,10 @@ function initDefaultUser() {
         localStorage.setItem('nardoo_users', JSON.stringify(users));
     }
     
-    console.log('✅ تم تفعيل وضع المدير - صلاحيات كاملة');
+    console.log('✅ تم تسجيل الدخول كمدير - اسم المستخدم: azer');
 }
 
-// ===== [4.7] التحقق من الصلاحية قبل العمليات الحساسة =====
+// ===== [4.7] التحقق من الصلاحية =====
 function requireAuth() {
     if (!isAuthenticated) {
         showNotification('❌ الرجاء تسجيل الدخول أولاً', 'warning');
@@ -127,7 +131,7 @@ function requireAuth() {
     return true;
 }
 
-// ===== [4.8] تحميل المستخدمين من localStorage =====
+// ===== [4.8] تحميل المستخدمين =====
 function loadUsers() {
     const saved = localStorage.getItem('nardoo_users');
     if (saved) {
@@ -136,7 +140,8 @@ function loadUsers() {
         users = [
             { 
                 id: 1, 
-                name: 'مدير النظام', 
+                name: 'مدير النظام',
+                username: 'azer',
                 email: 'admin@nardoo.com', 
                 password: '', 
                 role: 'admin',
@@ -357,7 +362,6 @@ async function saveProduct() {
     
     console.log('🔄 بدء saveProduct');
     
-    // الحصول على القيم من النموذج
     const nameInput = document.getElementById('productName');
     const categorySelect = document.getElementById('productCategory');
     const priceInput = document.getElementById('productPrice');
@@ -365,7 +369,6 @@ async function saveProduct() {
     const descInput = document.getElementById('productDescription');
     const imageInput = document.getElementById('productImages');
 
-    // التحقق من وجود العناصر
     if (!nameInput || !categorySelect || !priceInput || !stockInput || !imageInput) {
         console.error('❌ بعض حقول النموذج غير موجودة');
         showNotification('خطأ في النموذج', 'error');
@@ -379,7 +382,6 @@ async function saveProduct() {
     const description = descInput ? descInput.value : '';
     const imageFile = imageInput.files[0];
 
-    // التحقق من المدخلات
     if (!name) {
         showNotification('الرجاء إدخال اسم المنتج', 'error');
         nameInput.focus();
@@ -410,13 +412,11 @@ async function saveProduct() {
         return;
     }
 
-    // التحقق من نوع الملف
     if (!imageFile.type.startsWith('image/')) {
         showNotification('الرجاء اختيار ملف صورة صالح', 'error');
         return;
     }
 
-    // التحقق من حجم الملف (max 5MB)
     if (imageFile.size > 5 * 1024 * 1024) {
         showNotification('حجم الصورة كبير جداً (الحد الأقصى 5MB)', 'error');
         return;
@@ -433,15 +433,11 @@ async function saveProduct() {
         description: description
     };
 
-    console.log('📦 المنتج:', product);
-    console.log('🖼️ الصورة:', imageFile.name, imageFile.type, imageFile.size);
-
     const result = await addProductToTelegram(product, imageFile);
 
     if (result.success) {
-        showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.messageId}`, 'success');
+        showNotification(`✅ تم إضافة المنتج بنجاح`, 'success');
         
-        // حفظ المنتج محلياً مع معرف تلغرام
         const localProduct = {
             id: result.messageId,
             telegramId: result.messageId,
@@ -457,12 +453,10 @@ async function saveProduct() {
             images: []
         };
         
-        // إضافة للمنتجات المحلية
         const localProducts = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
         localProducts.push(localProduct);
         localStorage.setItem('nardoo_products', JSON.stringify(localProducts));
         
-        // إعادة تعيين النموذج
         nameInput.value = '';
         categorySelect.value = 'promo';
         priceInput.value = '';
@@ -470,14 +464,11 @@ async function saveProduct() {
         if (descInput) descInput.value = '';
         imageInput.value = '';
         
-        // مسح معاينة الصور
         const preview = document.getElementById('imagePreview');
         if (preview) preview.innerHTML = '';
         
-        // إغلاق النافذة
         closeModal('productModal');
         
-        // إعادة تحميل المنتجات بعد ثانيتين
         setTimeout(async () => {
             await loadProducts();
         }, 2000);
@@ -489,10 +480,7 @@ function handleImageUpload(event) {
     const files = event.target.files;
     const preview = document.getElementById('imagePreview');
     
-    if (!preview) {
-        console.error('❌ عنصر المعاينة غير موجود');
-        return;
-    }
+    if (!preview) return;
     
     preview.innerHTML = '';
 
@@ -558,14 +546,12 @@ async function fetchProductsFromTelegram() {
             for (const update of updates) {
                 const post = update.channel_post || update.message;
                 if (!post) continue;
-                
                 if (!post.photo && !post.video) continue;
                 
                 const caption = post.caption || '';
                 if (!caption.includes('🟣') && !caption.includes('منتج جديد')) continue;
                 
                 const telegramId = post.message_id;
-                
                 const lines = caption.split('\n');
                 
                 let name = 'منتج';
@@ -1033,13 +1019,11 @@ function openLoginModal() {
     const modal = document.getElementById('loginModal');
     if (modal) {
         modal.style.display = 'flex';
-        // تعيين التركيز على حقل كلمة السر
         setTimeout(() => {
-            const passwordInput = document.getElementById('loginPassword');
-            if (passwordInput) passwordInput.focus();
+            const usernameInput = document.getElementById('loginUsername');
+            if (usernameInput) usernameInput.focus();
         }, 100);
     } else {
-        // إذا لم توجد نافذة تسجيل الدخول، نقوم بإنشائها
         createLoginModal();
     }
 }
@@ -1057,45 +1041,53 @@ function createLoginModal() {
                     <div style="text-align: center; margin-bottom: 30px;">
                         <i class="fas fa-crown" style="font-size: 60px; color: var(--gold);"></i>
                         <h3 style="margin-top: 15px;">ناردو برو</h3>
-                        <p style="color: var(--text-secondary);">أدخل كلمة السر للوصول إلى لوحة التحكم</p>
+                        <p style="color: var(--text-secondary);">أدخل بيانات الدخول للوصول إلى لوحة التحكم</p>
                     </div>
                     
                     <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 10px;">كلمة السر:</label>
-                        <input type="password" id="loginPassword" placeholder="أدخل كلمة السر" 
+                        <label style="display: block; margin-bottom: 10px;">اسم المستخدم:</label>
+                        <input type="text" id="loginUsername" placeholder="أدخل اسم المستخدم" 
                                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: var(--bg-input); color: var(--text);">
                     </div>
                     
-                    <button onclick="handlePasswordLogin()" class="btn-gold" style="width: 100%; padding: 12px;">
-                        <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 10px;">كلمة المرور:</label>
+                        <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" 
+                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: var(--bg-input); color: var(--text);">
+                    </div>
+                    
+                    <button onclick="handleFormLogin()" class="btn-gold" style="width: 100%; padding: 12px;">
+                        <i class="fas fa-sign-in-alt"></i> دخول
                     </button>
                     
                     <div style="margin-top: 20px; text-align: center; font-size: 12px; color: var(--text-secondary);">
-                        <i class="fas fa-shield-alt"></i> نظام آمن
+                        <i class="fas fa-shield-alt"></i> بيانات الدخول: azer / 123456
                     </div>
                 </div>
             </div>
         </div>
     `;
     
-    // إضافة النافذة إلى الجسم إذا لم تكن موجودة
     if (!document.getElementById('loginModal')) {
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     }
 }
 
-// ===== [4.36] معالجة تسجيل الدخول بكلمة السر =====
-function handlePasswordLogin() {
+// ===== [4.36] معالجة تسجيل الدخول من النموذج =====
+function handleFormLogin() {
+    const usernameInput = document.getElementById('loginUsername');
     const passwordInput = document.getElementById('loginPassword');
+    const username = usernameInput ? usernameInput.value : '';
     const password = passwordInput ? passwordInput.value : '';
     
-    if (login(password)) {
-        // إعادة تحميل المنتجات وتحديث الواجهة
+    if (login(username, password)) {
+        if (usernameInput) usernameInput.value = '';
+        if (passwordInput) passwordInput.value = '';
         loadProducts();
         updateUIBasedOnRole();
     } else {
-        // مسح حقل كلمة السر
         if (passwordInput) passwordInput.value = '';
+        passwordInput.focus();
     }
 }
 
@@ -1105,30 +1097,30 @@ function closeModal(modalId) {
     if (modal) modal.style.display = 'none';
 }
 
-// ===== [4.38] تبديل علامات التبويب في المصادقة (معطل) =====
+// ===== [4.38] تبديل علامات التبويب =====
 function switchAuthTab(tab) {
-    showNotification('استخدم كلمة السر: azer 123456', 'info');
+    showNotification('بيانات الدخول: azer / 123456', 'info');
 }
 
-// ===== [4.39] إظهار/إخفاء حقول التاجر (معطل) =====
+// ===== [4.39] إظهار/إخفاء حقول التاجر =====
 function toggleMerchantFields() {
-    // معطل - المصادقة بكلمة سر واحدة
+    // معطل
 }
 
-// ===== [4.40] معالجة تسجيل الدخول القديم (معطل) =====
+// ===== [4.40] معالجة تسجيل الدخول القديم =====
 function handleLogin() {
     openLoginModal();
 }
 
-// ===== [4.41] معالجة تسجيل التاجر (معطل) =====
+// ===== [4.41] معالجة تسجيل التاجر =====
 function handleMerchantRegister(merchantData) {
-    showNotification('الرجاء استخدام كلمة السر الرئيسية: azer 123456', 'info');
+    showNotification('بيانات الدخول: azer / 123456', 'info');
     return false;
 }
 
-// ===== [4.42] معالجة تسجيل المستخدم العادي (معطل) =====
+// ===== [4.42] معالجة تسجيل المستخدم =====
 function handleRegister() {
-    showNotification('الرجاء استخدام كلمة السر الرئيسية: azer 123456', 'info');
+    showNotification('بيانات الدخول: azer / 123456', 'info');
 }
 
 // ===== [4.43] تحديث الواجهة حسب دور المستخدم =====
@@ -1180,7 +1172,7 @@ function viewMyProducts() {
     displayProducts();
 }
 
-// ===== [4.45] عرض لوحة التاجر =====
+// ===== [4.45] عرض لوحة المدير =====
 function showMerchantPanel() {
     if (!currentUser || !isAuthenticated) return;
     
@@ -1201,7 +1193,7 @@ function showMerchantPanel() {
                 <i class="fas fa-crown" style="font-size: 50px; color: var(--gold);"></i>
                 <div>
                     <h2 style="color: var(--gold); margin: 0;">${currentUser.storeName || currentUser.name}</h2>
-                    <p style="color: var(--text-secondary);">✅ وضع المدير - صلاحيات كاملة</p>
+                    <p style="color: var(--text-secondary);">✅ مرحباً ${currentUser.username || 'azer'} - صلاحيات كاملة</p>
                 </div>
                 <button onclick="logout()" style="margin-right: auto; background: rgba(255,100,100,0.2); border: 1px solid #ff6b6b; padding: 8px 15px; border-radius: 8px; cursor: pointer;">
                     <i class="fas fa-sign-out-alt"></i> تسجيل خروج
@@ -1238,19 +1230,14 @@ function showMerchantPanel() {
     `;
 }
 
-// ===== [4.46] إرسال طلب تاجر إلى تلغرام (معطل) =====
-async function sendMerchantRequestToTelegram(merchant) {
-    console.log('إرسال طلب تاجر معطل - استخدم كلمة السر: azer 123456');
-}
-
-// ===== [4.47] إظهار نافذة إضافة منتج =====
+// ===== [4.46] إظهار نافذة إضافة منتج =====
 function showAddProductModal() {
     if (!requireAuth()) return;
     const modal = document.getElementById('productModal');
     if (modal) modal.style.display = 'flex';
 }
 
-// ===== [4.48] البحث عن منتج بالمعرف =====
+// ===== [4.47] البحث عن منتج بالمعرف =====
 function findProductById() {
     const id = prompt('🔍 أدخل معرف المنتج (من تلغرام):');
     if (!id) return;
@@ -1271,7 +1258,7 @@ function findProductById() {
     }
 }
 
-// ===== [4.49] دوال التمرير =====
+// ===== [4.48] دوال التمرير =====
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1286,7 +1273,7 @@ function toggleQuickTopButton() {
     quickTopBtn.classList.toggle('show', window.scrollY > 300);
 }
 
-// ===== [4.50] تبديل الثيم =====
+// ===== [4.49] تبديل الثيم =====
 function toggleTheme() {
     isDarkMode = !isDarkMode;
     document.body.classList.toggle('light-mode', !isDarkMode);
@@ -1299,7 +1286,7 @@ function toggleTheme() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ===== [4.51] فتح لوحة تحكم المدير =====
+// ===== [4.50] فتح لوحة تحكم المدير =====
 function openDashboard() {
     if (!requireAuth()) return;
     const section = document.getElementById('dashboardSection');
@@ -1310,7 +1297,7 @@ function openDashboard() {
     }
 }
 
-// ===== [4.52] عرض نظرة عامة في لوحة التحكم =====
+// ===== [4.51] عرض نظرة عامة في لوحة التحكم =====
 function showDashboardOverview() {
     const pendingMerchants = users.filter(u => u.role === 'merchant_pending').length;
     const approvedMerchants = users.filter(u => u.role === 'merchant_approved').length;
@@ -1342,37 +1329,37 @@ function showDashboardOverview() {
         </div>
         
         <div style="background: var(--glass); padding: 25px; border-radius: 15px;">
-            <h4 style="color: var(--gold); margin-bottom: 20px;">حالة النظام</h4>
-            <p>✅ كلمة السر المطلوبة: <strong style="color: var(--gold);">azer 123456</strong></p>
+            <h4 style="color: var(--gold); margin-bottom: 20px;">معلومات الدخول</h4>
+            <p>✅ اسم المستخدم: <strong style="color: var(--gold);">azer</strong></p>
+            <p>✅ كلمة المرور: <strong style="color: var(--gold);">123456</strong></p>
             <p>✅ يمكنك إضافة وحذف وتعديل المنتجات بعد تسجيل الدخول</p>
-            <p>✅ جميع الصلاحيات متاحة بعد المصادقة</p>
         </div>
     `;
 }
 
-// ===== [4.53] عرض طلبات التجار في لوحة التحكم =====
+// ===== [4.52] عرض طلبات التجار =====
 function showDashboardMerchants() {
     const content = document.getElementById('dashboardContent');
     if (!content) return;
     
     content.innerHTML = `
         <h3 style="color: var(--gold); margin-bottom: 20px;">طلبات التجار</h3>
-        <p style="color: var(--text-secondary);">نظام المصادقة بكلمة سر واحدة - استخدم: azer 123456</p>
+        <p style="color: var(--text-secondary);">بيانات الدخول: azer / 123456</p>
         <button class="btn-outline-gold" onclick="showDashboardOverview()">رجوع</button>
     `;
 }
 
-// ===== [4.54] الموافقة على تاجر (معطل) =====
+// ===== [4.53] الموافقة على تاجر =====
 function approveMerchant(id) {
-    showNotification('نظام المصادقة بكلمة سر واحدة', 'info');
+    showNotification('بيانات الدخول: azer / 123456', 'info');
 }
 
-// ===== [4.55] رفض تاجر (معطل) =====
+// ===== [4.54] رفض تاجر =====
 function rejectMerchant(id) {
-    showNotification('نظام المصادقة بكلمة سر واحدة', 'info');
+    showNotification('بيانات الدخول: azer / 123456', 'info');
 }
 
-// ===== [4.56] إرسال إشعار عام =====
+// ===== [4.55] إرسال إشعار عام =====
 async function sendNotificationToTelegram(text) {
     const message = `
 🟡 *إشعار*
@@ -1392,7 +1379,7 @@ ${text}
     });
 }
 
-// ===== [4.57] تأثيرات الكتابة =====
+// ===== [4.56] تأثيرات الكتابة =====
 class TypingAnimation {
     constructor(element, texts, speed = 100, delay = 2000) {
         this.element = element;
@@ -1436,7 +1423,12 @@ class TypingAnimation {
     }
 }
 
-// ===== [4.58] التحقق من حالة المصادقة عند التحميل =====
+// ===== [4.57] حفظ حالة المصادقة =====
+function saveAuthStatus(status) {
+    localStorage.setItem('nardoo_auth', status ? 'true' : 'false');
+}
+
+// ===== [4.58] التحقق من حالة المصادقة =====
 function checkAuthStatus() {
     const savedAuth = localStorage.getItem('nardoo_auth');
     if (savedAuth === 'true') {
@@ -1448,88 +1440,26 @@ function checkAuthStatus() {
     return false;
 }
 
-// ===== [4.59] حفظ حالة المصادقة =====
-function saveAuthStatus(status) {
-    localStorage.setItem('nardoo_auth', status ? 'true' : 'false');
-}
-
-// ===== [4.60] تحديث دالة login لحفظ الحالة =====
-function login(password) {
-    if (verifyPassword(password)) {
-        isAuthenticated = true;
-        saveAuthStatus(true);
-        initDefaultUser();
-        showNotification('✅ تم تسجيل الدخول بنجاح', 'success');
-        closeModal('loginModal');
-        updateUIBasedOnRole();
-        return true;
-    } else {
-        showNotification('❌ كلمة السر غير صحيحة', 'error');
-        return false;
-    }
-}
-
-// ===== [4.61] تحديث دالة logout =====
-function logout() {
-    isAuthenticated = false;
-    saveAuthStatus(false);
-    currentUser = null;
-    localStorage.removeItem('current_user');
-    
-    // إخفاء عناصر المدير
-    const adminElements = document.querySelectorAll('.admin-only');
-    adminElements.forEach(el => el.style.display = 'none');
-    
-    const dashboardBtn = document.getElementById('dashboardBtn');
-    if (dashboardBtn) dashboardBtn.style.display = 'none';
-    
-    const merchantPanel = document.getElementById('merchantPanelContainer');
-    if (merchantPanel) merchantPanel.style.display = 'none';
-    
-    const adminAddBtn = document.getElementById('adminAddProductBtn');
-    if (adminAddBtn) adminAddBtn.style.display = 'none';
-    
-    const searchByIdBtn = document.getElementById('searchByIdBtn');
-    if (searchByIdBtn) searchByIdBtn.style.display = 'none';
-    
-    // تحديث زر المستخدم
-    const userBtn = document.getElementById('userBtn');
-    if (userBtn) {
-        userBtn.innerHTML = '<i class="fas fa-user"></i><span>تسجيل الدخول</span>';
-        userBtn.setAttribute('onclick', 'openLoginModal()');
-        userBtn.classList.remove('admin-only');
-    }
-    
-    showNotification('🔒 تم تسجيل الخروج', 'info');
-    openLoginModal();
-}
-
-// ===== [4.62] التهيئة عند تحميل الصفحة =====
+// ===== [4.59] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
-    // إنشاء نافذة تسجيل الدخول
     createLoginModal();
     
-    // التحقق من حالة المصادقة
     const isLoggedIn = checkAuthStatus();
     
     if (isLoggedIn) {
-        // تحميل المنتجات من localStorage أولاً
         const savedProducts = localStorage.getItem('nardoo_products');
         if (savedProducts) {
             products = JSON.parse(savedProducts);
             displayProducts();
-            console.log(`📦 تم تحميل ${products.length} منتج من الذاكرة`);
+            console.log(`📦 تم تحميل ${products.length} منتج`);
         }
         
         await loadProducts();
         loadCart();
-        
         updateUIBasedOnRole();
     } else {
-        // عرض نافذة تسجيل الدخول
         openLoginModal();
         
-        // تحميل المنتجات للعرض فقط (بدون صلاحيات)
         const savedProducts = localStorage.getItem('nardoo_products');
         if (savedProducts) {
             products = JSON.parse(savedProducts);
@@ -1578,17 +1508,17 @@ window.onload = async function() {
         }
     }, 1000);
     
-    console.log('✅ النظام جاهز - كلمة السر: azer 123456');
+    console.log('✅ النظام جاهز - اسم المستخدم: azer | كلمة المرور: 123456');
 };
 
-// ===== [4.63] إغلاق النوافذ عند الضغط خارجها =====
+// ===== [4.60] إغلاق النوافذ عند الضغط خارجها =====
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 };
 
-// ===== [4.64] تصدير الدوال إلى النطاق العام =====
+// ===== [4.61] تصدير الدوال =====
 window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
@@ -1620,7 +1550,7 @@ window.showDashboardMerchants = showDashboardMerchants;
 window.approveMerchant = approveMerchant;
 window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
-window.handlePasswordLogin = handlePasswordLogin;
+window.handleFormLogin = handleFormLogin;
 window.logout = logout;
 
-console.log('✅ نظام تلغرام المتكامل جاهز - كلمة السر: azer 123456');
+console.log('✅ نظام تلغرام المتكامل جاهز - اسم المستخدم: azer | كلمة المرور: 123456');
