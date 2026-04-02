@@ -1,6 +1,6 @@
 /* ================================================================== */
-/* ===== chop.js - نظام السلة المتكامل (النسخة النهائية العاملة) ===== */
-/* ===== يدعم التقسيم حسب التجار، إتمام الطلب، واتساب، تلغرام ===== */
+/* ===== chop.js - نظام السلة المتكامل (النسخة المعدلة) ===== */
+/* ===== متوافق مع نظام telegram.js ===== */
 /* ================================================================== */
 
 // ===== [1] التأكد من وجود CONFIG =====
@@ -74,7 +74,7 @@ const CartSystem = {
         return groups;
     },
     
-    // ===== إضافة منتج للسلة (الوظيفة الرئيسية) =====
+    // ===== إضافة منتج للسلة (معدل للتوافق مع telegram.js) =====
     add(product) {
         console.log('➕ [chop.js] إضافة منتج:', product);
         
@@ -84,17 +84,43 @@ const CartSystem = {
             return false;
         }
         
-        if (product.stock <= 0) {
+        // تحديد معرف المنتج (يدعم id أو productId)
+        const productId = product.id || product.productId;
+        if (!productId) {
+            console.error('❌ المنتج بدون معرف:', product);
+            this.showNotification('المنتج غير صالح (بدون معرف)', 'error');
+            return false;
+        }
+        
+        // تحديد السعر
+        const price = product.price || 0;
+        if (price <= 0) {
+            this.showNotification('سعر المنتج غير صحيح', 'error');
+            return false;
+        }
+        
+        // تحديد الكمية المتاحة
+        const stock = product.stock || 999;
+        if (stock <= 0) {
             this.showNotification('المنتج غير متوفر', 'error');
             return false;
         }
         
-        const existing = this.items.find(i => i.productId === product.id);
+        // تحديد اسم المنتج
+        const productName = product.name || 'منتج';
+        
+        // تحديد اسم التاجر
+        const merchantName = product.merchantName || product.merchant_name || 'ناردو برو';
+        
+        // تحديد صورة المنتج
+        let image = this.getProductImage(product);
+        
+        const existing = this.items.find(i => i.productId == productId);
         
         if (existing) {
-            if (existing.quantity < product.stock) {
+            if (existing.quantity < stock) {
                 existing.quantity++;
-                this.showNotification(`✓ تم زيادة كمية ${product.name}`, 'success');
+                this.showNotification(`✓ تم زيادة كمية ${productName}`, 'success');
             } else {
                 this.showNotification('الكمية غير متوفرة', 'warning');
                 return false;
@@ -102,18 +128,18 @@ const CartSystem = {
         } else {
             // إضافة منتج جديد
             const newItem = {
-                productId: product.id,
-                name: product.name,
-                price: product.price,
+                productId: productId,
+                name: productName,
+                price: price,
                 quantity: 1,
-                merchantId: product.merchantId || product.merchantName,
-                merchantName: product.merchantName || 'ناردو برو',
+                merchantId: merchantName,
+                merchantName: merchantName,
                 merchantPhone: product.merchantPhone || null,
-                image: this.getProductImage(product),
-                stock: product.stock
+                image: image,
+                stock: stock
             };
             this.items.push(newItem);
-            this.showNotification(`✓ تم إضافة ${product.name} للسلة`, 'success');
+            this.showNotification(`✓ تم إضافة ${productName} للسلة`, 'success');
         }
         
         this.saveCart();
@@ -375,10 +401,10 @@ const CartSystem = {
             return;
         }
         
-        // التحقق من تسجيل الدخول
-        if (typeof currentUser === 'undefined' || !currentUser) {
+        // التحقق من تسجيل الدخول (متوافق مع telegram.js)
+        if (typeof window.currentUser === 'undefined' || !window.currentUser) {
             this.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
-            if (typeof openLoginModal === 'function') openLoginModal();
+            if (typeof window.openLoginModal === 'function') window.openLoginModal();
             return;
         }
         
@@ -388,11 +414,11 @@ const CartSystem = {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             
-            // تعبئة بيانات المستخدم
+            // تعبئة بيانات المستخدم من currentUser (متوافق مع telegram.js)
             const nameInput = document.getElementById('customerName');
             const phoneInput = document.getElementById('customerPhone');
-            if (nameInput && currentUser.name) nameInput.value = currentUser.name;
-            if (phoneInput && currentUser.phone) phoneInput.value = currentUser.phone;
+            if (nameInput && window.currentUser.name) nameInput.value = window.currentUser.name;
+            if (phoneInput && window.currentUser.phone) phoneInput.value = window.currentUser.phone;
         }
     },
     
@@ -463,11 +489,11 @@ const CartSystem = {
     
     // ===== إتمام الطلب =====
     async completeOrder() {
-        // التحقق من تسجيل الدخول
-        if (typeof currentUser === 'undefined' || !currentUser) {
+        // التحقق من تسجيل الدخول (متوافق مع telegram.js)
+        if (typeof window.currentUser === 'undefined' || !window.currentUser) {
             this.showNotification('يرجى تسجيل الدخول أولاً', 'warning');
             this.closeCheckout();
-            if (typeof openLoginModal === 'function') openLoginModal();
+            if (typeof window.openLoginModal === 'function') window.openLoginModal();
             return;
         }
         
@@ -514,9 +540,9 @@ const CartSystem = {
             
             let merchantPhone = null;
             
-            // البحث عن رقم التاجر
-            if (typeof users !== 'undefined' && users) {
-                const merchantUser = users.find(u => 
+            // البحث عن رقم التاجر من مصفوفة users في telegram.js
+            if (typeof window.users !== 'undefined' && window.users) {
+                const merchantUser = window.users.find(u => 
                     u.name === group.merchantName || 
                     u.storeName === group.merchantName ||
                     u.id == merchantId
@@ -1187,45 +1213,57 @@ const CartSystem = {
     }
 };
 
-// ===== [3] تصدير الدوال للاستخدام العام =====
+// ===== [3] تصدير الدوال للاستخدام العام (متوافق مع telegram.js) =====
 window.Cart = CartSystem;
 window.CartSystem = CartSystem;
 window.toggleCart = () => CartSystem.showCartSidebar();
-window.addToCart = (product) => CartSystem.add(product);
-window.updateCartItem = (productId, quantity) => CartSystem.update(productId, quantity);
-window.removeFromCart = (productId) => CartSystem.remove(productId);
-window.checkoutCart = () => CartSystem.openCheckout();
 
-// ===== [4] دالة مساعدة للإضافة من telegram.js =====
-window.addToCartFromProduct = function(productId) {
-    if (typeof products !== 'undefined') {
-        const product = products.find(p => p.id == productId);
+// دالة addToCart المعدلة لتدعم ID المنتج (كما في telegram.js)
+window.addToCart = function(productId) {
+    console.log('🛒 addToCart تم استدعاؤها بـ ID:', productId);
+    
+    // البحث عن المنتج في مصفوفة products العامة من telegram.js
+    if (typeof window.products !== 'undefined' && window.products && window.products.length > 0) {
+        const product = window.products.find(p => p.id == productId);
         if (product) {
-            console.log('🛒 إضافة منتج من telegram.js:', product);
+            console.log('✅ تم العثور على المنتج:', product);
             CartSystem.add({
                 id: product.id,
                 name: product.name,
                 price: product.price,
                 stock: product.stock,
-                merchantName: product.merchantName,
-                merchantId: product.merchantName,
+                merchantName: product.merchantName || product.merchant_name || 'ناردو برو',
+                merchantId: product.merchantId || product.merchantName,
                 merchantPhone: product.merchantPhone || null,
                 images: product.images || [product.image],
                 image: product.image || (product.images && product.images[0]) || CONFIG.defaultImage
             });
         } else {
+            console.error('❌ المنتج غير موجود في مصفوفة products، ID:', productId);
+            console.log('📋 المنتجات المتاحة:', window.products);
             CartSystem.showNotification('المنتج غير موجود', 'error');
         }
     } else {
+        console.error('❌ مصفوفة products غير معرفة أو فارغة');
         CartSystem.showNotification('نظام المنتجات غير متاح', 'error');
     }
 };
 
-// ===== [5] تهيئة السلة =====
+// دالة مساعدة للإضافة من كائن المنتج (للحالات الخاصة)
+window.addToCartFromObject = function(productObject) {
+    console.log('🛒 addToCartFromObject:', productObject);
+    CartSystem.add(productObject);
+};
+
+window.updateCartItem = (productId, quantity) => CartSystem.update(productId, quantity);
+window.removeFromCart = (productId) => CartSystem.remove(productId);
+window.checkoutCart = () => CartSystem.openCheckout();
+
+// ===== [4] تهيئة السلة =====
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => CartSystem.init());
 } else {
     CartSystem.init();
 }
 
-console.log('✅ chop.js - نظام السلة المتكامل جاهز مع تقسيم حسب التجار');
+console.log('✅ chop.js - نظام السلة المتكامل جاهز (متوافق مع telegram.js)');
