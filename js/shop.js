@@ -1,14 +1,15 @@
 /* ================================================================== */
-/* ===== [05] shop.js - نظام المتجر المتكامل ===== */
-/* ===== مع دعم السلة، الطلبات، الدفع، والتواصل ===== */
-/* ===== متوافق مع telegram.js ونظام الريلز ===== */
+/* ===== [05] shop.js - نظام المتجر المتكامل (نسخة منقحة) ===== */
+/* ===== متوافق تماماً مع telegram.js دون تداخل ===== */
 /* ================================================================== */
+
+// التحقق من وجود الدوال قبل تعريفها لتجنب التداخل
+if (typeof CartSystem === 'undefined') {
 
 // ===== [5.1] نظام السلة المتقدم =====
 const CartSystem = {
     items: [],
     
-    // تهيئة السلة
     init() {
         const saved = localStorage.getItem('nardoo_cart');
         if (saved) {
@@ -18,13 +19,11 @@ const CartSystem = {
         return this;
     },
     
-    // إضافة منتج للسلة
     add(product, quantity = 1) {
         if (!product) return false;
         
-        // التحقق من الكمية المتوفرة
         if (product.stock && product.stock < quantity) {
-            showNotification(`⚠️ الكمية المتوفرة من ${product.name} هي ${product.stock} فقط`, 'warning');
+            if (window.showNotification) showNotification(`⚠️ الكمية المتوفرة من ${product.name} هي ${product.stock} فقط`, 'warning');
             return false;
         }
         
@@ -33,7 +32,7 @@ const CartSystem = {
         if (existing) {
             const newQty = existing.quantity + quantity;
             if (product.stock && product.stock < newQty) {
-                showNotification(`⚠️ لا يمكن إضافة كمية أكبر من المتوفرة (${product.stock})`, 'warning');
+                if (window.showNotification) showNotification(`⚠️ لا يمكن إضافة كمية أكبر من المتوفرة (${product.stock})`, 'warning');
                 return false;
             }
             existing.quantity = newQty;
@@ -50,25 +49,23 @@ const CartSystem = {
         }
         
         this.save();
-        showNotification(`✅ تم إضافة ${product.name} إلى السلة`, 'success');
+        if (window.showNotification) showNotification(`✅ تم إضافة ${product.name} إلى السلة`, 'success');
         return true;
     },
     
-    // إزالة منتج من السلة
     remove(productId) {
         const index = this.items.findIndex(item => item.id == productId);
         if (index !== -1) {
             const removed = this.items[index];
             this.items.splice(index, 1);
             this.save();
-            showNotification(`🗑️ تم إزالة ${removed.name} من السلة`, 'info');
+            if (window.showNotification) showNotification(`🗑️ تم إزالة ${removed.name} من السلة`, 'info');
             this.updateUI();
             return true;
         }
         return false;
     },
     
-    // تحديث كمية منتج
     updateQuantity(productId, quantity) {
         const item = this.items.find(item => item.id == productId);
         if (item) {
@@ -76,9 +73,8 @@ const CartSystem = {
                 return this.remove(productId);
             }
             
-            // التحقق من الحد الأقصى
             if (item.maxStock && quantity > item.maxStock) {
-                showNotification(`⚠️ الكمية المتوفرة من ${item.name} هي ${item.maxStock} فقط`, 'warning');
+                if (window.showNotification) showNotification(`⚠️ الكمية المتوفرة من ${item.name} هي ${item.maxStock} فقط`, 'warning');
                 quantity = item.maxStock;
             }
             
@@ -90,31 +86,26 @@ const CartSystem = {
         return false;
     },
     
-    // حساب الإجمالي
     getTotal() {
         return this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     },
     
-    // حساب عدد العناصر
     getItemCount() {
         return this.items.reduce((sum, item) => sum + item.quantity, 0);
     },
     
-    // تفريغ السلة
     clear() {
         this.items = [];
         this.save();
         this.updateUI();
-        showNotification('🛒 تم تفريغ السلة', 'info');
+        if (window.showNotification) showNotification('🛒 تم تفريغ السلة', 'info');
     },
     
-    // حفظ السلة
     save() {
         localStorage.setItem('nardoo_cart', JSON.stringify(this.items));
         this.updateCounters();
     },
     
-    // تحديث العدادات في الواجهة
     updateCounters() {
         const count = this.getItemCount();
         const cartCounter = document.getElementById('cartCounter');
@@ -124,13 +115,11 @@ const CartSystem = {
         if (fixedCartCounter) fixedCartCounter.textContent = count;
     },
     
-    // تحديث واجهة السلة المنبثقة
     updateUI() {
         this.updateCounters();
         this.renderCartSidebar();
     },
     
-    // عرض السلة الجانبية
     renderCartSidebar() {
         let sidebar = document.getElementById('cartSidebar');
         
@@ -175,15 +164,22 @@ const CartSystem = {
             return;
         }
         
+        function escapeHtmlShop(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         itemsContainer.innerHTML = this.items.map(item => `
             <div class="cart-item" data-id="${item.id}">
                 <div class="cart-item-image">
                     ${item.image ? `<img src="${item.image}" onerror="this.src='https://via.placeholder.com/60/2c5e4f/ffffff?text=نكهة'">` : '<i class="fas fa-box"></i>'}
                 </div>
                 <div class="cart-item-info">
-                    <div class="cart-item-title">${escapeHtml(item.name)}</div>
+                    <div class="cart-item-title">${escapeHtmlShop(item.name)}</div>
                     <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
-                    <div class="cart-item-merchant"><i class="fas fa-store"></i> ${escapeHtml(item.merchantName)}</div>
+                    <div class="cart-item-merchant"><i class="fas fa-store"></i> ${escapeHtmlShop(item.merchantName)}</div>
                 </div>
                 <div class="cart-item-actions">
                     <div class="quantity-control">
@@ -201,7 +197,6 @@ const CartSystem = {
         totalSpan.textContent = this.getTotal().toLocaleString() + ' دج';
     },
     
-    // تبديل عرض السلة الجانبية
     toggleSidebar() {
         const sidebar = document.getElementById('cartSidebar');
         if (sidebar) {
@@ -209,25 +204,21 @@ const CartSystem = {
         }
     },
     
-    // إتمام عملية الشراء
     async checkout() {
         if (this.items.length === 0) {
-            showNotification('🛒 سلة التسوق فارغة', 'warning');
+            if (window.showNotification) showNotification('🛒 سلة التسوق فارغة', 'warning');
             return;
         }
         
-        // التحقق من تسجيل الدخول
-        if (!isAuthenticated && typeof isAuthenticated !== 'undefined') {
-            showNotification('🔐 الرجاء تسجيل الدخول لإتمام الشراء', 'warning');
-            openLoginModal();
+        if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+            if (window.showNotification) showNotification('🔐 الرجاء تسجيل الدخول لإتمام الشراء', 'warning');
+            if (window.openLoginModal) openLoginModal();
             return;
         }
         
-        // فتح نافذة الطلب
         this.showCheckoutModal();
     },
     
-    // عرض نافذة إتمام الطلب
     showCheckoutModal() {
         let modal = document.getElementById('checkoutModal');
         
@@ -295,14 +286,20 @@ const CartSystem = {
             document.body.appendChild(modal);
         }
         
-        // تحديث ملخص الطلب
         const summaryContainer = document.getElementById('orderSummaryItems');
         const totalSpan = document.getElementById('orderTotalAmount');
+        
+        function escapeHtmlShop(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         
         if (summaryContainer) {
             summaryContainer.innerHTML = this.items.map(item => `
                 <div class="order-item">
-                    <span>${escapeHtml(item.name)} × ${item.quantity}</span>
+                    <span>${escapeHtmlShop(item.name)} × ${item.quantity}</span>
                     <span>${(item.price * item.quantity).toLocaleString()} دج</span>
                 </div>
             `).join('');
@@ -315,7 +312,6 @@ const CartSystem = {
         modal.style.display = 'flex';
     },
     
-    // تقديم الطلب
     async submitOrder() {
         const name = document.getElementById('customerName')?.value.trim();
         const phone = document.getElementById('customerPhone')?.value.trim();
@@ -324,14 +320,13 @@ const CartSystem = {
         const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
         
         if (!name || !phone || !address) {
-            showNotification('❌ الرجاء تعبئة جميع الحقول المطلوبة', 'error');
+            if (window.showNotification) showNotification('❌ الرجاء تعبئة جميع الحقول المطلوبة', 'error');
             return;
         }
         
-        // التحقق من رقم الهاتف
         const phoneRegex = /^(05|06|07)[0-9]{8}$/;
         if (!phoneRegex.test(phone)) {
-            showNotification('❌ رقم الهاتف غير صحيح (يجب أن يبدأ بـ 05، 06، أو 07)', 'error');
+            if (window.showNotification) showNotification('❌ رقم الهاتف غير صحيح (يجب أن يبدأ بـ 05، 06، أو 07)', 'error');
             return;
         }
         
@@ -346,25 +341,19 @@ const CartSystem = {
             statusHistory: [{ status: 'pending', date: new Date().toISOString(), note: 'تم استلام الطلب' }]
         };
         
-        // حفظ الطلب محلياً
         const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
         orders.unshift(order);
         localStorage.setItem('nardoo_orders', JSON.stringify(orders));
         
-        // إرسال الطلب إلى تليجرام
         await this.sendOrderToTelegram(order);
         
-        // تفريغ السلة
         this.clear();
         
-        // إغلاق النوافذ
-        closeModal('checkoutModal');
+        if (window.closeModal) closeModal('checkoutModal');
         this.toggleSidebar();
         
-        // عرض رسالة نجاح
-        showNotification(`✅ تم استلام طلبك رقم ${order.id} بنجاح! سنتواصل معك قريباً`, 'success');
+        if (window.showNotification) showNotification(`✅ تم استلام طلبك رقم ${order.id} بنجاح! سنتواصل معك قريباً`, 'success');
         
-        // إعادة توجيه إلى صفحة الطلبات (اختياري)
         setTimeout(() => {
             if (confirm('هل تريد عرض تفاصيل طلبك؟')) {
                 this.showOrderDetails(order.id);
@@ -372,30 +361,36 @@ const CartSystem = {
         }, 1000);
     },
     
-    // إرسال الطلب إلى تليجرام
     async sendOrderToTelegram(order) {
-        if (typeof TELEGRAM === 'undefined') {
+        if (typeof TELEGRAM === 'undefined' || !TELEGRAM.botToken) {
             console.log('⚠️ نظام تليجرام غير متاح');
             return;
         }
         
         try {
+            function escapeMarkdown(text) {
+                if (!text) return '';
+                return String(text).replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+            }
+            
             const itemsList = order.items.map(item => 
-                `📦 ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج`
+                `📦 ${escapeMarkdown(item.name)} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج`
             ).join('\n');
+            
+            const paymentNames = { 'cash': 'الدفع عند الاستلام', 'card': 'بطاقة ائتمان', 'cib': 'تحويل بنكي CIB' };
             
             const message = `🛒 *طلب جديد #${order.id}*
 ━━━━━━━━━━━━━━━━━━━━━━
-👤 *العميل:* ${order.customer.name}
+👤 *العميل:* ${escapeMarkdown(order.customer.name)}
 📞 *الهاتف:* ${order.customer.phone}
-📍 *العنوان:* ${order.customer.address}
-${order.customer.notes ? `📝 *ملاحظات:* ${order.customer.notes}\n` : ''}
+📍 *العنوان:* ${escapeMarkdown(order.customer.address)}
+${order.customer.notes ? `📝 *ملاحظات:* ${escapeMarkdown(order.customer.notes)}\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━
 *المنتجات:*
 ${itemsList}
 ━━━━━━━━━━━━━━━━━━━━━━
 💰 *الإجمالي:* ${order.total.toLocaleString()} دج
-💳 *طريقة الدفع:* ${this.getPaymentMethodName(order.paymentMethod)}
+💳 *طريقة الدفع:* ${paymentNames[order.paymentMethod] || order.paymentMethod}
 📅 *التاريخ:* ${new Date(order.createdAt).toLocaleString('ar-EG')}
 ━━━━━━━━━━━━━━━━━━━━━━
 ✅ يرجى التواصل مع العميل لتأكيد الطلب`;
@@ -420,17 +415,16 @@ ${itemsList}
         }
     },
     
-    // الحصول على اسم طريقة الدفع
     getPaymentMethodName(method) {
-        const methods = {
-            'cash': 'الدفع عند الاستلام',
-            'card': 'بطاقة ائتمان',
-            'cib': 'تحويل بنكي CIB'
-        };
+        const methods = { 'cash': 'الدفع عند الاستلام', 'card': 'بطاقة ائتمان', 'cib': 'تحويل بنكي CIB' };
         return methods[method] || method;
     },
     
-    // عرض تفاصيل الطلب
+    getOrderStatusName(status) {
+        const names = { 'pending': 'قيد الانتظار', 'processing': 'قيد المعالجة', 'shipped': 'تم الشحن', 'delivered': 'تم التوصيل', 'cancelled': 'ملغي' };
+        return names[status] || status;
+    },
+    
     showOrderDetails(orderId) {
         const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
         const order = orders.find(o => o.id === orderId);
@@ -446,21 +440,15 @@ ${itemsList}
             document.body.appendChild(modal);
         }
         
-        const statusColors = {
-            pending: '#fbbf24',
-            processing: '#60a5fa',
-            shipped: '#8b5cf6',
-            delivered: '#4ade80',
-            cancelled: '#f87171'
-        };
+        function escapeHtmlShop(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
         
-        const statusNames = {
-            pending: 'قيد الانتظار',
-            processing: 'قيد المعالجة',
-            shipped: 'تم الشحن',
-            delivered: 'تم التوصيل',
-            cancelled: 'ملغي'
-        };
+        const statusColors = { pending: '#fbbf24', processing: '#60a5fa', shipped: '#8b5cf6', delivered: '#4ade80', cancelled: '#f87171' };
+        const statusNames = { pending: 'قيد الانتظار', processing: 'قيد المعالجة', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'ملغي' };
         
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
@@ -469,48 +457,38 @@ ${itemsList}
                     <button class="close-btn" onclick="closeModal('orderDetailModal')">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="order-status-badge" style="background: ${statusColors[order.status]};">
+                    <div class="order-status-badge" style="background: ${statusColors[order.status]}; padding: 8px 16px; border-radius: 20px; text-align: center; color: black; font-weight: bold;">
                         ${statusNames[order.status]}
                     </div>
                     
-                    <div class="order-info-section">
+                    <div class="order-info-section" style="margin-top: 20px;">
                         <h4><i class="fas fa-user"></i> معلومات العميل</h4>
-                        <p><strong>الاسم:</strong> ${escapeHtml(order.customer.name)}</p>
+                        <p><strong>الاسم:</strong> ${escapeHtmlShop(order.customer.name)}</p>
                         <p><strong>الهاتف:</strong> ${order.customer.phone}</p>
-                        <p><strong>العنوان:</strong> ${escapeHtml(order.customer.address)}</p>
-                        ${order.customer.notes ? `<p><strong>ملاحظات:</strong> ${escapeHtml(order.customer.notes)}</p>` : ''}
+                        <p><strong>العنوان:</strong> ${escapeHtmlShop(order.customer.address)}</p>
+                        ${order.customer.notes ? `<p><strong>ملاحظات:</strong> ${escapeHtmlShop(order.customer.notes)}</p>` : ''}
                     </div>
                     
-                    <div class="order-info-section">
+                    <div class="order-info-section" style="margin-top: 20px;">
                         <h4><i class="fas fa-box"></i> المنتجات</h4>
                         ${order.items.map(item => `
-                            <div class="order-item-detail">
-                                <span>${escapeHtml(item.name)} × ${item.quantity}</span>
+                            <div class="order-item-detail" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #ddd;">
+                                <span>${escapeHtmlShop(item.name)} × ${item.quantity}</span>
                                 <span>${(item.price * item.quantity).toLocaleString()} دج</span>
                             </div>
                         `).join('')}
-                        <div class="order-total-detail">
+                        <div class="order-total-detail" style="display: flex; justify-content: space-between; padding: 10px 0; font-weight: bold;">
                             <strong>الإجمالي:</strong>
                             <strong>${order.total.toLocaleString()} دج</strong>
                         </div>
                     </div>
                     
-                    <div class="order-info-section">
+                    <div class="order-info-section" style="margin-top: 20px;">
                         <h4><i class="fas fa-credit-card"></i> طريقة الدفع</h4>
                         <p>${this.getPaymentMethodName(order.paymentMethod)}</p>
                     </div>
                     
-                    <div class="order-info-section">
-                        <h4><i class="fas fa-history"></i> سجل الحالة</h4>
-                        ${order.statusHistory.map(h => `
-                            <div class="status-history-item">
-                                <span class="status-date">${new Date(h.date).toLocaleString('ar-EG')}</span>
-                                <span class="status-note">${h.note}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <button class="btn-gold" onclick="closeModal('orderDetailModal')" style="width: 100%;">
+                    <button class="btn-gold" onclick="closeModal('orderDetailModal')" style="width: 100%; margin-top: 20px;">
                         <i class="fas fa-check"></i> إغلاق
                     </button>
                 </div>
@@ -520,17 +498,16 @@ ${itemsList}
         modal.style.display = 'flex';
     },
     
-    // عرض جميع الطلبات (للمدير)
     showAllOrders() {
-        if (!isAuthenticated && typeof isAuthenticated !== 'undefined') {
-            showNotification('🔐 هذه الصفحة للمدير فقط', 'warning');
+        if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) {
+            if (window.showNotification) showNotification('🔐 هذه الصفحة للمدير فقط', 'warning');
             return;
         }
         
         const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
         
         if (orders.length === 0) {
-            showNotification('📭 لا توجد طلبات حتى الآن', 'info');
+            if (window.showNotification) showNotification('📭 لا توجد طلبات حتى الآن', 'info');
             return;
         }
         
@@ -543,6 +520,13 @@ ${itemsList}
             document.body.appendChild(modal);
         }
         
+        function escapeHtmlShop(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         modal.innerHTML = `
             <div class="modal-content modal-lg" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
                 <div class="modal-header">
@@ -551,19 +535,19 @@ ${itemsList}
                 </div>
                 <div class="modal-body">
                     ${orders.map(order => `
-                        <div class="order-card" onclick="CartSystem.showOrderDetails('${order.id}')" style="cursor: pointer;">
-                            <div class="order-card-header">
-                                <span class="order-id">#${order.id}</span>
-                                <span class="order-date">${new Date(order.createdAt).toLocaleString('ar-EG')}</span>
+                        <div class="order-card" onclick="CartSystem.showOrderDetails('${order.id}')" style="cursor: pointer; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,215,0,0.3);">
+                            <div class="order-card-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span class="order-id" style="color: gold; font-weight: bold;">#${order.id}</span>
+                                <span class="order-date" style="font-size: 12px;">${new Date(order.createdAt).toLocaleString('ar-EG')}</span>
                             </div>
-                            <div class="order-card-body">
-                                <div><i class="fas fa-user"></i> ${escapeHtml(order.customer.name)}</div>
+                            <div class="order-card-body" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
+                                <div><i class="fas fa-user"></i> ${escapeHtmlShop(order.customer.name)}</div>
                                 <div><i class="fas fa-phone"></i> ${order.customer.phone}</div>
                                 <div><i class="fas fa-box"></i> ${order.items.length} منتج</div>
                                 <div><i class="fas fa-money-bill"></i> ${order.total.toLocaleString()} دج</div>
                             </div>
                             <div class="order-card-footer">
-                                <span class="order-status">${this.getOrderStatusName(order.status)}</span>
+                                <span class="order-status" style="background: #fbbf24; padding: 4px 12px; border-radius: 20px; font-size: 12px;">${this.getOrderStatusName(order.status)}</span>
                             </div>
                         </div>
                     `).join('')}
@@ -572,22 +556,44 @@ ${itemsList}
         `;
         
         modal.style.display = 'flex';
-    },
-    
-    // الحصول على اسم حالة الطلب
-    getOrderStatusName(status) {
-        const names = {
-            pending: 'قيد الانتظار',
-            processing: 'قيد المعالجة',
-            shipped: 'تم الشحن',
-            delivered: 'تم التوصيل',
-            cancelled: 'ملغي'
-        };
-        return names[status] || status;
     }
 };
 
-// ===== [5.2] نظام المفضلة =====
+} // نهاية التحقق من وجود CartSystem
+
+// ===== [5.2] دوال مساعدة للسلة (بدون تداخل مع telegram.js) =====
+if (typeof toggleCart === 'undefined') {
+    window.toggleCart = function() {
+        if (CartSystem) CartSystem.toggleSidebar();
+    };
+}
+
+if (typeof addToCart === 'undefined') {
+    window.addToCart = function(product) {
+        if (CartSystem) CartSystem.add(product, 1);
+    };
+}
+
+if (typeof addToCartFromProduct === 'undefined') {
+    window.addToCartFromProduct = function(productId) {
+        if (typeof products !== 'undefined' && products && CartSystem) {
+            const product = products.find(p => p.id == productId);
+            if (product) {
+                CartSystem.add(product, 1);
+            }
+        }
+    };
+}
+
+if (typeof showAllOrders === 'undefined') {
+    window.showAllOrders = function() {
+        if (CartSystem) CartSystem.showAllOrders();
+    };
+}
+
+// ===== [5.3] نظام المفضلة =====
+if (typeof WishlistSystem === 'undefined') {
+
 const WishlistSystem = {
     items: [],
     
@@ -601,7 +607,7 @@ const WishlistSystem = {
     
     add(product) {
         if (this.items.some(item => item.id === product.id)) {
-            showNotification(`${product.name} موجود بالفعل في المفضلة`, 'info');
+            if (window.showNotification) showNotification(`${product.name} موجود بالفعل في المفضلة`, 'info');
             return false;
         }
         
@@ -614,7 +620,7 @@ const WishlistSystem = {
         });
         
         this.save();
-        showNotification(`❤️ تم إضافة ${product.name} إلى المفضلة`, 'success');
+        if (window.showNotification) showNotification(`❤️ تم إضافة ${product.name} إلى المفضلة`, 'success');
         return true;
     },
     
@@ -624,7 +630,7 @@ const WishlistSystem = {
             const removed = this.items[index];
             this.items.splice(index, 1);
             this.save();
-            showNotification(`💔 تم إزالة ${removed.name} من المفضلة`, 'info');
+            if (window.showNotification) showNotification(`💔 تم إزالة ${removed.name} من المفضلة`, 'info');
             return true;
         }
         return false;
@@ -650,7 +656,7 @@ const WishlistSystem = {
     
     showWishlist() {
         if (this.items.length === 0) {
-            showNotification('❤️ لا توجد منتجات في المفضلة', 'info');
+            if (window.showNotification) showNotification('❤️ لا توجد منتجات في المفضلة', 'info');
             return;
         }
         
@@ -663,6 +669,13 @@ const WishlistSystem = {
             document.body.appendChild(modal);
         }
         
+        function escapeHtmlShop(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
@@ -671,20 +684,20 @@ const WishlistSystem = {
                 </div>
                 <div class="modal-body">
                     ${this.items.map(item => `
-                        <div class="wishlist-item">
-                            <div class="wishlist-item-image">
-                                ${item.image ? `<img src="${item.image}" onerror="this.src='https://via.placeholder.com/60/2c5e4f/ffffff?text=نكهة'">` : '<i class="fas fa-box"></i>'}
+                        <div class="wishlist-item" style="display: flex; gap: 15px; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div class="wishlist-item-image" style="width: 60px; height: 60px; background: rgba(255,215,0,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                ${item.image ? `<img src="${item.image}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;" onerror="this.src='https://via.placeholder.com/60/2c5e4f/ffffff?text=نكهة'">` : '<i class="fas fa-box" style="font-size: 24px;"></i>'}
                             </div>
-                            <div class="wishlist-item-info">
-                                <div class="wishlist-item-title">${escapeHtml(item.name)}</div>
-                                <div class="wishlist-item-price">${item.price.toLocaleString()} دج</div>
-                                <div class="wishlist-item-merchant"><i class="fas fa-store"></i> ${escapeHtml(item.merchantName)}</div>
+                            <div class="wishlist-item-info" style="flex: 1;">
+                                <div class="wishlist-item-title" style="font-weight: bold;">${escapeHtmlShop(item.name)}</div>
+                                <div class="wishlist-item-price" style="color: gold;">${item.price.toLocaleString()} دج</div>
+                                <div class="wishlist-item-merchant" style="font-size: 12px;"><i class="fas fa-store"></i> ${escapeHtmlShop(item.merchantName)}</div>
                             </div>
-                            <div class="wishlist-item-actions">
-                                <button class="btn-gold-small" onclick="viewProductDetails(${item.id}); closeModal('wishlistModal')">
+                            <div class="wishlist-item-actions" style="display: flex; gap: 10px;">
+                                <button class="btn-gold-small" onclick="viewProductDetails(${item.id}); closeModal('wishlistModal')" style="padding: 8px 12px; border-radius: 8px;">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn-danger-small" onclick="WishlistSystem.remove(${item.id}); this.closest('.wishlist-item').remove(); if(WishlistSystem.items.length===0) closeModal('wishlistModal')">
+                                <button class="btn-danger-small" onclick="WishlistSystem.remove(${item.id}); this.closest('.wishlist-item').remove(); if(WishlistSystem.items.length===0) closeModal('wishlistModal')" style="padding: 8px 12px; border-radius: 8px; background: rgba(255,100,100,0.2); border: none; color: #ff6b6b; cursor: pointer;">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -698,12 +711,23 @@ const WishlistSystem = {
     }
 };
 
-// ===== [5.3] نظام التقييمات والمراجعات =====
+}
+
+if (typeof showWishlist === 'undefined') {
+    window.showWishlist = function() {
+        if (WishlistSystem) WishlistSystem.showWishlist();
+    };
+}
+
+// ===== [5.4] نظام التقييمات =====
+if (typeof ReviewSystem === 'undefined') {
+
 const ReviewSystem = {
-    // إضافة تقييم
+    currentRating: 0,
+    
     addReview(productId, rating, comment, userName) {
         if (!rating || rating < 1 || rating > 5) {
-            showNotification('❌ الرجاء اختيار تقييم من 1 إلى 5 نجوم', 'error');
+            if (window.showNotification) showNotification('❌ الرجاء اختيار تقييم من 1 إلى 5 نجوم', 'error');
             return false;
         }
         
@@ -722,20 +746,17 @@ const ReviewSystem = {
         reviews.push(newReview);
         localStorage.setItem(`nardoo_reviews_${productId}`, JSON.stringify(reviews));
         
-        // تحديث متوسط التقييم للمنتج
         this.updateProductRating(productId);
         
-        showNotification('⭐ تم إضافة تقييمك بنجاح!', 'success');
+        if (window.showNotification) showNotification('⭐ تم إضافة تقييمك بنجاح!', 'success');
         return true;
     },
     
-    // الحصول على تقييمات المنتج
     getProductReviews(productId) {
         const saved = localStorage.getItem(`nardoo_reviews_${productId}`);
         return saved ? JSON.parse(saved) : [];
     },
     
-    // حساب متوسط التقييم
     getAverageRating(productId) {
         const reviews = this.getProductReviews(productId);
         if (reviews.length === 0) return 0;
@@ -743,20 +764,18 @@ const ReviewSystem = {
         return sum / reviews.length;
     },
     
-    // تحديث تقييم المنتج في localStorage
     updateProductRating(productId) {
         const avg = this.getAverageRating(productId);
-        if (avg > 0 && products && products.length > 0) {
+        if (avg > 0 && typeof products !== 'undefined' && products && products.length > 0) {
             const productIndex = products.findIndex(p => p.id == productId);
             if (productIndex !== -1) {
                 products[productIndex].rating = avg;
                 localStorage.setItem('nardoo_products', JSON.stringify(products));
-                displayProducts();
+                if (window.displayProducts) displayProducts();
             }
         }
     },
     
-    // عرض نافذة التقييم
     showReviewModal(product) {
         let modal = document.getElementById('reviewModal');
         
@@ -771,11 +790,11 @@ const ReviewSystem = {
                         <button class="close-btn" onclick="closeModal('reviewModal')">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <h3 id="reviewProductName"></h3>
-                        <div class="rating-input">
+                        <h3 id="reviewProductName" style="color: gold;"></h3>
+                        <div class="rating-input" style="margin: 20px 0;">
                             <label>تقييمك:</label>
-                            <div class="stars-input" id="starsInput">
-                                ${[1,2,3,4,5].map(i => `<i class="far fa-star" data-rating="${i}" onclick="ReviewSystem.setRating(${i})"></i>`).join('')}
+                            <div class="stars-input" id="starsInput" style="display: flex; gap: 10px; margin-top: 10px;">
+                                ${[1,2,3,4,5].map(i => `<i class="far fa-star" data-rating="${i}" onclick="ReviewSystem.setRating(${i})" style="font-size: 30px; cursor: pointer;"></i>`).join('')}
                             </div>
                         </div>
                         <div class="form-group">
@@ -795,16 +814,20 @@ const ReviewSystem = {
             document.body.appendChild(modal);
         }
         
-        document.getElementById('reviewProductName').textContent = product.name;
-        document.getElementById('reviewComment').value = '';
-        document.getElementById('reviewerName').value = '';
+        const nameElement = document.getElementById('reviewProductName');
+        if (nameElement) nameElement.textContent = product.name;
+        
+        const commentElement = document.getElementById('reviewComment');
+        if (commentElement) commentElement.value = '';
+        
+        const nameInput = document.getElementById('reviewerName');
+        if (nameInput) nameInput.value = '';
+        
         this.currentRating = 0;
         this.updateStarsDisplay();
         
         modal.style.display = 'flex';
     },
-    
-    currentRating: 0,
     
     setRating(rating) {
         this.currentRating = rating;
@@ -824,7 +847,7 @@ const ReviewSystem = {
     
     submitReview(productId) {
         if (this.currentRating === 0) {
-            showNotification('❌ الرجاء اختيار عدد النجوم', 'error');
+            if (window.showNotification) showNotification('❌ الرجاء اختيار عدد النجوم', 'error');
             return;
         }
         
@@ -832,15 +855,16 @@ const ReviewSystem = {
         const userName = document.getElementById('reviewerName')?.value || 'مستخدم';
         
         this.addReview(productId, this.currentRating, comment, userName);
-        closeModal('reviewModal');
+        if (window.closeModal) closeModal('reviewModal');
         
-        // عرض التقييمات بعد الإضافة
         this.showProductReviews(productId);
     },
     
-    // عرض تقييمات المنتج
     showProductReviews(productId) {
-        const product = products?.find(p => p.id == productId);
+        let product = null;
+        if (typeof products !== 'undefined' && products) {
+            product = products.find(p => p.id == productId);
+        }
         if (!product) return;
         
         const reviews = this.getProductReviews(productId);
@@ -856,37 +880,60 @@ const ReviewSystem = {
         
         const avgRating = this.getAverageRating(productId);
         
+        function escapeHtmlShop(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function generateStarsForReviews(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            let starsHTML = '';
+            for (let i = 0; i < fullStars; i++) {
+                starsHTML += '<i class="fas fa-star" style="color: gold;"></i>';
+            }
+            if (hasHalfStar) {
+                starsHTML += '<i class="fas fa-star-half-alt" style="color: gold;"></i>';
+            }
+            for (let i = 0; i < 5 - fullStars - (hasHalfStar ? 1 : 0); i++) {
+                starsHTML += '<i class="far fa-star" style="color: gold;"></i>';
+            }
+            return starsHTML;
+        }
+        
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2><i class="fas fa-star"></i> تقييمات ${escapeHtml(product.name)}</h2>
+                    <h2><i class="fas fa-star"></i> تقييمات ${escapeHtmlShop(product.name)}</h2>
                     <button class="close-btn" onclick="closeModal('reviewsModal')">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="reviews-summary">
+                    <div class="reviews-summary" style="text-align: center; padding: 20px; background: rgba(255,215,0,0.1); border-radius: 15px; margin-bottom: 20px;">
                         <div class="average-rating">
-                            <span class="avg-value">${avgRating.toFixed(1)}</span>
-                            <div class="stars">${generateStars(avgRating)}</div>
+                            <span class="avg-value" style="font-size: 48px; font-weight: bold; color: gold;">${avgRating.toFixed(1)}</span>
+                            <div class="stars" style="margin: 10px 0;">${generateStarsForReviews(avgRating)}</div>
                             <span class="review-count">(${reviews.length} تقييم)</span>
                         </div>
                     </div>
                     
                     <div class="reviews-list">
-                        ${reviews.length === 0 ? '<p class="no-reviews">لا توجد تقييمات بعد. كن أول من يقيم هذا المنتج!</p>' : 
+                        ${reviews.length === 0 ? '<p class="no-reviews" style="text-align: center; padding: 40px;">لا توجد تقييمات بعد. كن أول من يقيم هذا المنتج!</p>' : 
                             reviews.slice().reverse().map(review => `
-                                <div class="review-item">
-                                    <div class="review-header">
-                                        <strong>${escapeHtml(review.userName)}</strong>
-                                        <div class="review-stars">${generateStars(review.rating)}</div>
-                                        <span class="review-date">${new Date(review.date).toLocaleDateString('ar-EG')}</span>
+                                <div class="review-item" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding: 15px;">
+                                    <div class="review-header" style="display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px;">
+                                        <strong>${escapeHtmlShop(review.userName)}</strong>
+                                        <div class="review-stars">${generateStarsForReviews(review.rating)}</div>
+                                        <span class="review-date" style="font-size: 12px;">${new Date(review.date).toLocaleDateString('ar-EG')}</span>
                                     </div>
-                                    ${review.comment ? `<p class="review-comment">${escapeHtml(review.comment)}</p>` : ''}
+                                    ${review.comment ? `<p class="review-comment" style="margin-top: 10px;">${escapeHtmlShop(review.comment)}</p>` : ''}
                                 </div>
                             `).join('')
                         }
                     </div>
                     
-                    <button class="btn-gold" onclick="ReviewSystem.showReviewModal(${productId}); closeModal('reviewsModal')" style="width: 100%; margin-top: 20px;">
+                    <button class="btn-gold" onclick="ReviewSystem.showReviewModal(products.find(p => p.id == ${productId})); closeModal('reviewsModal')" style="width: 100%; margin-top: 20px;">
                         <i class="fas fa-plus"></i> أضف تقييمك
                     </button>
                 </div>
@@ -897,166 +944,253 @@ const ReviewSystem = {
     }
 };
 
-// ===== [5.4] تحديث واجهة المنتج لإضافة أزرار جديدة =====
-// تعديل دالة displayProducts الأصلية لإضافة أزرار المفضلة والتقييم
-const originalDisplayProducts = displayProducts;
-window.displayProducts = function() {
-    if (originalDisplayProducts) {
-        originalDisplayProducts();
-    }
-    
-    // إضافة مستمعي الأحداث لأزرار المفضلة بعد عرض المنتجات
-    setTimeout(() => {
-        document.querySelectorAll('.wishlist-btn').forEach(btn => {
-            btn.removeEventListener('click', handleWishlistClick);
-            btn.addEventListener('click', handleWishlistClick);
-        });
-        
-        document.querySelectorAll('.review-btn').forEach(btn => {
-            btn.removeEventListener('click', handleReviewClick);
-            btn.addEventListener('click', handleReviewClick);
-        });
-    }, 100);
-};
-
-function handleWishlistClick(e) {
-    e.stopPropagation();
-    const productId = this.dataset.id;
-    const product = products?.find(p => p.id == productId);
-    if (product) {
-        WishlistSystem.toggle(product);
-        // تحديث مظهر الزر
-        const icon = this.querySelector('i');
-        if (WishlistSystem.isInWishlist(productId)) {
-            icon.className = 'fas fa-heart';
-            this.style.color = 'var(--gold)';
-        } else {
-            icon.className = 'far fa-heart';
-            this.style.color = '';
-        }
-    }
 }
 
-function handleReviewClick(e) {
-    e.stopPropagation();
-    const productId = this.dataset.id;
-    const product = products?.find(p => p.id == productId);
-    if (product) {
-        ReviewSystem.showReviewModal(product);
-    }
-}
-
-// تعديل دالة عرض المنتج لتشمل الأزرار الجديدة
-const originalViewProductDetails = viewProductDetails;
-window.viewProductDetails = function(productId) {
-    const product = products?.find(p => p.id == productId);
-    if (!product) return;
-    
-    const modal = document.getElementById('productDetailModal');
-    const content = document.getElementById('productDetailContent');
-    
-    const imageUrl = product.images && product.images.length > 0 ? product.images[0] : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
-    const isInWishlist = WishlistSystem.isInWishlist(productId);
-    const avgRating = ReviewSystem.getAverageRating(productId);
-    const reviewCount = ReviewSystem.getProductReviews(productId).length;
-    
-    content.innerHTML = `
-        <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
-            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${escapeHtml(product.name)}</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; flex-wrap: wrap;">
-                <div>
-                    <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
-                </div>
-                <div>
-                    <p>🆔 المعرف: ${product.id}</p>
-                    <p>👤 الناشر: ${escapeHtml(product.merchantName)}</p>
-                    <p>${product.description || 'منتج عالي الجودة'}</p>
-                    
-                    <div class="product-rating" style="margin: 20px 0;">
-                        <div class="stars-container">${generateStars(avgRating || 4.5)}</div>
-                        <span>${(avgRating || 4.5).toFixed(1)}</span>
-                        <span style="font-size: 12px;">(${reviewCount} تقييم)</span>
-                        <button class="review-link-btn" onclick="ReviewSystem.showProductReviews(${product.id}); event.stopPropagation();" style="background: none; border: none; color: var(--gold); cursor: pointer; font-size: 12px;">
-                            <i class="fas fa-comment"></i> قراءة التقييمات
-                        </button>
-                    </div>
-                    
-                    <div style="margin: 20px 0;">
-                        <span style="font-size: 32px; color: var(--gold);">${product.price.toLocaleString()} دج</span>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <button class="btn-gold" onclick="CartSystem.add(products.find(p => p.id == ${product.id}), 1); closeModal('productDetailModal')">
-                            <i class="fas fa-shopping-cart"></i> أضف للسلة
-                        </button>
-                        <button class="btn-outline-gold" onclick="WishlistSystem.toggle(products.find(p => p.id == ${product.id})); closeModal('productDetailModal')">
-                            <i class="fas fa-heart ${isInWishlist ? 'fas' : 'far'}"></i> ${isInWishlist ? 'إزالة من المفضلة' : 'أضف للمفضلة'}
-                        </button>
-                        <button class="btn-outline-gold" onclick="ReviewSystem.showReviewModal(products.find(p => p.id == ${product.id})); closeModal('productDetailModal')">
-                            <i class="fas fa-star"></i> قيم المنتج
-                        </button>
-                        <button class="btn-outline-gold" onclick="closeModal('productDetailModal')">
-                            <i class="fas fa-times"></i> إغلاق
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    modal.style.display = 'flex';
-};
-
-// ===== [5.5] دوال مساعدة إضافية =====
-function toggleCart() {
-    CartSystem.toggleSidebar();
-}
-
-function addToCart(product) {
-    CartSystem.add(product, 1);
-}
-
-// عرض جميع الطلبات (للمدير)
-function showAllOrders() {
-    CartSystem.showAllOrders();
-}
-
-// عرض المفضلة
-function showWishlist() {
-    WishlistSystem.showWishlist();
-}
-
-// ===== [5.6] تهيئة النظام عند تحميل الصفحة =====
+// ===== [5.5] إضافة أزرار إضافية للواجهة =====
 document.addEventListener('DOMContentLoaded', function() {
-    CartSystem.init();
-    WishlistSystem.init();
+    // تهيئة السلة
+    if (CartSystem) CartSystem.init();
     
-    // إضافة أيقونة المفضلة في الهيدر
-    const headerActions = document.querySelector('.header-actions');
-    if (headerActions && !document.getElementById('wishlistBtn')) {
-        const wishlistBtn = document.createElement('button');
-        wishlistBtn.id = 'wishlistBtn';
-        wishlistBtn.className = 'action-btn';
-        wishlistBtn.setAttribute('onclick', 'showWishlist()');
-        wishlistBtn.innerHTML = '<i class="far fa-heart"></i>';
-        wishlistBtn.title = 'المفضلة';
-        headerActions.insertBefore(wishlistBtn, headerActions.children[1]);
-    }
+    // تهيئة المفضلة
+    if (WishlistSystem) WishlistSystem.init();
     
-    // إضافة زر الطلبات للمدير
-    if (isAuthenticated && typeof isAuthenticated !== 'undefined') {
-        const dashboardBtn = document.getElementById('dashboardBtn');
-        if (dashboardBtn && dashboardBtn.parentElement && !document.getElementById('ordersBtn')) {
-            const ordersBtn = document.createElement('button');
-            ordersBtn.id = 'ordersBtn';
-            ordersBtn.className = 'action-btn admin-only';
-            ordersBtn.setAttribute('onclick', 'showAllOrders()');
-            ordersBtn.innerHTML = '<i class="fas fa-clipboard-list"></i>';
-            ordersBtn.title = 'الطلبات';
-            dashboardBtn.parentElement.insertBefore(ordersBtn, dashboardBtn);
+    // إضافة أيقونة المفضلة في الهيدر (إذا لم تكن موجودة)
+    setTimeout(() => {
+        const headerActions = document.querySelector('.header-actions');
+        if (headerActions && !document.getElementById('wishlistBtn')) {
+            const wishlistBtn = document.createElement('button');
+            wishlistBtn.id = 'wishlistBtn';
+            wishlistBtn.className = 'action-btn';
+            wishlistBtn.setAttribute('onclick', 'showWishlist()');
+            wishlistBtn.innerHTML = '<i class="far fa-heart"></i>';
+            wishlistBtn.title = 'المفضلة';
+            headerActions.insertBefore(wishlistBtn, headerActions.children[1]);
         }
-    }
+        
+        // إضافة زر الطلبات للمدير
+        if (typeof isAuthenticated !== 'undefined' && isAuthenticated) {
+            const dashboardBtn = document.getElementById('dashboardBtn');
+            if (dashboardBtn && dashboardBtn.parentElement && !document.getElementById('ordersBtn')) {
+                const ordersBtn = document.createElement('button');
+                ordersBtn.id = 'ordersBtn';
+                ordersBtn.className = 'action-btn admin-only';
+                ordersBtn.setAttribute('onclick', 'showAllOrders()');
+                ordersBtn.innerHTML = '<i class="fas fa-clipboard-list"></i>';
+                ordersBtn.title = 'الطلبات';
+                dashboardBtn.parentElement.insertBefore(ordersBtn, dashboardBtn);
+            }
+        }
+    }, 500);
 });
 
-console.log('✅ نظام المتجر المتكامل (shop.js) جاهز');
-console.log('📦 الميزات: سلة متقدمة | مفضلة | تقييمات | طلبات | دفع');
+// إضافة أنماط CSS للسلة والمفضلة
+const shopStyles = document.createElement('style');
+shopStyles.textContent = `
+    /* أنماط السلة الجانبية */
+    .cart-sidebar {
+        position: fixed;
+        top: 0;
+        left: -400px;
+        width: 400px;
+        height: 100vh;
+        background: var(--bg-primary, #1a1a2e);
+        z-index: 10001;
+        transition: left 0.3s ease;
+        box-shadow: -5px 0 30px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid rgba(255,215,0,0.3);
+    }
+    
+    .cart-sidebar.open {
+        left: 0;
+    }
+    
+    .cart-sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid rgba(255,215,0,0.3);
+        background: rgba(0,0,0,0.3);
+    }
+    
+    .cart-sidebar-header h3 {
+        color: gold;
+        margin: 0;
+    }
+    
+    .cart-close {
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: white;
+    }
+    
+    .cart-sidebar-items {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+    }
+    
+    .cart-item {
+        display: flex;
+        gap: 15px;
+        padding: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 10px;
+    }
+    
+    .cart-item-image {
+        width: 70px;
+        height: 70px;
+        background: rgba(255,215,0,0.1);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    .cart-item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .cart-item-info {
+        flex: 1;
+    }
+    
+    .cart-item-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .cart-item-price {
+        color: gold;
+        font-size: 14px;
+    }
+    
+    .cart-item-merchant {
+        font-size: 11px;
+        color: #aaa;
+    }
+    
+    .cart-item-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+    }
+    
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .quantity-control button {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,215,0,0.3);
+        background: rgba(255,255,255,0.1);
+        cursor: pointer;
+        color: white;
+    }
+    
+    .cart-remove {
+        background: rgba(255,100,100,0.2);
+        border: none;
+        padding: 5px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #ff6b6b;
+    }
+    
+    .cart-sidebar-footer {
+        padding: 20px;
+        border-top: 1px solid rgba(255,215,0,0.3);
+        background: rgba(0,0,0,0.3);
+    }
+    
+    .cart-total {
+        display: flex;
+        justify-content: space-between;
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    
+    .cart-total .total-amount {
+        color: gold;
+    }
+    
+    .empty-cart {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    
+    .empty-cart i {
+        font-size: 60px;
+        color: rgba(255,215,0,0.3);
+        margin-bottom: 20px;
+    }
+    
+    /* أنماط الطلبات */
+    .order-summary {
+        background: rgba(255,215,0,0.1);
+        padding: 15px;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
+    
+    .order-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .order-total {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        font-size: 18px;
+        border-top: 2px solid gold;
+        margin-top: 10px;
+    }
+    
+    .payment-methods {
+        margin: 20px 0;
+    }
+    
+    .payment-method {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        cursor: pointer;
+    }
+    
+    /* أنماط المفضلة */
+    .wishlist-item-actions button:hover {
+        transform: scale(1.05);
+    }
+    
+    @media (max-width: 480px) {
+        .cart-sidebar {
+            width: 100%;
+            left: -100%;
+        }
+    }
+`;
+
+document.head.appendChild(shopStyles);
+
+console.log('✅ shop.js (النسخة المنقحة) جاهز - متوافق تماماً مع telegram.js');
