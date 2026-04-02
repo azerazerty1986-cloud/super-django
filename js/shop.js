@@ -1,206 +1,267 @@
-// ===== ملف تجريبي لاختبار السلة مع نظام تلغرام =====
+/* ================================================================== */
+/* ===== [03] الملف: 03-shop.js - نظام المتجر والمنتجات ===== */
+/* ===== مع سلة تسوق متكاملة ومتقدمة ===== */
+/* ================================================================== */
 
-// 1. إعدادات بسيطة
-const CONFIG = {
-    currency: 'دج',
-    shipping: 800,
-    phone: '2135622448',
-    defaultImage: 'https://via.placeholder.com/300x300?text=No+Image'
-};
-
-// 2. منتجات تجريبية
-window.products = [
-    {
-        id: 1,
-        name: 'قهوة عربية',
-        price: 150,
-        stock: 20,
-        merchantName: 'ناردو برو',
-        image: 'https://via.placeholder.com/300/2c5e4f/ffffff?text=قهوة'
-    },
-    {
-        id: 2,
-        name: 'زعفران',
-        price: 300,
-        stock: 10,
-        merchantName: 'ناردو برو',
-        image: 'https://via.placeholder.com/300/2c5e4f/ffffff?text=زعفران'
-    },
-    {
-        id: 3,
-        name: 'عسل جبلي',
-        price: 500,
-        stock: 5,
-        merchantName: 'ناردو برو',
-        image: 'https://via.placeholder.com/300/2c5e4f/ffffff?text=عسل'
-    }
-];
-
-// 3. نظام السلة المتكامل (مأخوذ من كود تلغرام)
-const Cart = {
-    items: [],
+// ===== [3.1] نظام المنتجات =====
+const ShopSystem = {
+    products: [],
+    currentFilter: 'all',
+    searchTerm: '',
+    sortBy: 'newest',
     
-    init() {
-        this.load();
-        this.updateDisplay();
-        this.createUI();
-        console.log('✅ السلة جاهزة');
-    },
-    
-    load() {
-        const saved = localStorage.getItem('nardoo_cart');
-        this.items = saved ? JSON.parse(saved) : [];
-    },
-    
-    save() {
-        localStorage.setItem('nardoo_cart', JSON.stringify(this.items));
-        this.updateDisplay();
-    },
-    
-    add(productId) {
-        const product = window.products.find(p => p.id == productId);
-        if (!product) {
-            this.showMessage('المنتج غير موجود', 'error');
-            return;
-        }
-        
-        if (product.stock <= 0) {
-            this.showMessage('المنتج غير متوفر', 'error');
-            return;
-        }
-        
-        const existing = this.items.find(i => i.id == productId);
-        if (existing) {
-            if (existing.quantity < product.stock) {
-                existing.quantity++;
-                this.showMessage(`✓ تم زيادة كمية ${product.name}`, 'success');
-            } else {
-                this.showMessage('الكمية غير متوفرة', 'warning');
-                return;
-            }
+    // تحميل المنتجات
+    async loadProducts() {
+        // محاولة جلب من تلغرام أولاً
+        if (window.Telegram && Telegram.fetchProducts) {
+            this.products = await Telegram.fetchProducts();
         } else {
-            this.items.push({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                quantity: 1,
-                merchantName: product.merchantName,
-                image: product.image
-            });
-            this.showMessage(`✓ تم إضافة ${product.name} للسلة`, 'success');
+            this.products = Utils.load('nardoo_products', []);
         }
         
-        this.save();
-        this.showCart();
-    },
-    
-    remove(id) {
-        this.items = this.items.filter(i => i.id != id);
-        this.save();
-        this.showMessage('✓ تم حذف المنتج', 'info');
-        this.updateDisplay();
-    },
-    
-    update(id, newQty) {
-        const item = this.items.find(i => i.id == id);
-        if (item) {
-            if (newQty <= 0) {
-                this.remove(id);
-            } else {
-                const product = window.products.find(p => p.id == id);
-                if (newQty <= (product?.stock || 999)) {
-                    item.quantity = newQty;
-                    this.save();
-                } else {
-                    this.showMessage('الكمية غير متوفرة', 'warning');
-                }
-            }
+        // إذا لم توجد منتجات، أنشئ منتجات افتراضية
+        if (this.products.length === 0) {
+            this.createDefaultProducts();
         }
+        
+        this.displayProducts();
+        return this.products;
     },
     
-    getTotal() {
-        return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    // إنشاء منتجات افتراضية
+    createDefaultProducts() {
+        const merchantId = 'MER_001001';
+        
+        this.products = [
+            {
+                id: IDSystem.generateProductId(merchantId),
+                productId: IDSystem.generateProductId(merchantId),
+                name: 'زعتر فلسطيني',
+                price: 500,
+                category: 'spices',
+                stock: 50,
+                minStock: 10,
+                maxStock: 100,
+                merchantId: merchantId,
+                merchantName: 'المتجر الرئيسي',
+                description: 'زعتر فلسطيني أصلي 100%',
+                images: [CONFIG.defaultImage],
+                rating: 4.5,
+                soldCount: 150,
+                createdAt: new Date().toISOString(),
+                dateStr: 'الآن'
+            },
+            {
+                id: IDSystem.generateProductId(merchantId),
+                productId: IDSystem.generateProductId(merchantId),
+                name: 'كريم ترطيب',
+                price: 1200,
+                category: 'cosmetic',
+                stock: 30,
+                minStock: 5,
+                maxStock: 50,
+                merchantId: merchantId,
+                merchantName: 'المتجر الرئيسي',
+                description: 'كريم ترطيب للبشرة',
+                images: [CONFIG.defaultImage],
+                rating: 4.3,
+                soldCount: 75,
+                createdAt: new Date().toISOString(),
+                dateStr: 'الآن'
+            },
+            {
+                id: IDSystem.generateProductId(merchantId),
+                productId: IDSystem.generateProductId(merchantId),
+                name: 'بخور عود',
+                price: 1500,
+                category: 'other',
+                stock: 15,
+                minStock: 3,
+                maxStock: 30,
+                merchantId: merchantId,
+                merchantName: 'المتجر الرئيسي',
+                description: 'بخور عود فاخر',
+                images: [CONFIG.defaultImage],
+                rating: 4.8,
+                soldCount: 45,
+                createdAt: new Date().toISOString(),
+                dateStr: 'الآن'
+            }
+        ];
+        
+        this.saveProducts();
     },
     
-    getCount() {
-        return this.items.reduce((sum, i) => sum + i.quantity, 0);
+    // حفظ المنتجات
+    saveProducts() {
+        Utils.save('nardoo_products', this.products);
     },
     
-    updateDisplay() {
-        const container = document.getElementById('cartItems');
+    // عرض المنتجات
+    displayProducts() {
+        const container = document.getElementById('productsContainer');
         if (!container) return;
         
-        if (this.items.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center;padding:60px 20px;">
-                    <i class="fas fa-shopping-cart" style="font-size:60px;color:#2c5e4f;opacity:0.5;margin-bottom:20px;"></i>
-                    <p style="color:#888;">سلة التسوق فارغة</p>
-                </div>
-            `;
-            document.getElementById('cartSubtotal').textContent = '0 دج';
-            document.getElementById('cartShipping').textContent = `${CONFIG.shipping} دج`;
-            document.getElementById('cartTotalAmount').textContent = `${CONFIG.shipping} دج`;
-            document.getElementById('cartCount').textContent = '0';
-            this.updateFloatCount();
+        let filtered = this.filterProducts();
+        filtered = this.sortProducts(filtered);
+        
+        if (filtered.length === 0) {
+            container.innerHTML = this.getEmptyStateHTML();
             return;
         }
         
-        let html = '';
-        let subtotal = 0;
+        container.innerHTML = filtered.map(p => this.getProductCardHTML(p)).join('');
+    },
+    
+    // تصفية المنتجات
+    filterProducts() {
+        let filtered = this.products.filter(p => p.stock > 0);
         
-        this.items.forEach(item => {
-            const itemTotal = item.price * item.quantity;
-            subtotal += itemTotal;
-            
-            html += `
-                <div style="display:flex;gap:15px;padding:15px;border-bottom:1px solid #eee;align-items:center;">
-                    <img src="${item.image}" style="width:60px;height:60px;border-radius:12px;object-fit:cover;">
-                    <div style="flex:1;">
-                        <div style="font-weight:bold;margin-bottom:5px;">${item.name}</div>
-                        <div style="font-size:12px;color:#888;">${item.merchantName}</div>
-                        <div style="color:#2c5e4f;font-weight:bold;">${item.price.toLocaleString()} دج</div>
-                    </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-                        <div style="display:flex;gap:8px;align-items:center;">
-                            <button onclick="Cart.update(${item.id}, ${item.quantity - 1})" 
-                                style="width:28px;height:28px;border-radius:6px;background:#f0f0f0;border:none;cursor:pointer;">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <span style="min-width:30px;text-align:center;font-weight:bold;">${item.quantity}</span>
-                            <button onclick="Cart.update(${item.id}, ${item.quantity + 1})" 
-                                style="width:28px;height:28px;border-radius:6px;background:#f0f0f0;border:none;cursor:pointer;">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button onclick="Cart.remove(${item.id})" 
-                                style="width:28px;height:28px;border-radius:6px;background:#ff4444;border:none;color:white;cursor:pointer;">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                        <div style="font-weight:bold;">${itemTotal.toLocaleString()} دج</div>
-                    </div>
+        if (this.currentFilter !== 'all') {
+            filtered = filtered.filter(p => p.category === this.currentFilter);
+        }
+        
+        if (this.searchTerm) {
+            const term = this.searchTerm.toLowerCase();
+            filtered = filtered.filter(p => 
+                p.name.toLowerCase().includes(term) ||
+                (p.description && p.description.toLowerCase().includes(term))
+            );
+        }
+        
+        return filtered;
+    },
+    
+    // ترتيب المنتجات
+    sortProducts(products) {
+        const sorts = {
+            'newest': (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+            'price_low': (a, b) => a.price - b.price,
+            'price_high': (a, b) => b.price - a.price,
+            'name': (a, b) => a.name.localeCompare(b.name),
+            'rating': (a, b) => (b.rating || 0) - (a.rating || 0)
+        };
+        
+        return products.sort(sorts[this.sortBy] || sorts.newest);
+    },
+    
+    // HTML لبطاقة المنتج
+    getProductCardHTML(product) {
+        const mainImage = product.images && product.images.length > 0 ? product.images[0] : CONFIG.defaultImage;
+        const categoryName = this.getCategoryName(product.category);
+        const stockClass = this.getStockClass(product.stock);
+        const stockText = this.getStockText(product.stock);
+        
+        return `
+        <div class="product-card" onclick="App.showProductDetail('${product.id}')">
+            <div class="product-time-badge">
+                <i class="far fa-clock"></i> ${product.dateStr || Utils.getTimeAgo(product.createdAt)}
+            </div>
+            <div class="product-gallery">
+                <img src="${mainImage}" alt="${product.name}" onerror="this.src='${CONFIG.defaultImage}'">
+                ${product.images && product.images.length > 1 ? 
+                    `<span class="image-counter"><i class="fas fa-images"></i> ${product.images.length}</span>` : ''}
+            </div>
+            <div class="product-info">
+                <span class="product-category">${categoryName}</span>
+                <h3 class="product-title">${product.name}</h3>
+                <div class="product-merchant-info">
+                    <i class="fas fa-store"></i> ${product.merchantName}
+                    <small>(${product.merchantId})</small>
                 </div>
-            `;
-        });
-        
-        container.innerHTML = html;
-        
-        const total = subtotal + CONFIG.shipping;
-        
-        document.getElementById('cartSubtotal').textContent = `${subtotal.toLocaleString()} دج`;
-        document.getElementById('cartShipping').textContent = `${CONFIG.shipping} دج`;
-        document.getElementById('cartTotalAmount').textContent = `${total.toLocaleString()} دج`;
-        document.getElementById('cartCount').textContent = this.getCount();
-        
-        this.updateFloatCount();
+                <div class="product-price">${product.price.toLocaleString()} <small>دج</small></div>
+                <div class="product-stock ${stockClass}">${stockText}</div>
+                <div class="product-actions">
+                    <button class="add-to-cart" 
+                            onclick="event.stopPropagation(); App.addToCart('${product.id}')"
+                            ${product.stock <= 0 ? 'disabled' : ''}>
+                        <i class="fas fa-shopping-cart"></i> أضف للسلة
+                    </button>
+                </div>
+            </div>
+        </div>`;
     },
     
-    updateFloatCount() {
-        const floatCount = document.getElementById('floatCartCount');
-        if (floatCount) floatCount.textContent = this.getCount();
+    // HTML للحالة الفارغة
+    getEmptyStateHTML() {
+        const canAdd = Auth.currentUser && 
+                       (Auth.currentUser.role === 'admin' || Auth.currentUser.role === 'merchant');
+        
+        return `
+            <div style="grid-column:1/-1; text-align:center; padding:80px 20px;">
+                <i class="fas fa-box-open" style="font-size:80px; color:var(--gold); margin-bottom:20px;"></i>
+                <h3 style="color:var(--gold);">لا توجد منتجات</h3>
+                ${canAdd ? 
+                    '<button class="btn-gold" onclick="App.openAddProductModal()"><i class="fas fa-plus"></i> إضافة منتج جديد</button>' : 
+                    '<p style="color:var(--text-secondary);">سجل دخول كتاجر لإضافة منتجات</p>'}
+            </div>
+        `;
     },
     
-    createUI() {
-        if (document.getElementById('testCartSidebar')) return;
+    // اسم القسم
+    getCategoryName(cat) {
+        const names = {
+            promo: 'برموسيو',
+            spices: 'توابل',
+            cosmetic: 'كوسمتيك',
+            other: 'أخرى'
+        };
+        return names[cat] || cat;
+    },
+    
+    // كلاس المخزون
+    getStockClass(stock) {
+        if (stock <= 0) return 'out-of-stock';
+        if (stock < 5) return 'low-stock';
+        return 'in-stock';
+    },
+    
+    // نص المخزون
+    getStockText(stock) {
+        if (stock <= 0) return 'غير متوفر';
+        if (stock < 5) return `كمية محدودة (${stock})`;
+        return `متوفر (${stock})`;
+    },
+    
+    // تغيير التصفية
+    filter(category) {
+        this.currentFilter = category;
+        this.displayProducts();
+    },
+    
+    // بحث
+    search(term) {
+        this.searchTerm = term;
+        this.displayProducts();
+    },
+    
+    // تغيير الترتيب
+    setSort(sortBy) {
+        this.sortBy = sortBy;
+        this.displayProducts();
+    },
+    
+    // الحصول على منتج
+    getProduct(productId) {
+        return this.products.find(p => p.id === productId || p.productId === productId);
+    }
+};
+
+// ===== [3.2] نظام السلة المتكامل (مدمج من الملف التجريبي) =====
+const CartSystem = {
+    items: [],
+    
+    // التهيئة
+    init() {
+        this.items = Utils.load('nardoo_cart', []);
+        this.updateCounter();
+        this.createCartUI();
+        console.log('✅ نظام السلة جاهز');
+    },
+    
+    // إنشاء واجهة السلة
+    createCartUI() {
+        if (document.getElementById('mainCartSidebar')) return;
         
         // إضافة أنماط FontAwesome إذا لم تكن موجودة
         if (!document.querySelector('link[href*="font-awesome"]')) {
@@ -211,62 +272,62 @@ const Cart = {
         }
         
         const html = `
-            <div id="testCartSidebar" style="
+            <div id="mainCartSidebar" style="
                 position: fixed;
                 top: 0;
                 right: -420px;
                 width: 420px;
                 height: 100vh;
-                background: white;
+                background: var(--bg-primary, white);
                 box-shadow: -2px 0 10px rgba(0,0,0,0.2);
                 z-index: 10000;
                 transition: right 0.3s ease;
                 display: flex;
                 flex-direction: column;
             ">
-                <div style="padding:20px; background:#2c5e4f; color:white; display:flex; justify-content:space-between; align-items:center;">
+                <div style="padding:20px; background: var(--gold, #2c5e4f); color: white; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin:0;">
                         <i class="fas fa-shopping-cart"></i> سلة التسوق 
-                        <span id="cartCount" style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:20px; margin-left:8px;">0</span>
+                        <span id="mainCartCount" style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:20px; margin-left:8px;">0</span>
                     </h3>
-                    <button onclick="Cart.close()" style="background:none;border:none;color:white;font-size:28px;cursor:pointer;">&times;</button>
+                    <button onclick="CartSystem.close()" style="background:none;border:none;color:white;font-size:28px;cursor:pointer;">&times;</button>
                 </div>
                 
-                <div id="cartItems" style="flex:1; overflow-y:auto; padding:15px;"></div>
+                <div id="mainCartItems" style="flex:1; overflow-y:auto; padding:15px;"></div>
                 
-                <div style="padding:20px; border-top:1px solid #ddd; background:#f9f9f9;">
+                <div style="padding:20px; border-top:1px solid var(--border, #ddd); background: var(--bg-secondary, #f9f9f9);">
                     <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                        <span style="color:#666;">المجموع الفرعي:</span>
+                        <span style="color: var(--text-secondary, #666);">المجموع الفرعي:</span>
                         <span id="cartSubtotal" style="font-weight:bold;">0 دج</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                        <span style="color:#666;">الشحن:</span>
-                        <span id="cartShipping">${CONFIG.shipping} دج</span>
+                        <span style="color: var(--text-secondary, #666);">الشحن:</span>
+                        <span id="cartShippingAmount">${CONFIG.shipping || 800} دج</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:18px; margin-top:12px; padding-top:12px; border-top:2px solid #2c5e4f;">
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:18px; margin-top:12px; padding-top:12px; border-top:2px solid var(--gold, #2c5e4f);">
                         <span>الإجمالي:</span>
-                        <span id="cartTotalAmount" style="color:#2c5e4f;">0 دج</span>
+                        <span id="cartTotalAmount" style="color: var(--gold, #2c5e4f);">0 دج</span>
                     </div>
                     
-                    <button onclick="Cart.checkout()" style="
+                    <button onclick="CartSystem.checkout()" style="
                         width:100%; 
                         padding:14px; 
-                        background:#2c5e4f; 
-                        color:white; 
-                        border:none; 
-                        border-radius:10px; 
-                        margin-top:15px; 
-                        cursor:pointer;
-                        font-size:16px;
-                        font-weight:bold;
-                        transition:all 0.3s;
-                    " onmouseover="this.style.background='#1e453a'" onmouseout="this.style.background='#2c5e4f'">
+                        background: var(--gold, #2c5e4f); 
+                        color: white; 
+                        border: none; 
+                        border-radius: 10px; 
+                        margin-top: 15px; 
+                        cursor: pointer;
+                        font-size: 16px;
+                        font-weight: bold;
+                        transition: all 0.3s;
+                    ">
                         <i class="fas fa-check-circle"></i> إتمام الطلب
                     </button>
                 </div>
             </div>
             
-            <div id="testCartOverlay" onclick="Cart.close()" style="
+            <div id="mainCartOverlay" onclick="CartSystem.close()" style="
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -281,16 +342,24 @@ const Cart = {
         document.body.insertAdjacentHTML('beforeend', html);
         
         // إضافة زر عائم
+        this.createFloatingButton();
+    },
+    
+    // إنشاء الزر العائم
+    createFloatingButton() {
+        if (document.getElementById('floatingCartBtn')) return;
+        
         const floatBtn = document.createElement('div');
+        floatBtn.id = 'floatingCartBtn';
         floatBtn.innerHTML = `
-            <button onclick="Cart.toggle()" style="
+            <button onclick="CartSystem.toggle()" style="
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
                 width: 60px;
                 height: 60px;
                 border-radius: 50%;
-                background: #2c5e4f;
+                background: var(--gold, #2c5e4f);
                 color: white;
                 border: none;
                 cursor: pointer;
@@ -298,8 +367,8 @@ const Cart = {
                 box-shadow: 0 4px 15px rgba(0,0,0,0.3);
                 z-index: 9998;
                 transition: all 0.3s;
-            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                🛒 <span id="floatCartCount" style="
+            ">
+                🛒 <span id="floatingCartCount" style="
                     position: absolute;
                     top: -5px;
                     right: -5px;
@@ -316,246 +385,288 @@ const Cart = {
             </button>
         `;
         document.body.appendChild(floatBtn);
-        
-        this.updateDisplay();
     },
     
+    // تبديل السلة
     toggle() {
-        const sidebar = document.getElementById('testCartSidebar');
-        const overlay = document.getElementById('testCartOverlay');
+        const sidebar = document.getElementById('mainCartSidebar');
+        const overlay = document.getElementById('mainCartOverlay');
         if (sidebar.style.right === '0px') {
             this.close();
         } else {
-            this.show();
+            this.open();
         }
     },
     
-    show() {
-        document.getElementById('testCartSidebar').style.right = '0';
-        document.getElementById('testCartOverlay').style.display = 'block';
-        this.updateDisplay();
+    // فتح السلة
+    open() {
+        document.getElementById('mainCartSidebar').style.right = '0';
+        document.getElementById('mainCartOverlay').style.display = 'block';
+        this.display();
     },
     
+    // إغلاق السلة
     close() {
-        document.getElementById('testCartSidebar').style.right = '-420px';
-        document.getElementById('testCartOverlay').style.display = 'none';
+        document.getElementById('mainCartSidebar').style.right = '-420px';
+        document.getElementById('mainCartOverlay').style.display = 'none';
     },
     
-    showCart() {
-        this.show();
-    },
-    
-    showMessage(msg, type) {
-        // إنشاء حاوية الإشعارات إذا لم تكن موجودة
-        let container = document.getElementById('toastContainer');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.style.cssText = `
-                position: fixed;
-                bottom: 100px;
-                right: 20px;
-                z-index: 10001;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            `;
-            document.body.appendChild(container);
+    // إضافة للسلة
+    add(productId) {
+        const product = ShopSystem.getProduct(productId);
+        if (!product || product.stock <= 0) {
+            Utils.showNotification('المنتج غير متوفر', 'error');
+            return false;
         }
         
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : type === 'warning' ? '#fbbf24' : '#60a5fa'};
-            color: ${type === 'warning' ? 'black' : 'white'};
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-weight: bold;
-            animation: slideInRight 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            direction: rtl;
-        `;
-        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${msg}`;
-        container.appendChild(toast);
+        const existing = this.items.find(i => i.productId === productId);
         
-        setTimeout(() => {
-            toast.style.animation = 'fadeOutRight 0.3s ease';
-            setTimeout(() => toast.remove(), 300);
-        }, 2500);
+        if (existing) {
+            if (existing.quantity < product.stock) {
+                existing.quantity++;
+                Utils.showNotification(`✓ تم زيادة كمية ${product.name}`, 'success');
+            } else {
+                Utils.showNotification('الكمية غير متوفرة', 'warning');
+                return false;
+            }
+        } else {
+            this.items.push({
+                productId: productId,
+                name: product.name,
+                price: product.price,
+                quantity: 1,
+                merchantId: product.merchantId,
+                merchantName: product.merchantName,
+                image: product.images ? product.images[0] : product.image
+            });
+            Utils.showNotification(`✓ تم إضافة ${product.name} للسلة`, 'success');
+        }
+        
+        this.save();
+        this.open(); // فتح السلة تلقائياً عند الإضافة
+        return true;
     },
     
-    checkout() {
-        if (this.items.length === 0) {
-            this.showMessage('السلة فارغة', 'warning');
+    // تحديث الكمية
+    update(productId, newQuantity) {
+        if (newQuantity <= 0) {
+            this.remove(productId);
             return;
         }
         
-        const subtotal = this.getTotal();
-        const total = subtotal + CONFIG.shipping;
+        const item = this.items.find(i => i.productId === productId);
+        const product = ShopSystem.getProduct(productId);
+        
+        if (item && product && newQuantity <= product.stock) {
+            item.quantity = newQuantity;
+            this.save();
+        } else {
+            Utils.showNotification('الكمية غير متوفرة', 'warning');
+        }
+    },
+    
+    // حذف من السلة
+    remove(productId) {
+        const item = this.items.find(i => i.productId === productId);
+        this.items = this.items.filter(i => i.productId !== productId);
+        this.save();
+        Utils.showNotification(`✓ تم حذف ${item?.name || 'المنتج'} من السلة`, 'info');
+    },
+    
+    // حفظ السلة
+    save() {
+        Utils.save('nardoo_cart', this.items);
+        this.updateCounter();
+        this.display();
+    },
+    
+    // تحديث العداد
+    updateCounter() {
+        const count = this.items.reduce((sum, i) => sum + i.quantity, 0);
+        
+        // تحديث جميع أعداد السلة
+        ['mainCartCount', 'cartCounter', 'fixedCartCounter', 'floatingCartCount'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = count;
+        });
+        
+        // تحديث عداد شريط التنقل إذا وجد
+        const cartBtn = document.querySelector('.cart-btn .badge');
+        if (cartBtn) cartBtn.textContent = count;
+    },
+    
+    // عرض السلة
+    display() {
+        const container = document.getElementById('mainCartItems');
+        if (!container) return;
+        
+        if (this.items.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px;">
+                    <i class="fas fa-shopping-cart" style="font-size:60px; color:var(--gold, #2c5e4f); opacity:0.5; margin-bottom:20px;"></i>
+                    <p style="color: var(--text-secondary, #888);">سلة التسوق فارغة</p>
+                    <button class="btn-outline-gold" onclick="CartSystem.close()" style="margin-top:20px;">
+                        <i class="fas fa-arrow-right"></i> متابعة التسوق
+                    </button>
+                </div>
+            `;
+            document.getElementById('cartSubtotal').textContent = '0 دج';
+            document.getElementById('cartTotalAmount').textContent = `${CONFIG.shipping || 800} دج`;
+            return;
+        }
+        
+        let subtotal = 0;
+        let itemsHtml = '';
+        
+        this.items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            subtotal += itemTotal;
+            
+            itemsHtml += `
+                <div class="cart-item" style="
+                    display: flex;
+                    gap: 15px;
+                    padding: 15px;
+                    border-bottom: 1px solid rgba(0,0,0,0.1);
+                    align-items: center;
+                ">
+                    <div style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <img src="${item.image || CONFIG.defaultImage}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; margin-bottom: 5px;">${item.name}</div>
+                        <div style="font-size: 12px; color: #888;">${item.merchantName || 'ناردو برو'}</div>
+                        <div style="color: var(--gold, #2c5e4f); font-weight: bold;">${item.price.toLocaleString()} دج</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button onclick="CartSystem.update('${item.productId}', ${item.quantity - 1})" 
+                                style="width: 28px; height: 28px; border-radius: 6px; background: #f0f0f0; border: none; cursor: pointer;">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <span style="min-width: 30px; text-align: center; font-weight: bold;">${item.quantity}</span>
+                            <button onclick="CartSystem.update('${item.productId}', ${item.quantity + 1})" 
+                                style="width: 28px; height: 28px; border-radius: 6px; background: #f0f0f0; border: none; cursor: pointer;">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button onclick="CartSystem.remove('${item.productId}')" 
+                                style="width: 28px; height: 28px; border-radius: 6px; background: #f87171; border: none; color: white; cursor: pointer;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        <div style="font-weight: bold;">${itemTotal.toLocaleString()} دج</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = itemsHtml;
+        
+        const shipping = CONFIG.shipping || 800;
+        const total = subtotal + shipping;
+        
+        document.getElementById('cartSubtotal').textContent = `${subtotal.toLocaleString()} دج`;
+        document.getElementById('cartShippingAmount').textContent = `${shipping} دج`;
+        document.getElementById('cartTotalAmount').textContent = `${total.toLocaleString()} دج`;
+    },
+    
+    // إتمام الشراء
+    checkout() {
+        if (this.items.length === 0) {
+            Utils.showNotification('السلة فارغة', 'warning');
+            return;
+        }
+        
+        const subtotal = this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const shipping = CONFIG.shipping || 800;
+        const total = subtotal + shipping;
         
         // بناء رسالة الطلب
-        let orderMessage = `🛍️ طلب جديد\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-        this.items.forEach(item => {
-            orderMessage += `📦 ${item.name} x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
+        let orderMessage = `🛍️ *طلب جديد - ناردو برو*\n`;
+        orderMessage += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        this.items.forEach((item, index) => {
+            orderMessage += `📦 ${index + 1}. ${item.name}\n`;
+            orderMessage += `   الكمية: ${item.quantity}\n`;
+            orderMessage += `   السعر: ${(item.price * item.quantity).toLocaleString()} دج\n\n`;
         });
+        
         orderMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        orderMessage += `💰 المجموع: ${subtotal.toLocaleString()} دج\n`;
-        orderMessage += `🚚 الشحن: ${CONFIG.shipping} دج\n`;
+        orderMessage += `💰 المجموع الفرعي: ${subtotal.toLocaleString()} دج\n`;
+        orderMessage += `🚚 الشحن: ${shipping} دج\n`;
         orderMessage += `💎 الإجمالي: ${total.toLocaleString()} دج\n`;
         orderMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-        orderMessage += `📅 ${new Date().toLocaleString('ar-EG')}`;
+        
+        if (Auth.currentUser) {
+            orderMessage += `\n👤 العميل: ${Auth.currentUser.name}\n`;
+            orderMessage += `📞 الهاتف: ${Auth.currentUser.phone || 'غير مدخل'}\n`;
+            orderMessage += `📧 البريد: ${Auth.currentUser.email || 'غير مدخل'}\n`;
+        } else {
+            const name = prompt('👤 أدخل اسمك:', '');
+            const phone = prompt('📞 أدخل رقم هاتفك:', '');
+            
+            if (name && phone) {
+                orderMessage += `\n👤 العميل: ${name}\n`;
+                orderMessage += `📞 الهاتف: ${phone}\n`;
+            } else {
+                Utils.showNotification('يجب إدخال الاسم والهاتف', 'warning');
+                return;
+            }
+        }
+        
+        orderMessage += `\n📅 التاريخ: ${new Date().toLocaleString('ar-EG')}\n`;
+        orderMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+        orderMessage += `شكراً لتسوقكم مع ناردو برو 🛍️`;
         
         // فتح واتساب لإرسال الطلب
-        const whatsappUrl = `https://wa.me/${CONFIG.phone}?text=${encodeURIComponent(orderMessage)}`;
+        const whatsappUrl = `https://wa.me/${CONFIG.phone || '2135622448'}?text=${encodeURIComponent(orderMessage)}`;
         window.open(whatsappUrl, '_blank');
         
-        this.showMessage(`✅ تم إرسال الطلب! الإجمالي: ${total.toLocaleString()} دج`, 'success');
+        // إرسال للتلغرام إذا كان متاحاً
+        if (window.Telegram && Telegram.sendOrder) {
+            Telegram.sendOrder({
+                customer: Auth.currentUser?.name || 'زائر',
+                phone: Auth.currentUser?.phone || '',
+                items: this.items,
+                total: total
+            });
+        }
         
-        // تفريغ السلة
+        Utils.showNotification(`✅ تم إرسال الطلب! الإجمالي: ${total.toLocaleString()} دج`, 'success');
+        
+        // تفريغ السلة بعد ثانيتين
+        setTimeout(() => {
+            this.items = [];
+            this.save();
+            this.close();
+        }, 2000);
+    },
+    
+    // تفريغ السلة
+    clear() {
         this.items = [];
         this.save();
-        this.close();
+        Utils.showNotification('🗑️ تم تفريغ السلة', 'info');
+    },
+    
+    // الحصول على عدد العناصر
+    getCount() {
+        return this.items.reduce((sum, i) => sum + i.quantity, 0);
+    },
+    
+    // الحصول على المجموع
+    getTotal() {
+        return this.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     }
 };
 
-// 4. إضافة أزرار للمنتجات في الصفحة
-function createProductButtons() {
-    const container = document.getElementById('productsContainer');
-    
-    const productsHTML = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:25px;padding:20px;max-width:1200px;margin:0 auto;">
-            ${window.products.map(p => `
-                <div style="
-                    border:1px solid #eee;
-                    border-radius:16px;
-                    padding:20px;
-                    text-align:center;
-                    transition:transform 0.3s,box-shadow 0.3s;
-                    background:white;
-                " onmouseover="this.style.transform='translateY(-5px)';this.style.boxShadow='0 10px 25px rgba(0,0,0,0.1)'" 
-                   onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none'">
-                    <img src="${p.image}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;">
-                    <h3 style="margin:15px 0 10px;font-size:20px;">${p.name}</h3>
-                    <div style="color:#2c5e4f;font-size:24px;font-weight:bold;">${p.price.toLocaleString()} <small style="font-size:14px;">دج</small></div>
-                    <div style="font-size:12px;color:#888;margin:8px 0;">
-                        ${p.stock > 0 ? `<span style="color:#4ade80;">✓ متوفر (${p.stock})</span>` : '<span style="color:#f87171;">✗ غير متوفر</span>'}
-                    </div>
-                    <button onclick="Cart.add(${p.id})" 
-                        style="
-                            margin-top:15px;
-                            padding:12px 25px;
-                            background:#2c5e4f;
-                            color:white;
-                            border:none;
-                            border-radius:25px;
-                            cursor:pointer;
-                            font-size:16px;
-                            font-weight:bold;
-                            transition:all 0.3s;
-                            width:100%;
-                        " 
-                        onmouseover="this.style.background='#1e453a'"
-                        onmouseout="this.style.background='#2c5e4f'"
-                        ${p.stock <= 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
-                        🛒 إضافة للسلة
-                    </button>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    if (container) {
-        container.innerHTML = productsHTML;
-    } else {
-        // إذا لم يوجد حاوية، ننشئها
-        const wrapper = document.createElement('div');
-        wrapper.id = 'productsContainer';
-        wrapper.innerHTML = productsHTML;
-        document.body.insertBefore(wrapper, document.body.firstChild);
-    }
-}
+// ===== [3.3] تهيئة الأنظمة =====
+window.Shop = ShopSystem;
+window.Cart = CartSystem;
 
-// 5. إضافة أنماط CSS
-function addStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        @keyframes fadeOutRight {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-        }
-        
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Cairo', 'Tajawal', sans-serif;
-            background: #f5f5f5;
-            direction: rtl;
-        }
-        
-        /* تخصيص شريط التمرير */
-        #cartItems::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        #cartItems::-webkit-scrollbar-track {
-            background: #f0f0f0;
-        }
-        
-        #cartItems::-webkit-scrollbar-thumb {
-            background: #2c5e4f;
-            border-radius: 10px;
-        }
-        
-        /* تأثيرات للأزرار */
-        button {
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        button:active {
-            transform: scale(0.95);
-        }
-    `;
-    document.head.appendChild(style);
-}
+// تهيئة السلة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    CartSystem.init();
+});
 
-// 6. إضافة عنوان للصفحة
-function addHeader() {
-    const header = document.createElement('div');
-    header.style.cssText = `
-        background: linear-gradient(135deg, #2c5e4f 0%, #1e453a 100%);
-        color: white;
-        padding: 40px 20px;
-        text-align: center;
-    `;
-    header.innerHTML = `
-        <h1 style="margin:0;font-size:36px;">🛍️ ناردو برو</h1>
-        <p style="margin:10px 0 0;opacity:0.9;">أفضل المنتجات بأفضل الأسعار</p>
-    `;
-    document.body.insertBefore(header, document.body.firstChild);
-}
-
-// 7. تشغيل السلة
-Cart.init();
-addStyles();
-addHeader();
-createProductButtons();
-
-console.log('✅ نظام السلة المتكامل جاهز!');
-console.log('📦 تم تحميل', window.products.length, 'منتج');
+console.log('✅ نظام المتجر مع السلة المتكاملة جاهز');
