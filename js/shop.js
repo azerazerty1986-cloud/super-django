@@ -1,4 +1,3 @@
-
 /* ================================================================== */
 /* ===== [05] shop.js - نظام المتجر المتكامل (النسخة النهائية) ===== */
 /* ================================================================== */
@@ -149,6 +148,16 @@ const CartSystem = {
             return;
         }
         
+        // تجميع المنتجات حسب اسم التاجر
+        const groupedByMerchant = {};
+        this.items.forEach(item => {
+            const merchantName = item.merchantName || 'ناردو برو';
+            if (!groupedByMerchant[merchantName]) {
+                groupedByMerchant[merchantName] = [];
+            }
+            groupedByMerchant[merchantName].push(item);
+        });
+        
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -156,29 +165,53 @@ const CartSystem = {
             return div.innerHTML;
         }
         
-        itemsContainer.innerHTML = this.items.map(item => `
-            <div class="cart-item" data-id="${item.id}">
-                <div class="cart-item-image">
-                    ${item.image ? `<img src="${item.image}" onerror="this.src='https://via.placeholder.com/60/2c5e4f/ffffff?text=نكهة'">` : '<i class="fas fa-box"></i>'}
-                </div>
-                <div class="cart-item-info">
-                    <div class="cart-item-title">${escapeHtml(item.name)}</div>
-                    <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
-                    <div class="cart-item-merchant"><i class="fas fa-store"></i> ${escapeHtml(item.merchantName)}</div>
-                </div>
-                <div class="cart-item-actions">
-                    <div class="quantity-control">
-                        <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
-                        <span>${item.quantity}</span>
-                        <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+        // بناء HTML مع تجميع حسب التاجر
+        let html = '';
+        for (const [merchantName, merchantItems] of Object.entries(groupedByMerchant)) {
+            // حساب إجمالي هذا التاجر
+            const merchantTotal = merchantItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            html += `
+                <div class="merchant-group">
+                    <div class="merchant-header">
+                        <i class="fas fa-store"></i>
+                        <span class="merchant-name">${escapeHtml(merchantName)}</span>
+                        <span class="merchant-total">${merchantTotal.toLocaleString()} دج</span>
                     </div>
-                    <button class="cart-remove" onclick="CartSystem.remove(${item.id})">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    <div class="merchant-items">
+            `;
+            
+            merchantItems.forEach(item => {
+                html += `
+                    <div class="cart-item" data-id="${item.id}">
+                        <div class="cart-item-image">
+                            ${item.image ? `<img src="${item.image}" onerror="this.src='https://via.placeholder.com/60/2c5e4f/ffffff?text=نكهة'">` : '<i class="fas fa-box"></i>'}
+                        </div>
+                        <div class="cart-item-info">
+                            <div class="cart-item-title">${escapeHtml(item.name)}</div>
+                            <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+                        </div>
+                        <div class="cart-item-actions">
+                            <div class="quantity-control">
+                                <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                                <span>${item.quantity}</span>
+                                <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                            </div>
+                            <button class="cart-remove" onclick="CartSystem.remove(${item.id})">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }
         
+        itemsContainer.innerHTML = html;
         totalSpan.textContent = this.getTotal().toLocaleString() + ' دج';
     },
     
@@ -465,7 +498,6 @@ function addCartStyles() {
         .cart-item-info { flex: 1; }
         .cart-item-title { font-weight: bold; margin-bottom: 5px; }
         .cart-item-price { color: gold; font-size: 14px; }
-        .cart-item-merchant { font-size: 11px; color: #aaa; }
         
         .cart-item-actions {
             display: flex;
@@ -524,6 +556,48 @@ function addCartStyles() {
             font-size: 60px;
             color: rgba(255,215,0,0.3);
             margin-bottom: 20px;
+        }
+        
+        /* أنماط تجميع المنتجات حسب التاجر */
+        .merchant-group {
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .merchant-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: rgba(255,215,0,0.1);
+            border-bottom: 1px solid rgba(255,215,0,0.2);
+            font-weight: bold;
+        }
+        
+        .merchant-name {
+            flex: 1;
+            margin-right: 10px;
+            color: gold;
+        }
+        
+        .merchant-total {
+            color: #ffd700;
+            font-size: 14px;
+        }
+        
+        .merchant-items {
+            padding: 5px;
+        }
+        
+        .merchant-items .cart-item {
+            margin-bottom: 5px;
+        }
+        
+        .merchant-items .cart-item:last-child {
+            border-bottom: none;
         }
         
         @keyframes slideUp {
