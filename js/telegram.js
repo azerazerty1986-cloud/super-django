@@ -1,26 +1,22 @@
 /* ================================================================== */
-/* ===== ملف: telegram.js - نظام تكامل تلغرام ===== */
+/* ===== ملف: telegram.js - نظام تكامل تلغرام الكامل ===== */
 /* ================================================================== */
 
-// ==================== القسم 1: إعدادات تلغرام ====================
-
-const TELEGRAM_CONFIG = {
+// ==================== إعدادات تلغرام ====================
+const TELEGRAM = {
     botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
     channelId: '-1003822964890',
     adminId: '7461896689',
-    apiUrl: 'https://api.telegram.org/bot',
-    storageKey: 'nardoo_products',
-    requestsStorageKey: 'sent_merchant_requests'
+    apiUrl: 'https://api.telegram.org/bot'
 };
 
-// ==================== القسم 2: المتغيرات العامة ====================
-
+// ==================== متغيرات ====================
 let telegramProducts = [];
 let lastProcessedUpdateId = 0;
 let processedRequests = {};
 let isLoading = false;
 
-// ==================== القسم 3: جلب المنتجات من تلغرام ====================
+// ==================== القسم 1: جلب المنتجات ====================
 
 async function fetchProductsFromTelegram() {
     if (isLoading) return telegramProducts;
@@ -30,7 +26,7 @@ async function fetchProductsFromTelegram() {
         console.log('🔄 جاري جلب المنتجات من تلغرام...');
         
         // عرض المنتجات المخزنة مؤقتاً
-        const saved = localStorage.getItem(TELEGRAM_CONFIG.storageKey);
+        const saved = localStorage.getItem('nardoo_products');
         if (saved && telegramProducts.length === 0) {
             telegramProducts = JSON.parse(saved);
             if (typeof window.displayProducts === 'function') {
@@ -40,11 +36,9 @@ async function fetchProductsFromTelegram() {
         }
         
         // جلب التحديثات من تلغرام
-        const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/getUpdates?limit=100`);
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
         
-        if (!response.ok) {
-            throw new Error('فشل الاتصال بتلغرام');
-        }
+        if (!response.ok) throw new Error('فشل الاتصال بتلغرام');
         
         const data = await response.json();
         const newProducts = [];
@@ -76,16 +70,17 @@ async function fetchProductsFromTelegram() {
         const mergedProducts = mergeProducts(telegramProducts, newProducts);
         
         // حفظ في localStorage
-        localStorage.setItem(TELEGRAM_CONFIG.storageKey, JSON.stringify(mergedProducts));
+        localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
         
         telegramProducts = mergedProducts;
-        if (typeof window.displayProducts === 'function') {
-            window.displayProducts();
-        }
         
         // مزامنة مع المتجر الرئيسي
         if (typeof window.products !== 'undefined') {
             window.products = telegramProducts;
+        }
+        
+        if (typeof window.displayProducts === 'function') {
+            window.displayProducts();
         }
         
         return mergedProducts;
@@ -102,7 +97,7 @@ async function fetchProductsFromTelegram() {
     }
 }
 
-// ==================== القسم 4: استخراج بيانات المنتج ====================
+// ==================== القسم 2: استخراج بيانات المنتج ====================
 
 async function extractProductFromPost(post) {
     const caption = post.caption || '';
@@ -171,7 +166,7 @@ async function extractProductFromPost(post) {
         rating: 4.5,
         image: imageUrl,
         images: [imageUrl],
-        telegramLink: `https://t.me/c/${TELEGRAM_CONFIG.channelId.replace('-100', '')}/${post.message_id}`,
+        telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${post.message_id}`,
         createdAt: new Date(post.date * 1000).toISOString(),
         dateStr: getTimeAgo(post.date)
     };
@@ -181,12 +176,12 @@ async function extractProductFromPost(post) {
 async function getTelegramFileUrl(fileId) {
     try {
         const response = await fetch(
-            `${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/getFile?file_id=${fileId}`
+            `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`
         );
         const data = await response.json();
         
         if (data.ok && data.result) {
-            return `https://api.telegram.org/file/bot${TELEGRAM_CONFIG.botToken}/${data.result.file_path}`;
+            return `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${data.result.file_path}`;
         }
     } catch (error) {
         console.error('❌ خطأ في جلب رابط الملف:', error);
@@ -210,19 +205,19 @@ function mergeProducts(oldProducts, newProducts) {
     return merged;
 }
 
-// ==================== القسم 5: إرسال المنتجات إلى تلغرام ====================
+// ==================== القسم 3: إرسال المنتجات ====================
 
 async function addProductToTelegram(product, imageFile) {
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product.name);
         
         const formData = new FormData();
-        formData.append('chat_id', TELEGRAM_CONFIG.channelId);
+        formData.append('chat_id', TELEGRAM.channelId);
         formData.append('photo', imageFile);
         formData.append('caption', formatProductCaption(product));
         formData.append('parse_mode', 'Markdown');
 
-        const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendPhoto`, {
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendPhoto`, {
             method: 'POST',
             body: formData
         });
@@ -269,59 +264,7 @@ function formatProductCaption(product) {
 ✅ للطلب: تواصل مع التاجر`;
 }
 
-// ==================== القسم 6: إدارة طلبات التجار ====================
-
-async function sendMerchantRequestToTelegram(merchant) {
-    const sentRequests = JSON.parse(localStorage.getItem(TELEGRAM_CONFIG.requestsStorageKey) || '[]');
-    
-    if (sentRequests.includes(merchant.id)) {
-        console.log('⚠️ طلب التاجر هذا أرسل مسبقاً');
-        return;
-    }
-    
-    const message = `🔵 *طلب انضمام تاجر جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-🆔 *رقم الطلب:* ${merchant.id}
-🏪 *اسم المتجر:* ${merchant.storeName}
-👤 *التاجر:* ${merchant.name}
-📧 *البريد:* ${merchant.email}
-📞 *الهاتف:* ${merchant.phone || 'غير محدد'}
-📊 *المستوى:* ${merchant.level || '1'}
-📝 *الوصف:* ${merchant.desc || 'تاجر جديد'}
-━━━━━━━━━━━━━━━━━━━━━━
-🕐 ${new Date().toLocaleString('ar-EG')}`;
-
-    try {
-        const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM_CONFIG.channelId,
-                text: message,
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '✅ موافقة', callback_data: `approve_${merchant.id}` },
-                            { text: '❌ رفض', callback_data: `reject_${merchant.id}` }
-                        ]
-                    ]
-                }
-            })
-        });
-        
-        if (response.ok) {
-            sentRequests.push(merchant.id);
-            localStorage.setItem(TELEGRAM_CONFIG.requestsStorageKey, JSON.stringify(sentRequests));
-            console.log('✅ تم إرسال طلب التاجر');
-        }
-        
-    } catch (error) {
-        console.error('❌ خطأ في إرسال طلب التاجر:', error);
-    }
-}
-
-// ==================== القسم 7: إدارة الطلبات ====================
+// ==================== القسم 4: إدارة الطلبات ====================
 
 async function sendOrderToTelegram(order) {
     const message = `🟢 *طلب جديد #${order.orderId}*
@@ -340,18 +283,25 @@ ${order.items.map(i => `  • ${i.name} x${i.quantity} = ${(i.price * i.quantity
 📅 ${new Date().toLocaleString('ar-EG')}`;
 
     try {
-        const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendMessage`, {
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: TELEGRAM_CONFIG.channelId,
+                chat_id: TELEGRAM.channelId,
                 text: message,
                 parse_mode: 'Markdown'
             })
         });
         
-        return response.ok;
-        
+        if (response.ok) {
+            console.log('✅ تم إرسال الطلب إلى تلغرام');
+            // حفظ الطلب في localStorage
+            const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
+            orders.push(order);
+            localStorage.setItem('nardoo_orders', JSON.stringify(orders));
+            return true;
+        }
+        return false;
     } catch (error) {
         console.error('❌ خطأ في إرسال الطلب:', error);
         return false;
@@ -373,11 +323,11 @@ ${text}
 🕐 ${new Date().toLocaleString('ar-EG')}`;
 
     try {
-        await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendMessage`, {
+        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: TELEGRAM_CONFIG.channelId,
+                chat_id: TELEGRAM.channelId,
                 text: message,
                 parse_mode: 'Markdown'
             })
@@ -389,11 +339,63 @@ ${text}
     }
 }
 
-// ==================== القسم 8: الاستماع لأوامر تلغرام ====================
+// ==================== القسم 5: إدارة طلبات التجار ====================
+
+async function sendMerchantRequestToTelegram(merchant) {
+    const sentRequests = JSON.parse(localStorage.getItem('sent_merchant_requests') || '[]');
+    
+    if (sentRequests.includes(merchant.id)) {
+        console.log('⚠️ طلب التاجر هذا أرسل مسبقاً');
+        return;
+    }
+    
+    const message = `🔵 *طلب انضمام تاجر جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 *رقم الطلب:* ${merchant.id}
+🏪 *اسم المتجر:* ${merchant.storeName}
+👤 *التاجر:* ${merchant.name}
+📧 *البريد:* ${merchant.email}
+📞 *الهاتف:* ${merchant.phone || 'غير محدد'}
+📊 *المستوى:* ${merchant.level || '1'}
+📝 *الوصف:* ${merchant.desc || 'تاجر جديد'}
+━━━━━━━━━━━━━━━━━━━━━━
+🕐 ${new Date().toLocaleString('ar-EG')}`;
+
+    try {
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.channelId,
+                text: message,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '✅ موافقة', callback_data: `approve_${merchant.id}` },
+                            { text: '❌ رفض', callback_data: `reject_${merchant.id}` }
+                        ]
+                    ]
+                }
+            })
+        });
+        
+        if (response.ok) {
+            sentRequests.push(merchant.id);
+            localStorage.setItem('sent_merchant_requests', JSON.stringify(sentRequests));
+            console.log('✅ تم إرسال طلب التاجر');
+        }
+        
+    } catch (error) {
+        console.error('❌ خطأ في إرسال طلب التاجر:', error);
+    }
+}
+
+// ==================== القسم 6: الاستماع لأوامر تلغرام ====================
 
 async function loadProcessedRequestsFromTelegram() {
     try {
-        const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/getUpdates`);
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         const data = await response.json();
         const processed = {};
         
@@ -410,7 +412,7 @@ async function loadProcessedRequestsFromTelegram() {
         }
         return processed;
     } catch (error) {
-        console.error('❌ خطأ:', error);
+        console.error('❌ خطأ في تحميل المعاملات:', error);
         return {};
     }
 }
@@ -422,7 +424,7 @@ function startTelegramListener() {
     
     setInterval(async () => {
         try {
-            const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/getUpdates?offset=${lastProcessedUpdateId + 1}`);
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${lastProcessedUpdateId + 1}`);
             const data = await response.json();
             
             if (data.ok && data.result) {
@@ -434,7 +436,7 @@ function startTelegramListener() {
                 }
             }
         } catch (error) {
-            console.error('❌ خطأ:', error);
+            console.error('❌ خطأ في التحقق من أوامر تلغرام:', error);
         }
     }, 10000);
 }
@@ -463,17 +465,23 @@ async function handleCallbackQuery(callback) {
     if (data.startsWith('approve_') && typeof window.approveMerchant === 'function') {
         window.approveMerchant(userId);
         await answerCallbackQuery(callback.id, '✅ تمت الموافقة على التاجر');
+    } else if (data.startsWith('approve_')) {
+        console.log('✅ موافقة على التاجر:', userId);
+        await answerCallbackQuery(callback.id, '✅ تمت الموافقة على التاجر');
     }
     
     if (data.startsWith('reject_') && typeof window.rejectMerchant === 'function') {
         window.rejectMerchant(userId);
+        await answerCallbackQuery(callback.id, '❌ تم رفض التاجر');
+    } else if (data.startsWith('reject_')) {
+        console.log('❌ رفض التاجر:', userId);
         await answerCallbackQuery(callback.id, '❌ تم رفض التاجر');
     }
 }
 
 async function answerCallbackQuery(callbackId, text, showAlert = false) {
     try {
-        await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/answerCallbackQuery`, {
+        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/answerCallbackQuery`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -483,11 +491,11 @@ async function answerCallbackQuery(callbackId, text, showAlert = false) {
             })
         });
     } catch (error) {
-        console.error('❌ خطأ:', error);
+        console.error('❌ خطأ في الرد على الاستدعاء:', error);
     }
 }
 
-// ==================== القسم 9: دوال مساعدة ====================
+// ==================== القسم 7: دوال مساعدة ====================
 
 function getTimeAgo(timestamp) {
     if (!timestamp) return '';
@@ -511,17 +519,84 @@ function getCategoryName(category) {
     return names[category] || 'أخرى';
 }
 
-// ==================== القسم 10: التصدير ====================
+// ==================== القسم 8: الموافقة على التاجر ورفضه ====================
 
-window.TELEGRAM_CONFIG = TELEGRAM_CONFIG;
+function approveMerchant(userId) {
+    const users = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
+    const user = users.find(u => u.id == userId);
+    
+    if (user && user.role !== 'merchant_approved') {
+        user.role = 'merchant_approved';
+        user.status = 'approved';
+        localStorage.setItem('nardoo_users', JSON.stringify(users));
+        
+        sendNotificationToTelegram(`✅ تمت الموافقة على التاجر ${user.name}\n🏪 المتجر: ${user.storeName || user.name}`, 'success');
+        
+        if (typeof window.showNotification === 'function') {
+            window.showNotification('✅ تمت الموافقة على التاجر', 'success');
+        }
+    }
+}
+
+function rejectMerchant(userId) {
+    const users = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
+    const user = users.find(u => u.id == userId);
+    
+    if (user && user.status !== 'rejected') {
+        user.role = 'customer';
+        user.status = 'rejected';
+        localStorage.setItem('nardoo_users', JSON.stringify(users));
+        
+        sendNotificationToTelegram(`❌ تم رفض طلب التاجر ${user.name}`, 'error');
+        
+        if (typeof window.showNotification === 'function') {
+            window.showNotification('❌ تم رفض التاجر', 'info');
+        }
+    }
+}
+
+// ==================== القسم 9: التهيئة ====================
+
+function initTelegram() {
+    console.log('🤖 نظام تلغرام جاهز');
+    
+    // تحميل المنتجات المخزنة
+    const saved = localStorage.getItem('nardoo_products');
+    if (saved) {
+        telegramProducts = JSON.parse(saved);
+        if (typeof window.products !== 'undefined') {
+            window.products = telegramProducts;
+        }
+    }
+    
+    // جلب المنتجات تلقائياً
+    setTimeout(() => {
+        fetchProductsFromTelegram();
+    }, 1000);
+    
+    // بدء الاستماع للأوامر
+    startTelegramListener();
+    
+    // تحديث كل دقيقة
+    setInterval(() => {
+        fetchProductsFromTelegram();
+    }, 60000);
+}
+
+// ==================== القسم 10: تصدير الدوال ====================
+
+window.TELEGRAM = TELEGRAM;
 window.fetchProductsFromTelegram = fetchProductsFromTelegram;
 window.addProductToTelegram = addProductToTelegram;
-window.sendMerchantRequestToTelegram = sendMerchantRequestToTelegram;
 window.sendOrderToTelegram = sendOrderToTelegram;
 window.sendNotificationToTelegram = sendNotificationToTelegram;
+window.sendMerchantRequestToTelegram = sendMerchantRequestToTelegram;
 window.startTelegramListener = startTelegramListener;
 window.getTelegramFileUrl = getTelegramFileUrl;
 window.getTimeAgo = getTimeAgo;
 window.getCategoryName = getCategoryName;
+window.approveMerchant = approveMerchant;
+window.rejectMerchant = rejectMerchant;
+window.initTelegram = initTelegram;
 
-console.log('✅ نظام تلغرام المتكامل جاهز');
+console.log('✅ ملف telegram.js جاهز وكامل');
