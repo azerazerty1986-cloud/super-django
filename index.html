@@ -1053,252 +1053,236 @@
         });
     </script>
     <script>
-// إصلاح أزرار السلة والمتجر - كود مستق
-        
-<script>
-// ========== نظام السلة والمفضلة المتكامل ==========
-(function() {
-    console.log('🛒 جاري تهيئة نظام السلة والمفضلة...');
-    
-    // ===== المتغيرات =====
-    let cartItems = [];
-    let wishlistItems = [];
-    
-    // ===== تحميل البيانات =====
-    function loadData() {
-        const savedCart = localStorage.getItem('nardoo_cart');
-        const savedWishlist = localStorage.getItem('nardoo_wishlist');
-        if (savedCart) cartItems = JSON.parse(savedCart);
-        if (savedWishlist) wishlistItems = JSON.parse(savedWishlist);
-        updateCartCounters();
-    }
-    
-    // ===== حفظ البيانات =====
-    function saveData() {
-        localStorage.setItem('nardoo_cart', JSON.stringify(cartItems));
-        localStorage.setItem('nardoo_wishlist', JSON.stringify(wishlistItems));
-        updateCartCounters();
-    }
-    
-    // ===== تحديث عدادات السلة =====
-    function updateCartCounters() {
-        const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        const cartCounter = document.getElementById('cartCounter');
-        const fixedCartCounter = document.getElementById('fixedCartCounter');
-        if (cartCounter) cartCounter.textContent = count;
-        if (fixedCartCounter) fixedCartCounter.textContent = count;
-    }
-    
-    // ===== إضافة منتج للسلة =====
-    window.addToCart = function(product) {
-        if (!product) return;
-        
-        const existing = cartItems.find(item => item.id === product.id);
-        if (existing) {
-            existing.quantity++;
-        } else {
-            cartItems.push({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                quantity: 1,
-                image: product.images?.[0] || null,
-                merchantName: product.merchantName || 'ناردو برو'
-            });
-        }
-        
-        saveData();
-        showMessage(`✅ تم إضافة ${product.name} إلى السلة`);
-    };
-    
-    // ===== إضافة من معرف المنتج =====
-    window.addToCartFromProduct = function(productId) {
-        if (typeof products !== 'undefined' && products) {
-            const product = products.find(p => p.id == productId);
-            if (product) {
-                addToCart(product);
-            } else {
-                showMessage('⚠️ المنتج غير موجود');
-            }
-        } else {
-            showMessage('⚠️ جاري تحميل المنتجات...');
-        }
-    };
-    
-    // ===== عرض السلة =====
-    window.toggleCart = function() {
-        if (cartItems.length === 0) {
-            showMessage('🛒 السلة فارغة');
-            return;
-        }
-        
-        let message = '🛒 سلة التسوق:\n━━━━━━━━━━━━━━━━\n';
-        let total = 0;
-        
-        cartItems.forEach((item, index) => {
-            const itemTotal = item.price * item.quantity;
-            total += itemTotal;
-            message += `${index + 1}. ${item.name}\n   ${item.quantity} × ${item.price} = ${itemTotal} دج\n`;
-        });
-        
-        message += `━━━━━━━━━━━━━━━━\n`;
-        message += `💰 الإجمالي: ${total.toLocaleString()} دج\n`;
-        message += `━━━━━━━━━━━━━━━━\n`;
-        message += `📞 للطلب: 0562243648`;
-        
-        if (confirm(`${message}\n\n✅ هل تريد تأكيد الطلب؟`)) {
-            const whatsappMsg = encodeURIComponent(`مرحباً، أريد طلب:\n${cartItems.map(i => `${i.name} × ${i.quantity}`).join('\n')}\nالإجمالي: ${total} دج`);
-            window.open(`https://wa.me/213562243648?text=${whatsappMsg}`, '_blank');
-            cartItems = [];
-            saveData();
-            showMessage('✅ تم إرسال طلبك، سنتواصل معك قريباً');
-        }
-    };
-    
-    // ===== نظام المفضلة =====
-    window.addToWishlist = function(product) {
-        if (!product) return;
-        
-        if (wishlistItems.some(item => item.id === product.id)) {
-            showMessage(`${product.name} موجود بالفعل في المفضلة`);
-            return;
-        }
-        
-        wishlistItems.push({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.images?.[0] || null
-        });
-        
-        saveData();
-        showMessage(`❤️ تم إضافة ${product.name} إلى المفضلة`);
-    };
-    
-    window.removeFromWishlist = function(productId) {
-        const index = wishlistItems.findIndex(item => item.id == productId);
-        if (index !== -1) {
-            const removed = wishlistItems[index];
-            wishlistItems.splice(index, 1);
-            saveData();
-            showMessage(`💔 تم إزالة ${removed.name} من المفضلة`);
-            return true;
-        }
-        return false;
-    };
-    
-    window.toggleWishlist = function(product) {
-        if (wishlistItems.some(item => item.id === product.id)) {
-            removeFromWishlist(product.id);
-            return false;
-        } else {
-            addToWishlist(product);
-            return true;
-        }
-    };
-    
-    window.isInWishlist = function(productId) {
-        return wishlistItems.some(item => item.id == productId);
-    };
-    
-    window.showWishlist = function() {
-        if (wishlistItems.length === 0) {
-            showMessage('❤️ لا توجد منتجات في المفضلة');
-            return;
-        }
-        
-        let message = '❤️ قائمة المفضلة:\n━━━━━━━━━━━━━━━━\n';
-        wishlistItems.forEach((item, i) => {
-            message += `${i+1}. ${item.name}\n   ${item.price.toLocaleString()} دج\n`;
-        });
-        message += `━━━━━━━━━━━━━━━━\n📌 اضغط موافق للشراء`;
-        
-        if (confirm(message)) {
-            const productNames = wishlistItems.map((item, i) => `${i+1}. ${item.name}`).join('\n');
-            const choice = prompt(`🔢 أدخل رقم المنتج للشراء:\n${productNames}`);
+        // ========== نظام السلة والمفضلة المتكامل ==========
+        (function() {
+            console.log('🛒 جاري تهيئة نظام السلة والمفضلة...');
             
-            if (choice && !isNaN(choice) && choice >= 1 && choice <= wishlistItems.length) {
-                const selected = wishlistItems[choice - 1];
+            let cartItems = [];
+            let wishlistItems = [];
+            
+            function loadData() {
+                const savedCart = localStorage.getItem('nardoo_cart');
+                const savedWishlist = localStorage.getItem('nardoo_wishlist');
+                if (savedCart) cartItems = JSON.parse(savedCart);
+                if (savedWishlist) wishlistItems = JSON.parse(savedWishlist);
+                updateCartCounters();
+            }
+            
+            function saveData() {
+                localStorage.setItem('nardoo_cart', JSON.stringify(cartItems));
+                localStorage.setItem('nardoo_wishlist', JSON.stringify(wishlistItems));
+                updateCartCounters();
+            }
+            
+            function updateCartCounters() {
+                const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+                const cartCounter = document.getElementById('cartCounter');
+                const fixedCartCounter = document.getElementById('fixedCartCounter');
+                if (cartCounter) cartCounter.textContent = count;
+                if (fixedCartCounter) fixedCartCounter.textContent = count;
+            }
+            
+            window.addToCart = function(product) {
+                if (!product) return;
+                
+                const existing = cartItems.find(item => item.id === product.id);
+                if (existing) {
+                    existing.quantity++;
+                } else {
+                    cartItems.push({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        image: product.images?.[0] || null,
+                        merchantName: product.merchantName || 'ناردو برو'
+                    });
+                }
+                
+                saveData();
+                showToastMessage(`✅ تم إضافة ${product.name} إلى السلة`);
+            };
+            
+            window.addToCartFromProduct = function(productId) {
                 if (typeof products !== 'undefined' && products) {
-                    const product = products.find(p => p.id == selected.id);
+                    const product = products.find(p => p.id == productId);
                     if (product) {
                         addToCart(product);
+                    } else {
+                        showToastMessage('⚠️ المنتج غير موجود');
                     }
+                } else {
+                    showToastMessage('⚠️ جاري تحميل المنتجات...');
+                }
+            };
+            
+            window.toggleCart = function() {
+                if (cartItems.length === 0) {
+                    showToastMessage('🛒 السلة فارغة');
+                    return;
+                }
+                
+                let message = '🛒 سلة التسوق:\n━━━━━━━━━━━━━━━━\n';
+                let total = 0;
+                
+                cartItems.forEach((item, index) => {
+                    const itemTotal = item.price * item.quantity;
+                    total += itemTotal;
+                    message += `${index + 1}. ${item.name}\n   ${item.quantity} × ${item.price} = ${itemTotal} دج\n`;
+                });
+                
+                message += `━━━━━━━━━━━━━━━━\n`;
+                message += `💰 الإجمالي: ${total.toLocaleString()} دج\n`;
+                message += `━━━━━━━━━━━━━━━━\n`;
+                message += `📞 للطلب: 0562243648`;
+                
+                if (confirm(`${message}\n\n✅ هل تريد تأكيد الطلب؟`)) {
+                    const whatsappMsg = encodeURIComponent(`مرحباً، أريد طلب:\n${cartItems.map(i => `${i.name} × ${i.quantity}`).join('\n')}\nالإجمالي: ${total} دج`);
+                    window.open(`https://wa.me/213562243648?text=${whatsappMsg}`, '_blank');
+                    cartItems = [];
+                    saveData();
+                    showToastMessage('✅ تم إرسال طلبك، سنتواصل معك قريباً');
+                }
+            };
+            
+            window.addToWishlist = function(product) {
+                if (!product) return;
+                
+                if (wishlistItems.some(item => item.id === product.id)) {
+                    showToastMessage(`${product.name} موجود بالفعل في المفضلة`);
+                    return;
+                }
+                
+                wishlistItems.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.images?.[0] || null
+                });
+                
+                saveData();
+                showToastMessage(`❤️ تم إضافة ${product.name} إلى المفضلة`);
+            };
+            
+            window.removeFromWishlist = function(productId) {
+                const index = wishlistItems.findIndex(item => item.id == productId);
+                if (index !== -1) {
+                    const removed = wishlistItems[index];
+                    wishlistItems.splice(index, 1);
+                    saveData();
+                    showToastMessage(`💔 تم إزالة ${removed.name} من المفضلة`);
+                    return true;
+                }
+                return false;
+            };
+            
+            window.toggleWishlist = function(product) {
+                if (wishlistItems.some(item => item.id === product.id)) {
+                    removeFromWishlist(product.id);
+                    return false;
+                } else {
+                    addToWishlist(product);
+                    return true;
+                }
+            };
+            
+            window.isInWishlist = function(productId) {
+                return wishlistItems.some(item => item.id == productId);
+            };
+            
+            window.showWishlist = function() {
+                if (wishlistItems.length === 0) {
+                    showToastMessage('❤️ لا توجد منتجات في المفضلة');
+                    return;
+                }
+                
+                let message = '❤️ قائمة المفضلة:\n━━━━━━━━━━━━━━━━\n';
+                wishlistItems.forEach((item, i) => {
+                    message += `${i+1}. ${item.name}\n   ${item.price.toLocaleString()} دج\n`;
+                });
+                message += `━━━━━━━━━━━━━━━━\n📌 اضغط موافق للشراء`;
+                
+                if (confirm(message)) {
+                    const productNames = wishlistItems.map((item, i) => `${i+1}. ${item.name}`).join('\n');
+                    const choice = prompt(`🔢 أدخل رقم المنتج للشراء:\n${productNames}`);
+                    
+                    if (choice && !isNaN(choice) && choice >= 1 && choice <= wishlistItems.length) {
+                        const selected = wishlistItems[choice - 1];
+                        if (typeof products !== 'undefined' && products) {
+                            const product = products.find(p => p.id == selected.id);
+                            if (product) {
+                                addToCart(product);
+                            }
+                        }
+                    }
+                }
+            };
+            
+            function showToastMessage(msg) {
+                const toast = document.createElement('div');
+                toast.textContent = msg;
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 100px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: gold;
+                    color: black;
+                    padding: 12px 24px;
+                    border-radius: 50px;
+                    z-index: 10000;
+                    font-weight: bold;
+                    white-space: nowrap;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                    animation: slideUp 0.3s ease;
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            }
+            
+            function addWishlistButton() {
+                const headerActions = document.querySelector('.header-actions');
+                if (headerActions && !document.getElementById('wishlistBtn')) {
+                    const wishlistBtn = document.createElement('button');
+                    wishlistBtn.id = 'wishlistBtn';
+                    wishlistBtn.className = 'action-btn';
+                    wishlistBtn.innerHTML = '<i class="far fa-heart"></i>';
+                    wishlistBtn.title = 'المفضلة';
+                    wishlistBtn.style.cursor = 'pointer';
+                    wishlistBtn.onclick = () => showWishlist();
+                    headerActions.appendChild(wishlistBtn);
+                    console.log('✅ تم إضافة زر المفضلة');
                 }
             }
-        }
-    };
-    
-    // ===== عرض رسالة مؤقتة =====
-    function showMessage(msg) {
-        const toast = document.createElement('div');
-        toast.textContent = msg;
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: gold;
-            color: black;
-            padding: 12px 24px;
-            border-radius: 50px;
-            z-index: 10000;
-            font-weight: bold;
-            white-space: nowrap;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            animation: slideUp 0.3s ease;
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
-    }
-    
-    // ===== إضافة زر المفضلة =====
-    function addWishlistButton() {
-        const headerActions = document.querySelector('.header-actions');
-        if (headerActions && !document.getElementById('wishlistBtn')) {
-            const wishlistBtn = document.createElement('button');
-            wishlistBtn.id = 'wishlistBtn';
-            wishlistBtn.className = 'action-btn';
-            wishlistBtn.innerHTML = '<i class="far fa-heart"></i>';
-            wishlistBtn.title = 'المفضلة';
-            wishlistBtn.style.cursor = 'pointer';
-            wishlistBtn.onclick = () => showWishlist();
-            headerActions.appendChild(wishlistBtn);
-            console.log('✅ تم إضافة زر المفضلة');
-        }
-    }
-    
-    // ===== إضافة أنماط CSS للرسائل =====
-    function addAnimationStyles() {
-        if (!document.getElementById('cart-animation-styles')) {
-            const style = document.createElement('style');
-            style.id = 'cart-animation-styles';
-            style.textContent = `
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0);
-                    }
+            
+            function addAnimationStyles() {
+                if (!document.getElementById('cart-animation-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'cart-animation-styles';
+                    style.textContent = `
+                        @keyframes slideUp {
+                            from {
+                                opacity: 0;
+                                transform: translateX(-50%) translateY(20px);
+                            }
+                            to {
+                                opacity: 1;
+                                transform: translateX(-50%) translateY(0);
+                            }
+                        }
+                    `;
+                    document.head.appendChild(style);
                 }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-    
-    // ===== تهيئة النظام =====
-    loadData();
-    addWishlistButton();
-    addAnimationStyles();
-    
-    console.log('✅ نظام السلة والمفضلة جاهز');
-    console.log('📦 عدد المنتجات في السلة:', cartItems.length);
-    console.log('❤️ عدد المنتجات في المفضلة:', wishlistItems.length);
-})();
-</script>
-</script>
+            }
+            
+            loadData();
+            addWishlistButton();
+            addAnimationStyles();
+            
+            console.log('✅ نظام السلة والمفضلة جاهز');
+            console.log('📦 عدد المنتجات في السلة:', cartItems.length);
+            console.log('❤️ عدد المنتجات في المفضلة:', wishlistItems.length);
+        })();
+    </script>
 </body>
 </html>
