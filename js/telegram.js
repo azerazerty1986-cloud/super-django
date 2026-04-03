@@ -1670,4 +1670,122 @@ window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
 window.showWelcomePopup = showWelcomePopup;
 
+// ===== [4.56] إصلاح دالة handleLogin =====
+// التأكد من أن دالة handleLogin تعمل بشكل صحيح مع بيانات الدخول
+if (typeof window.handleLogin === 'function') {
+    // نستبدلها بالنسخة المصححة
+    window.handleLogin = function() {
+        const email = document.getElementById('loginEmail')?.value;
+        const password = document.getElementById('loginPassword')?.value;
+
+        if (!email || !password) {
+            showNotification('الرجاء إدخال البريد الإلكتروني وكلمة المرور', 'error');
+            return;
+        }
+
+        const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
+
+        if (user) {
+            currentUser = user;
+            localStorage.setItem('current_user', JSON.stringify(user));
+            closeModal('loginModal');
+            updateUIBasedOnRole();
+            
+            setTimeout(() => {
+                if (typeof window.showWelcomePopup === 'function') {
+                    window.showWelcomePopup(user);
+                }
+            }, 100);
+            
+            showNotification(`مرحباً ${user.name}`, 'success');
+            
+            if (typeof loadProducts === 'function') {
+                loadProducts();
+            }
+            
+            // تحديث واجهة السلة
+            if (typeof CartSystem !== 'undefined' && CartSystem.updateCartUI) {
+                CartSystem.updateCartUI();
+            }
+        } else {
+            showNotification('البريد الإلكتروني أو كلمة المرور غير صحيحة', 'error');
+        }
+    };
+}
+
+// ===== [4.57] إصلاح دالة closeModal =====
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+};
+
+// ===== [4.58] إضافة دالة toggleCart إذا لم تكن موجودة =====
+if (typeof window.toggleCart !== 'function') {
+    window.toggleCart = function() {
+        if (typeof CartSystem !== 'undefined' && CartSystem.toggleCart) {
+            CartSystem.toggleCart();
+        } else {
+            const sidebar = document.getElementById('cartSidebar');
+            if (sidebar) {
+                sidebar.classList.toggle('active');
+            }
+        }
+    };
+}
+
+// ===== [4.59] إضافة دالة openCart =====
+if (typeof window.openCart !== 'function') {
+    window.openCart = function() {
+        if (typeof CartSystem !== 'undefined' && CartSystem.openCart) {
+            CartSystem.openCart();
+        } else {
+            const sidebar = document.getElementById('cartSidebar');
+            if (sidebar) {
+                sidebar.classList.add('active');
+            }
+        }
+    };
+}
+
+// ===== [4.60] إضافة دالة closeCart =====
+if (typeof window.closeCart !== 'function') {
+    window.closeCart = function() {
+        if (typeof CartSystem !== 'undefined' && CartSystem.closeCart) {
+            CartSystem.closeCart();
+        } else {
+            const sidebar = document.getElementById('cartSidebar');
+            if (sidebar) {
+                sidebar.classList.remove('active');
+            }
+        }
+    };
+}
+
+// ===== [4.61] إضافة دالة addToCart =====
+if (typeof window.addToCart !== 'function') {
+    window.addToCart = function(productId, quantity = 1) {
+        if (typeof CartSystem !== 'undefined' && CartSystem.addToCart) {
+            return CartSystem.addToCart(productId, quantity);
+        } else {
+            showNotification('نظام السلة غير جاهز', 'error');
+            return false;
+        }
+    };
+}
+
+// ===== [4.62] التأكد من عرض المنتجات بعد تحميل الصفحة =====
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (typeof products !== 'undefined' && products.length > 0) {
+            displayProducts();
+        }
+        if (typeof CartSystem !== 'undefined' && CartSystem.updateCartUI) {
+            CartSystem.updateCartUI();
+        }
+    }, 500);
+});
+
+console.log('✅ تم إصلاح جميع التعارضات - نظام تلغرام جاهز');
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
