@@ -1,11 +1,10 @@
-
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
-    botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
+    botToken: '8576673096:AAECPDHWRTVQ_juq68hxM9PIdacnqevGRb4',
     channelId: '-1003822964890',
     adminId: '7461896689',
     apiUrl: 'https://api.telegram.org/bot'
@@ -1867,4 +1866,3 @@ window.viewMyProducts = viewMyProducts;
 window.showWelcomePopup = showWelcomePopup;
 
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
-
