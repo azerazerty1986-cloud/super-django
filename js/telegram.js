@@ -1,3 +1,4 @@
+تلقرام جيد رقم 1 ميكرو 
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ================================================================== */
@@ -359,6 +360,7 @@ async function saveProduct() {
         
         closeModal('productModal');
         
+        // ✅ إعادة تحميل المنتجات من تلغرام
         await loadProducts();
     }
 }
@@ -402,6 +404,7 @@ function handleImageUpload(event) {
     }
 }
 
+// ===== [4.17] جلب جميع المنتجات من تلغرام =====
 // ===== [4.17] جلب جميع المنتجات من تلغرام (مع دمج المنتجات) =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
@@ -410,8 +413,10 @@ async function fetchProductsFromTelegram() {
     try {
         console.log('🔄 جاري جلب المنتجات من تلغرام...');
         
+        // حفظ المنتجات القديمة
         const oldProducts = [...products];
         
+        // عرض المنتجات المخزنة فوراً (للسرعة)
         const saved = localStorage.getItem('nardoo_products');
         if (saved && oldProducts.length === 0) {
             products = JSON.parse(saved);
@@ -419,6 +424,7 @@ async function fetchProductsFromTelegram() {
             console.log(`⚡ عرض سريع: ${products.length} منتج من التخزين`);
         }
         
+        // جلب من تلغرام
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         
         if (!response.ok) {
@@ -525,6 +531,7 @@ async function fetchProductsFromTelegram() {
         
         console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام`);
         
+        // ✅ دمج المنتجات: الاحتفاظ بالقديمة وإضافة الجديدة فقط
         const mergedProducts = [...oldProducts];
         
         for (const newProduct of telegramProducts) {
@@ -535,6 +542,7 @@ async function fetchProductsFromTelegram() {
             }
         }
         
+        // ✅ حفظ المنتجات المدمجة
         localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
         
         products = mergedProducts;
@@ -937,7 +945,7 @@ function toggleMerchantFields() {
     }
 }
 
-// ===== [4.33] معالجة تسجيل الدخول (مع نافذة الترحيب) =====
+// ===== [4.33] معالجة تسجيل الدخول =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -949,10 +957,6 @@ function handleLogin() {
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         updateUIBasedOnRole();
-        
-        // ✅ عرض نافذة الترحيب المنبثقة
-        showWelcomePopup(user);
-        
         showNotification(`مرحباً ${user.name}`, 'success');
     } else {
         showNotification('بيانات غير صحيحة', 'error');
@@ -1646,119 +1650,9 @@ setInterval(async () => {
     }
 }, 10000);
 
-// ===== [4.52] نافذة الترحيب المنبثقة =====
-function showWelcomePopup(user) {
-    const popup = document.createElement('div');
-    popup.id = 'welcomePopup';
-    popup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-        border: 2px solid var(--gold);
-        border-radius: 30px;
-        padding: 30px 40px;
-        text-align: center;
-        z-index: 10000;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        animation: welcomeZoomIn 0.4s ease-out;
-        min-width: 350px;
-        backdrop-filter: blur(10px);
-    `;
-    
-    let roleIcon = '👤';
-    let roleText = 'عميل';
-    if (user.role === 'admin') {
-        roleIcon = '👑';
-        roleText = 'مدير';
-    } else if (user.role === 'merchant_approved') {
-        roleIcon = '🏪';
-        roleText = 'تاجر معتمد';
-    } else if (user.role === 'merchant_pending') {
-        roleIcon = '⏳';
-        roleText = 'قيد المراجعة';
-    }
-    
-    popup.innerHTML = `
-        <div style="font-size: 70px; margin-bottom: 15px;">${roleIcon}</div>
-        <h2 style="color: var(--gold); margin-bottom: 10px; font-size: 28px;">مرحباً بك يا ${user.name}! 🎉</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 15px;">نوع الحساب: <strong style="color: var(--gold);">${roleText}</strong></p>
-        <div style="background: rgba(255,215,0,0.15); border-radius: 15px; padding: 15px; margin: 15px 0;">
-            <p style="margin: 5px 0;">📧 ${user.email}</p>
-            ${user.phone ? `<p style="margin: 5px 0;">📞 ${user.phone}</p>` : ''}
-            ${user.storeName ? `<p style="margin: 5px 0;">🏪 ${user.storeName}</p>` : ''}
-        </div>
-        <p style="color: var(--gold); font-size: 14px; margin-bottom: 20px;">✨ أهلاً وسهلاً بك في متجر ناردو برو ✨</p>
-        <button id="closeWelcomePopup" style="
-            background: var(--gold);
-            color: black;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <i class="fas fa-check"></i> تفضل بالتسوق
-        </button>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes welcomeZoomIn {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-        }
-        @keyframes welcomeZoomOut {
-            from {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-            to {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.8);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    
-    document.getElementById('closeWelcomePopup').onclick = () => {
-        popup.style.animation = 'welcomeZoomOut 0.3s ease-in';
-        setTimeout(() => popup.remove(), 300);
-    };
-    
-    setTimeout(() => {
-        document.addEventListener('click', function closeOnOutside(e) {
-            if (!popup.contains(e.target) && !e.target.closest('#closeWelcomePopup')) {
-                popup.style.animation = 'welcomeZoomOut 0.3s ease-in';
-                setTimeout(() => {
-                    popup.remove();
-                    document.removeEventListener('click', closeOnOutside);
-                }, 300);
-            }
-        });
-    }, 100);
-    
-    setTimeout(() => {
-        if (document.getElementById('welcomePopup')) {
-            popup.style.animation = 'welcomeZoomOut 0.3s ease-in';
-            setTimeout(() => popup.remove(), 300);
-        }
-    }, 5000);
-}
-
-// ===== [4.53] التهيئة عند تحميل الصفحة =====
+// ===== [4.52] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
+    // تحميل المنتجات من localStorage أولاً
     const savedProducts = localStorage.getItem('nardoo_products');
     if (savedProducts) {
         products = JSON.parse(savedProducts);
@@ -1773,13 +1667,6 @@ window.onload = async function() {
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         updateUIBasedOnRole();
-        
-        if (!sessionStorage.getItem('welcome_shown')) {
-            setTimeout(() => {
-                showWelcomePopup(currentUser);
-                sessionStorage.setItem('welcome_shown', 'true');
-            }, 500);
-        }
     }
 
     const savedTheme = localStorage.getItem('theme');
@@ -1809,6 +1696,7 @@ window.onload = async function() {
         new TypingAnimation(typingElement, ['نكهة وجمال', 'ناردو برو', 'تسوق آمن', 'جودة عالية'], 100, 2000).start();
     }
     
+    // إضافة زر البحث بالمعرف
     setTimeout(() => {
         const nav = document.getElementById('mainNav');
         if (nav && !document.getElementById('searchByIdBtn')) {
@@ -1824,14 +1712,14 @@ window.onload = async function() {
     console.log('✅ النظام جاهز - جميع المنتجات تستخدم معرف تلغرام');
 };
 
-// ===== [4.54] إغلاق النوافذ عند الضغط خارجها =====
+// ===== [4.53] إغلاق النوافذ عند الضغط خارجها =====
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 };
 
-// ===== [4.55] تصدير الدوال إلى النطاق العام =====
+// ===== [4.54] تصدير الدوال إلى النطاق العام =====
 window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
@@ -1863,6 +1751,6 @@ window.showDashboardMerchants = showDashboardMerchants;
 window.approveMerchant = approveMerchant;
 window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
-window.showWelcomePopup = showWelcomePopup;
 
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
+
