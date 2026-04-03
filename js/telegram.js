@@ -1307,6 +1307,35 @@ function showOrdersHistory() {
         if (e.target === modal) modal.remove();
     };
 }
+// ===== [4.27.11] تأكيد ربط الزر =====
+document.addEventListener('DOMContentLoaded', function() {
+    // البحث عن زر إتمام الطلب
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    
+    if (checkoutBtn) {
+        console.log('✅ تم العثور على زر إتمام الطلب');
+        checkoutBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.checkoutCart();
+        };
+    } else {
+        console.log('⚠️ لم يتم العثور على زر إتمام الطلب، سيتم إنشاؤه تلقائياً');
+        
+        // إنشاء الزر إذا لم يكن موجوداً
+        const cartSidebar = document.getElementById('cartSidebar');
+        if (cartSidebar) {
+            const btn = document.createElement('button');
+            btn.id = 'checkoutBtn';
+            btn.className = 'btn-gold';
+            btn.style.cssText = 'width: 100%; padding: 15px; font-size: 18px; margin-top: 15px;';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> إتمام الطلب';
+            btn.onclick = () => window.checkoutCart();
+            cartSidebar.appendChild(btn);
+            console.log('✅ تم إنشاء زر إتمام الطلب تلقائياً');
+        }
+    }
+});
     
 
 // ===== [4.28] عرض تفاصيل المنتج =====
