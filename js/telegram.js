@@ -1,8 +1,9 @@
 /* ================================================================== */
-/* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
+/* ===== [05] الملف: 05-telegram-advanced.js - تلغرام متقدم ===== */
+/* ===== مع نظام سلة متعدد التجار (shop.js) ===== */
 /* ================================================================== */
 
-// ===== [4.1] إعدادات تلغرام الأساسية =====
+// ===== [5.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
     botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
     channelId: '-1003822964890',
@@ -10,10 +11,9 @@ const TELEGRAM = {
     apiUrl: 'https://api.telegram.org/bot'
 };
 
-// ===== [4.2] المتغيرات العامة =====
+// ===== [5.2] المتغيرات العامة =====
 let products = [];
 let currentUser = null;
-let cart = [];
 let isDarkMode = true;
 let currentFilter = 'all';
 let searchTerm = '';
@@ -21,7 +21,10 @@ let sortBy = 'newest';
 let users = [];
 let isLoading = false;
 
-// ===== [4.3] تحميل المستخدمين من localStorage =====
+// ملاحظة: السلة (cart) موجودة الآن في shop.js
+// لا نعيد تعريفها هنا لتجنب التعارض
+
+// ===== [5.3] تحميل المستخدمين من localStorage =====
 function loadUsers() {
     const saved = localStorage.getItem('nardoo_users');
     if (saved) {
@@ -48,6 +51,18 @@ function loadUsers() {
                 merchantLevel: '2',
                 status: 'approved',
                 createdAt: new Date().toISOString()
+            },
+            { 
+                id: 3, 
+                name: 'تاجر العطور', 
+                email: 'perfume@nardoo.com', 
+                password: 'p123', 
+                role: 'merchant_approved',
+                phone: '0555222222',
+                storeName: 'متجر العطور الفاخرة',
+                merchantLevel: '1',
+                status: 'approved',
+                createdAt: new Date().toISOString()
             }
         ];
         localStorage.setItem('nardoo_users', JSON.stringify(users));
@@ -55,66 +70,53 @@ function loadUsers() {
 }
 loadUsers();
 
-// ===== [4.4] تحميل السلة =====
-function loadCart() {
-    const saved = localStorage.getItem('nardoo_cart');
-    cart = saved ? JSON.parse(saved) : [];
-    updateCartCounter();
-}
-
-// ===== [4.5] حفظ السلة =====
-function saveCart() {
-    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
-}
-
-// ===== [4.6] تحديث عداد السلة =====
-function updateCartCounter() {
-    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const counter = document.getElementById('cartCounter');
-    const fixedCounter = document.getElementById('fixedCartCounter');
-    
-    if (counter) counter.textContent = count;
-    if (fixedCounter) fixedCounter.textContent = count;
-}
-
-// ===== [4.7] دوال المساعدة والإشعارات =====
+// ===== [5.4] دوال المساعدة والإشعارات =====
 function showNotification(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
+    let container = document.getElementById('toastContainer');
     if (!container) {
-        const newContainer = document.createElement('div');
-        newContainer.id = 'toastContainer';
-        newContainer.style.cssText = `
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.style.cssText = `
             position: fixed;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
             z-index: 9999;
             display: flex;
             flex-direction: column;
             gap: 10px;
         `;
-        document.body.appendChild(newContainer);
+        document.body.appendChild(container);
     }
     
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.style.cssText = `
-        background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : type === 'warning' ? '#fbbf24' : '#60a5fa'};
-        color: black;
-        padding: 15px 25px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        font-weight: bold;
-        animation: slideIn 0.3s ease;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        min-width: 250px;
-    `;
-    toast.innerHTML = `<div class="toast-message">${message}</div>`;
-    document.getElementById('toastContainer').appendChild(toast);
+    const colors = {
+        success: '#4ade80',
+        error: '#f87171',
+        warning: '#fbbf24',
+        info: '#60a5fa'
+    };
     
-    setTimeout(() => toast.remove(), 3000);
+    toast.style.cssText = `
+        background: ${colors[type] || colors.info};
+        color: ${type === 'warning' ? 'black' : 'white'};
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-weight: bold;
+        animation: slideInRight 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        font-size: 14px;
+        direction: rtl;
+    `;
+    toast.innerHTML = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
-// ===== [4.8] دالة مساعدة لجلب رابط الملف من تلغرام =====
+// ===== [5.5] دالة مساعدة لجلب رابط الملف من تلغرام =====
 async function getTelegramFileUrl(fileId) {
     try {
         const response = await fetch(
@@ -131,10 +133,10 @@ async function getTelegramFileUrl(fileId) {
     return null;
 }
 
-// ===== [4.9] دالة الحصول على اسم القسم =====
+// ===== [5.6] دالة الحصول على اسم القسم =====
 function getCategoryName(category) {
     const names = {
-        'promo': 'برموسيو',
+        'promo': 'بروموسيو',
         'spices': 'توابل',
         'cosmetic': 'كوسمتيك',
         'other': 'منتوجات أخرى'
@@ -142,7 +144,7 @@ function getCategoryName(category) {
     return names[category] || 'أخرى';
 }
 
-// ===== [4.10] دالة حساب الوقت المنقضي =====
+// ===== [5.7] دالة حساب الوقت المنقضي =====
 function getTimeAgo(dateString) {
     if (!dateString) return '';
     
@@ -166,7 +168,7 @@ function getTimeAgo(dateString) {
     return 'منذ وقت';
 }
 
-// ===== [4.11] دالة توليد النجوم =====
+// ===== [5.8] دالة توليد النجوم =====
 function generateStars(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -188,7 +190,7 @@ function generateStars(rating) {
     return starsHTML;
 }
 
-// ===== [4.12] دالة الفرز =====
+// ===== [5.9] دالة الفرز =====
 function sortProducts(productsArray) {
     switch(sortBy) {
         case 'newest':
@@ -204,13 +206,13 @@ function sortProducts(productsArray) {
     }
 }
 
-// ===== [4.13] تغيير طريقة الفرز =====
+// ===== [5.10] تغيير طريقة الفرز =====
 function changeSort(value) {
     sortBy = value;
     displayProducts();
 }
 
-// ===== [4.14] إضافة منتج إلى تلغرام =====
+// ===== [5.11] إضافة منتج إلى تلغرام =====
 async function addProductToTelegram(product, imageFile) {
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
@@ -252,7 +254,7 @@ async function addProductToTelegram(product, imageFile) {
     }
 }
 
-// ===== [4.15] دالة حفظ المنتج =====
+// ===== [5.12] دالة حفظ المنتج =====
 async function saveProduct() {
     console.log('🔄 بدء saveProduct');
     
@@ -335,6 +337,8 @@ async function saveProduct() {
         category: category,
         stock: stock,
         merchantName: currentUser.storeName || currentUser.name,
+        merchantId: currentUser.id,
+        merchantPhone: currentUser.phone || '',
         description: description
     };
 
@@ -363,7 +367,7 @@ async function saveProduct() {
     }
 }
 
-// ===== [4.16] معالجة رفع الصور =====
+// ===== [5.13] معالجة رفع الصور =====
 function handleImageUpload(event) {
     const files = event.target.files;
     const preview = document.getElementById('imagePreview');
@@ -402,7 +406,7 @@ function handleImageUpload(event) {
     }
 }
 
-// ===== [4.17] جلب جميع المنتجات من تلغرام (مع دمج المنتجات) =====
+// ===== [5.14] جلب جميع المنتجات من تلغرام =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
@@ -475,10 +479,6 @@ async function fetchProductsFromTelegram() {
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
                     }
-                    else if (line.includes('معرف المنتج:')) {
-                        const match = line.match(/\d+/);
-                        if (match) productId = parseInt(match[0]);
-                    }
                 });
                 
                 let mediaUrl = null;
@@ -502,6 +502,9 @@ async function fetchProductsFromTelegram() {
                     mediaUrl = images[0];
                 }
                 
+                // البحث عن معلومات التاجر من قاعدة المستخدمين
+                let merchantInfo = users.find(u => u.storeName === merchant || u.name === merchant);
+                
                 if (mediaUrl) {
                     telegramProducts.push({
                         id: productId,
@@ -511,6 +514,8 @@ async function fetchProductsFromTelegram() {
                         category: category,
                         stock: stock || 10,
                         merchantName: merchant,
+                        merchantId: merchantInfo ? merchantInfo.id : null,
+                        merchantPhone: merchantInfo ? merchantInfo.phone : '',
                         description: description,
                         rating: 4.5,
                         image: mediaUrl,
@@ -531,13 +536,19 @@ async function fetchProductsFromTelegram() {
             const exists = mergedProducts.some(p => p.id === newProduct.id);
             if (!exists) {
                 mergedProducts.push(newProduct);
-                console.log(`➕ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
+                console.log(`➕ منتج جديد: ${newProduct.name} (ID: ${newProduct.id}) - التاجر: ${newProduct.merchantName}`);
             }
         }
         
         localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
         
         products = mergedProducts;
+        
+        // تحديث المنتجات في نظام السلة (shop.js)
+        if (typeof setProducts === 'function') {
+            setProducts(products);
+        }
+        
         displayProducts();
         
         console.log(`📦 إجمالي المنتجات: ${products.length}`);
@@ -551,6 +562,7 @@ async function fetchProductsFromTelegram() {
         const saved = localStorage.getItem('nardoo_products');
         if (saved) {
             products = JSON.parse(saved);
+            if (typeof setProducts === 'function') setProducts(products);
             displayProducts();
             return products;
         }
@@ -562,12 +574,12 @@ async function fetchProductsFromTelegram() {
     }
 }
 
-// ===== [4.18] تحميل المنتجات وعرضها =====
+// ===== [5.15] تحميل المنتجات وعرضها =====
 async function loadProducts() {
     await fetchProductsFromTelegram();
 }
 
-// ===== [4.19] عرض المنتجات =====
+// ===== [5.16] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
@@ -576,8 +588,7 @@ function displayProducts() {
     
     if (currentFilter === 'my_products' && currentUser?.role === 'merchant_approved') {
         filtered = filtered.filter(p => 
-            p.merchantName === currentUser.storeName || 
-            p.merchantName === currentUser.name
+            p.merchantName === (currentUser.storeName || currentUser.name)
         );
     }
     else if (currentFilter !== 'all') {
@@ -673,187 +684,19 @@ function displayProducts() {
     }).join('');
 }
 
-// ===== [4.20] فلترة المنتجات =====
+// ===== [5.17] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
     displayProducts();
 }
 
-// ===== [4.21] البحث عن المنتجات =====
+// ===== [5.18] البحث عن المنتجات =====
 function searchProducts() {
     searchTerm = document.getElementById('searchInput').value;
     displayProducts();
 }
 
-// ===== [4.22] إضافة منتج إلى السلة =====
-function addToCart(productId) {
-    const product = products.find(p => p.id == productId);
-    if (!product || product.stock <= 0) {
-        showNotification('المنتج غير متوفر', 'error');
-        return;
-    }
-
-    const existing = cart.find(item => item.productId == productId);
-    if (existing) {
-        if (existing.quantity < product.stock) {
-            existing.quantity++;
-        } else {
-            showNotification('الكمية غير كافية', 'warning');
-            return;
-        }
-    } else {
-        cart.push({
-            productId,
-            name: product.name,
-            price: product.price,
-            quantity: 1,
-            merchantName: product.merchantName
-        });
-    }
-
-    saveCart();
-    updateCartCounter();
-    updateCartDisplay();
-    showNotification('تمت الإضافة إلى السلة', 'success');
-}
-
-// ===== [4.23] تبديل عرض السلة =====
-function toggleCart() {
-    const sidebar = document.getElementById('cartSidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('open');
-        updateCartDisplay();
-    }
-}
-
-// ===== [4.24] تحديث عرض السلة =====
-function updateCartDisplay() {
-    const itemsDiv = document.getElementById('cartItems');
-    const totalSpan = document.getElementById('cartTotal');
-
-    if (!itemsDiv) return;
-
-    if (cart.length === 0) {
-        itemsDiv.innerHTML = '<div style="text-align: center; padding: 40px;">السلة فارغة</div>';
-        if (totalSpan) totalSpan.textContent = '0 دج';
-        return;
-    }
-
-    let total = 0;
-    itemsDiv.innerHTML = cart.map(item => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
-        return `
-            <div class="cart-item">
-                <div class="cart-item-details">
-                    <div class="cart-item-title">${item.name}</div>
-                    <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
-                    <div class="cart-item-quantity">
-                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity - 1})">-</button>
-                        <span>${item.quantity}</span>
-                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity + 1})">+</button>
-                        <button class="quantity-btn" onclick="removeFromCart(${item.productId})" style="background: #f87171; color: white;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} دج`;
-}
-
-// ===== [4.25] تحديث كمية منتج في السلة =====
-function updateCartItem(productId, newQuantity) {
-    const item = cart.find(i => i.productId == productId);
-    const product = products.find(p => p.id == productId);
-
-    if (newQuantity <= 0) {
-        removeFromCart(productId);
-        return;
-    }
-
-    if (newQuantity > product.stock) {
-        showNotification('الكمية غير متوفرة', 'warning');
-        return;
-    }
-
-    item.quantity = newQuantity;
-    saveCart();
-    updateCartCounter();
-    updateCartDisplay();
-}
-
-// ===== [4.26] إزالة منتج من السلة =====
-function removeFromCart(productId) {
-    cart = cart.filter(i => i.productId != productId);
-    saveCart();
-    updateCartCounter();
-    updateCartDisplay();
-    showNotification('تمت إزالة المنتج', 'info');
-}
-
-// ===== [4.27] إتمام الشراء =====
-async function checkoutCart() {
-    if (cart.length === 0) {
-        showNotification('السلة فارغة', 'warning');
-        return;
-    }
-
-    if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'warning');
-        openLoginModal();
-        return;
-    }
-
-    const customerPhone = prompt('رقم الهاتف:', currentUser.phone || '');
-    if (!customerPhone) return;
-    
-    const customerAddress = prompt('عنوان التوصيل:', '');
-    if (!customerAddress) return;
-
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = 800;
-    const total = subtotal + shipping;
-
-    const order = {
-        customerName: currentUser.name,
-        customerPhone: customerPhone,
-        customerAddress: customerAddress,
-        items: [...cart],
-        total: total
-    };
-
-    const message = `🟢 *طلب جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 *الزبون:* ${order.customerName}
-📞 *الهاتف:* ${order.customerPhone}
-📍 *العنوان:* ${order.customerAddress}
-📦 *المنتجات:*
-${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج`).join('\n')}
-💰 *الإجمالي:* ${order.total} دج
-📅 ${new Date().toLocaleString('ar-EG')}`;
-
-    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: TELEGRAM.channelId,
-            text: message,
-            parse_mode: 'Markdown'
-        })
-    });
-
-    cart = [];
-    saveCart();
-    updateCartCounter();
-    toggleCart();
-    
-    showNotification('✅ تم إرسال الطلب بنجاح', 'success');
-}
-
-// ===== [4.28] عرض تفاصيل المنتج =====
+// ===== [5.19] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
     const product = products.find(p => p.id == productId);
     if (!product) return;
@@ -874,7 +717,7 @@ function viewProductDetails(productId) {
                 </div>
                 <div>
                     <p style="color: #888; margin-bottom: 10px;">🆔 المعرف: ${product.id}</p>
-                    <p style="color: #888; margin-bottom: 10px;">👤 الناشر: ${product.merchantName}</p>
+                    <p style="color: #888; margin-bottom: 10px;">🏪 التاجر: ${product.merchantName}</p>
                     <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
                     
                     <div class="product-rating" style="margin-bottom: 20px;">
@@ -906,19 +749,19 @@ function viewProductDetails(productId) {
     modal.style.display = 'flex';
 }
 
-// ===== [4.29] إدارة المستخدمين - فتح نافذة تسجيل الدخول =====
+// ===== [5.20] إدارة المستخدمين - فتح نافذة تسجيل الدخول =====
 function openLoginModal() {
     const modal = document.getElementById('loginModal');
     if (modal) modal.style.display = 'flex';
 }
 
-// ===== [4.30] إغلاق النوافذ =====
+// ===== [5.21] إغلاق النوافذ =====
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.style.display = 'none';
 }
 
-// ===== [4.31] تبديل علامات التبويب في المصادقة =====
+// ===== [5.22] تبديل علامات التبويب في المصادقة =====
 function switchAuthTab(tab) {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
@@ -927,7 +770,7 @@ function switchAuthTab(tab) {
     if (registerForm) registerForm.style.display = tab === 'register' ? 'block' : 'none';
 }
 
-// ===== [4.32] إظهار/إخفاء حقول التاجر =====
+// ===== [5.23] إظهار/إخفاء حقول التاجر =====
 function toggleMerchantFields() {
     const isMerchant = document.getElementById('isMerchant');
     const merchantFields = document.getElementById('merchantFields');
@@ -937,7 +780,7 @@ function toggleMerchantFields() {
     }
 }
 
-// ===== [4.33] معالجة تسجيل الدخول (مع نافذة الترحيب) =====
+// ===== [5.24] معالجة تسجيل الدخول =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -949,17 +792,14 @@ function handleLogin() {
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         updateUIBasedOnRole();
-        
-        // ✅ عرض نافذة الترحيب المنبثقة
         showWelcomePopup(user);
-        
         showNotification(`مرحباً ${user.name}`, 'success');
     } else {
         showNotification('بيانات غير صحيحة', 'error');
     }
 }
 
-// ===== [4.34] معالجة تسجيل التاجر =====
+// ===== [5.25] معالجة تسجيل التاجر =====
 function handleMerchantRegister(merchantData) {
     const {
         name,
@@ -1007,7 +847,7 @@ function handleMerchantRegister(merchantData) {
     return true;
 }
 
-// ===== [4.35] معالجة تسجيل المستخدم العادي =====
+// ===== [5.26] معالجة تسجيل المستخدم العادي =====
 function handleRegister() {
     const name = document.getElementById('regName')?.value;
     const email = document.getElementById('regEmail')?.value;
@@ -1053,7 +893,7 @@ function handleRegister() {
     }
 }
 
-// ===== [4.36] تحديث الواجهة حسب دور المستخدم =====
+// ===== [5.27] تحديث الواجهة حسب دور المستخدم =====
 function updateUIBasedOnRole() {
     if (!currentUser) return;
 
@@ -1111,20 +951,19 @@ function updateUIBasedOnRole() {
     }
 }
 
-// ===== [4.37] عرض منتجات التاجر =====
+// ===== [5.28] عرض منتجات التاجر =====
 function viewMyProducts() {
     if (!currentUser || currentUser.role !== 'merchant_approved') return;
     currentFilter = 'my_products';
     displayProducts();
 }
 
-// ===== [4.38] عرض لوحة التاجر =====
+// ===== [5.29] عرض لوحة التاجر =====
 function showMerchantPanel() {
     if (!currentUser || currentUser.role !== 'merchant_approved') return;
     
     const merchantProducts = products.filter(p => 
-        p.merchantName === currentUser.storeName || 
-        p.merchantName === currentUser.name
+        p.merchantName === (currentUser.storeName || currentUser.name)
     );
     
     const totalValue = merchantProducts.reduce((sum, p) => sum + (p.price * p.stock), 0);
@@ -1170,7 +1009,7 @@ function showMerchantPanel() {
     `;
 }
 
-// ===== [4.39] إرسال طلب تاجر إلى تلغرام مع أزرار =====
+// ===== [5.30] إرسال طلب تاجر إلى تلغرام مع أزرار =====
 async function sendMerchantRequestToTelegram(merchant) {
     const sentRequests = JSON.parse(localStorage.getItem('sent_merchant_requests') || '[]');
     
@@ -1213,7 +1052,7 @@ async function sendMerchantRequestToTelegram(merchant) {
     localStorage.setItem('sent_merchant_requests', JSON.stringify(sentRequests));
 }
 
-// ===== [4.40] إظهار نافذة إضافة منتج =====
+// ===== [5.31] إظهار نافذة إضافة منتج =====
 function showAddProductModal() {
     if (!currentUser) {
         showNotification('يجب تسجيل الدخول أولاً', 'warning');
@@ -1229,7 +1068,7 @@ function showAddProductModal() {
     }
 }
 
-// ===== [4.41] البحث عن منتج بالمعرف =====
+// ===== [5.32] البحث عن منتج بالمعرف =====
 function findProductById() {
     const id = prompt('🔍 أدخل معرف المنتج:');
     if (!id) return;
@@ -1250,7 +1089,7 @@ function findProductById() {
     }
 }
 
-// ===== [4.42] دوال التمرير =====
+// ===== [5.33] دوال التمرير =====
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1265,7 +1104,7 @@ function toggleQuickTopButton() {
     quickTopBtn.classList.toggle('show', window.scrollY > 300);
 }
 
-// ===== [4.43] تبديل الثيم =====
+// ===== [5.34] تبديل الثيم =====
 function toggleTheme() {
     isDarkMode = !isDarkMode;
     document.body.classList.toggle('light-mode', !isDarkMode);
@@ -1278,7 +1117,7 @@ function toggleTheme() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ===== [4.44] فتح لوحة تحكم المدير =====
+// ===== [5.35] فتح لوحة تحكم المدير =====
 function openDashboard() {
     if (!currentUser || currentUser.role !== 'admin') {
         showNotification('غير مصرح', 'error');
@@ -1293,7 +1132,7 @@ function openDashboard() {
     }
 }
 
-// ===== [4.45] عرض نظرة عامة في لوحة التحكم =====
+// ===== [5.36] عرض نظرة عامة في لوحة التحكم =====
 function showDashboardOverview() {
     const pendingMerchants = users.filter(u => u.role === 'merchant_pending').length;
     const approvedMerchants = users.filter(u => u.role === 'merchant_approved').length;
@@ -1337,7 +1176,7 @@ function showDashboardOverview() {
     `;
 }
 
-// ===== [4.46] عرض طلبات التجار في لوحة التحكم =====
+// ===== [5.37] عرض طلبات التجار في لوحة التحكم =====
 function showDashboardMerchants() {
     const pendingMerchants = users.filter(u => u.role === 'merchant_pending');
     
@@ -1380,7 +1219,7 @@ function showDashboardMerchants() {
     `;
 }
 
-// ===== [4.47] الموافقة على تاجر =====
+// ===== [5.38] الموافقة على تاجر =====
 function approveMerchant(id) {
     const user = users.find(u => u.id == id);
     if (user) {
@@ -1417,7 +1256,7 @@ function approveMerchant(id) {
     }
 }
 
-// ===== [4.48] رفض تاجر =====
+// ===== [5.39] رفض تاجر =====
 function rejectMerchant(id) {
     const user = users.find(u => u.id == id);
     if (user) {
@@ -1453,7 +1292,7 @@ function rejectMerchant(id) {
     }
 }
 
-// ===== [4.49] إرسال إشعار عام =====
+// ===== [5.40] إرسال إشعار عام =====
 async function sendNotificationToTelegram(text) {
     const message = `
 🟡 *إشعار*
@@ -1473,7 +1312,7 @@ ${text}
     });
 }
 
-// ===== [4.50] تأثيرات الكتابة =====
+// ===== [5.41] تأثيرات الكتابة =====
 class TypingAnimation {
     constructor(element, texts, speed = 100, delay = 2000) {
         this.element = element;
@@ -1517,7 +1356,7 @@ class TypingAnimation {
     }
 }
 
-// ===== [4.51] الاستماع لأوامر وأزرار تلغرام =====
+// ===== [5.42] الاستماع لأوامر وأزرار تلغرام =====
 let lastProcessedUpdateId = 0;
 let processedRequests = {};
 
@@ -1646,7 +1485,7 @@ setInterval(async () => {
     }
 }, 10000);
 
-// ===== [4.52] نافذة الترحيب المنبثقة =====
+// ===== [5.43] نافذة الترحيب المنبثقة =====
 function showWelcomePopup(user) {
     const popup = document.createElement('div');
     popup.id = 'welcomePopup';
@@ -1757,17 +1596,36 @@ function showWelcomePopup(user) {
     }, 5000);
 }
 
-// ===== [4.53] التهيئة عند تحميل الصفحة =====
+// ===== [5.44] إضافة الأنيميشن للإشعارات =====
+const notificationStyle = document.createElement('style');
+notificationStyle.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+`;
+document.head.appendChild(notificationStyle);
+
+// ===== [5.45] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
     const savedProducts = localStorage.getItem('nardoo_products');
     if (savedProducts) {
         products = JSON.parse(savedProducts);
+        if (typeof setProducts === 'function') setProducts(products);
         displayProducts();
         console.log(`📦 تم تحميل ${products.length} منتج من الذاكرة`);
     }
     
     await loadProducts();
-    loadCart();
+    
+    // تحميل السلة من shop.js
+    if (typeof loadCart === 'function') {
+        loadCart();
+    }
 
     const savedUser = localStorage.getItem('current_user');
     if (savedUser) {
@@ -1821,17 +1679,17 @@ window.onload = async function() {
         }
     }, 1000);
     
-    console.log('✅ النظام جاهز - جميع المنتجات تستخدم معرف تلغرام');
+    console.log('✅ النظام المتقدم جاهز - مع دعم السلة متعددة التجار');
 };
 
-// ===== [4.54] إغلاق النوافذ عند الضغط خارجها =====
+// ===== [5.46] إغلاق النوافذ عند الضغط خارجها =====
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 };
 
-// ===== [4.55] تصدير الدوال إلى النطاق العام =====
+// ===== [5.47] تصدير الدوال إلى النطاق العام =====
 window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
@@ -1841,11 +1699,6 @@ window.loadProducts = loadProducts;
 window.displayProducts = displayProducts;
 window.filterProducts = filterProducts;
 window.searchProducts = searchProducts;
-window.addToCart = addToCart;
-window.toggleCart = toggleCart;
-window.updateCartItem = updateCartItem;
-window.removeFromCart = removeFromCart;
-window.checkoutCart = checkoutCart;
 window.viewProductDetails = viewProductDetails;
 window.openLoginModal = openLoginModal;
 window.switchAuthTab = switchAuthTab;
@@ -1865,4 +1718,5 @@ window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
 window.showWelcomePopup = showWelcomePopup;
 
-console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
+console.log('✅ نظام تلغرام المتقدم جاهز - جميع المنتجات تستخدم معرف تلغرام');
+console.log('🛒 نظام السلة متعدد التجار متكامل مع shop.js');
