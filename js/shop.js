@@ -1,4 +1,3 @@
-
 /* ================================================================== */
 /* ===== [03] ملف: shop.js - نظام السلة المتكامل ===== */
 /* ================================================================== */
@@ -48,7 +47,7 @@ const CartSystem = {
         this.saveCart();
     },
     
-    // ===== [3.4] تنظيف السلة (إزالة المنتجات غير المتوفرة) =====
+    // ===== [3.4] تنظيف السلة =====
     cleanCart() {
         if (typeof products !== 'undefined' && products.length > 0) {
             this.cart = this.cart.filter(cartItem => {
@@ -56,10 +55,10 @@ const CartSystem = {
                 if (!productExists) return false;
                 
                 const product = products.find(p => p.id == cartItem.id);
-                if (product.stock < cartItem.quantity) {
+                if (product && product.stock < cartItem.quantity) {
                     cartItem.quantity = product.stock;
                 }
-                return product.stock > 0;
+                return product && product.stock > 0;
             });
             this.saveCart();
         }
@@ -109,19 +108,16 @@ const CartSystem = {
                 price: product.price,
                 quantity: quantity,
                 merchantName: product.merchantName,
-                merchantId: product.merchantId || this.getMerchantIdByName(product.merchantName),
                 stock: product.stock,
-                image: product.image || product.images?.[0],
-                category: product.category
+                image: product.image || (product.images ? product.images[0] : null)
             });
         }
         
         this.saveCart();
         this.showNotification(`✅ تم إضافة ${product.name} إلى السلة`, 'success');
-        this.updateCartUI();
         
         // تأثير اهتزاز لأيقونة السلة
-        const cartIcon = document.querySelector('.fixed-cart, .action-btn .fa-shopping-cart');
+        const cartIcon = document.querySelector('.action-btn .fa-shopping-cart');
         if (cartIcon) {
             cartIcon.style.transform = 'scale(1.2)';
             setTimeout(() => { cartIcon.style.transform = ''; }, 300);
@@ -130,19 +126,7 @@ const CartSystem = {
         return true;
     },
     
-    // ===== [3.7] الحصول على معرف التاجر من الاسم =====
-    getMerchantIdByName(merchantName) {
-        if (typeof users !== 'undefined') {
-            const merchant = users.find(u => 
-                u.storeName === merchantName || 
-                u.name === merchantName
-            );
-            return merchant ? merchant.id : null;
-        }
-        return null;
-    },
-    
-    // ===== [3.8] إزالة منتج من السلة =====
+    // ===== [3.7] إزالة منتج من السلة =====
     removeFromCart(productId) {
         const index = this.cart.findIndex(item => item.id == productId);
         if (index !== -1) {
@@ -150,11 +134,10 @@ const CartSystem = {
             this.cart.splice(index, 1);
             this.saveCart();
             this.showNotification(`❌ تم إزالة ${removed.name} من السلة`, 'info');
-            this.updateCartUI();
         }
     },
     
-    // ===== [3.9] تحديث كمية منتج =====
+    // ===== [3.8] تحديث كمية منتج =====
     updateQuantity(productId, quantity) {
         const item = this.cart.find(item => item.id == productId);
         if (!item) return;
@@ -172,16 +155,15 @@ const CartSystem = {
         } else {
             item.quantity = quantity;
             this.saveCart();
-            this.updateCartUI();
         }
     },
     
-    // ===== [3.10] حساب المجموع الفرعي =====
+    // ===== [3.9] حساب المجموع الفرعي =====
     calculateSubtotal() {
         return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     },
     
-    // ===== [3.11] حساب الخصم =====
+    // ===== [3.10] حساب الخصم =====
     calculateDiscount() {
         if (!this.appliedCoupon) return 0;
         
@@ -190,7 +172,6 @@ const CartSystem = {
         
         if (!coupon) return 0;
         
-        // التحقق من الحد الأدنى
         if (coupon.minAmount && subtotal < coupon.minAmount) {
             this.appliedCoupon = null;
             this.showNotification(`الكوبون يتطلب حد أدنى ${coupon.minAmount} دج`, 'warning');
@@ -210,14 +191,13 @@ const CartSystem = {
         return discount;
     },
     
-    // ===== [3.12] حساب الشحن =====
+    // ===== [3.11] حساب الشحن =====
     calculateShipping() {
         const subtotal = this.calculateSubtotal();
-        // شحن مجاني للطلبات فوق 5000 دج
         return subtotal >= 5000 ? 0 : 500;
     },
     
-    // ===== [3.13] حساب المجموع الكلي =====
+    // ===== [3.12] حساب المجموع الكلي =====
     calculateTotal() {
         const subtotal = this.calculateSubtotal();
         const discount = this.calculateDiscount();
@@ -225,7 +205,7 @@ const CartSystem = {
         return subtotal - discount + shipping;
     },
     
-    // ===== [3.14] تطبيق كوبون =====
+    // ===== [3.13] تطبيق كوبون =====
     applyCoupon(code) {
         const coupon = this.coupons[code.toUpperCase()];
         if (!coupon) {
@@ -245,45 +225,24 @@ const CartSystem = {
         return true;
     },
     
-    // ===== [3.15] إزالة الكوبون =====
+    // ===== [3.14] إزالة الكوبون =====
     removeCoupon() {
         this.appliedCoupon = null;
         this.showNotification('تم إزالة الكوبون', 'info');
         this.updateCartUI();
     },
     
-    // ===== [3.16] تجميع المنتجات حسب التاجر =====
-    groupByMerchant() {
-        const groups = {};
-        
-        this.cart.forEach(item => {
-            const merchant = item.merchantName;
-            if (!groups[merchant]) {
-                groups[merchant] = {
-                    merchantName: merchant,
-                    merchantId: item.merchantId,
-                    items: [],
-                    subtotal: 0
-                };
-            }
-            groups[merchant].items.push(item);
-            groups[merchant].subtotal += item.price * item.quantity;
-        });
-        
-        return Object.values(groups);
-    },
-    
-    // ===== [3.17] عرض السلة في الـ Sidebar =====
+    // ===== [3.15] عرض السلة في الـ Sidebar =====
     displayCart() {
         const container = document.getElementById('cartItems');
         if (!container) return;
         
         if (this.cart.length === 0) {
             container.innerHTML = `
-                <div class="empty-cart">
+                <div class="empty-cart" style="text-align: center; padding: 60px 20px;">
                     <i class="fas fa-shopping-basket" style="font-size: 60px; color: var(--gold); margin-bottom: 20px;"></i>
-                    <p>سلة التسوق فارغة</p>
-                    <button class="btn-gold" onclick="toggleCart()" style="margin-top: 20px;">
+                    <p style="color: var(--text-secondary);">سلة التسوق فارغة</p>
+                    <button class="btn-gold" onclick="toggleCart()" style="margin-top: 20px; padding: 10px 25px;">
                         <i class="fas fa-store"></i> تسوق الآن
                     </button>
                 </div>
@@ -297,26 +256,23 @@ const CartSystem = {
         const total = this.calculateTotal();
         
         container.innerHTML = `
-            <div class="cart-items-list">
+            <div class="cart-items-list" style="flex: 1; overflow-y: auto; padding: 10px;">
                 ${this.cart.map(item => `
-                    <div class="cart-item" data-id="${item.id}">
-                        <div class="cart-item-image">
-                            <img src="${item.image || 'https://via.placeholder.com/60'}" onerror="this.src='https://via.placeholder.com/60'">
+                    <div class="cart-item" style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <div class="cart-item-image" style="width: 60px; height: 60px; border-radius: 10px; overflow: hidden;">
+                            <img src="${item.image || 'https://via.placeholder.com/60'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/60'">
                         </div>
-                        <div class="cart-item-info">
-                            <div class="cart-item-name">${this.escapeHtml(item.name)}</div>
-                            <div class="cart-item-merchant">
-                                <i class="fas fa-store"></i> ${this.escapeHtml(item.merchantName)}
-                            </div>
-                            <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+                        <div class="cart-item-info" style="flex: 1;">
+                            <div class="cart-item-name" style="font-weight: bold; margin-bottom: 4px;">${this.escapeHtml(item.name)}</div>
+                            <div class="cart-item-price" style="color: var(--gold); font-size: 14px;">${item.price.toLocaleString()} دج</div>
                         </div>
-                        <div class="cart-item-actions">
-                            <div class="quantity-control">
-                                <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
-                                <span>${item.quantity}</span>
-                                <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                        <div class="cart-item-actions" style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            <div class="quantity-control" style="display: flex; gap: 8px; align-items: center;">
+                                <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity - 1})" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--gold); background: transparent; color: var(--gold); cursor: pointer;">-</button>
+                                <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
+                                <button onclick="CartSystem.updateQuantity(${item.id}, ${item.quantity + 1})" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--gold); background: transparent; color: var(--gold); cursor: pointer;">+</button>
                             </div>
-                            <button class="remove-item" onclick="CartSystem.removeFromCart(${item.id})">
+                            <button onclick="CartSystem.removeFromCart(${item.id})" style="background: none; border: none; color: #f87171; cursor: pointer;">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -324,29 +280,29 @@ const CartSystem = {
                 `).join('')}
             </div>
             
-            <div class="cart-summary">
+            <div class="cart-summary" style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
                 ${this.appliedCoupon ? `
-                    <div class="summary-row">
+                    <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                         <span>الكوبون (${this.appliedCoupon})</span>
                         <span style="color: #4ade80;">-${discount.toLocaleString()} دج</span>
-                        <button onclick="CartSystem.removeCoupon()" class="remove-coupon-btn">✕</button>
+                        <button onclick="CartSystem.removeCoupon()" style="background: none; border: none; color: #f87171; cursor: pointer;">✕</button>
                     </div>
                 ` : `
-                    <div class="coupon-input">
-                        <input type="text" id="couponCode" placeholder="كود الخصم">
-                        <button onclick="CartSystem.applyCoupon(document.getElementById('couponCode').value)">تطبيق</button>
+                    <div class="coupon-input" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="couponCode" placeholder="كود الخصم" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,215,0,0.3); background: var(--bg-secondary); color: white;">
+                        <button onclick="CartSystem.applyCoupon(document.getElementById('couponCode').value)" style="padding: 8px 15px; border-radius: 8px; border: none; background: var(--gold); color: black; cursor: pointer;">تطبيق</button>
                     </div>
                 `}
                 
-                <div class="summary-row">
+                <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span>المجموع الفرعي</span>
                     <span>${subtotal.toLocaleString()} دج</span>
                 </div>
-                <div class="summary-row">
+                <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span>الشحن</span>
                     <span>${shipping === 0 ? 'مجاني' : shipping.toLocaleString() + ' دج'}</span>
                 </div>
-                <div class="summary-row total">
+                <div class="summary-row total" style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--gold); font-size: 18px; font-weight: bold; color: var(--gold);">
                     <span>المجموع الكلي</span>
                     <span>${total.toLocaleString()} دج</span>
                 </div>
@@ -356,7 +312,7 @@ const CartSystem = {
         this.updateCartCounter();
     },
     
-    // ===== [3.18] تحديث عداد السلة =====
+    // ===== [3.16] تحديث عداد السلة =====
     updateCartCounter() {
         const totalItems = this.cart.reduce((sum, item) => sum + item.quantity, 0);
         
@@ -365,7 +321,7 @@ const CartSystem = {
         
         if (cartCounter) {
             cartCounter.textContent = totalItems;
-            cartCounter.style.display = totalItems > 0 ? 'flex' : 'none';
+            cartCounter.style.display = totalItems > 0 ? 'inline-flex' : 'none';
         }
         
         if (fixedCartCounter) {
@@ -374,13 +330,13 @@ const CartSystem = {
         }
     },
     
-    // ===== [3.19] تحديث واجهة السلة =====
+    // ===== [3.17] تحديث واجهة السلة =====
     updateCartUI() {
         this.displayCart();
         this.updateCartCounter();
     },
     
-    // ===== [3.20] فتح نافذة إتمام الطلب =====
+    // ===== [3.18] فتح نافذة إتمام الطلب =====
     openCheckout() {
         if (this.cart.length === 0) {
             this.showNotification('السلة فارغة! أضف منتجات أولاً', 'warning');
@@ -395,104 +351,109 @@ const CartSystem = {
             return;
         }
         
-        const modal = document.getElementById('checkoutModal');
-        if (modal) {
-            this.populateCheckoutModal();
-            modal.style.display = 'flex';
-        } else {
-            this.createCheckoutModal();
-        }
-    },
-    
-    // ===== [3.21] تعبئة نافذة الدفع =====
-    populateCheckoutModal() {
-        const container = document.getElementById('checkoutContent');
-        if (!container) return;
+        this.showNotification('جاري تجهيز الطلب...', 'info');
         
+        // تجميع الطلبات حسب التاجر
         const merchantGroups = this.groupByMerchant();
         const total = this.calculateTotal();
         
-        container.innerHTML = `
-            <div style="max-height: 60vh; overflow-y: auto; padding: 10px;">
-                <h3 style="color: var(--gold); margin-bottom: 20px;">📦 ملخص الطلب</h3>
-                
-                ${merchantGroups.map(group => `
-                    <div style="background: rgba(255,255,255,0.05); border-radius: 15px; padding: 15px; margin-bottom: 20px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,215,0,0.3); padding-bottom: 10px;">
-                            <i class="fas fa-store" style="color: var(--gold);"></i>
-                            <h4 style="color: var(--gold); margin: 0;">${this.escapeHtml(group.merchantName)}</h4>
-                        </div>
-                        ${group.items.map(item => `
-                            <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                                <span>${this.escapeHtml(item.name)} × ${item.quantity}</span>
-                                <span style="color: var(--gold);">${(item.price * item.quantity).toLocaleString()} دج</span>
-                            </div>
-                        `).join('')}
-                        <div style="display: flex; justify-content: space-between; padding-top: 10px; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
-                            <strong>مجموع ${this.escapeHtml(group.merchantName)}</strong>
-                            <strong style="color: var(--gold);">${group.subtotal.toLocaleString()} دج</strong>
-                        </div>
-                    </div>
-                `).join('')}
-                
-                <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05)); border-radius: 15px; padding: 15px; margin: 20px 0;">
-                    <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>المجموع الكلي</span>
-                        <span style="font-size: 24px; color: var(--gold); font-weight: bold;">${total.toLocaleString()} دج</span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-map-marker-alt"></i> عنوان التوصيل</label>
-                    <input type="text" class="form-control" id="shippingAddress" placeholder="أدخل عنوانك كاملاً" value="${currentUser?.address || ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-sticky-note"></i> ملاحظات إضافية</label>
-                    <textarea class="form-control" id="orderNote" rows="3" placeholder="أي ملاحظات للبائع..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-credit-card"></i> طريقة الدفع</label>
-                    <select class="form-control" id="paymentMethod">
-                        <option value="cash">الدفع عند الاستلام</option>
-                        <option value="cih">تحويل CIH</option>
-                        <option value="baridimob">بريدى موب</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-top: 20px;">
-                <button class="btn-gold" onclick="CartSystem.submitOrder()" style="flex: 1;">
-                    <i class="fas fa-check-circle"></i> تأكيد الطلب
-                </button>
-                <button class="btn-outline-gold" onclick="closeModal('checkoutModal')" style="flex: 0.5;">
-                    إلغاء
-                </button>
-            </div>
-        `;
-    },
-    
-    // ===== [3.22] إنشاء نافذة الدفع إذا لم تكن موجودة =====
-    createCheckoutModal() {
+        // إنشاء نافذة الدفع
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.id = 'checkoutModal';
+        modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; align-items: center; justify-content: center;';
+        
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h2><i class="fas fa-shopping-cart"></i> إتمام الطلب</h2>
-                    <button class="close-btn" onclick="closeModal('checkoutModal')">&times;</button>
+            <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto; background: var(--bg-primary); border-radius: 20px; padding: 20px;">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: var(--gold);"><i class="fas fa-shopping-cart"></i> إتمام الطلب</h2>
+                    <button class="close-btn" onclick="closeModal('checkoutModal')" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-secondary);">&times;</button>
                 </div>
-                <div id="checkoutContent"></div>
+                
+                <div style="max-height: 60vh; overflow-y: auto; padding: 10px;">
+                    <h3 style="color: var(--gold); margin-bottom: 20px;">📦 ملخص الطلب</h3>
+                    
+                    ${merchantGroups.map(group => `
+                        <div style="background: rgba(255,255,255,0.05); border-radius: 15px; padding: 15px; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,215,0,0.3); padding-bottom: 10px;">
+                                <i class="fas fa-store" style="color: var(--gold);"></i>
+                                <h4 style="color: var(--gold); margin: 0;">${this.escapeHtml(group.merchantName)}</h4>
+                            </div>
+                            ${group.items.map(item => `
+                                <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                                    <span>${this.escapeHtml(item.name)} × ${item.quantity}</span>
+                                    <span style="color: var(--gold);">${(item.price * item.quantity).toLocaleString()} دج</span>
+                                </div>
+                            `).join('')}
+                            <div style="display: flex; justify-content: space-between; padding-top: 10px; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                                <strong>مجموع ${this.escapeHtml(group.merchantName)}</strong>
+                                <strong style="color: var(--gold);">${group.subtotal.toLocaleString()} دج</strong>
+                            </div>
+                        </div>
+                    `).join('')}
+                    
+                    <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05)); border-radius: 15px; padding: 15px; margin: 20px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span>المجموع الكلي</span>
+                            <span style="font-size: 24px; color: var(--gold); font-weight: bold;">${total.toLocaleString()} دج</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label><i class="fas fa-map-marker-alt"></i> عنوان التوصيل</label>
+                        <input type="text" class="form-control" id="shippingAddress" placeholder="أدخل عنوانك كاملاً" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: var(--bg-secondary); color: white;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label><i class="fas fa-sticky-note"></i> ملاحظات إضافية</label>
+                        <textarea class="form-control" id="orderNote" rows="3" placeholder="أي ملاحظات للبائع..." style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: var(--bg-secondary); color: white;"></textarea>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label><i class="fas fa-credit-card"></i> طريقة الدفع</label>
+                        <select class="form-control" id="paymentMethod" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: var(--bg-secondary); color: white;">
+                            <option value="cash">الدفع عند الاستلام</option>
+                            <option value="cih">تحويل CIH</option>
+                            <option value="baridimob">بريدى موب</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 20px;">
+                    <button class="btn-gold" onclick="CartSystem.submitOrder()" style="flex: 1; padding: 12px; background: var(--gold); color: black; border: none; border-radius: 10px; cursor: pointer;">
+                        <i class="fas fa-check-circle"></i> تأكيد الطلب
+                    </button>
+                    <button class="btn-outline-gold" onclick="closeModal('checkoutModal')" style="flex: 0.5; padding: 12px; background: transparent; border: 1px solid var(--gold); color: var(--gold); border-radius: 10px; cursor: pointer;">
+                        إلغاء
+                    </button>
+                </div>
             </div>
         `;
+        
         document.body.appendChild(modal);
-        this.populateCheckoutModal();
-        modal.style.display = 'flex';
     },
     
-    // ===== [3.23] تقديم الطلب =====
+    // ===== [3.19] تجميع المنتجات حسب التاجر =====
+    groupByMerchant() {
+        const groups = {};
+        
+        this.cart.forEach(item => {
+            const merchant = item.merchantName;
+            if (!groups[merchant]) {
+                groups[merchant] = {
+                    merchantName: merchant,
+                    items: [],
+                    subtotal: 0
+                };
+            }
+            groups[merchant].items.push(item);
+            groups[merchant].subtotal += item.price * item.quantity;
+        });
+        
+        return Object.values(groups);
+    },
+    
+    // ===== [3.20] تقديم الطلب =====
     async submitOrder() {
         if (this.cart.length === 0) {
             this.showNotification('السلة فارغة', 'error');
@@ -521,23 +482,6 @@ const CartSystem = {
             paymentMethod: paymentMethod
         };
         
-        const ordersByMerchant = [];
-        let allSuccess = true;
-        
-        // إرسال طلب لكل تاجر على حدة
-        for (const group of merchantGroups) {
-            const result = await this.sendMerchantOrderToTelegram(group, customerInfo, orderId);
-            ordersByMerchant.push({
-                merchantName: group.merchantName,
-                merchantId: group.merchantId,
-                items: group.items,
-                total: group.subtotal,
-                telegramSent: result.success,
-                telegramMessageId: result.messageId
-            });
-            if (!result.success) allSuccess = false;
-        }
-        
         // حفظ الطلب
         const order = {
             orderId: orderId,
@@ -547,7 +491,7 @@ const CartSystem = {
             userAddress: address,
             customerNote: note,
             paymentMethod: paymentMethod,
-            ordersByMerchant: ordersByMerchant,
+            ordersByMerchant: merchantGroups,
             totalAmount: this.calculateTotal(),
             status: 'pending',
             createdAt: new Date().toISOString()
@@ -555,8 +499,10 @@ const CartSystem = {
         
         this.saveOrder(order);
         
-        // إرسال إشعار للمشتري
-        await this.sendCustomerConfirmation(order, customerInfo);
+        // إرسال إشعار للمشتري (إذا كان تلغرام متاحاً)
+        if (typeof TELEGRAM !== 'undefined') {
+            await this.sendCustomerConfirmation(order, customerInfo);
+        }
         
         // تنظيف السلة
         this.clearCart();
@@ -566,88 +512,14 @@ const CartSystem = {
         closeModal('checkoutModal');
         
         // عرض رسالة نجاح
-        if (allSuccess) {
-            this.showNotification('🎉 تم إرسال طلبك بنجاح! سيتم التواصل معك قريباً', 'success');
-        } else {
-            this.showNotification('⚠️ تم إرسال الطلب جزئياً، يرجى متابعة حالة طلبك', 'warning');
-        }
+        this.showNotification('🎉 تم إرسال طلبك بنجاح! سيتم التواصل معك قريباً', 'success');
         
         // عرض نافذة تأكيد
         this.showOrderConfirmation(order);
     },
     
-    // ===== [3.24] إرسال طلب تاجر إلى تلغرام =====
-    async sendMerchantOrderToTelegram(merchantGroup, customerInfo, orderId) {
-        if (typeof TELEGRAM === 'undefined') {
-            console.warn('⚠️ تلغرام غير متوفر');
-            return { success: false, messageId: null };
-        }
-        
-        const message = this.formatOrderMessage(merchantGroup, customerInfo, orderId);
-        
-        try {
-            const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM.channelId,
-                    text: message,
-                    parse_mode: 'Markdown'
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.ok) {
-                console.log(`✅ تم إرسال طلب إلى التاجر ${merchantGroup.merchantName}`);
-                return { success: true, messageId: data.result.message_id };
-            } else {
-                console.error('❌ فشل الإرسال:', data);
-                return { success: false, messageId: null };
-            }
-        } catch (error) {
-            console.error('❌ خطأ في الإرسال:', error);
-            return { success: false, messageId: null };
-        }
-    },
-    
-    // ===== [3.25] تنسيق رسالة الطلب =====
-    formatOrderMessage(merchantGroup, customerInfo, orderId) {
-        const itemsList = merchantGroup.items.map((item, index) => {
-            return `${index + 1}. *${this.escapeMarkdown(item.name)}* × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج`;
-        }).join('\n');
-        
-        const paymentMethodText = {
-            'cash': 'الدفع عند الاستلام',
-            'cih': 'تحويل CIH',
-            'baridimob': 'بريدى موب'
-        }[customerInfo.paymentMethod] || 'الدفع عند الاستلام';
-        
-        return `
-🛒 *طلب جديد #${orderId}*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 *العميل:* ${this.escapeMarkdown(customerInfo.name)}
-📞 *الهاتف:* ${customerInfo.phone || 'غير محدد'}
-📍 *العنوان:* ${this.escapeMarkdown(customerInfo.address)}
-💳 *الدفع:* ${paymentMethodText}
-
-📦 *المنتجات المطلوبة:*
-${itemsList}
-━━━━━━━━━━━━━━━━━━━━━━
-💰 *المجموع:* ${merchantGroup.subtotal.toLocaleString()} دج
-
-📝 *ملاحظات:* ${customerInfo.note || 'لا توجد ملاحظات'}
-━━━━━━━━━━━━━━━━━━━━━━
-🕐 ${new Date().toLocaleString('ar-EG')}
-
-✅ يرجى تأكيد الطلب
-        `;
-    },
-    
-    // ===== [3.26] إرسال إشعار للمشتري =====
+    // ===== [3.21] إرسال إشعار للمشتري =====
     async sendCustomerConfirmation(order, customerInfo) {
-        if (typeof TELEGRAM === 'undefined') return;
-        
         const message = `
 ✅ *تم استلام طلبك بنجاح #${order.orderId}*
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -656,7 +528,7 @@ ${itemsList}
 
 📦 *ملخص الطلب:*
 ${order.ordersByMerchant.map(m => 
-    `🏪 ${m.merchantName}: ${m.items.reduce((sum, i) => sum + i.quantity, 0)} منتج - ${m.total.toLocaleString()} دج`
+    `🏪 ${m.merchantName}: ${m.items.reduce((sum, i) => sum + i.quantity, 0)} منتج - ${m.subtotal.toLocaleString()} دج`
 ).join('\n')}
 ━━━━━━━━━━━━━━━━━━━━━━
 💰 *الإجمالي:* ${order.totalAmount.toLocaleString()} دج
@@ -682,7 +554,7 @@ ${order.ordersByMerchant.map(m =>
         }
     },
     
-    // ===== [3.27] توليد معرف طلب فريد =====
+    // ===== [3.22] توليد معرف طلب فريد =====
     generateOrderId() {
         const date = new Date();
         const timestamp = date.getFullYear().toString().slice(-2) +
@@ -694,7 +566,7 @@ ${order.ordersByMerchant.map(m =>
         return `ORD${timestamp}${random}`;
     },
     
-    // ===== [3.28] حفظ الطلب =====
+    // ===== [3.23] حفظ الطلب =====
     saveOrder(order) {
         const savedOrders = localStorage.getItem(this.ordersKey);
         let orders = [];
@@ -705,105 +577,22 @@ ${order.ordersByMerchant.map(m =>
         }
         orders.unshift(order);
         
-        // الاحتفاظ بآخر 100 طلب فقط
         if (orders.length > 100) orders = orders.slice(0, 100);
         
         localStorage.setItem(this.ordersKey, JSON.stringify(orders));
     },
     
-    // ===== [3.29] الحصول على طلبات المستخدم =====
-    getUserOrders() {
-        const savedOrders = localStorage.getItem(this.ordersKey);
-        if (!savedOrders) return [];
-        
-        try {
-            const orders = JSON.parse(savedOrders);
-            if (currentUser) {
-                return orders.filter(o => o.userId === currentUser.id);
-            }
-            return [];
-        } catch(e) {
-            return [];
-        }
-    },
-    
-    // ===== [3.30] عرض طلبات المستخدم =====
-    displayUserOrders() {
-        const orders = this.getUserOrders();
-        const container = document.getElementById('userOrdersContainer');
-        if (!container) return;
-        
-        if (orders.length === 0) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <i class="fas fa-box-open" style="font-size: 60px; color: var(--gold);"></i>
-                    <p>لا توجد طلبات سابقة</p>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = orders.map(order => `
-            <div style="background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div>
-                        <span style="color: var(--gold); font-weight: bold;">#${order.orderId}</span>
-                        <span style="font-size: 12px; color: #888; margin-right: 10px;">${new Date(order.createdAt).toLocaleString('ar-EG')}</span>
-                    </div>
-                    <span style="background: ${this.getStatusColor(order.status)}; padding: 5px 10px; border-radius: 20px; font-size: 12px;">
-                        ${this.getStatusText(order.status)}
-                    </span>
-                </div>
-                <div>
-                    ${order.ordersByMerchant.map(m => `
-                        <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-                            <span>🏪 ${m.merchantName}</span>
-                            <span>${m.items.reduce((s, i) => s + i.quantity, 0)} منتج</span>
-                            <span style="color: var(--gold);">${m.total.toLocaleString()} دج</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; padding-top: 10px; text-align: left;">
-                    <strong>الإجمالي: ${order.totalAmount.toLocaleString()} دج</strong>
-                </div>
-            </div>
-        `).join('');
-    },
-    
-    // ===== [3.31] الحصول على لون الحالة =====
-    getStatusColor(status) {
-        const colors = {
-            'pending': '#fbbf24',
-            'confirmed': '#4ade80',
-            'shipped': '#60a5fa',
-            'delivered': '#10b981',
-            'cancelled': '#ef4444'
-        };
-        return colors[status] || '#888';
-    },
-    
-    // ===== [3.32] الحصول على نص الحالة =====
-    getStatusText(status) {
-        const texts = {
-            'pending': 'قيد المعالجة',
-            'confirmed': 'تم التأكيد',
-            'shipped': 'تم الشحن',
-            'delivered': 'تم التوصيل',
-            'cancelled': 'ملغي'
-        };
-        return texts[status] || status;
-    },
-    
-    // ===== [3.33] عرض نافذة تأكيد الطلب =====
+    // ===== [3.24] عرض نافذة تأكيد الطلب =====
     showOrderConfirmation(order) {
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.id = 'orderConfirmationModal';
+        modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10002; align-items: center; justify-content: center;';
+        
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 500px; text-align: center;">
-                <div class="modal-header">
-                    <h2><i class="fas fa-check-circle" style="color: #4ade80;"></i> تم استلام طلبك</h2>
-                    <button class="close-btn" onclick="closeModal('orderConfirmationModal')">&times;</button>
+            <div class="modal-content" style="max-width: 500px; text-align: center; background: var(--bg-primary); border-radius: 20px; padding: 30px;">
+                <div class="modal-header" style="margin-bottom: 20px;">
+                    <h2 style="color: #4ade80;"><i class="fas fa-check-circle"></i> تم استلام طلبك</h2>
                 </div>
                 <div style="padding: 20px;">
                     <i class="fas fa-receipt" style="font-size: 60px; color: var(--gold); margin-bottom: 20px;"></i>
@@ -813,33 +602,31 @@ ${order.ordersByMerchant.map(m =>
                         <p style="margin: 5px 0;">📧 سيصلك إشعار عبر تلغرام</p>
                         <p style="margin: 5px 0;">📞 سيتم التواصل معك لتأكيد الطلب</p>
                     </div>
-                    <button class="btn-gold" onclick="closeModal('orderConfirmationModal'); CartSystem.displayUserOrders();">
-                        <i class="fas fa-list"></i> تتبع طلبي
+                    <button class="btn-gold" onclick="closeModal('orderConfirmationModal')" style="padding: 10px 25px; background: var(--gold); color: black; border: none; border-radius: 10px; cursor: pointer;">
+                        <i class="fas fa-check"></i> حسناً
                     </button>
                 </div>
             </div>
         `;
+        
         document.body.appendChild(modal);
-        modal.style.display = 'flex';
         
         setTimeout(() => {
             if (document.getElementById('orderConfirmationModal')) {
-                closeModal('orderConfirmationModal');
+                modal.remove();
             }
         }, 5000);
     },
     
-    // ===== [3.34] تفريغ السلة =====
+    // ===== [3.25] تفريغ السلة =====
     clearCart() {
         this.cart = [];
         this.appliedCoupon = null;
         this.saveCart();
-        this.updateCartUI();
     },
     
-    // ===== [3.35] إعداد مستمعي الأحداث =====
+    // ===== [3.26] إعداد مستمعي الأحداث =====
     setupEventListeners() {
-        // إغلاق السلة عند الضغط خارجها
         document.addEventListener('click', (e) => {
             const sidebar = document.getElementById('cartSidebar');
             if (sidebar && sidebar.classList.contains('active')) {
@@ -850,7 +637,7 @@ ${order.ordersByMerchant.map(m =>
         });
     },
     
-    // ===== [3.36] فتح السلة =====
+    // ===== [3.27] فتح السلة =====
     openCart() {
         const sidebar = document.getElementById('cartSidebar');
         if (sidebar) {
@@ -859,7 +646,7 @@ ${order.ordersByMerchant.map(m =>
         }
     },
     
-    // ===== [3.37] إغلاق السلة =====
+    // ===== [3.28] إغلاق السلة =====
     closeCart() {
         const sidebar = document.getElementById('cartSidebar');
         if (sidebar) {
@@ -867,7 +654,7 @@ ${order.ordersByMerchant.map(m =>
         }
     },
     
-    // ===== [3.38] تبديل حالة السلة =====
+    // ===== [3.29] تبديل حالة السلة =====
     toggleCart() {
         const sidebar = document.getElementById('cartSidebar');
         if (sidebar) {
@@ -878,32 +665,42 @@ ${order.ordersByMerchant.map(m =>
         }
     },
     
-    // ===== [3.39] عرض إشعار =====
+    // ===== [3.30] عرض إشعار =====
     showNotification(message, type = 'info') {
         if (typeof showNotification === 'function') {
             showNotification(message, type);
         } else {
             console.log(`[${type}] ${message}`);
-            alert(message);
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : type === 'warning' ? '#fbbf24' : '#60a5fa'};
+                color: black;
+                padding: 10px 20px;
+                border-radius: 50px;
+                z-index: 2000;
+                font-weight: bold;
+                white-space: nowrap;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
     },
     
-    // ===== [3.40] تنصيص النص لمنع XSS =====
+    // ===== [3.31] تنصيص النص =====
     escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    },
-    
-    // ===== [3.41] تنصيص للنص Markdown =====
-    escapeMarkdown(text) {
-        if (!text) return '';
-        return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
     }
 };
 
-// ===== [3.42] دوال مساعدة للاستخدام العام =====
+// ===== [3.32] دوال مساعدة للاستخدام العام =====
 function addToCart(productId, quantity = 1) {
     return CartSystem.addToCart(productId, quantity);
 }
@@ -924,7 +721,7 @@ function updateCartUI() {
     CartSystem.updateCartUI();
 }
 
-// ===== [3.43] تهيئة السلة عند تحميل الصفحة =====
+// ===== [3.33] تهيئة السلة =====
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         CartSystem.init();
@@ -933,7 +730,7 @@ if (document.readyState === 'loading') {
     CartSystem.init();
 }
 
-// ===== [3.44] تصدير الدوال إلى النطاق العام =====
+// ===== [3.34] تصدير الدوال =====
 window.CartSystem = CartSystem;
 window.addToCart = addToCart;
 window.toggleCart = toggleCart;
@@ -941,4 +738,4 @@ window.openCart = openCart;
 window.closeCart = closeCart;
 window.updateCartUI = updateCartUI;
 
-console.log('✅ نظام السلة المتطور جاهز - يدعم تقسيم الطلبات حسب التاجر');
+console.log('✅ نظام السلة المتطور جاهز');
