@@ -55,6 +55,27 @@ function loadUsers() {
 }
 loadUsers();
 
+// ===== [4.4] تحميل السلة =====
+function loadCart() {
+    const saved = localStorage.getItem('nardoo_cart');
+    cart = saved ? JSON.parse(saved) : [];
+    updateCartCounter();
+}
+
+// ===== [4.5] حفظ السلة =====
+function saveCart() {
+    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
+}
+
+// ===== [4.6] تحديث عداد السلة =====
+function updateCartCounter() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const counter = document.getElementById('cartCounter');
+    const fixedCounter = document.getElementById('fixedCartCounter');
+    
+    if (counter) counter.textContent = count;
+    if (fixedCounter) fixedCounter.textContent = count;
+}
 
 // ===== [4.7] دوال المساعدة والإشعارات =====
 function showNotification(message, type = 'info') {
@@ -696,6 +717,141 @@ function addToCart(productId) {
     showNotification('تمت الإضافة إلى السلة', 'success');
 }
 
+// ===== [4.23] تبديل عرض السلة =====
+function toggleCart() {
+    const sidebar = document.getElementById('cartSidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('open');
+        updateCartDisplay();
+    }
+}
+
+// ===== [4.24] تحديث عرض السلة =====
+function updateCartDisplay() {
+    const itemsDiv = document.getElementById('cartItems');
+    const totalSpan = document.getElementById('cartTotal');
+
+    if (!itemsDiv) return;
+
+    if (cart.length === 0) {
+        itemsDiv.innerHTML = '<div style="text-align: center; padding: 40px;">السلة فارغة</div>';
+        if (totalSpan) totalSpan.textContent = '0 دج';
+        return;
+    }
+
+    let total = 0;
+    itemsDiv.innerHTML = cart.map(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        return `
+            <div class="cart-item">
+                <div class="cart-item-details">
+                    <div class="cart-item-title">${item.name}</div>
+                    <div class="cart-item-price">${item.price.toLocaleString()} دج</div>
+                    <div class="cart-item-quantity">
+                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity - 1})">-</button>
+                        <span>${item.quantity}</span>
+                        <button class="quantity-btn" onclick="updateCartItem(${item.productId}, ${item.quantity + 1})">+</button>
+                        <button class="quantity-btn" onclick="removeFromCart(${item.productId})" style="background: #f87171; color: white;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (totalSpan) totalSpan.textContent = `${total.toLocaleString()} دج`;
+}
+
+// ===== [4.25] تحديث كمية منتج في السلة =====
+function updateCartItem(productId, newQuantity) {
+    const item = cart.find(i => i.productId == productId);
+    const product = products.find(p => p.id == productId);
+
+    if (newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+    }
+
+    if (newQuantity > product.stock) {
+        showNotification('الكمية غير متوفرة', 'warning');
+        return;
+    }
+
+    item.quantity = newQuantity;
+    saveCart();
+    updateCartCounter();
+    updateCartDisplay();
+}
+
+// ===== [4.26] إزالة منتج من السلة =====
+function removeFromCart(productId) {
+    cart = cart.filter(i => i.productId != productId);
+    saveCart();
+    updateCartCounter();
+    updateCartDisplay();
+    showNotification('تمت إزالة المنتج', 'info');
+}
+
+// ===== [4.27] إتمام الشراء =====
+async function checkoutCart() {
+    if (cart.length === 0) {
+        showNotification('السلة فارغة', 'warning');
+        return;
+    }
+
+    if (!currentUser) {
+        showNotification('يجب تسجيل الدخول أولاً', 'warning');
+        openLoginModal();
+        return;
+    }
+
+    const customerPhone = prompt('رقم الهاتف:', currentUser.phone || '');
+    if (!customerPhone) return;
+    
+    const customerAddress = prompt('عنوان التوصيل:', '');
+    if (!customerAddress) return;
+
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shipping = 800;
+    const total = subtotal + shipping;
+
+    const order = {
+        customerName: currentUser.name,
+        customerPhone: customerPhone,
+        customerAddress: customerAddress,
+        items: [...cart],
+        total: total
+    };
+
+    const message = `🟢 *طلب جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *الزبون:* ${order.customerName}
+📞 *الهاتف:* ${order.customerPhone}
+📍 *العنوان:* ${order.customerAddress}
+📦 *المنتجات:*
+${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج`).join('\n')}
+💰 *الإجمالي:* ${order.total} دج
+📅 ${new Date().toLocaleString('ar-EG')}`;
+
+    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: TELEGRAM.channelId,
+            text: message,
+            parse_mode: 'Markdown'
+        })
+    });
+
+    cart = [];
+    saveCart();
+    updateCartCounter();
+    toggleCart();
+    
+    showNotification('✅ تم إرسال الطلب بنجاح', 'success');
+}
 
 // ===== [4.28] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
