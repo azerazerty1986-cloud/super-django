@@ -2242,6 +2242,92 @@ function showWelcomePopup(user) {
         }
     }, 5000);
 }
+// ===== [4.56] إضافة أيقونة التوصيل داخل نافذة السلة =====
+function addDeliveryIconToCart() {
+    // البحث عن نافذة السلة
+    const cartSidebar = document.getElementById('cartSidebar');
+    
+    if (!cartSidebar) {
+        // إذا لم توجد نافذة السلة بعد، ننتظر قليلاً
+        setTimeout(addDeliveryIconToCart, 500);
+        return;
+    }
+    
+    // التحقق إذا كانت الأيقونة موجودة مسبقاً
+    if (document.getElementById('cartDeliveryIcon')) return;
+    
+    // إنشاء قسم خاص بالأيقونة
+    const deliverySection = document.createElement('div');
+    deliverySection.style.cssText = `
+        padding: 15px;
+        border-top: 1px solid rgba(255,215,0,0.3);
+        margin-top: 10px;
+        text-align: center;
+    `;
+    
+    // إنشاء رابط/زر الأيقونة
+    const deliveryLink = document.createElement('a');
+    deliveryLink.id = 'cartDeliveryIcon';
+    deliveryLink.innerHTML = '🚚 معلومات التوصيل';
+    deliveryLink.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px;
+        background: rgba(255,215,0,0.1);
+        border: 1px solid var(--gold);
+        border-radius: 10px;
+        color: var(--gold);
+        text-decoration: none;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+    `;
+    
+    // تأثير hover
+    deliveryLink.onmouseover = () => {
+        deliveryLink.style.background = 'rgba(255,215,0,0.2)';
+        deliveryLink.style.transform = 'translateX(-5px)';
+    };
+    deliveryLink.onmouseout = () => {
+        deliveryLink.style.background = 'rgba(255,215,0,0.1)';
+        deliveryLink.style.transform = 'translateX(0)';
+    };
+    
+    // فتح الملف عند النقر
+    deliveryLink.onclick = (e) => {
+        e.preventDefault();
+        window.open('delivery-full.html', '_blank');
+    };
+    
+    deliverySection.appendChild(deliveryLink);
+    
+    // إضافة القسم إلى نافذة السلة (قبل زر إتمام الطلب)
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.parentElement.insertBefore(deliverySection, checkoutBtn);
+    } else {
+        cartSidebar.appendChild(deliverySection);
+    }
+}
+
+// تشغيل الوظيفة عند تحميل الصفحة
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addDeliveryIconToCart);
+} else {
+    addDeliveryIconToCart();
+}
+
+// مراقبة فتح نافذة السلة لإضافة الأيقونة إذا لم تكن موجودة
+const cartObserver = new MutationObserver(function(mutations) {
+    const cartSidebar = document.getElementById('cartSidebar');
+    if (cartSidebar && cartSidebar.classList.contains('open')) {
+        setTimeout(addDeliveryIconToCart, 100);
+    }
+});
+cartObserver.observe(document.body, { attributes: true, subtree: false, attributeFilter: ['class'] });
 
 // ===== [4.53] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
