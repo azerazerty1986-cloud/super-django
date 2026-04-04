@@ -1,1118 +1,821 @@
-/* ================================================================== */
-/* ===== [delivery-full.js] - نظام معلومات التوصيل المتكامل ===== */
-/* ================================================================== */
-
-// ===== [1] إعدادات تلغرام الأساسية =====
-const TELEGRAM_CONFIG = {
-    botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
-    channelId: '-1003822964890',
-    adminId: '7461896689',
-    apiUrl: 'https://api.telegram.org/bot'
-};
-
-// ===== [2] بيانات التوصيل الإقليمية =====
-const DELIVERY_ZONES = {
-    'الجزائر العاصمة': {
-        name: 'الجزائر العاصمة',
-        cities: ['الجزائر الوسطى', 'باب الوادي', 'حسين داي', 'القبة', 'براقي', 'الحراش', 'الرويبة', 'الدار البيضاء'],
-        standardFee: 500,
-        expressFee: 1000,
-        standardDays: '1-2 أيام',
-        expressDays: '24 ساعة'
-    },
-    'وهران': {
-        name: 'وهران',
-        cities: ['وهران الوسطى', 'بئر الجير', 'السانية', 'عين الترك', 'المرسى الكبير', 'قديل', 'بوتليليس'],
-        standardFee: 600,
-        expressFee: 1200,
-        standardDays: '1-2 أيام',
-        expressDays: '24 ساعة'
-    },
-    'قسنطينة': {
-        name: 'قسنطينة',
-        cities: ['قسنطينة الوسطى', 'علي منجلي', 'الخروب', 'عين سمارة', 'زيغود يوسف'],
-        standardFee: 600,
-        expressFee: 1200,
-        standardDays: '1-2 أيام',
-        expressDays: '24 ساعة'
-    },
-    'عنابة': {
-        name: 'عنابة',
-        cities: ['عنابة الوسطى', 'سيدي عمار', 'الحجار', 'برحال', 'عين الباردة'],
-        standardFee: 700,
-        expressFee: 1400,
-        standardDays: '2-3 أيام',
-        expressDays: '48 ساعة'
-    },
-    'سطيف': {
-        name: 'سطيف',
-        cities: ['سطيف الوسطى', 'العلمة', 'بابور', 'قجال', 'بني ورتيلان'],
-        standardFee: 700,
-        expressFee: 1400,
-        standardDays: '2-3 أيام',
-        expressDays: '48 ساعة'
-    },
-    'تيزي وزو': {
-        name: 'تيزي وزو',
-        cities: ['تيزي وزو الوسطى', 'ذراع بن خدة', 'واسيف', 'الأربعاء ناث إيراثن', 'بوخالفة'],
-        standardFee: 700,
-        expressFee: 1400,
-        standardDays: '2-3 أيام',
-        expressDays: '48 ساعة'
-    },
-    'بجاية': {
-        name: 'بجاية',
-        cities: ['بجاية الوسطى', 'القصر', 'أميزور', 'القلعة', 'صدوق'],
-        standardFee: 750,
-        expressFee: 1500,
-        standardDays: '2-3 أيام',
-        expressDays: '48 ساعة'
-    },
-    'باتنة': {
-        name: 'باتنة',
-        cities: ['باتنة الوسطى', 'عين التوتة', 'مروانة', 'بريكة', 'أريس'],
-        standardFee: 800,
-        expressFee: 1600,
-        standardDays: '3-4 أيام',
-        expressDays: '48 ساعة'
-    },
-    'ورقلة': {
-        name: 'ورقلة',
-        cities: ['ورقلة الوسطى', 'رويسات', 'البرمة', 'حاسي مسعود', 'نزلة'],
-        standardFee: 1200,
-        expressFee: 2000,
-        standardDays: '4-5 أيام',
-        expressDays: '3 أيام'
-    },
-    'تندوف': {
-        name: 'تندوف',
-        cities: ['تندوف الوسطى', 'أم العسل', 'الشهيد محمد'],
-        standardFee: 1500,
-        expressFee: 2500,
-        standardDays: '5-7 أيام',
-        expressDays: '4 أيام'
-    },
-    'ولاية أخرى': {
-        name: 'ولاية أخرى',
-        cities: [],
-        standardFee: 1000,
-        expressFee: 1800,
-        standardDays: '3-5 أيام',
-        expressDays: '2-3 أيام'
-    }
-};
-
-// ===== [3] معلومات الشحن والتوصيل =====
-const SHIPPING_INFO = {
-    freeShippingThreshold: 15000, // توصيل مجاني للطلبات فوق 15000 دج
-    handlingTime: '24 ساعة', // وقت تجهيز الطلب
-    returns: {
-        allowed: true,
-        days: 14,
-        conditions: 'المنتج يجب أن يكون غير مستخدم وفي عبوته الأصلية'
-    },
-    paymentMethods: ['الدفع عند الاستلام', 'تحويل بنكي', 'بريديكاش'],
-    workingHours: {
-        saturday: '9:00 - 17:00',
-        sunday: '9:00 - 17:00',
-        monday: '9:00 - 17:00',
-        tuesday: '9:00 - 17:00',
-        wednesday: '9:00 - 17:00',
-        thursday: '9:00 - 17:00',
-        friday: 'مغلق'
-    }
-};
-
-// ===== [4] إحصائيات الطلبات =====
-let deliveryStats = {
-    totalOrders: 0,
-    deliveredOrders: 0,
-    pendingOrders: 0,
-    averageDeliveryTime: 0
-};
-
-// ===== [5] تحميل إحصائيات التوصيل =====
-function loadDeliveryStats() {
-    const ordersHistory = JSON.parse(localStorage.getItem('nardoo_orders_history') || '[]');
-    
-    deliveryStats.totalOrders = ordersHistory.length;
-    deliveryStats.deliveredOrders = ordersHistory.filter(o => o.status === 'delivered').length;
-    deliveryStats.pendingOrders = ordersHistory.filter(o => o.status === 'pending' || o.status === 'processing').length;
-    
-    // حساب متوسط وقت التوصيل (تجريبي)
-    deliveryStats.averageDeliveryTime = Math.floor(Math.random() * 3) + 2; // 2-4 أيام
-    
-    return deliveryStats;
-}
-
-// ===== [6] حساب رسوم التوصيل =====
-function calculateDeliveryFee(wilaya, city, deliveryType, subtotal) {
-    // التوصيل المجاني
-    if (subtotal >= SHIPPING_INFO.freeShippingThreshold) {
-        return 0;
-    }
-    
-    const zone = Object.values(DELIVERY_ZONES).find(z => 
-        z.name === wilaya || z.cities.includes(city)
-    ) || DELIVERY_ZONES['ولاية أخرى'];
-    
-    if (deliveryType === 'express') {
-        return zone.expressFee;
-    }
-    return zone.standardFee;
-}
-
-// ===== [7] حساب وقت التوصيل المتوقع =====
-function getExpectedDeliveryTime(wilaya, city, deliveryType) {
-    const zone = Object.values(DELIVERY_ZONES).find(z => 
-        z.name === wilaya || z.cities.includes(city)
-    ) || DELIVERY_ZONES['ولاية أخرى'];
-    
-    if (deliveryType === 'express') {
-        return zone.expressDays;
-    }
-    return zone.standardDays;
-}
-
-// ===== [8] التحقق من توفر التوصيل =====
-function isDeliveryAvailable(wilaya, city) {
-    // كل الولايات متوفرة مع رسوم مختلفة
-    return true;
-}
-
-// ===== [9] إنشاء جدول أسعار التوصيل =====
-function generateDeliveryTable() {
-    let tableHTML = `
-        <div class="delivery-table-container">
-            <table class="delivery-table">
-                <thead>
-                    <tr>
-                        <th>الولاية</th>
-                        <th>المدن الرئيسية</th>
-                        <th>توصيل عادي</th>
-                        <th>توصيل سريع</th>
-                        <th>المدة المتوقعة</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-    
-    for (const zone of Object.values(DELIVERY_ZONES)) {
-        if (zone.name === 'ولاية أخرى') continue;
-        
-        const citiesDisplay = zone.cities.slice(0, 3).join('، ') + (zone.cities.length > 3 ? '...' : '');
-        
-        tableHTML += `
-            <tr>
-                <td><strong>${zone.name}</strong></td>
-                <td>${citiesDisplay || 'جميع المدن'}</td>
-                <td>${zone.standardFee.toLocaleString()} دج</td>
-                <td>${zone.expressFee.toLocaleString()} دج</td>
-                <td>${zone.standardDays}</td>
-            </tr>
-        `;
-    }
-    
-    tableHTML += `
-                    <tr style="background: rgba(255,215,0,0.1);">
-                        <td><strong>ولايات أخرى</strong></td>
-                        <td>جميع الولايات غير المذكورة</td>
-                        <td>${DELIVERY_ZONES['ولاية أخرى'].standardFee.toLocaleString()} دج</td>
-                        <td>${DELIVERY_ZONES['ولاية أخرى'].expressFee.toLocaleString()} دج</td>
-                        <td>${DELIVERY_ZONES['ولاية أخرى'].standardDays}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    return tableHTML;
-}
-
-// ===== [10] حاسبة التوصيل التفاعلية =====
-function createDeliveryCalculator() {
-    const wilayas = Object.values(DELIVERY_ZONES).map(z => z.name);
-    
-    return `
-        <div class="calculator-card">
-            <h3><i class="fas fa-calculator"></i> حاسبة التوصيل</h3>
-            <div class="calculator-form">
-                <div class="form-group">
-                    <label><i class="fas fa-map-marker-alt"></i> اختر الولاية</label>
-                    <select id="calcWilaya" class="calc-input">
-                        ${wilayas.map(w => `<option value="${w}">${w}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label><i class="fas fa-city"></i> اختر المدينة</label>
-                    <select id="calcCity" class="calc-input">
-                        <option value="">اختر الولاية أولاً</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label><i class="fas fa-truck"></i> نوع التوصيل</label>
-                    <select id="calcType" class="calc-input">
-                        <option value="standard">🚚 عادي</option>
-                        <option value="express">⚡ سريع</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label><i class="fas fa-shopping-cart"></i> قيمة الطلب (دج)</label>
-                    <input type="number" id="calcSubtotal" class="calc-input" placeholder="أدخل قيمة الطلب" value="5000">
-                </div>
-                <button onclick="updateCalculatorResult()" class="calc-btn">
-                    <i class="fas fa-chart-line"></i> احسب التوصيل
-                </button>
-                <div id="calcResult" class="calc-result">
-                    <!-- النتيجة تظهر هنا -->
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// ===== [11] تحديث نتيجة الحاسبة =====
-function updateCalculatorResult() {
-    const wilaya = document.getElementById('calcWilaya')?.value;
-    const city = document.getElementById('calcCity')?.value;
-    const deliveryType = document.getElementById('calcType')?.value;
-    const subtotal = parseInt(document.getElementById('calcSubtotal')?.value) || 0;
-    
-    if (!wilaya) return;
-    
-    const deliveryFee = calculateDeliveryFee(wilaya, city, deliveryType, subtotal);
-    const expectedDays = getExpectedDeliveryTime(wilaya, city, deliveryType);
-    const totalWithShipping = subtotal + deliveryFee;
-    const isFreeShipping = subtotal >= SHIPPING_INFO.freeShippingThreshold;
-    
-    const resultDiv = document.getElementById('calcResult');
-    if (resultDiv) {
-        if (isFreeShipping && deliveryFee === 0) {
-            resultDiv.innerHTML = `
-                <div class="calc-result-free">
-                    <i class="fas fa-gift"></i>
-                    <div>
-                        <strong>🎉 توصيل مجاني!</strong>
-                        <p>طلبيتك تجاوزت ${SHIPPING_INFO.freeShippingThreshold.toLocaleString()} دج</p>
-                    </div>
-                </div>
-            `;
-        } else {
-            resultDiv.innerHTML = `
-                <div class="calc-result-fee">
-                    <div class="result-row">
-                        <span>رسوم التوصيل:</span>
-                        <strong class="fee-amount">${deliveryFee.toLocaleString()} دج</strong>
-                    </div>
-                    <div class="result-row">
-                        <span>الإجمالي مع التوصيل:</span>
-                        <strong>${totalWithShipping.toLocaleString()} دج</strong>
-                    </div>
-                    <div class="result-row">
-                        <span>الوقت المتوقع:</span>
-                        <span class="time-badge">⏱️ ${expectedDays}</span>
-                    </div>
-                </div>
-            `;
-        }
-    }
-}
-
-// ===== [12] تحديث قائمة المدن حسب الولاية =====
-function updateCitiesByWilaya() {
-    const wilaya = document.getElementById('calcWilaya')?.value;
-    const citySelect = document.getElementById('calcCity');
-    
-    if (!citySelect) return;
-    
-    const zone = Object.values(DELIVERY_ZONES).find(z => z.name === wilaya);
-    
-    if (zone && zone.cities.length > 0) {
-        citySelect.innerHTML = `<option value="">اختر المدينة</option>` +
-            zone.cities.map(city => `<option value="${city}">${city}</option>`).join('');
-        citySelect.disabled = false;
-    } else {
-        citySelect.innerHTML = `<option value="">جميع المدن</option>`;
-        citySelect.disabled = false;
-    }
-}
-
-// ===== [13] إنشاء بطاقات طرق الدفع =====
-function createPaymentMethods() {
-    const methods = {
-        'الدفع عند الاستلام': {
-            icon: 'fas fa-hand-holding-usd',
-            description: 'ادفع نقداً عند استلام الطلب',
-            color: '#4ade80'
-        },
-        'تحويل بنكي': {
-            icon: 'fas fa-university',
-            description: 'تحويل إلى حسابنا البنكي',
-            color: '#60a5fa'
-        },
-        'بريديكاش': {
-            icon: 'fas fa-envelope',
-            description: 'الدفع عبر بريديكاش CCP',
-            color: '#fbbf24'
-        }
-    };
-    
-    return `
-        <div class="payment-grid">
-            ${Object.entries(methods).map(([name, info]) => `
-                <div class="payment-card">
-                    <div class="payment-icon" style="background: ${info.color}20; color: ${info.color};">
-                        <i class="${info.icon}"></i>
-                    </div>
-                    <h4>${name}</h4>
-                    <p>${info.description}</p>
-                </div>
-            `).join('')}
-        </div>
-    `;
-}
-
-// ===== [15] إنشاء قسم الأسئلة الشائعة =====
-function createFAQs() {
-    const faqs = [
-        {
-            q: 'كم تستغرق عملية التوصيل؟',
-            a: 'تختلف مدة التوصيل حسب منطقتك ونوع الشحن المختار. التوصيل العادي يستغرق 2-5 أيام، بينما التوصيل السريع يستغرق 24-48 ساعة.'
-        },
-        {
-            q: 'هل يمكنني تتبع طلبي؟',
-            a: 'نعم، نوفر خدمة تتبع الطلب. ستتلقى رابط تتبع عبر البريد الإلكتروني أو رسالة تلغرام عند شحن طلبك.'
-        },
-        {
-            q: 'ماذا لو كان المنتج تالفاً؟',
-            a: 'يمكنك إرجاع المنتج خلال ${SHIPPING_INFO.returns.days} يوماً من تاريخ الاستلام بشرط أن يكون غير مستخدم وفي عبوته الأصلية.'
-        },
-        {
-            q: 'هل التوصيل مجاني؟',
-            a: 'نعم، التوصيل مجاني للطلبات التي تتجاوز ${SHIPPING_INFO.freeShippingThreshold.toLocaleString()} دج.'
-        },
-        {
-            q: 'ما هي أوقات التوصيل؟',
-            a: 'أوقات التوصيل من السبت إلى الخميس من 9:00 صباحاً إلى 5:00 مساءً. يوم الجمعة لا يوجد توصيل.'
-        }
-    ];
-    
-    return `
-        <div class="faq-container">
-            ${faqs.map((faq, index) => `
-                <div class="faq-item">
-                    <div class="faq-question" onclick="toggleFaq(${index})">
-                        <span>❓ ${faq.q}</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div class="faq-answer" id="faqAnswer${index}">
-                        <p>${faq.a}</p>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-}
-
-// ===== [16] تبديل ظهور الإجابة =====
-function toggleFaq(index) {
-    const answer = document.getElementById(`faqAnswer${index}`);
-    if (answer) {
-        answer.classList.toggle('open');
-    }
-}
-
-// ===== [17] إنشاء إحصائيات التوصيل =====
-function createDeliveryStats() {
-    loadDeliveryStats();
-    
-    const statsCards = [
-        {
-            icon: 'fas fa-shopping-cart',
-            label: 'إجمالي الطلبات',
-            value: deliveryStats.totalOrders,
-            color: '#4ade80'
-        },
-        {
-            icon: 'fas fa-check-circle',
-            label: 'تم التوصيل',
-            value: deliveryStats.deliveredOrders,
-            color: '#60a5fa'
-        },
-        {
-            icon: 'fas fa-clock',
-            label: 'قيد المعالجة',
-            value: deliveryStats.pendingOrders,
-            color: '#fbbf24'
-        },
-        {
-            icon: 'fas fa-tachometer-alt',
-            label: 'متوسط التوصيل',
-            value: `${deliveryStats.averageDeliveryTime} أيام`,
-            color: '#f87171'
-        }
-    ];
-    
-    return `
-        <div class="stats-grid">
-            ${statsCards.map(stat => `
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: ${stat.color}20; color: ${stat.color};">
-                        <i class="${stat.icon}"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-value">${stat.value}</div>
-                        <div class="stat-label">${stat.label}</div>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-}
-
-// ===== [18] إنشاء خريطة التوصيل (نمطية) =====
-function createDeliveryMap() {
-    return `
-        <div class="delivery-map-card">
-            <h3><i class="fas fa-map-marked-alt"></i> مناطق التوصيل</h3>
-            <div class="map-placeholder">
-                <div class="map-grid">
-                    <div class="map-region north">
-                        <span>الشمال</span>
-                        <small>الجزائر، تيزي وزو، بجاية</small>
-                    </div>
-                    <div class="map-region east">
-                        <span>الشرق</span>
-                        <small>قسنطينة، عنابة، سطيف</small>
-                    </div>
-                    <div class="map-region west">
-                        <span>الغرب</span>
-                        <small>وهران، تلمسان، سيدي بلعباس</small>
-                    </div>
-                    <div class="map-region south">
-                        <span>الجنوب</span>
-                        <small>ورقلة، تندوف، أدرار</small>
-                    </div>
-                </div>
-                <p class="map-note"><i class="fas fa-info-circle"></i> جميع ولايات الجزائر مشمولة بخدمة التوصيل</p>
-            </div>
-        </div>
-    `;
-}
-
-// ===== [19] إنشاء صفحة التوصيل الكاملة =====
-function renderDeliveryPage() {
-    const container = document.getElementById('deliveryContainer');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="delivery-wrapper">
-            <!-- الهيدر -->
-            <div class="delivery-header">
-                <div class="header-content">
-                    <i class="fas fa-truck-fast header-icon"></i>
-                    <h1>معلومات التوصيل والشحن</h1>
-                    <p>نوصل لك أينما كنت في الجزائر</p>
-                </div>
-            </div>
-            
-            <!-- الإحصائيات -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-chart-simple"></i>
-                    <h2>إحصائيات التوصيل</h2>
-                </div>
-                ${createDeliveryStats()}
-            </section>
-            
-            <!-- حاسبة التوصيل -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-calculator"></i>
-                    <h2>احسب رسوم التوصيل</h2>
-                </div>
-                ${createDeliveryCalculator()}
-            </section>
-            
-            <!-- جدول الأسعار -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-table-list"></i>
-                    <h2>أسعار التوصيل حسب الولاية</h2>
-                </div>
-                ${generateDeliveryTable()}
-            </section>
-            
-            <!-- خريطة المناطق -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-map"></i>
-                    <h2>مناطق التوصيل</h2>
-                </div>
-                ${createDeliveryMap()}
-            </section>
-            
-            <!-- طرق الدفع -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-credit-card"></i>
-                    <h2>طرق الدفع المتاحة</h2>
-                </div>
-                ${createPaymentMethods()}
-            </section>
-            
-            <!-- معلومات إضافية -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-clock"></i>
-                    <h2>ساعات العمل والتوصيل</h2>
-                </div>
-                <div class="working-hours-card">
-                    <div class="hours-grid">
-                        <div class="hour-item">
-                            <span>السبت - الخميس:</span>
-                            <strong>${SHIPPING_INFO.workingHours.saturday}</strong>
-                        </div>
-                        <div class="hour-item">
-                            <span>الجمعة:</span>
-                            <strong class="closed">${SHIPPING_INFO.workingHours.friday}</strong>
-                        </div>
-                        <div class="hour-item">
-                            <span>وقت تجهيز الطلب:</span>
-                            <strong>${SHIPPING_INFO.handlingTime}</strong>
-                        </div>
-                        <div class="hour-item">
-                            <span>توصيل مجاني للطلبات:</span>
-                            <strong>أكثر من ${SHIPPING_INFO.freeShippingThreshold.toLocaleString()} دج</strong>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- الأسئلة الشائعة -->
-            <section class="delivery-section">
-                <div class="section-title">
-                    <i class="fas fa-question-circle"></i>
-                    <h2>الأسئلة الشائعة</h2>
-                </div>
-                ${createFAQs()}
-            </section>
-            
-            <!-- زر الرجوع -->
-            <div class="back-button-container">
-                <button onclick="window.close()" class="back-btn">
-                    <i class="fas fa-arrow-left"></i> رجوع
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // إضافة مستمع لتغيير الولاية
-    const wilayaSelect = document.getElementById('calcWilaya');
-    if (wilayaSelect) {
-        wilayaSelect.addEventListener('change', updateCitiesByWilaya);
-        setTimeout(() => {
-            updateCitiesByWilaya();
-            updateCalculatorResult();
-        }, 100);
-    }
-    
-    // إضافة مستمع للحاسبة
-    const calcInputs = ['calcWilaya', 'calcCity', 'calcType', 'calcSubtotal'];
-    calcInputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', updateCalculatorResult);
-            el.addEventListener('input', updateCalculatorResult);
-        }
-    });
-}
-
-// ===== [20] تطبيق الثيم =====
-function applyTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    const isDark = savedTheme === 'dark';
-    
-    document.body.classList.toggle('dark-theme', isDark);
-    document.body.classList.toggle('light-theme', !isDark);
-}
-
-// ===== [21] إضافة الأنماط CSS =====
-function addDeliveryStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ناردو برو - معلومات التوصيل والشحن</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Tajawal', 'Cairo', sans-serif;
-            background: var(--bg-primary, #0a0a0a);
-            color: var(--text-primary, #ffffff);
+            font-family: 'Tajawal', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
             line-height: 1.6;
-            transition: all 0.3s ease;
         }
-        
-        body.light-theme {
-            --bg-primary: #f5f5f5;
-            --bg-secondary: #ffffff;
-            --text-primary: #1a1a1a;
-            --text-secondary: #666666;
-            --gold: #d4af37;
-            --glass: rgba(255, 255, 255, 0.9);
-        }
-        
-        body.dark-theme {
+
+        /* الوضع الليلي */
+        body.dark {
             --bg-primary: #0a0a0a;
             --bg-secondary: #1a1a1a;
+            --bg-card: #222;
             --text-primary: #ffffff;
             --text-secondary: #aaaaaa;
             --gold: #ffd700;
-            --glass: rgba(26, 26, 26, 0.9);
+            --gold-dark: #cca000;
+            --glass: rgba(255, 255, 255, 0.05);
+            --success: #4ade80;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --info: #60a5fa;
         }
-        
-        .delivery-wrapper {
+
+        /* الوضع النهاري */
+        body.light {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --gold: #d4af37;
+            --gold-dark: #b8941e;
+            --glass: rgba(0, 0, 0, 0.05);
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
+        /* الهيدر */
         .delivery-header {
             text-align: center;
             padding: 60px 20px;
-            background: linear-gradient(135deg, var(--gold)20, transparent);
-            border-radius: 30px;
+            background: linear-gradient(135deg, var(--gold)15, transparent);
+            border-radius: 40px;
             margin-bottom: 40px;
         }
-        
+
         .header-icon {
-            font-size: 60px;
+            font-size: 70px;
             color: var(--gold);
             margin-bottom: 20px;
         }
-        
+
         .delivery-header h1 {
             font-size: 36px;
             color: var(--gold);
             margin-bottom: 10px;
         }
-        
+
         .delivery-header p {
             font-size: 18px;
             color: var(--text-secondary);
         }
-        
-        .delivery-section {
+
+        /* الأقسام */
+        .section {
             background: var(--bg-secondary);
-            border-radius: 20px;
+            border-radius: 25px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border: 1px solid var(--glass);
         }
-        
+
         .section-title {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 2px solid var(--gold);
         }
-        
+
         .section-title i {
             font-size: 28px;
             color: var(--gold);
         }
-        
+
         .section-title h2 {
             font-size: 24px;
             color: var(--gold);
         }
-        
-        /* الإحصائيات */
+
+        /* بطاقات الإحصائيات */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
+            margin-bottom: 30px;
         }
-        
+
         .stat-card {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 20px;
-            background: var(--glass);
-            border-radius: 15px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
             transition: transform 0.3s;
+            border: 1px solid var(--glass);
         }
-        
+
         .stat-card:hover {
             transform: translateY(-5px);
         }
-        
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 15px;
-            font-size: 28px;
-        }
-        
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
+
+        .stat-card i {
+            font-size: 40px;
             color: var(--gold);
+            margin-bottom: 15px;
         }
-        
-        .stat-label {
-            font-size: 14px;
+
+        .stat-card h3 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
             color: var(--text-secondary);
+            font-size: 14px;
         }
-        
-        /* حاسبة التوصيل */
-        .calculator-card {
-            background: var(--glass);
+
+        /* الحاسبة */
+        .calculator-box {
+            background: var(--bg-card);
             border-radius: 20px;
             padding: 25px;
         }
-        
-        .calculator-card h3 {
-            color: var(--gold);
-            margin-bottom: 20px;
-            font-size: 22px;
-        }
-        
-        .calculator-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        
+
         .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            margin-bottom: 20px;
         }
-        
+
         .form-group label {
+            display: block;
+            margin-bottom: 8px;
             font-weight: bold;
             color: var(--text-secondary);
         }
-        
-        .calc-input {
-            padding: 12px;
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
             border: 1px solid var(--gold);
-            border-radius: 10px;
             background: var(--bg-primary);
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 16px;
+            font-family: inherit;
         }
-        
+
         .calc-btn {
-            grid-column: 1/-1;
-            padding: 15px;
+            width: 100%;
+            padding: 14px;
             background: var(--gold);
             color: black;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.3s;
         }
-        
+
         .calc-btn:hover {
+            background: var(--gold-dark);
             transform: scale(1.02);
         }
-        
-        .calc-result {
-            grid-column: 1/-1;
-            margin-top: 15px;
+
+        .result-box {
+            margin-top: 25px;
             padding: 20px;
-            background: var(--bg-primary);
-            border-radius: 10px;
+            background: var(--glass);
+            border-radius: 15px;
+            text-align: center;
         }
-        
-        .calc-result-free {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            color: #4ade80;
+
+        .result-box.free {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid var(--success);
         }
-        
-        .calc-result-fee .result-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--text-secondary)30;
-        }
-        
-        .fee-amount {
-            color: var(--gold);
-            font-size: 20px;
-        }
-        
-        .time-badge {
-            background: var(--gold)20;
-            padding: 5px 10px;
-            border-radius: 20px;
+
+        .result-amount {
+            font-size: 36px;
+            font-weight: bold;
             color: var(--gold);
         }
-        
-        /* جدول التوصيل */
-        .delivery-table-container {
-            overflow-x: auto;
-        }
-        
-        .delivery-table {
+
+        /* جدول الأسعار */
+        .price-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
-        .delivery-table th,
-        .delivery-table td {
-            padding: 12px;
+
+        .price-table th,
+        .price-table td {
+            padding: 15px;
             text-align: right;
-            border-bottom: 1px solid var(--text-secondary)30;
+            border-bottom: 1px solid var(--glass);
         }
-        
-        .delivery-table th {
-            background: var(--gold);
-            color: black;
+
+        .price-table th {
+            background: var(--glass);
+            color: var(--gold);
             font-weight: bold;
         }
-        
-        .delivery-table tr:hover {
-            background: var(--gold)10;
+
+        .price-table tr:hover {
+            background: var(--glass);
         }
-        
+
         /* طرق الدفع */
-        .payment-grid {
+        .payment-methods {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
-        
+
         .payment-card {
-            text-align: center;
+            background: var(--bg-card);
+            border-radius: 20px;
             padding: 25px;
-            background: var(--glass);
-            border-radius: 15px;
+            text-align: center;
+            border: 1px solid var(--glass);
             transition: transform 0.3s;
         }
-        
+
         .payment-card:hover {
             transform: translateY(-5px);
         }
-        
+
         .payment-icon {
             width: 70px;
             height: 70px;
             margin: 0 auto 15px;
+            background: var(--glass);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
             font-size: 32px;
-        }
-        
-        .payment-card h4 {
-            margin-bottom: 10px;
             color: var(--gold);
         }
-        
-        /* ساعات العمل */
-        .working-hours-card {
-            background: var(--glass);
-            border-radius: 15px;
-            padding: 20px;
-        }
-        
-        .hours-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-        }
-        
-        .hour-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px;
-            border-bottom: 1px solid var(--text-secondary)20;
-        }
-        
-        .closed {
-            color: #f87171;
-        }
-        
+
         /* الأسئلة الشائعة */
-        .faq-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
         .faq-item {
-            background: var(--glass);
-            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--glass);
+            border-radius: 15px;
             overflow: hidden;
         }
-        
+
         .faq-question {
+            padding: 18px 20px;
+            background: var(--bg-card);
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px 20px;
-            cursor: pointer;
             font-weight: bold;
-            transition: background 0.3s;
         }
-        
+
         .faq-question:hover {
-            background: var(--gold)10;
+            background: var(--glass);
         }
-        
+
         .faq-answer {
+            padding: 0 20px;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease;
-            padding: 0 20px;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
         }
-        
+
         .faq-answer.open {
+            padding: 18px 20px;
             max-height: 200px;
-            padding: 0 20px 18px 20px;
         }
-        
-        /* خريطة التوصيل */
-        .delivery-map-card {
-            background: var(--glass);
+
+        /* شريط التتبع */
+        .tracking-box {
+            background: var(--bg-card);
             border-radius: 20px;
             padding: 25px;
-        }
-        
-        .map-placeholder {
-            margin-top: 20px;
-        }
-        
-        .map-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .map-region {
             text-align: center;
-            padding: 20px;
-            background: var(--bg-primary);
+        }
+
+        .tracking-input-group {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .tracking-input {
+            flex: 1;
+            padding: 14px;
             border-radius: 12px;
+            border: 1px solid var(--gold);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .tracking-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--glass);
+            border-radius: 15px;
+            text-align: right;
+        }
+
+        /* خريطة المناطق */
+        .regions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .region-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
             border-right: 3px solid var(--gold);
         }
-        
-        .map-region span {
-            display: block;
-            font-size: 18px;
-            font-weight: bold;
+
+        .region-card h4 {
             color: var(--gold);
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
-        
-        .map-region small {
-            color: var(--text-secondary);
-        }
-        
-        .map-note {
-            text-align: center;
-            padding: 15px;
-            background: var(--gold)10;
-            border-radius: 10px;
-            color: var(--text-secondary);
-        }
-        
+
         /* زر الرجوع */
-        .back-button-container {
-            text-align: center;
-            margin-top: 30px;
-        }
-        
         .back-btn {
-            padding: 15px 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 30px;
             background: var(--gold);
             color: black;
             border: none;
             border-radius: 40px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.3s;
+            text-decoration: none;
         }
-        
+
         .back-btn:hover {
+            background: var(--gold-dark);
             transform: scale(1.05);
         }
-        
+
+        /* شريط الثيم */
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            border: none;
+            font-size: 24px;
+            color: black;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
         /* ريسپونسيف */
         @media (max-width: 768px) {
-            .delivery-wrapper {
+            .container {
                 padding: 15px;
             }
-            
             .delivery-header h1 {
                 font-size: 28px;
             }
-            
-            .section-title h2 {
-                font-size: 20px;
+            .tracking-input-group {
+                flex-direction: column;
             }
-            
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+    </style>
+</head>
+<body class="dark">
+    <button class="theme-toggle" id="themeToggle">
+        <i class="fas fa-sun"></i>
+    </button>
+
+    <div class="container">
+        <!-- الهيدر -->
+        <div class="delivery-header fade-in">
+            <div class="header-icon">
+                <i class="fas fa-truck-fast"></i>
+            </div>
+            <h1>معلومات التوصيل والشحن</h1>
+            <p>نوصل لك أينما كنت في الجزائر | توصيل سريع وآمن</p>
+        </div>
+
+        <!-- إحصائيات سريعة -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <h3>24-48</h3>
+                <p>ساعة للتوصيل السريع</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-map-marked-alt"></i>
+                <h3>58</h3>
+                <p>ولاية مشمولة</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <h3>100%</h3>
+                <p>رضا العملاء</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-gift"></i>
+                <h3>15000+</h3>
+                <p>دج للتوصيل المجاني</p>
+            </div>
+        </div>
+
+        <!-- حاسبة التوصيل -->
+        <div class="section fade-in">
+            <div class="section-title">
+                <i class="fas fa-calculator"></i>
+                <h2>احسب رسوم التوصيل</h2>
+            </div>
+            <div class="calculator-box">
+                <div class="form-group">
+                    <label><i class="fas fa-map-marker-alt"></i> اختر الولاية</label>
+                    <select id="wilayaSelect">
+                        <option value="">-- اختر الولاية --</option>
+                        <option value="algiers">الجزائر العاصمة</option>
+                        <option value="oran">وهران</option>
+                        <option value="constantine">قسنطينة</option>
+                        <option value="annaba">عنابة</option>
+                        <option value="setif">سطيف</option>
+                        <option value="tizi">تيزي وزو</option>
+                        <option value="bejaia">بجاية</option>
+                        <option value="batna">باتنة</option>
+                        <option value="blida">البليدة</option>
+                        <option value="tiaret">تيارت</option>
+                        <option value="other">ولاية أخرى</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-truck"></i> نوع التوصيل</label>
+                    <select id="deliveryType">
+                        <option value="standard">🚚 عادي (2-4 أيام)</option>
+                        <option value="express">⚡ سريع (24-48 ساعة)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-shopping-cart"></i> قيمة الطلب (دج)</label>
+                    <input type="number" id="orderAmount" placeholder="أدخل قيمة الطلب" value="5000">
+                </div>
+                <button class="calc-btn" onclick="calculateShipping()">
+                    <i class="fas fa-chart-line"></i> احسب التوصيل
+                </button>
+                <div id="calcResult" class="result-box" style="display: none;">
+                    <!-- النتيجة تظهر هنا -->
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول أسعار التوصيل -->
+        <div class="section fade-in">
+            <div class="section-title">
+                <i class="fas fa-table-list"></i>
+                <h2>أسعار التوصيل حسب الولاية</h2>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="price-table">
+                    <thead>
+                        <tr>
+                            <th>الولاية</th>
+                            <th>توصيل عادي</th>
+                            <th>توصيل سريع</th>
+                            <th>المدة المتوقعة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>الجزائر العاصمة</td><td>500 دج</td><td>1000 دج</td><td>1-2 أيام</td></tr>
+                        <tr><td>وهران</td><td>600 دج</td><td>1200 دج</td><td>1-2 أيام</td></tr>
+                        <tr><td>قسنطينة</td><td>600 دج</td><td>1200 دج</td><td>1-2 أيام</td></tr>
+                        <tr><td>عنابة</td><td>700 دج</td><td>1400 دج</td><td>2-3 أيام</td></tr>
+                        <tr><td>سطيف</td><td>700 دج</td><td>1400 دج</td><td>2-3 أيام</td></tr>
+                        <tr><td>تيزي وزو</td><td>700 دج</td><td>1400 دج</td><td>2-3 أيام</td></tr>
+                        <tr><td>بجاية</td><td>750 دج</td><td>1500 دج</td><td>2-3 أيام</td></tr>
+                        <tr><td>باتنة</td><td>800 دج</td><td>1600 دج</td><td>3-4 أيام</td></tr>
+                        <tr><td>ولاية أخرى</td><td>1000 دج</td><td>1800 دج</td><td>3-5 أيام</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- مناطق التوصيل -->
+        <div class="section fade-in">
+            <div class="section-title">
+                <i class="fas fa-map-marked-alt"></i>
+                <h2>مناطق التوصيل</h2>
+            </div>
+            <div class="regions-grid">
+                <div class="region-card"><h4>📍 الشمال</h4><small>الجزائر، تيزي وزو، بجاية، بومرداس</small></div>
+                <div class="region-card"><h4>📍 الشرق</h4><small>قسنطينة، عنابة، سطيف، جيجل</small></div>
+                <div class="region-card"><h4>📍 الغرب</h4><small>وهران، تلمسان، سيدي بلعباس، مستغانم</small></div>
+                <div class="region-card"><h4>📍 الوسط</h4><small>البليدة، المدية، تيبازة، عين الدفلى</small></div>
+                <div class="region-card"><h4>📍 الجنوب</h4><small>ورقلة، تندوف، أدرار، غرداية</small></div>
+                <div class="region-card"><h4>📍 الهضاب العليا</h4><small>باتنة، تبسة، بسكرة، خنشلة</small></div>
+            </div>
+        </div>
+
+        <!-- تتبع الشحنة -->
+        <div class="section fade-in">
+            <div class="section-title">
+                <i class="fas fa-search-location"></i>
+                <h2>تتبع شحنتك</h2>
+            </div>
+            <div class="tracking-box">
+                <p style="margin-bottom: 15px;">أدخل رقم التتبع الخاص بك لمتابعة حالة طلبك</p>
+                <div class="tracking-input-group">
+                    <input type="text" id="trackingNumber" class="tracking-input" placeholder="مثال: NAR-2026-00123">
+                    <button class="calc-btn" style="width: auto; padding: 14px 25px;" onclick="trackShipment()">
+                        <i class="fas fa-search"></i> تتبع
+                    </button>
+                </div>
+                <div id="trackingResult" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- طرق الدفع -->
+        <div class="section fade-in">
+            <div class="section-title">
+                <i class="fas fa-credit-card"></i>
+                <h2>طرق الدفع المتاحة</h2>
+            </div>
+            <div class="payment-methods">
+                <div class="payment-card">
+                    <div class="payment-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                    <h3>الدفع عند الاستلام</h3>
+                    <p>ادفع نقداً عند استلام طلبك</p>
+                </div>
+                <div class="payment-card">
+                    <div class="payment-icon"><i class="fas fa-university"></i></div>
+                    <h3>تحويل بنكي</h3>
+                    <p>تحويل آمن إلى حسابنا البنكي</p>
+                </div>
+                <div class="payment-card">
+                    <div class="payment-icon"><i class="fas fa-envelope"></i></div>
+                    <h3>بريديكاش CCP</h3>
+                    <p>الدفع عبر بريد الجزائر</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- الأسئلة الشائعة -->
+        <div class="section fade-in">
+            <div class="section-title">
+                <i class="fas fa-question-circle"></i>
+                <h2>الأسئلة الشائعة</h2>
+            </div>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>❓ كم تستغرق عملية التوصيل؟</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        التوصيل العادي يستغرق من 2 إلى 5 أيام حسب منطقتك، بينما التوصيل السريع يستغرق 24 إلى 48 ساعة.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>❓ هل التوصيل مجاني؟</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        نعم، التوصيل مجاني للطلبات التي تتجاوز 15,000 دج. للطلبات الأقل، يتم حساب رسوم التوصيل حسب المنطقة.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>❓ كيف يمكنني تتبع طلبي؟</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        يمكنك تتبع طلبك باستخدام رقم التتبع المرسل إليك عبر البريد الإلكتروني أو رسالة تلغرام بعد شحن الطلب.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>❓ ماذا لو كان المنتج تالفاً؟</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        يمكنك إرجاع المنتج خلال 14 يوماً من تاريخ الاستلام بشرط أن يكون غير مستخدم وفي عبوته الأصلية.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- زر الرجوع -->
+        <div style="text-align: center; margin-top: 30px; padding-bottom: 30px;">
+            <button class="back-btn" onclick="window.close()">
+                <i class="fas fa-arrow-right"></i> رجوع
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // أسعار التوصيل
+        const shippingFees = {
+            algiers: { standard: 500, express: 1000, days: '1-2 أيام' },
+            oran: { standard: 600, express: 1200, days: '1-2 أيام' },
+            constantine: { standard: 600, express: 1200, days: '1-2 أيام' },
+            annaba: { standard: 700, express: 1400, days: '2-3 أيام' },
+            setif: { standard: 700, express: 1400, days: '2-3 أيام' },
+            tizi: { standard: 700, express: 1400, days: '2-3 أيام' },
+            bejaia: { standard: 750, express: 1500, days: '2-3 أيام' },
+            batna: { standard: 800, express: 1600, days: '3-4 أيام' },
+            blida: { standard: 550, express: 1100, days: '1-2 أيام' },
+            tiaret: { standard: 800, express: 1600, days: '3-4 أيام' },
+            other: { standard: 1000, express: 1800, days: '3-5 أيام' }
+        };
+
+        const FREE_SHIPPING_THRESHOLD = 15000;
+
+        // حساب التوصيل
+        function calculateShipping() {
+            const wilaya = document.getElementById('wilayaSelect').value;
+            const deliveryType = document.getElementById('deliveryType').value;
+            const orderAmount = parseInt(document.getElementById('orderAmount').value) || 0;
+            const resultDiv = document.getElementById('calcResult');
+
+            if (!wilaya) {
+                alert('الرجاء اختيار الولاية');
+                return;
+            }
+
+            const fees = shippingFees[wilaya] || shippingFees.other;
+            const fee = deliveryType === 'express' ? fees.express : fees.standard;
+            const isFree = orderAmount >= FREE_SHIPPING_THRESHOLD;
+            const finalFee = isFree ? 0 : fee;
+            const total = orderAmount + finalFee;
+
+            let resultHTML = '';
             
-            .map-grid {
-                grid-template-columns: 1fr;
+            if (isFree) {
+                resultHTML = `
+                    <div class="result-box free" style="display: block;">
+                        <i class="fas fa-gift" style="font-size: 40px; color: var(--success); margin-bottom: 10px;"></i>
+                        <h3 style="color: var(--success);">🎉 توصيل مجاني!</h3>
+                        <p>طلبيتك تجاوزت ${FREE_SHIPPING_THRESHOLD.toLocaleString()} دج</p>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass);">
+                            <p>قيمة الطلب: <strong>${orderAmount.toLocaleString()} دج</strong></p>
+                            <p>رسوم التوصيل: <strong style="color: var(--success);">0 دج</strong></p>
+                            <p style="font-size: 20px;">الإجمالي: <strong class="result-amount">${total.toLocaleString()} دج</strong></p>
+                            <p>الوقت المتوقع: <strong>${fees.days}</strong></p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultHTML = `
+                    <div class="result-box" style="display: block;">
+                        <div style="margin-bottom: 15px;">
+                            <p>قيمة الطلب: <strong>${orderAmount.toLocaleString()} دج</strong></p>
+                            <p>رسوم التوصيل: <strong style="color: var(--gold);">${finalFee.toLocaleString()} دج</strong></p>
+                            <p style="font-size: 20px; margin-top: 10px;">الإجمالي: <strong class="result-amount">${total.toLocaleString()} دج</strong></p>
+                        </div>
+                        <div style="background: var(--glass); padding: 12px; border-radius: 10px;">
+                            <p><i class="fas fa-clock"></i> الوقت المتوقع: <strong>${fees.days}</strong></p>
+                            <p><i class="fas fa-info-circle"></i> أضف ${(FREE_SHIPPING_THRESHOLD - orderAmount).toLocaleString()} دج للحصول على توصيل مجاني</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = resultHTML;
+        }
+
+        // تتبع الشحنة
+        function trackShipment() {
+            const trackingNumber = document.getElementById('trackingNumber').value;
+            const resultDiv = document.getElementById('trackingResult');
+
+            if (!trackingNumber) {
+                alert('الرجاء إدخال رقم التتبع');
+                return;
+            }
+
+            // محاكاة حالة التتبع
+            const statuses = [
+                { icon: 'fa-check-circle', text: 'تم استلام الطلب', color: '#4ade80', time: '2026-04-01 10:30' },
+                { icon: 'fa-box', text: 'جاري التجهيز', color: '#fbbf24', time: '2026-04-02 14:20' },
+                { icon: 'fa-truck', text: 'تم الشحن', color: '#60a5fa', time: '2026-04-03 09:15' },
+                { icon: 'fa-map-marker-alt', text: 'قيد التوصيل', color: '#f87171', time: '2026-04-04 08:00' }
+            ];
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <i class="fas fa-box-open" style="font-size: 50px; color: var(--gold);"></i>
+                    <h3>رقم التتبع: ${trackingNumber}</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    ${statuses.map((s, i) => `
+                        <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: var(--glass); border-radius: 10px;">
+                            <i class="fas ${s.icon}" style="font-size: 24px; color: ${s.color};"></i>
+                            <div style="flex: 1;">
+                                <strong>${s.text}</strong>
+                                <div style="font-size: 12px; color: var(--text-secondary);">${s.time}</div>
+                            </div>
+                            <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: var(--gold); border-radius: 10px; text-align: center; color: black;">
+                    <strong>🚚 الوقت المتوقع للتوصيل: خلال 24 ساعة</strong>
+                </div>
+            `;
+        }
+
+        // الأسئلة الشائعة
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const icon = element.querySelector('i:last-child');
+            answer.classList.toggle('open');
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
+        }
+
+        // الثيم
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark');
+            if (isDark) {
+                body.classList.remove('dark');
+                body.classList.add('light');
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.remove('light');
+                body.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
             }
         }
-    `;
-    
-    document.head.appendChild(style);
-}
 
-// ===== [22] تهيئة الصفحة =====
-function initDeliveryPage() {
-    applyTheme();
-    addDeliveryStyles();
-    renderDeliveryPage();
-    
-    // إضافة مراقب لتغيير الثيم
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'theme') {
-            applyTheme();
+        // تحميل الثيم المحفوظ
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.remove('dark');
+                document.body.classList.add('light');
+            } else {
+                document.body.classList.add('dark');
+                document.body.classList.remove('light');
+            }
         }
-    });
-    
-    console.log('✅ صفحة معلومات التوصيل جاهزة');
-}
 
-// ===== [23] تصدير الدوال =====
-window.renderDeliveryPage = renderDeliveryPage;
-window.updateCalculatorResult = updateCalculatorResult;
-window.updateCitiesByWilaya = updateCitiesByWilaya;
-window.toggleFaq = toggleFaq;
-window.calculateDeliveryFee = calculateDeliveryFee;
-window.getExpectedDeliveryTime = getExpectedDeliveryTime;
-window.isDeliveryAvailable = isDeliveryAvailable;
-window.loadDeliveryStats = loadDeliveryStats;
+        // ربط الدوال
+        window.calculateShipping = calculateShipping;
+        window.trackShipment = trackShipment;
+        window.toggleFaq = toggleFaq;
 
-// بدء التشغيل عند تحميل الصفحة
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDeliveryPage);
-} else {
-    initDeliveryPage();
-}
-
-console.log('✅ [delivery-full.js] تم تحميل نظام معلومات التوصيل بالكامل');
+        // التشغيل
+        loadTheme();
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    </script>
+</body>
+</html>
