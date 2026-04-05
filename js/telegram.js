@@ -18,33 +18,81 @@ let isDarkMode = true;
 let currentFilter = 'all';
 let searchTerm = '';
 let sortBy = 'newest';
-let users = [];
+let users = [];      // المستخدمين العاديين (من localStorage)
+let adminData = null; // المدير (من التلغرام)
 let isLoading = false;
 
-// ===== [4.3] تحميل المستخدمين من قناة التلغرام =====
-// بيانات المدير الثابتة في القناة
-const ADMIN_USER = {
+// ===== [4.3] بيانات المدير الثابتة =====
+const ADMIN_CONFIG = {
     id: 19862,
     name: 'azer',
     email: 'azer@admin.com',
     password: '19862',
     role: 'admin',
     phone: '',
-    createdAt: new Date().toISOString(),
-    telegramMessageId: null
+    createdAt: new Date().toISOString()
 };
 
-async function loadUsers() {
+// ===== [4.3.1] تحميل المستخدمين العاديين من localStorage =====
+function loadLocalUsers() {
+    const saved = localStorage.getItem('nardoo_users');
+    if (saved) {
+        users = JSON.parse(saved);
+        console.log(`📦 تم تحميل ${users.length} مستخدم من localStorage`);
+    } else {
+        // مستخدمين افتراضيين
+        users = [
+            { 
+                id: 1, 
+                name: 'تاجر تجريبي', 
+                email: 'merchant@nardoo.com', 
+                password: 'm123', 
+                role: 'merchant_approved',
+                phone: '0555111111',
+                storeName: 'متجر التجريبي',
+                merchantLevel: '2',
+                status: 'approved',
+                createdAt: new Date().toISOString()
+            },
+            { 
+                id: 2, 
+                name: 'مشتري تجريبي', 
+                email: 'customer@nardoo.com', 
+                password: 'c123', 
+                role: 'customer',
+                phone: '0555222222',
+                createdAt: new Date().toISOString()
+            }
+        ];
+        localStorage.setItem('nardoo_users', JSON.stringify(users));
+    }
+}
+
+// ===== [4.3.2] حفظ مستخدم عادي في localStorage =====
+function saveLocalUser(user) {
+    users.push(user);
+    localStorage.setItem('nardoo_users', JSON.stringify(users));
+}
+
+// ===== [4.3.3] تحديث مستخدم عادي في localStorage =====
+function updateLocalUser(userId, newData) {
+    const index = users.findIndex(u => u.id == userId);
+    if (index !== -1) {
+        users[index] = { ...users[index], ...newData };
+        localStorage.setItem('nardoo_users', JSON.stringify(users));
+    }
+}
+
+// ===== [4.3.4] جلب المدير من قناة التلغرام =====
+async function loadAdminFromTelegram() {
     try {
-        console.log('🔄 جاري تحميل المستخدمين من قناة التلغرام...');
+        console.log('🔄 جاري جلب المدير من قناة التلغرام...');
         
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         const data = await response.json();
         
-        const loadedUsers = [];
-        
         if (data.ok && data.result) {
-            const updates = data.result.slice(-100);
+            const updates = data.result.slice(-50);
             
             for (const update of updates) {
                 const post = update.channel_post || update.message;
@@ -52,135 +100,71 @@ async function loadUsers() {
                 
                 const caption = post.caption || post.text || '';
                 
-                if (caption.includes('#user_registration') && caption.includes('🆔')) {
-                    const userData = parseUserFromTelegramMessage(caption);
-                    if (userData) {
-                        userData.telegramLink = `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${post.message_id}`;
-                        userData.telegramMessageId = post.message_id;
-                        loadedUsers.push(userData);
+                // البحث عن رسالة المدير
+                if (caption.includes('#admin_registration') && caption.includes('🆔 19862')) {
+                    const parsedAdmin = parseAdminFromMessage(caption);
+                    if (parsedAdmin) {
+                        adminData = parsedAdmin;
+                        console.log(`✅ تم جلب المدير من القناة: ${adminData.name}`);
+                        return adminData;
                     }
                 }
             }
         }
         
-        const adminExists = loadedUsers.some(u => u.id === 19862 || u.name === 'azer');
+        // إذا لم يوجد المدير في القناة، قم بإرساله
+        console.log('📝 لم يتم العثور على المدير في القناة، جاري إرساله...');
+        await sendAdminToTelegramChannel();
         
-        if (!adminExists) {
-            console.log('📝 لم يتم العثور على المدير azer في القناة، جاري إنشاؤه...');
-            await saveAdminToTelegramChannel();
-            return await loadUsers();
-        }
-        
-        if (loadedUsers.length > 0) {
-            users = loadedUsers;
-            localStorage.setItem('nardoo_users_backup', JSON.stringify(users));
-            console.log(`✅ تم تحميل ${users.length} مستخدم من قناة التلغرام`);
-        } else {
-            const backup = localStorage.getItem('nardoo_users_backup');
-            if (backup) {
-                users = JSON.parse(backup);
-                console.log(`📦 تم تحميل ${users.length} مستخدم من النسخة الاحتياطية`);
-            } else {
-                users = [
-                    ADMIN_USER,
-                    { 
-                        id: 2, 
-                        name: 'تاجر تجريبي', 
-                        email: 'merchant@nardoo.com', 
-                        password: 'm123', 
-                        role: 'merchant_approved',
-                        phone: '0555111111',
-                        storeName: 'متجر التجريبي',
-                        merchantLevel: '2',
-                        status: 'approved',
-                        createdAt: new Date().toISOString()
-                    }
-                ];
-                localStorage.setItem('nardoo_users_backup', JSON.stringify(users));
-                for (const user of users) {
-                    await saveUserToTelegramChannel(user);
-                }
-            }
-        }
-        
-        return users;
+        // انتظر ثانية ثم حاول مرة أخرى
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return await loadAdminFromTelegram();
         
     } catch (error) {
-        console.error('❌ خطأ في تحميل المستخدمين:', error);
-        const backup = localStorage.getItem('nardoo_users_backup');
-        if (backup) {
-            users = JSON.parse(backup);
-        }
-        return users;
+        console.error('❌ خطأ في جلب المدير:', error);
+        return null;
     }
 }
 
-// ===== [4.3.1] تحليل رسالة المستخدم من التلغرام =====
-function parseUserFromTelegramMessage(caption) {
+// ===== [4.3.5] تحليل رسالة المدير من التلغرام =====
+function parseAdminFromMessage(caption) {
     try {
         const lines = caption.split('\n');
-        const user = {
-            id: null,
+        const admin = {
+            id: 19862,
             name: '',
             email: '',
             password: '',
-            role: 'customer',
-            phone: '',
-            storeName: '',
-            merchantLevel: '',
-            status: 'active',
-            createdAt: new Date().toISOString()
+            role: 'admin',
+            phone: ''
         };
         
         for (const line of lines) {
-            if (line.includes('🆔') && line.includes('المعرف:')) {
-                const match = line.match(/\d+/);
-                if (match) user.id = parseInt(match[0]);
-            }
-            else if (line.includes('👤') && line.includes('الاسم:')) {
-                user.name = line.replace(/.*الاسم:\s*/, '').replace(/[*_]/g, '').trim();
+            if (line.includes('👤') && line.includes('الاسم:')) {
+                admin.name = line.replace(/.*الاسم:\s*/, '').replace(/[*_]/g, '').trim();
             }
             else if (line.includes('📧') && line.includes('البريد:')) {
-                user.email = line.replace(/.*البريد:\s*/, '').replace(/[*_]/g, '').trim();
+                admin.email = line.replace(/.*البريد:\s*/, '').replace(/[*_]/g, '').trim();
             }
             else if (line.includes('🔑') && line.includes('كلمة السر:')) {
-                user.password = line.replace(/.*كلمة السر:\s*/, '').replace(/[*_]/g, '').trim();
-            }
-            else if (line.includes('الدور:') || line.includes('👑')) {
-                const roleText = line.toLowerCase();
-                if (roleText.includes('مدير')) user.role = 'admin';
-                else if (roleText.includes('تاجر معتمد')) user.role = 'merchant_approved';
-                else if (roleText.includes('تاجر قيد المراجعة')) user.role = 'merchant_pending';
-                else user.role = 'customer';
-            }
-            else if (line.includes('📞') && line.includes('الهاتف:')) {
-                user.phone = line.replace(/.*الهاتف:\s*/, '').replace(/[*_]/g, '').trim();
-            }
-            else if (line.includes('🏪') && line.includes('المتجر:')) {
-                user.storeName = line.replace(/.*المتجر:\s*/, '').replace(/[*_]/g, '').trim();
-            }
-            else if (line.includes('📊') && line.includes('المستوى:')) {
-                user.merchantLevel = line.replace(/.*المستوى:\s*/, '').replace(/[*_]/g, '').trim();
+                admin.password = line.replace(/.*كلمة السر:\s*/, '').replace(/[*_]/g, '').trim();
             }
         }
         
-        if (user.id && user.name && user.email) {
-            return user;
-        }
-        return null;
+        return admin;
         
     } catch (error) {
-        console.error('❌ خطأ في تحليل المستخدم:', error);
+        console.error('❌ خطأ في تحليل رسالة المدير:', error);
         return null;
     }
 }
 
-// ===== [4.3.2] حفظ المدير azer في قناة التلغرام =====
-async function saveAdminToTelegramChannel() {
+// ===== [4.3.6] إرسال المدير إلى قناة التلغرام =====
+async function sendAdminToTelegramChannel() {
     try {
-        console.log('📤 جاري حفظ المدير azer في قناة التلغرام...');
+        console.log('📤 جاري إرسال المدير azer إلى قناة التلغرام...');
         
-        const adminMessage = `#user_registration 👑 *تسجيل مدير النظام*
+        const adminMessage = `#admin_registration 👑 *تسجيل مدير النظام*
 ━━━━━━━━━━━━━━━━━━━━━━
 🆔 *المعرف:* 19862
 👤 *الاسم:* azer
@@ -207,122 +191,72 @@ async function saveAdminToTelegramChannel() {
         const data = await response.json();
         
         if (data.ok) {
-            console.log(`✅ تم حفظ المدير azer في القناة - معرف الرسالة: ${data.result.message_id}`);
-            ADMIN_USER.telegramMessageId = data.result.message_id;
-            return { success: true, messageId: data.result.message_id };
+            console.log(`✅ تم إرسال المدير إلى القناة - معرف الرسالة: ${data.result.message_id}`);
+            return { success: true };
         }
         
-        console.error('❌ فشل حفظ المدير:', data.description);
-        return { success: false, error: data.description };
+        console.error('❌ فشل إرسال المدير:', data.description);
+        return { success: false };
         
     } catch (error) {
-        console.error('❌ خطأ في حفظ المدير:', error);
-        return { success: false, error: error.message };
+        console.error('❌ خطأ في إرسال المدير:', error);
+        return { success: false };
     }
 }
 
-// ===== [4.3.3] حفظ مستخدم عادي في قناة التلغرام =====
-async function saveUserToTelegramChannel(user) {
-    try {
-        const roleIcon = user.role === 'admin' ? '👑' : 
-                        user.role === 'merchant_approved' ? '✅' : 
-                        user.role === 'merchant_pending' ? '⏳' : '👤';
-        
-        const roleText = user.role === 'admin' ? 'مدير' :
-                        user.role === 'merchant_approved' ? 'تاجر معتمد' :
-                        user.role === 'merchant_pending' ? 'تاجر قيد المراجعة' : 'عميل';
-        
-        const statusText = user.status === 'approved' ? '✅ معتمد' :
-                          user.status === 'pending' ? '⏳ قيد المراجعة' : '🟡 نشط';
-        
-        let message = `#user_registration ${roleIcon} *تسجيل مستخدم جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-🆔 *المعرف:* ${user.id}
-👤 *الاسم:* ${user.name}
-📧 *البريد:* ${user.email}
-🔑 *كلمة السر:* ${user.password}
-👑 *الدور:* ${roleText}
-📞 *الهاتف:* ${user.phone || 'غير محدد'}
-📅 *تاريخ التسجيل:* ${user.createdAt ? new Date(user.createdAt).toLocaleString('ar-EG') : new Date().toLocaleString('ar-EG')}
-📊 *الحالة:* ${statusText}`;
-        
-        if (user.storeName) {
-            message += `\n🏪 *المتجر:* ${user.storeName}`;
-        }
-        
-        if (user.merchantLevel) {
-            message += `\n📈 *مستوى التاجر:* ${user.merchantLevel}`;
-        }
-        
-        message += `\n━━━━━━━━━━━━━━━━━━━━━━\n✨ مرحباً بك في متجر ناردو برو ✨`;
-        
-        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM.channelId,
-                text: message,
-                parse_mode: 'Markdown'
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.ok) {
-            console.log(`✅ تم حفظ المستخدم ${user.name} في القناة`);
-            user.telegramMessageId = data.result.message_id;
-            return { success: true, messageId: data.result.message_id };
-        }
-        
-        return { success: false, error: data.description };
-        
-    } catch (error) {
-        console.error('❌ خطأ في حفظ المستخدم:', error);
-        return { success: false, error: error.message };
+// ===== [4.3.7] تسجيل الدخول الموحد =====
+async function loginUser(email, password) {
+    // 1️⃣ أولاً: تحقق من المدير (من التلغرام)
+    if (adminData && (adminData.email === email || adminData.name === email) && adminData.password === password) {
+        currentUser = adminData;
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
+        updateUIBasedOnRole();
+        showWelcomePopup(currentUser);
+        showNotification(`👑 مرحباً أيها المدير ${currentUser.name}`, 'success');
+        closeModal('loginModal');
+        return true;
     }
+    
+    // 2️⃣ ثانياً: تحقق من المستخدمين العاديين (من localStorage)
+    const localUser = users.find(u => (u.email === email || u.name === email) && u.password === password);
+    
+    if (localUser) {
+        // التحقق من حالة التاجر
+        if (localUser.role === 'merchant_pending') {
+            showNotification('⏳ حسابك قيد المراجعة من قبل المدير', 'warning');
+            return false;
+        }
+        
+        currentUser = localUser;
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
+        updateUIBasedOnRole();
+        showWelcomePopup(currentUser);
+        
+        if (localUser.role === 'merchant_approved') {
+            showNotification(`🏪 مرحباً أيها التاجر ${localUser.name}`, 'success');
+        } else {
+            showNotification(`مرحباً ${localUser.name}`, 'success');
+        }
+        
+        closeModal('loginModal');
+        return true;
+    }
+    
+    showNotification('❌ البريد أو كلمة السر غير صحيحة', 'error');
+    return false;
 }
 
-// ===== [4.3.4] تحديث مستخدم في قناة التلغرام =====
-async function updateUserInTelegramChannel(user) {
-    try {
-        const updateMessage = `#user_update 🔄 *تحديث بيانات المستخدم*
-━━━━━━━━━━━━━━━━━━━━━━
-🆔 *المعرف:* ${user.id}
-👤 *الاسم:* ${user.name}
-📧 *البريد:* ${user.email}
-👑 *الدور الجديد:* ${user.role}
-📊 *الحالة الجديدة:* ${user.status || 'نشط'}
-📅 *تاريخ التحديث:* ${new Date().toLocaleString('ar-EG')}
-━━━━━━━━━━━━━━━━━━━━━━
-🔄 تم تحديث بيانات المستخدم بنجاح`;
-        
-        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM.channelId,
-                text: updateMessage,
-                parse_mode: 'Markdown',
-                reply_to_message_id: user.telegramMessageId
-            })
-        });
-        
-        return await response.json();
-        
-    } catch (error) {
-        console.error('❌ خطأ في تحديث المستخدم:', error);
-    }
-}
-
-// ===== [4.3.5] تسجيل مستخدم جديد (يحفظ في القناة تلقائياً) =====
-async function registerUserInSystem(userData) {
+// ===== [4.3.8] تسجيل مستخدم جديد (محلي فقط) =====
+async function registerLocalUser(userData) {
+    // التحقق من وجود المستخدم
     const existingUser = users.find(u => u.email === userData.email);
     if (existingUser) {
         showNotification('البريد الإلكتروني مستخدم بالفعل', 'error');
         return false;
     }
     
-    const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+    // إنشاء معرف جديد
+    const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 3;
     
     const newUser = {
         id: newId,
@@ -340,48 +274,31 @@ async function registerUserInSystem(userData) {
         newUser.merchantLevel = userData.merchantLevel;
     }
     
-    const result = await saveUserToTelegramChannel(newUser);
+    // حفظ في localStorage
+    users.push(newUser);
+    localStorage.setItem('nardoo_users', JSON.stringify(users));
     
-    if (result.success) {
-        users.push(newUser);
-        localStorage.setItem('nardoo_users_backup', JSON.stringify(users));
-        
-        showNotification('✅ تم التسجيل بنجاح', 'success');
-        
-        if (userData.isMerchant) {
-            await sendMerchantRequestToTelegram(newUser);
-            showNotification('📋 تم إرسال طلب الموافقة للمدير في القناة', 'info');
-        }
-        
-        return true;
+    showNotification('✅ تم التسجيل بنجاح', 'success');
+    
+    // إذا كان تاجر، نرسل طلب موافقة للمدير
+    if (userData.isMerchant) {
+        await sendMerchantRequestToTelegram(newUser);
+        showNotification('📋 تم إرسال طلب الموافقة للمدير', 'info');
     }
     
-    showNotification('❌ فشل التسجيل، حاول مرة أخرى', 'error');
-    return false;
+    return true;
 }
 
-// ===== [4.3.6] تسجيل الدخول (يتحقق من القناة أولاً) =====
-async function loginUserFromSystem(email, password) {
-    await loadUsers();
+// ===== [4.3.9] تسجيل خروج =====
+function logoutUser() {
+    currentUser = null;
+    localStorage.removeItem('current_user');
+    updateUIBasedOnRole();
+    showNotification('👋 تم تسجيل الخروج بنجاح', 'info');
     
-    const user = users.find(u => (u.email === email || u.name === email) && u.password === password);
-    
-    if (user) {
-        if (user.role === 'merchant_pending') {
-            showNotification('⏳ حسابك قيد المراجعة من قبل المدير', 'warning');
-            return false;
-        }
-        
-        currentUser = user;
-        localStorage.setItem('current_user', JSON.stringify(user));
-        updateUIBasedOnRole();
-        showWelcomePopup(user);
-        showNotification(`مرحباً ${user.name}`, 'success');
-        return true;
-    }
-    
-    showNotification('بيانات غير صحيحة', 'error');
-    return false;
+    // تحديث الواجهة
+    currentFilter = 'all';
+    displayProducts();
 }
 
 // ===== [4.4] تحميل السلة =====
@@ -731,7 +648,7 @@ function handleImageUpload(event) {
     }
 }
 
-// ===== [4.17] جلب جميع المنتجات من تلغرام (مع دمج المنتجات) =====
+// ===== [4.17] جلب جميع المنتجات من تلغرام =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
@@ -803,10 +720,6 @@ async function fetchProductsFromTelegram() {
                     }
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
-                    }
-                    else if (line.includes('معرف المنتج:')) {
-                        const match = line.match(/\d+/);
-                        if (match) productId = parseInt(match[0]);
                     }
                 });
                 
@@ -1123,7 +1036,7 @@ function removeFromCart(productId) {
     showNotification('تمت إزالة المنتج', 'info');
 }
 
-// ===== [4.27] إتمام الشراء - نسخة احترافية 2026 =====
+// ===== [4.27] إتمام الشراء =====
 async function checkoutCart() {
     if (cart.length === 0) {
         showNotification('🛒 السلة فارغة! أضف بعض المنتجات أولاً', 'warning');
@@ -1357,7 +1270,7 @@ async function getCustomerInfo() {
     });
 }
 
-// ===== [4.27.2] إنشاء تقرير الطلب المتقدم =====
+// ===== [4.27.2] إنشاء تقرير الطلب =====
 function generateOrderReport(orderId, orderDate, customerInfo, totals) {
     const { customerName, customerPhone, customerAddress, notes, deliveryType } = customerInfo;
     const { subtotal, shipping, tax, discount, total, merchantOrders, shippingPerMerchant, estimatedDays } = totals;
@@ -1556,68 +1469,6 @@ function showOrderSuccessModal(orderId, total, estimatedDays) {
     }, 5000);
 }
 
-// ===== [4.27.8] دالة عرض سجل الطلبات =====
-function showOrdersHistory() {
-    const ordersHistory = JSON.parse(localStorage.getItem('nardoo_orders_history') || '[]');
-    
-    if (ordersHistory.length === 0) {
-        showNotification('📭 لا توجد طلبات سابقة', 'info');
-        return;
-    }
-    
-    let historyHTML = `
-        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                    background: var(--bg-secondary); border-radius: 20px; padding: 30px;
-                    max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
-                    z-index: 20002; border: 2px solid var(--gold);">
-            <h2 style="color: var(--gold); text-align: center; margin-bottom: 20px;">
-                <i class="fas fa-history"></i> سجل الطلبات
-            </h2>
-    `;
-    
-    ordersHistory.forEach(order => {
-        historyHTML += `
-            <div style="background: rgba(255,215,0,0.1); border-radius: 15px; padding: 15px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <strong style="color: var(--gold);">${order.orderId}</strong>
-                    <span style="color: var(--text-secondary);">${order.orderDate}</span>
-                </div>
-                <div style="color: var(--text);">
-                    <div>📦 عدد المنتجات: ${order.items.length}</div>
-                    <div>💰 الإجمالي: ${order.total.toLocaleString()} دج</div>
-                    <div>📊 الحالة: ${order.status === 'pending' ? '🟡 قيد المعالجة' : '🟢 مكتمل'}</div>
-                </div>
-            </div>
-        `;
-    });
-    
-    historyHTML += `
-            <button onclick="this.closest('div').remove()" 
-                    style="width: 100%; padding: 12px; background: var(--gold);
-                           border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">
-                إغلاق
-            </button>
-        </div>
-    `;
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        z-index: 20001;
-    `;
-    modal.innerHTML = historyHTML;
-    document.body.appendChild(modal);
-    
-    modal.onclick = (e) => {
-        if (e.target === modal) modal.remove();
-    };
-}
-
 // ===== [4.28] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
     const product = products.find(p => p.id == productId);
@@ -1702,11 +1553,11 @@ function toggleMerchantFields() {
     }
 }
 
-// ===== [4.33] معالجة تسجيل الدخول (نسخة القناة) =====
+// ===== [4.33] معالجة تسجيل الدخول =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-    loginUserFromSystem(email, password);
+    loginUser(email, password);
 }
 
 // ===== [4.34] معالجة تسجيل التاجر =====
@@ -1741,7 +1592,7 @@ function handleMerchantRegister(merchantData) {
     };
 
     users.push(newMerchant);
-    localStorage.setItem('nardoo_users_backup', JSON.stringify(users));
+    localStorage.setItem('nardoo_users', JSON.stringify(users));
 
     sendMerchantRequestToTelegram({
         id: newMerchant.id,
@@ -1757,7 +1608,7 @@ function handleMerchantRegister(merchantData) {
     return true;
 }
 
-// ===== [4.35] معالجة تسجيل المستخدم (نسخة القناة) =====
+// ===== [4.35] معالجة تسجيل المستخدم =====
 async function handleRegister() {
     const name = document.getElementById('regName')?.value;
     const email = document.getElementById('regEmail')?.value;
@@ -1775,14 +1626,14 @@ async function handleRegister() {
         const merchantLevel = document.getElementById('merchantLevel')?.value;
         const merchantDesc = document.getElementById('merchantDesc')?.value;
 
-        await registerUserInSystem({
+        await registerLocalUser({
             name, email, password, phone,
             isMerchant: true,
             storeName, merchantLevel, merchantDesc
         });
         switchAuthTab('login');
     } else {
-        await registerUserInSystem({
+        await registerLocalUser({
             name, email, password, phone,
             isMerchant: false
         });
@@ -1924,8 +1775,8 @@ async function sendMerchantRequestToTelegram(merchant) {
 👤 *التاجر:* ${merchant.name}
 📧 *البريد:* ${merchant.email}
 📞 *الهاتف:* ${merchant.phone || 'غير محدد'}
-📊 *المستوى:* ${merchant.level || '1'}
-📝 *الوصف:* ${merchant.desc || 'تاجر جديد'}
+📊 *المستوى:* ${merchant.merchantLevel || '1'}
+📝 *الوصف:* ${merchant.description || 'تاجر جديد'}
     `;
 
     await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
@@ -2128,7 +1979,7 @@ function approveMerchant(id) {
         
         user.role = 'merchant_approved';
         user.status = 'approved';
-        localStorage.setItem('nardoo_users_backup', JSON.stringify(users));
+        localStorage.setItem('nardoo_users', JSON.stringify(users));
         showNotification('✅ تمت الموافقة على التاجر بنجاح', 'success');
         
         if (document.getElementById('dashboardSection')?.style.display === 'block') {
@@ -2165,7 +2016,7 @@ function rejectMerchant(id) {
         
         user.role = 'customer';
         user.status = 'rejected';
-        localStorage.setItem('nardoo_users_backup', JSON.stringify(users));
+        localStorage.setItem('nardoo_users', JSON.stringify(users));
         showNotification('❌ تم رفض طلب التاجر', 'info');
         
         if (document.getElementById('dashboardSection')?.style.display === 'block') {
@@ -2494,12 +2345,15 @@ function showWelcomePopup(user) {
     }, 5000);
 }
 
-// ===== [4.53] التهيئة عند تحميل الصفحة (نسخة القناة) =====
+// ===== [4.53] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
-    // تحميل المستخدمين من قناة التلغرام أولاً
-    await loadUsers();
+    // 1️⃣ تحميل المستخدمين العاديين من localStorage
+    loadLocalUsers();
     
-    // تحميل المنتجات
+    // 2️⃣ جلب المدير من قناة التلغرام
+    adminData = await loadAdminFromTelegram();
+    
+    // 3️⃣ تحميل المنتجات
     const savedProducts = localStorage.getItem('nardoo_products');
     if (savedProducts) {
         products = JSON.parse(savedProducts);
@@ -2510,13 +2364,24 @@ window.onload = async function() {
     await loadProducts();
     loadCart();
 
-    // استعادة جلسة المستخدم
+    // 4️⃣ استعادة جلسة المستخدم
     const savedUser = localStorage.getItem('current_user');
     if (savedUser) {
         const parsedUser = JSON.parse(savedUser);
-        const validUser = users.find(u => u.id === parsedUser.id);
-        if (validUser) {
-            currentUser = validUser;
+        
+        // التحقق من نوع المستخدم
+        if (parsedUser.role === 'admin' && adminData && adminData.id === parsedUser.id) {
+            currentUser = adminData;
+        } else {
+            const localUser = users.find(u => u.id === parsedUser.id);
+            if (localUser) {
+                currentUser = localUser;
+            } else {
+                localStorage.removeItem('current_user');
+            }
+        }
+        
+        if (currentUser) {
             updateUIBasedOnRole();
             
             if (!sessionStorage.getItem('welcome_shown')) {
@@ -2525,12 +2390,10 @@ window.onload = async function() {
                     sessionStorage.setItem('welcome_shown', 'true');
                 }, 500);
             }
-        } else {
-            localStorage.removeItem('current_user');
         }
     }
 
-    // استعادة الثيم
+    // 5️⃣ استعادة الثيم
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         isDarkMode = savedTheme === 'dark';
@@ -2573,8 +2436,11 @@ window.onload = async function() {
         }
     }, 1000);
     
-    console.log('✅ النظام جاهز - جميع المنتجات تستخدم معرف تلغرام');
-    console.log('👑 المدير azer (ID: 19862) موجود في القناة');
+    console.log('✅ النظام جاهز');
+    if (adminData) {
+        console.log(`👑 المدير azer جاهز من القناة (كلمة السر: ${adminData.password})`);
+    }
+    console.log(`📦 ${users.length} مستخدم محلي (تجار ومشترين)`);
 };
 
 // ===== [4.54] إغلاق النوافذ عند الضغط خارجها =====
@@ -2617,6 +2483,7 @@ window.approveMerchant = approveMerchant;
 window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
 window.showWelcomePopup = showWelcomePopup;
+window.logoutUser = logoutUser;
 
 // ===== [4.56] إضافة أيقونة التوصيل داخل نافذة السلة =====
 function addDeliveryIconToCart() {
@@ -2695,5 +2562,6 @@ const cartObserver = new MutationObserver(function(mutations) {
 });
 cartObserver.observe(document.body, { attributes: true, subtree: false, attributeFilter: ['class'] });
 
-console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
-console.log('👑 المدير azer (ID: 19862) مسجل في القناة');
+console.log('✅ نظام تلغرام المتكامل جاهز');
+console.log('👑 المدير azer يتم جلبه من قناة التلغرام');
+console.log('📦 التجار والمشترين من localStorage');
