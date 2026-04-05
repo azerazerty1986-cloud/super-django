@@ -1,370 +1,700 @@
-// ============================================================
-// نظام التوصيل المتكامل - ناردو برو
-// ============================================================
-
-// ===== [1] ربط السلة والمستخدم من window =====
-let cart = [];
-let currentUser = null;
-
-function loadDataFromWindow() {
-    // ربط سلة المشتريات من window.cart
-    if (typeof window !== 'undefined' && window.cart) {
-        cart = window.cart;
-        console.log('✅ تم ربط السلة من window.cart:', cart.length, 'منتج');
-    } else {
-        // محاولة القراءة من localStorage
-        const savedCart = localStorage.getItem('nardoo_cart');
-        if (savedCart) {
-            cart = JSON.parse(savedCart);
-            console.log('✅ تم تحميل السلة من localStorage:', cart.length, 'منتج');
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ناردو برو - نظام التوصيل المتكامل</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    }
-    
-    // ربط المستخدم الحالي من window.currentUser
-    if (typeof window !== 'undefined' && window.currentUser) {
-        currentUser = window.currentUser;
-        console.log('✅ تم ربط المستخدم من window.currentUser:', currentUser?.name);
-    } else {
-        // محاولة القراءة من localStorage
-        const savedUser = localStorage.getItem('current_user');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            console.log('✅ تم تحميل المستخدم من localStorage:', currentUser?.name);
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
         }
-    }
-}
 
-// ===== [2] 8 مناطق التوصيل =====
-const DELIVERY_REGIONS = [
-    { id: 1, name: 'الجزائر العاصمة', fee: 500, days: '1-2 أيام' },
-    { id: 2, name: 'وهران', fee: 600, days: '1-2 أيام' },
-    { id: 3, name: 'قسنطينة', fee: 600, days: '1-2 أيام' },
-    { id: 4, name: 'عنابة', fee: 700, days: '2-3 أيام' },
-    { id: 5, name: 'سطيف', fee: 700, days: '2-3 أيام' },
-    { id: 6, name: 'تيزي وزو', fee: 700, days: '2-3 أيام' },
-    { id: 7, name: 'بجاية', fee: 750, days: '2-3 أيام' },
-    { id: 8, name: 'ولايات أخرى', fee: 1000, days: '3-5 أيام' }
-];
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-// ===== [3] 4 شركات التوصيل =====
-const DELIVERY_COMPANIES = [
-    { id: 1, name: 'برق الجزائر', logo: '⚡', multiplier: 1.0, phone: '0555 11 22 33' },
-    { id: 2, name: 'يمين إكسبريس', logo: '🚚', multiplier: 0.9, phone: '0555 44 55 66' },
-    { id: 3, name: 'فاست شيب', logo: '📦', multiplier: 1.1, phone: '0555 77 88 99' },
-    { id: 4, name: 'دليفري بلس', logo: '🏍️', multiplier: 0.95, phone: '0555 00 11 22' }
-];
+        /* الهيدر */
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #ffd70020, transparent);
+            border-radius: 30px;
+            margin-bottom: 30px;
+        }
 
-// ===== [4] حساب رسوم التوصيل =====
-function calculateShippingFee(regionId, companyId, subtotal) {
-    const region = DELIVERY_REGIONS.find(r => r.id == regionId);
-    const company = DELIVERY_COMPANIES.find(c => c.id == companyId);
-    
-    if (!region || !company) return 0;
-    
-    let fee = region.fee * company.multiplier;
-    
-    // توصيل مجاني للطلبات فوق 15000 دج
-    if (subtotal >= 15000) {
-        fee = 0;
-    }
-    
-    return Math.round(fee);
-}
+        .header h1 {
+            font-size: 32px;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
 
-// ===== [5] حساب إجمالي الطلب =====
-function calculateOrderTotal() {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const selectedRegion = document.getElementById('deliveryRegion')?.value;
-    const selectedCompany = document.getElementById('deliveryCompany')?.value;
-    
-    let shippingFee = 0;
-    if (selectedRegion && selectedCompany) {
-        shippingFee = calculateShippingFee(selectedRegion, selectedCompany, subtotal);
-    }
-    
-    return { subtotal, shippingFee, total: subtotal + shippingFee };
-}
+        .header p {
+            color: #aaa;
+        }
 
-// ===== [6] عرض ملخص السلة =====
-function displayCartSummary() {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const container = document.getElementById('cartSummary');
-    
-    if (!container) return;
-    
-    if (cart.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px;">
-                <i class="fas fa-shopping-cart" style="font-size: 50px; opacity: 0.5;"></i>
-                <p>سلة المشتريات فارغة</p>
+        /* بطاقات */
+        .card {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,215,0,0.1);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #ffd700;
+        }
+
+        .card-title i {
+            font-size: 24px;
+            color: #ffd700;
+        }
+
+        .card-title h2 {
+            font-size: 22px;
+            color: #ffd700;
+        }
+
+        /* السلة */
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* نموذج */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ffd700;
+            background: #0a0a0a;
+            color: white;
+            font-size: 14px;
+        }
+
+        /* أزرار */
+        .btn-gold {
+            background: #ffd700;
+            color: black;
+            border: none;
+            padding: 14px 25px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .btn-gold:hover {
+            background: #cca000;
+            transform: scale(1.02);
+        }
+
+        /* شبكة */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        /* معلومات المستخدم */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #1a1a1a;
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            background: #ffd700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: black;
+        }
+
+        /* الإجمالي */
+        .total-box {
+            background: rgba(255,215,0,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- الهيدر -->
+        <div class="header">
+            <h1><i class="fas fa-truck"></i> ناردو برو</h1>
+            <p>نظام التوصيل المتكامل | 8 مناطق | 4 شركات | 3 رسائل تلغرام</p>
+        </div>
+
+        <!-- معلومات المستخدم -->
+        <div class="user-info" id="userInfo">
+            <div class="user-avatar"><i class="fas fa-user"></i></div>
+            <div>
+                <div id="userName">جاري التحميل...</div>
+                <div style="font-size: 12px; color: #aaa;" id="userEmail"></div>
             </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = `
-        <div style="max-height: 300px; overflow-y: auto;">
-            ${cart.map(item => `
-                <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--glass);">
-                    <div>
-                        <strong>${item.name}</strong><br>
-                        <small>${item.merchantName} | ×${item.quantity}</small>
+            <div style="margin-right: auto; background: #ffd700; padding: 5px 12px; border-radius: 20px; font-size: 12px; color: black;" id="userRole"></div>
+        </div>
+
+        <!-- ملخص السلة -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fas fa-shopping-cart"></i>
+                <h2>سلة المشتريات</h2>
+            </div>
+            <div id="cartSummary">
+                <div style="text-align: center; padding: 30px;">
+                    <i class="fas fa-spinner fa-spin"></i> جاري التحميل...
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- نموذج معلومات العميل -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-user-edit"></i>
+                    <h2>معلومات العميل</h2>
+                </div>
+                <div class="form-group">
+                    <label>الاسم الكامل</label>
+                    <input type="text" id="customerName" placeholder="أدخل اسمك الكامل">
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="tel" id="customerPhone" placeholder="أدخل رقم هاتفك">
+                </div>
+                <div class="form-group">
+                    <label>العنوان</label>
+                    <textarea id="customerAddress" rows="2" placeholder="أدخل عنوانك الكامل"></textarea>
+                </div>
+            </div>
+
+            <!-- التوصيل -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-truck"></i>
+                    <h2>معلومات التوصيل</h2>
+                </div>
+                <div class="form-group">
+                    <label>منطقة التوصيل (8 مناطق)</label>
+                    <select id="deliveryRegion">
+                        <option value="">-- اختر المنطقة --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>شركة التوصيل (4 شركات)</label>
+                    <select id="deliveryCompany">
+                        <option value="">-- اختر الشركة --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ملاحظات إضافية</label>
+                    <textarea id="orderNotes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- الإجمالي -->
+        <div class="card">
+            <div class="card-title">
+                <i class="fas fa-receipt"></i>
+                <h2>ملخص الطلب</h2>
+            </div>
+            <div id="orderTotal">
+                <div style="text-align: center; padding: 20px;">اختر المنطقة وشركة التوصيل</div>
+            </div>
+            <button class="btn-gold" id="confirmOrderBtn" style="margin-top: 20px;">
+                <i class="fas fa-check-circle"></i> تأكيد الطلب وإرسال الإشعارات
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // إعدادات تلغرام
+        // ============================================================
+        const TELEGRAM = {
+            botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
+            channelId: '-1003822964890',
+            apiUrl: 'https://api.telegram.org/bot'
+        };
+
+        // ============================================================
+        // 8 مناطق التوصيل
+        // ============================================================
+        const DELIVERY_REGIONS = [
+            { id: 1, name: 'الجزائر العاصمة', fee: 500, days: '1-2 أيام' },
+            { id: 2, name: 'وهران', fee: 600, days: '1-2 أيام' },
+            { id: 3, name: 'قسنطينة', fee: 600, days: '1-2 أيام' },
+            { id: 4, name: 'عنابة', fee: 700, days: '2-3 أيام' },
+            { id: 5, name: 'سطيف', fee: 700, days: '2-3 أيام' },
+            { id: 6, name: 'تيزي وزو', fee: 700, days: '2-3 أيام' },
+            { id: 7, name: 'بجاية', fee: 750, days: '2-3 أيام' },
+            { id: 8, name: 'ولايات أخرى', fee: 1000, days: '3-5 أيام' }
+        ];
+
+        // ============================================================
+        // 4 شركات التوصيل
+        // ============================================================
+        const DELIVERY_COMPANIES = [
+            { id: 1, name: 'برق الجزائر', logo: '⚡', multiplier: 1.0, phone: '0555 11 22 33' },
+            { id: 2, name: 'يمين إكسبريس', logo: '🚚', multiplier: 0.9, phone: '0555 44 55 66' },
+            { id: 3, name: 'فاست شيب', logo: '📦', multiplier: 1.1, phone: '0555 77 88 99' },
+            { id: 4, name: 'دليفري بلس', logo: '🏍️', multiplier: 0.95, phone: '0555 00 11 22' }
+        ];
+
+        // ============================================================
+        // المتغيرات العامة
+        // ============================================================
+        let cart = [];
+        let currentUser = null;
+
+        // ============================================================
+        // تحميل البيانات من window و localStorage
+        // ============================================================
+        function loadData() {
+            // تحميل السلة
+            if (typeof window !== 'undefined' && window.cart && window.cart.length > 0) {
+                cart = window.cart;
+                console.log('✅ تم ربط السلة من window.cart:', cart.length, 'منتج');
+            } else {
+                const savedCart = localStorage.getItem('nardoo_cart');
+                if (savedCart) {
+                    cart = JSON.parse(savedCart);
+                    console.log('✅ تم تحميل السلة من localStorage:', cart.length, 'منتج');
+                } else {
+                    // بيانات تجريبية للعرض
+                    cart = [
+                        { productId: 1, name: 'عطر ورد فرنسي', price: 3500, quantity: 1, merchantName: 'عطور الفاخرة', image: 'https://picsum.photos/id/263/80/80' },
+                        { productId: 2, name: 'زعفران حر', price: 1200, quantity: 2, merchantName: 'توابل المذاق', image: 'https://picsum.photos/id/292/80/80' }
+                    ];
+                }
+            }
+
+            // تحميل المستخدم
+            if (typeof window !== 'undefined' && window.currentUser) {
+                currentUser = window.currentUser;
+                console.log('✅ تم ربط المستخدم من window.currentUser:', currentUser?.name);
+            } else {
+                const savedUser = localStorage.getItem('current_user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    console.log('✅ تم تحميل المستخدم من localStorage:', currentUser?.name);
+                } else {
+                    currentUser = { name: 'أحمد محمد', email: 'ahmed@example.com', role: 'customer' };
+                }
+            }
+
+            updateUserDisplay();
+            displayCart();
+        }
+
+        // ============================================================
+        // عرض معلومات المستخدم
+        // ============================================================
+        function updateUserDisplay() {
+            document.getElementById('userName').innerHTML = currentUser?.name || 'زائر';
+            document.getElementById('userEmail').innerHTML = currentUser?.email || 'غير مسجل';
+            
+            let roleText = 'عميل';
+            if (currentUser?.role === 'admin') roleText = 'مدير';
+            else if (currentUser?.role === 'merchant_approved') roleText = 'تاجر';
+            document.getElementById('userRole').innerHTML = roleText;
+        }
+
+        // ============================================================
+        // عرض السلة
+        // ============================================================
+        function displayCart() {
+            const container = document.getElementById('cartSummary');
+            
+            if (!cart || cart.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 30px;">
+                        <i class="fas fa-shopping-cart" style="font-size: 50px; opacity: 0.5;"></i>
+                        <p style="margin-top: 15px;">سلة المشتريات فارغة</p>
+                        <p style="font-size: 12px;">أضف منتجات من المتجر أولاً</p>
                     </div>
-                    <div style="color: var(--gold);">${(item.price * item.quantity).toLocaleString()} دج</div>
-                </div>
-            `).join('')}
-        </div>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid var(--gold); font-weight: bold;">
-            <div style="display: flex; justify-content: space-between;">
-                <span>المجموع:</span>
-                <span>${subtotal.toLocaleString()} دج</span>
-            </div>
-        </div>
-    `;
-}
+                `;
+                return;
+            }
 
-// ===== [7] عرض معلومات المستخدم =====
-function displayUserInfo() {
-    const container = document.getElementById('userInfo');
-    if (!container) return;
-    
-    if (currentUser) {
-        container.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="width: 45px; height: 45px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-user"></i>
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            container.innerHTML = `
+                <div style="max-height: 300px; overflow-y: auto;">
+                    ${cart.map(item => `
+                        <div class="cart-item">
+                            <div>
+                                <strong>${item.name}</strong><br>
+                                <small>${item.merchantName} | الكمية: ${item.quantity}</small>
+                            </div>
+                            <div style="color: #ffd700;">${(item.price * item.quantity).toLocaleString()} دج</div>
+                        </div>
+                    `).join('')}
                 </div>
-                <div>
-                    <div><strong>${currentUser.name}</strong></div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">${currentUser.email}</div>
-                </div>
-                <div class="role-badge" style="background: var(--gold); padding: 5px 12px; border-radius: 20px; font-size: 12px;">
-                    ${currentUser.role === 'admin' ? '👑 مدير' : currentUser.role === 'merchant_approved' ? '🏪 تاجر' : '👤 عميل'}
-                </div>
-            </div>
-        `;
-    } else {
-        container.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="width: 45px; height: 45px; background: var(--glass); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div>
-                    <div><strong>زائر</strong></div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">لم يتم تسجيل الدخول</div>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// ===== [8] إرسال 3 رسائل تلغرام =====
-const TELEGRAM = {
-    botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
-    channelId: '-1003822964890',
-    apiUrl: 'https://api.telegram.org/bot'
-};
-
-async function sendTelegramMessage(chatId, message, parseMode = 'HTML') {
-    try {
-        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: parseMode })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('❌ خطأ في الإرسال:', error);
-    }
-}
-
-async function sendOrderNotifications(orderDetails) {
-    const { orderId, customer, items, subtotal, shippingFee, total, region, company } = orderDetails;
-    
-    // تجميع المنتجات حسب التاجر
-    const merchantOrders = {};
-    for (const item of items) {
-        if (!merchantOrders[item.merchantName]) merchantOrders[item.merchantName] = [];
-        merchantOrders[item.merchantName].push(item);
-    }
-    
-    // ===== الرسالة 1: للمدير =====
-    let adminMessage = `╔══════════════════════════════════════════════════════╗\n`;
-    adminMessage += `║                    👑 <b>طلب جديد - للمدير</b>                    ║\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║ 📋 <b>رقم الطلب:</b> <code>${orderId}</code>\n`;
-    adminMessage += `║ 🕐 <b>التاريخ:</b> ${new Date().toLocaleString('ar-EG')}\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║                      👤 <b>معلومات العميل</b>                       ║\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║ 👨 <b>الاسم:</b> ${customer.name}\n`;
-    adminMessage += `║ 📞 <b>الهاتف:</b> ${customer.phone}\n`;
-    adminMessage += `║ 📍 <b>العنوان:</b> ${customer.address}\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║                      📦 <b>المنتجات</b>                         ║\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    
-    for (const [merchant, items] of Object.entries(merchantOrders)) {
-        adminMessage += `║ 🏪 <b>${merchant}</b>\n`;
-        for (const item of items) {
-            adminMessage += `║    📦 ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
-        }
-    }
-    
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║                      🚚 <b>معلومات التوصيل</b>                     ║\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║ 📍 <b>المنطقة:</b> ${region}\n`;
-    adminMessage += `║ 🏢 <b>شركة التوصيل:</b> ${company}\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║                      💰 <b>الإجماليات</b>                         ║\n`;
-    adminMessage += `╠══════════════════════════════════════════════════════╣\n`;
-    adminMessage += `║ 💵 <b>مجموع المنتجات:</b> ${subtotal.toLocaleString()} دج\n`;
-    adminMessage += `║ 🚚 <b>رسوم التوصيل:</b> ${shippingFee.toLocaleString()} دج\n`;
-    adminMessage += `║ 💎 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج\n`;
-    adminMessage += `╚══════════════════════════════════════════════════════╝`;
-    
-    await sendTelegramMessage(TELEGRAM.channelId, adminMessage, 'HTML');
-    
-    // ===== الرسالة 2: لكل تاجر =====
-    for (const [merchant, items] of Object.entries(merchantOrders)) {
-        const merchantTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        
-        let merchantMessage = `🟢 <b>طلب جديد - للتاجر ${merchant}</b>\n`;
-        merchantMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        merchantMessage += `📋 <b>رقم الطلب:</b> <code>${orderId}</code>\n`;
-        merchantMessage += `👤 <b>العميل:</b> ${customer.name}\n`;
-        merchantMessage += `📞 <b>الهاتف:</b> ${customer.phone}\n`;
-        merchantMessage += `📍 <b>العنوان:</b> ${customer.address}\n`;
-        merchantMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        merchantMessage += `📦 <b>المنتجات المطلوبة من متجرك:</b>\n`;
-        
-        for (const item of items) {
-            merchantMessage += `┃ 📦 ${item.name}\n`;
-            merchantMessage += `┃    ├ الكمية: ${item.quantity}\n`;
-            merchantMessage += `┃    └ السعر: ${(item.price * item.quantity).toLocaleString()} دج\n`;
-        }
-        
-        merchantMessage += `┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        merchantMessage += `┃ 💰 <b>الإجمالي:</b> ${merchantTotal.toLocaleString()} دج\n`;
-        merchantMessage += `┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        merchantMessage += `\n✅ يرجى تجهيز الطلب في أقرب وقت`;
-        
-        await sendTelegramMessage(TELEGRAM.channelId, merchantMessage, 'HTML');
-        await new Promise(r => setTimeout(r, 500));
-    }
-    
-    // ===== الرسالة 3: للمشتري =====
-    let customerMessage = `🟢 <b>✅ تم استلام طلبك بنجاح!</b>\n`;
-    customerMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    customerMessage += `📋 <b>رقم الطلب:</b> <code>${orderId}</code>\n`;
-    customerMessage += `📅 <b>التاريخ:</b> ${new Date().toLocaleString('ar-EG')}\n`;
-    customerMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    customerMessage += `📦 <b>المنتجات المطلوبة:</b>\n`;
-    
-    for (const item of items) {
-        customerMessage += `• ${item.name} (${item.quantity}) × ${item.price.toLocaleString()} دج = ${(item.price * item.quantity).toLocaleString()} دج\n`;
-    }
-    
-    customerMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    customerMessage += `💰 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج\n`;
-    customerMessage += `🚚 <b>عنوان التوصيل:</b> ${customer.address}\n`;
-    customerMessage += `⏰ <b>الوقت المتوقع:</b> ${DELIVERY_REGIONS.find(r => r.name === region)?.days || '2-5 أيام'}\n`;
-    customerMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    customerMessage += `✨ شكراً لتسوقك من <b>ناردو برو</b> ✨`;
-    
-    await sendTelegramMessage(TELEGRAM.channelId, customerMessage, 'HTML');
-}
-
-// ===== [9] تأكيد الطلب وإرسال الإشعارات =====
-async function confirmOrder() {
-    const customerName = document.getElementById('customerName')?.value;
-    const customerPhone = document.getElementById('customerPhone')?.value;
-    const customerAddress = document.getElementById('customerAddress')?.value;
-    const regionId = document.getElementById('deliveryRegion')?.value;
-    const companyId = document.getElementById('deliveryCompany')?.value;
-    
-    if (!customerName || !customerPhone || !customerAddress || !regionId || !companyId) {
-        alert('الرجاء ملء جميع الحقول');
-        return;
-    }
-    
-    const region = DELIVERY_REGIONS.find(r => r.id == regionId);
-    const company = DELIVERY_COMPANIES.find(c => c.id == companyId);
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shippingFee = calculateShippingFee(regionId, companyId, subtotal);
-    const total = subtotal + shippingFee;
-    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    
-    const orderDetails = {
-        orderId,
-        customer: { name: customerName, phone: customerPhone, address: customerAddress },
-        items: [...cart],
-        subtotal,
-        shippingFee,
-        total,
-        region: region.name,
-        company: company.name
-    };
-    
-    // إرسال الإشعارات إلى تلغرام
-    await sendOrderNotifications(orderDetails);
-    
-    // حفظ الطلب
-    const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
-    orders.unshift({ ...orderDetails, date: new Date().toISOString(), status: 'pending' });
-    localStorage.setItem('nardoo_orders', JSON.stringify(orders.slice(0, 50)));
-    
-    // تفريغ السلة
-    cart = [];
-    if (typeof window !== 'undefined' && window.cart) window.cart = [];
-    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
-    
-    alert(`✅ تم إتمام الطلب بنجاح!\nرقم الطلب: ${orderId}\nالإجمالي: ${total.toLocaleString()} دج`);
-    
-    // إغلاق النافذة
-    document.getElementById('customerModal')?.remove();
-}
-
-// ===== [10] تهيئة النظام =====
-function initDeliverySystem() {
-    loadDataFromWindow();
-    displayCartSummary();
-    displayUserInfo();
-    
-    // بناء قائمة المناطق
-    const regionSelect = document.getElementById('deliveryRegion');
-    if (regionSelect) {
-        regionSelect.innerHTML = '<option value="">-- اختر المنطقة --</option>' +
-            DELIVERY_REGIONS.map(r => `<option value="${r.id}">${r.name} (${r.fee} دج - ${r.days})</option>`).join('');
-    }
-    
-    // بناء قائمة الشركات
-    const companySelect = document.getElementById('deliveryCompany');
-    if (companySelect) {
-        companySelect.innerHTML = '<option value="">-- اختر شركة التوصيل --</option>' +
-            DELIVERY_COMPANIES.map(c => `<option value="${c.id}">${c.logo} ${c.name}</option>`).join('');
-    }
-    
-    // تحديث الإجمالي عند تغيير الخيارات
-    const updateTotal = () => {
-        const { subtotal, shippingFee, total } = calculateOrderTotal();
-        const totalDiv = document.getElementById('orderTotal');
-        if (totalDiv) {
-            totalDiv.innerHTML = `
-                <div style="margin-top: 15px; padding: 15px; background: var(--glass); border-radius: 10px;">
-                    <div>مجموع المنتجات: ${subtotal.toLocaleString()} دج</div>
-                    <div>رسوم التوصيل: ${shippingFee.toLocaleString()} دج</div>
-                    <div style="font-size: 20px; font-weight: bold;">الإجمالي: ${total.toLocaleString()} دج</div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #ffd700;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                        <span>المجموع:</span>
+                        <span style="color: #ffd700;">${subtotal.toLocaleString()} دج</span>
+                    </div>
                 </div>
             `;
         }
-    };
-    
-    regionSelect?.addEventListener('change', updateTotal);
-    companySelect?.addEventListener('change', updateTotal);
-    updateTotal();
-}
 
-// التشغيل عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', initDeliverySystem);
+        // ============================================================
+        // حساب رسوم التوصيل
+        // ============================================================
+        function calculateShippingFee(regionId, companyId, subtotal) {
+            const region = DELIVERY_REGIONS.find(r => r.id == regionId);
+            const company = DELIVERY_COMPANIES.find(c => c.id == companyId);
+            
+            if (!region || !company) return 0;
+            
+            let fee = region.fee * company.multiplier;
+            
+            // توصيل مجاني للطلبات فوق 15000 دج
+            if (subtotal >= 15000) {
+                fee = 0;
+            }
+            
+            return Math.round(fee);
+        }
+
+        // ============================================================
+        // تحديث الإجمالي
+        // ============================================================
+        function updateTotal() {
+            const regionId = document.getElementById('deliveryRegion').value;
+            const companyId = document.getElementById('deliveryCompany').value;
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            if (!regionId || !companyId) {
+                document.getElementById('orderTotal').innerHTML = `
+                    <div style="text-align: center; padding: 20px; background: rgba(255,215,0,0.1); border-radius: 15px;">
+                        <i class="fas fa-info-circle"></i> اختر المنطقة وشركة التوصيل لحساب الإجمالي
+                    </div>
+                `;
+                return;
+            }
+            
+            const region = DELIVERY_REGIONS.find(r => r.id == regionId);
+            const company = DELIVERY_COMPANIES.find(c => c.id == companyId);
+            const shippingFee = calculateShippingFee(regionId, companyId, subtotal);
+            const total = subtotal + shippingFee;
+            const isFree = subtotal >= 15000;
+            
+            document.getElementById('orderTotal').innerHTML = `
+                <div style="background: rgba(255,215,0,0.1); border-radius: 15px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>مجموع المنتجات:</span>
+                        <span>${subtotal.toLocaleString()} دج</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>منطقة التوصيل (${region.name}):</span>
+                        <span>${region.fee.toLocaleString()} دج</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>شركة التوصيل (${company.name}):</span>
+                        <span>${company.multiplier > 1 ? '+' : ''}${((company.multiplier - 1) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,215,0,0.3);">
+                        <span>رسوم التوصيل:</span>
+                        <span style="color: ${isFree ? '#4ade80' : '#ffd700'}">${isFree ? '0 دج (مجاني)' : shippingFee.toLocaleString() + ' دج'}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold;">
+                        <span>الإجمالي النهائي:</span>
+                        <span style="color: #ffd700;">${total.toLocaleString()} دج</span>
+                    </div>
+                    ${isFree ? '<div style="margin-top: 10px; color: #4ade80;">🎉 طلبك مؤهل للتوصيل المجاني!</div>' : ''}
+                    <div style="margin-top: 10px; font-size: 12px; color: #aaa;">
+                        <i class="fas fa-clock"></i> الوقت المتوقع: ${region.days}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================================
+        // إرسال رسائل تلغرام (3 رسائل)
+        // ============================================================
+        async function sendTelegramMessage(message, parseMode = 'HTML') {
+            try {
+                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM.channelId,
+                        text: message,
+                        parse_mode: parseMode
+                    })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('❌ خطأ:', error);
+                return null;
+            }
+        }
+
+        async function sendOrderNotifications(orderDetails) {
+            const { orderId, customer, items, subtotal, shippingFee, total, region, company } = orderDetails;
+            
+            // تجميع المنتجات حسب التاجر
+            const merchantOrders = {};
+            for (const item of items) {
+                if (!merchantOrders[item.merchantName]) merchantOrders[item.merchantName] = [];
+                merchantOrders[item.merchantName].push(item);
+            }
+            
+            // ===== الرسالة 1: للمدير =====
+            let adminMsg = `╔══════════════════════════════════════════════════════╗\n`;
+            adminMsg += `║                    👑 <b>طلب جديد - للمدير</b>                    ║\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║ 📋 <b>رقم الطلب:</b> <code>${orderId}</code>\n`;
+            adminMsg += `║ 🕐 <b>التاريخ:</b> ${new Date().toLocaleString('ar-EG')}\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║                      👤 <b>معلومات العميل</b>                       ║\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║ 👨 <b>الاسم:</b> ${customer.name}\n`;
+            adminMsg += `║ 📞 <b>الهاتف:</b> ${customer.phone}\n`;
+            adminMsg += `║ 📍 <b>العنوان:</b> ${customer.address}\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║                      📦 <b>المنتجات</b>                         ║\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            
+            for (const [merchant, its] of Object.entries(merchantOrders)) {
+                adminMsg += `║ 🏪 <b>${merchant}</b>\n`;
+                for (const it of its) {
+                    adminMsg += `║    📦 ${it.name} × ${it.quantity} = ${(it.price * it.quantity).toLocaleString()} دج\n`;
+                }
+            }
+            
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║                      🚚 <b>معلومات التوصيل</b>                     ║\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║ 📍 <b>المنطقة:</b> ${region}\n`;
+            adminMsg += `║ 🏢 <b>شركة التوصيل:</b> ${company}\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║                      💰 <b>الإجماليات</b>                         ║\n`;
+            adminMsg += `╠══════════════════════════════════════════════════════╣\n`;
+            adminMsg += `║ 💵 <b>مجموع المنتجات:</b> ${subtotal.toLocaleString()} دج\n`;
+            adminMsg += `║ 🚚 <b>رسوم التوصيل:</b> ${shippingFee.toLocaleString()} دج\n`;
+            adminMsg += `║ 💎 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج\n`;
+            adminMsg += `╚══════════════════════════════════════════════════════╝`;
+            
+            await sendTelegramMessage(adminMsg, 'HTML');
+            console.log('✅ تم إرسال إشعار للمدير');
+            
+            // ===== الرسالة 2: لكل تاجر =====
+            for (const [merchant, its] of Object.entries(merchantOrders)) {
+                const merchantTotal = its.reduce((s, it) => s + (it.price * it.quantity), 0);
+                let merchantMsg = `🟢 <b>طلب جديد - للتاجر ${merchant}</b>\n`;
+                merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                merchantMsg += `📋 <b>رقم الطلب:</b> <code>${orderId}</code>\n`;
+                merchantMsg += `👤 <b>العميل:</b> ${customer.name}\n`;
+                merchantMsg += `📞 <b>الهاتف:</b> ${customer.phone}\n`;
+                merchantMsg += `📍 <b>العنوان:</b> ${customer.address}\n`;
+                merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                merchantMsg += `📦 <b>المنتجات المطلوبة من متجرك:</b>\n`;
+                for (const it of its) {
+                    merchantMsg += `┃ 📦 ${it.name}\n`;
+                    merchantMsg += `┃    ├ الكمية: ${it.quantity}\n`;
+                    merchantMsg += `┃    └ السعر: ${(it.price * it.quantity).toLocaleString()} دج\n`;
+                }
+                merchantMsg += `┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                merchantMsg += `┃ 💰 <b>الإجمالي:</b> ${merchantTotal.toLocaleString()} دج\n`;
+                merchantMsg += `┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                merchantMsg += `\n✅ يرجى تجهيز الطلب في أقرب وقت`;
+                
+                await sendTelegramMessage(merchantMsg, 'HTML');
+                await new Promise(r => setTimeout(r, 500));
+            }
+            console.log(`✅ تم إرسال إشعار لـ ${Object.keys(merchantOrders).length} تاجر`);
+            
+            // ===== الرسالة 3: للمشتري =====
+            let customerMsg = `🟢 <b>✅ تم استلام طلبك بنجاح!</b>\n`;
+            customerMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            customerMsg += `📋 <b>رقم الطلب:</b> <code>${orderId}</code>\n`;
+            customerMsg += `📅 <b>التاريخ:</b> ${new Date().toLocaleString('ar-EG')}\n`;
+            customerMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            customerMsg += `📦 <b>المنتجات المطلوبة:</b>\n`;
+            for (const it of items) {
+                customerMsg += `• ${it.name} (${it.quantity}) × ${it.price.toLocaleString()} دج = ${(it.price * it.quantity).toLocaleString()} دج\n`;
+            }
+            customerMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            customerMsg += `💰 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج\n`;
+            customerMsg += `🚚 <b>عنوان التوصيل:</b> ${customer.address}\n`;
+            customerMsg += `⏰ <b>الوقت المتوقع:</b> ${DELIVERY_REGIONS.find(r => r.name === region)?.days || '2-5 أيام'}\n`;
+            customerMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            customerMsg += `✨ شكراً لتسوقك من <b>ناردو برو</b> ✨`;
+            
+            await sendTelegramMessage(customerMsg, 'HTML');
+            console.log('✅ تم إرسال تأكيد للمشتري');
+        }
+
+        // ============================================================
+        // تأكيد الطلب
+        // ============================================================
+        async function confirmOrder() {
+            const customerName = document.getElementById('customerName').value;
+            const customerPhone = document.getElementById('customerPhone').value;
+            const customerAddress = document.getElementById('customerAddress').value;
+            const regionId = document.getElementById('deliveryRegion').value;
+            const companyId = document.getElementById('deliveryCompany').value;
+            const notes = document.getElementById('orderNotes').value;
+            
+            if (!customerName || !customerPhone || !customerAddress || !regionId || !companyId) {
+                alert('❌ الرجاء ملء جميع الحقول المطلوبة');
+                return;
+            }
+            
+            if (!cart || cart.length === 0) {
+                alert('❌ سلة المشتريات فارغة');
+                return;
+            }
+            
+            const region = DELIVERY_REGIONS.find(r => r.id == regionId);
+            const company = DELIVERY_COMPANIES.find(c => c.id == companyId);
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const shippingFee = calculateShippingFee(regionId, companyId, subtotal);
+            const total = subtotal + shippingFee;
+            const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            
+            const orderDetails = {
+                orderId,
+                customer: { name: customerName, phone: customerPhone, address: customerAddress, notes },
+                items: [...cart],
+                subtotal,
+                shippingFee,
+                total,
+                region: region.name,
+                company: company.name
+            };
+            
+            // إظهار رسالة جاري المعالجة
+            const btn = document.getElementById('confirmOrderBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري إرسال الطلب...';
+            btn.disabled = true;
+            
+            try {
+                // إرسال الإشعارات
+                await sendOrderNotifications(orderDetails);
+                
+                // حفظ الطلب
+                const orders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
+                orders.unshift({ ...orderDetails, date: new Date().toISOString(), status: 'pending' });
+                localStorage.setItem('nardoo_orders', JSON.stringify(orders.slice(0, 50)));
+                
+                // تفريغ السلة
+                cart = [];
+                if (typeof window !== 'undefined' && window.cart) window.cart = [];
+                localStorage.setItem('nardoo_cart', JSON.stringify(cart));
+                displayCart();
+                
+                // تنظيف النموذج
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerPhone').value = '';
+                document.getElementById('customerAddress').value = '';
+                document.getElementById('deliveryRegion').value = '';
+                document.getElementById('deliveryCompany').value = '';
+                document.getElementById('orderNotes').value = '';
+                
+                alert(`✅ تم إتمام الطلب بنجاح!\n\n📋 رقم الطلب: ${orderId}\n💰 الإجمالي: ${total.toLocaleString()} دج\n🚚 الوقت المتوقع: ${region.days}\n\n📨 تم إرسال إشعارات للمدير والتاجر والمشتري`);
+                
+            } catch (error) {
+                console.error(error);
+                alert('❌ حدث خطأ في إرسال الطلب، يرجى المحاولة مرة أخرى');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // بناء القوائم المنسدلة
+        // ============================================================
+        function buildSelectors() {
+            // المناطق
+            const regionSelect = document.getElementById('deliveryRegion');
+            regionSelect.innerHTML = '<option value="">-- اختر المنطقة --</option>' +
+                DELIVERY_REGIONS.map(r => `<option value="${r.id}">${r.name} (${r.fee.toLocaleString()} دج - ${r.days})</option>`).join('');
+            
+            // الشركات
+            const companySelect = document.getElementById('deliveryCompany');
+            companySelect.innerHTML = '<option value="">-- اختر شركة التوصيل --</option>' +
+                DELIVERY_COMPANIES.map(c => `<option value="${c.id}">${c.logo} ${c.name}</option>`).join('');
+            
+            // إضافة مستمعي الأحداث
+            regionSelect.addEventListener('change', updateTotal);
+            companySelect.addEventListener('change', updateTotal);
+        }
+
+        // ============================================================
+        // التهيئة
+        // ============================================================
+        function init() {
+            loadData();
+            buildSelectors();
+            updateTotal();
+            document.getElementById('confirmOrderBtn').addEventListener('click', confirmOrder);
+            console.log('✅ نظام التوصيل جاهز | 8 مناطق | 4 شركات | 3 رسائل تلغرام');
+        }
+        
+        init();
+    </script>
+</body>
+</html>
