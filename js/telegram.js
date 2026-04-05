@@ -27,7 +27,7 @@ const ADMIN_USER = {
     id: 19862,
     name: 'azer',
     email: 'azer@admin.com',
-    password: '123456',
+    password: '19862',
     role: 'admin',
     phone: '',
     createdAt: new Date().toISOString(),
