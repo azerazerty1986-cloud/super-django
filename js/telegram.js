@@ -1,6 +1,4 @@
 
-
-
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
@@ -35,9 +33,9 @@ function loadUsers() {
         users = [
             { 
                 id: 1, 
-                name: 'azer', 
+                name: 'azert', 
                 email: 'azer@admin.com', 
-                password: '123456', 
+                password: '19861', 
                 role: 'admin',
                 phone: '',
                 createdAt: new Date().toISOString()
