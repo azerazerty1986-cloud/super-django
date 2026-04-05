@@ -33,7 +33,7 @@ function loadUsers() {
         users = [
             { 
                 id: 1, 
-                name: 'azert', 
+                name: 'azer', 
                 email: 'azer@admin.com', 
                 password: '19861', 
                 role: 'admin',
