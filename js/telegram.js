@@ -1,4 +1,5 @@
 
+
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ================================================================== */
@@ -796,63 +797,547 @@ function removeFromCart(productId) {
 }
 
 // ===== [4.27] إتمام الشراء =====
+// ===== [4.27] إتمام الشراء - نسخة احترافية 2026 =====
 async function checkoutCart() {
+    // ===== [4.27.1] التحقق من صحة السلة =====
     if (cart.length === 0) {
-        showNotification('السلة فارغة', 'warning');
+        showNotification('🛒 السلة فارغة! أضف بعض المنتجات أولاً', 'warning');
         return;
     }
 
     if (!currentUser) {
-        showNotification('يجب تسجيل الدخول أولاً', 'warning');
+        showNotification('🔐 يرجى تسجيل الدخول أولاً لإتمام عملية الشراء', 'warning');
         openLoginModal();
         return;
     }
 
-    const customerPhone = prompt('رقم الهاتف:', currentUser.phone || '');
-    if (!customerPhone) return;
-    
-    const customerAddress = prompt('عنوان التوصيل:', '');
-    if (!customerAddress) return;
-
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = 800;
-    const total = subtotal + shipping;
-
-    const order = {
-        customerName: currentUser.name,
-        customerPhone: customerPhone,
-        customerAddress: customerAddress,
-        items: [...cart],
-        total: total
-    };
-
-    const message = `🟢 *طلب جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-👤 *الزبون:* ${order.customerName}
-📞 *الهاتف:* ${order.customerPhone}
-📍 *العنوان:* ${order.customerAddress}
-📦 *المنتجات:*
-${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج`).join('\n')}
-💰 *الإجمالي:* ${order.total} دج
-📅 ${new Date().toLocaleString('ar-EG')}`;
-
-    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: TELEGRAM.channelId,
-            text: message,
-            parse_mode: 'Markdown'
-        })
+    // ===== [4.27.2] إنشاء رقم طلب فريد =====
+    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const orderDate = new Date().toLocaleString('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
 
+    // ===== [4.27.3] جمع معلومات العميل بشكل احترافي =====
+    showNotification('📝 جاري تجهيز نموذج الطلب...', 'info');
+    
+    const customerInfo = await getCustomerInfo();
+    if (!customerInfo) return;
+
+    const { customerName, customerPhone, customerAddress, notes, deliveryType } = customerInfo;
+
+    // ===== [4.27.4] حساب تفاصيل الطلب =====
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    // حساب رسوم التوصيل حسب المنطقة
+    let shipping = 800;
+    let estimatedDays = '2-3 أيام';
+    if (deliveryType === 'express') {
+        shipping = 1500;
+        estimatedDays = '24 ساعة';
+    } else if (customerAddress.includes('دبي') || customerAddress.includes('أبوظبي')) {
+        shipping = 500;
+        estimatedDays = '1-2 أيام';
+    }
+    
+    const tax = subtotal * 0.00; // 0% ضريبة
+    const discount = 0;
+    const total = subtotal + shipping + tax - discount;
+
+    // ===== [4.27.5] تجميع المنتجات حسب التاجر =====
+    const merchantOrders = {};
+    for (const item of cart) {
+        const merchantName = item.merchantName;
+        if (!merchantOrders[merchantName]) {
+            merchantOrders[merchantName] = {
+                items: [],
+                subtotal: 0
+            };
+        }
+        merchantOrders[merchantName].items.push(item);
+        merchantOrders[merchantName].subtotal += item.price * item.quantity;
+    }
+
+    // ===== [4.27.6] حساب حصة كل تاجر من التوصيل =====
+    const merchantCount = Object.keys(merchantOrders).length;
+    const shippingPerMerchant = shipping / merchantCount;
+
+    // ===== [4.27.7] إنشاء تقرير الطلب المتقدم =====
+    const orderReport = generateOrderReport(orderId, orderDate, customerInfo, {
+        subtotal, shipping, tax, discount, total,
+        merchantOrders, shippingPerMerchant, estimatedDays
+    });
+
+    // ===== [4.27.8] إرسال إشعارات للتجار =====
+    showNotification('📤 جاري إرسال الطلبات للتجار...', 'info');
+    
+    for (const [merchantName, orderData] of Object.entries(merchantOrders)) {
+        const merchantTotal = orderData.subtotal + shippingPerMerchant;
+        
+        const merchantMessage = generateMerchantMessage(
+            orderId, merchantName, orderData.items, 
+            orderData.subtotal, merchantTotal, customerInfo, estimatedDays
+        );
+        
+        await sendTelegramMessage(merchantMessage, 'Markdown');
+        await new Promise(resolve => setTimeout(resolve, 500)); // تأخير بسيط بين الإرسال
+    }
+
+    // ===== [4.27.9] إرسال التقرير الكامل للقناة =====
+    await sendTelegramMessage(orderReport, 'HTML');
+    
+    // ===== [4.27.10] إرسال إشعار تأكيد للعميل =====
+    const customerConfirmation = generateCustomerConfirmation(
+        orderId, orderDate, cart, total, estimatedDays, customerAddress
+    );
+    await sendTelegramMessage(customerConfirmation, 'Markdown');
+
+    // ===== [4.27.11] حفظ الطلب في localStorage =====
+    saveOrderToHistory(orderId, {
+        orderId, orderDate, customerInfo,
+        items: [...cart],
+        subtotal, shipping, tax, discount, total,
+        status: 'pending',
+        merchantOrders: merchantOrders
+    });
+
+    // ===== [4.27.12] تفريغ السلة =====
     cart = [];
     saveCart();
     updateCartCounter();
     toggleCart();
     
-    showNotification('✅ تم إرسال الطلب بنجاح', 'success');
+    // ===== [4.27.13] عرض نافذة نجاح العملية =====
+    showOrderSuccessModal(orderId, total, estimatedDays);
+    
+    console.log(`✅ تم إرسال الطلب بنجاح - رقم الطلب: ${orderId}`);
 }
+
+// ===== [4.27.14] دالة جمع معلومات العميل =====
+async function getCustomerInfo() {
+    return new Promise((resolve) => {
+        // إنشاء نافذة منبثقة متطورة لجمع المعلومات
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 20000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: var(--bg-secondary);
+                        border-radius: 30px;
+                        padding: 30px;
+                        max-width: 500px;
+                        width: 90%;
+                        border: 2px solid var(--gold);
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                        animation: slideUp 0.3s ease;">
+                <h2 style="color: var(--gold); text-align: center; margin-bottom: 25px;">
+                    <i class="fas fa-shopping-cart"></i> إتمام الطلب
+                </h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
+                        <i class="fas fa-user"></i> الاسم الكامل
+                    </label>
+                    <input type="text" id="customerName" value="${currentUser.name}" 
+                           style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
+                                  background: var(--bg-primary); color: var(--text);">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
+                        <i class="fas fa-phone"></i> رقم الهاتف
+                    </label>
+                    <input type="tel" id="customerPhone" value="${currentUser.phone || ''}" 
+                           style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
+                                  background: var(--bg-primary); color: var(--text);">
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
+                        <i class="fas fa-map-marker-alt"></i> عنوان التوصيل
+                    </label>
+                    <textarea id="customerAddress" rows="3" 
+                              style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
+                                     background: var(--bg-primary); color: var(--text);"></textarea>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
+                        <i class="fas fa-truck"></i> طريقة التوصيل
+                    </label>
+                    <select id="deliveryType" style="width: 100%; padding: 12px; border-radius: 10px; 
+                            border: 1px solid var(--gold); background: var(--bg-primary); color: var(--text);">
+                        <option value="standard">🚚 عادي (800 دج - 2-3 أيام)</option>
+                        <option value="express">⚡ سريع (1500 دج - 24 ساعة)</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
+                        <i class="fas fa-sticky-note"></i> ملاحظات إضافية (اختياري)
+                    </label>
+                    <textarea id="orderNotes" rows="2" 
+                              style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
+                                     background: var(--bg-primary); color: var(--text);"
+                              placeholder="أي ملاحظات تود إضافتها..."></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 25px;">
+                    <button onclick="this.closest('div').parentElement.remove()" 
+                            style="flex: 1; padding: 12px; background: #f87171; color: white;
+                                   border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">
+                        <i class="fas fa-times"></i> إلغاء
+                    </button>
+                    <button id="submitOrderBtn" 
+                            style="flex: 1; padding: 12px; background: var(--gold); color: black;
+                                   border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">
+                        <i class="fas fa-check"></i> تأكيد الطلب
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // إضافة تأثيرات CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(50px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        document.getElementById('submitOrderBtn').onclick = () => {
+            const customerName = document.getElementById('customerName').value;
+            const customerPhone = document.getElementById('customerPhone').value;
+            const customerAddress = document.getElementById('customerAddress').value;
+            const deliveryType = document.getElementById('deliveryType').value;
+            const notes = document.getElementById('orderNotes').value;
+            
+            if (!customerName || !customerPhone || !customerAddress) {
+                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
+                return;
+            }
+            
+            modal.remove();
+            resolve({ customerName, customerPhone, customerAddress, notes, deliveryType });
+        };
+    });
+}
+
+// ===== [4.27.15] إنشاء تقرير الطلب المتقدم =====
+function generateOrderReport(orderId, orderDate, customerInfo, totals) {
+    const { customerName, customerPhone, customerAddress, notes, deliveryType } = customerInfo;
+    const { subtotal, shipping, tax, discount, total, merchantOrders, shippingPerMerchant, estimatedDays } = totals;
+    
+    let merchantsDetails = '';
+    for (const [merchantName, orderData] of Object.entries(merchantOrders)) {
+        merchantsDetails += `
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┃ 🏪 <b>${merchantName}</b>
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+        for (const item of orderData.items) {
+            merchantsDetails += `
+┃ 📦 ${item.name}
+┃    ├ الكمية: ${item.quantity}
+┃    ├ السعر: ${item.price.toLocaleString()} دج
+┃    └ الإجمالي: ${(item.price * item.quantity).toLocaleString()} دج`;
+        }
+        merchantsDetails += `
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+┃ 💰 إجمالي المنتجات: ${orderData.subtotal.toLocaleString()} دج
+┃ 🚚 حصة التوصيل: ${Math.round(shippingPerMerchant).toLocaleString()} دج
+┃ ✨ إجمالي الطلب: ${Math.round(orderData.subtotal + shippingPerMerchant).toLocaleString()} دج
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    }
+    
+    return `
+╔══════════════════════════════════════════════════════════╗
+║                    🧾 <b>تقرير الطلب الجديد</b>                    ║
+╠══════════════════════════════════════════════════════════╣
+║ 📋 <b>رقم الطلب:</b> <code>${orderId}</code>
+║ 🕐 <b>تاريخ الطلب:</b> ${orderDate}
+╠══════════════════════════════════════════════════════════╣
+║                      👤 <b>معلومات العميل</b>                       ║
+╠══════════════════════════════════════════════════════════╣
+║ 👨 <b>الاسم:</b> ${customerName}
+║ 📞 <b>الهاتف:</b> ${customerPhone}
+║ 📍 <b>العنوان:</b> ${customerAddress}
+║ 📝 <b>ملاحظات:</b> ${notes || 'لا توجد ملاحظات'}
+╠══════════════════════════════════════════════════════════╣
+║                      📊 <b>تفاصيل الطلب</b>                       ║
+╠══════════════════════════════════════════════════════════╣
+${merchantsDetails}
+╠══════════════════════════════════════════════════════════╣
+║                      💰 <b>إجماليات الطلب</b>                      ║
+╠══════════════════════════════════════════════════════════╣
+║ 💵 <b>إجمالي المنتجات:</b> ${subtotal.toLocaleString()} دج
+║ 🚚 <b>رسوم التوصيل:</b> ${shipping.toLocaleString()} دج
+║ 🧾 <b>الضريبة:</b> ${tax.toLocaleString()} دج
+║ 🎁 <b>الخصم:</b> ${discount.toLocaleString()} دج
+╠══════════════════════════════════════════════════════════╣
+║ 💎 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج
+║ 🚚 <b>طريقة التوصيل:</b> ${deliveryType === 'express' ? 'سريع ⚡' : 'عادي 🚚'}
+║ 📅 <b>الوقت المتوقع:</b> ${estimatedDays}
+╚══════════════════════════════════════════════════════════╝
+    `;
+}
+
+// ===== [4.27.16] إنشاء رسالة التاجر =====
+function generateMerchantMessage(orderId, merchantName, items, subtotal, total, customerInfo, estimatedDays) {
+    const itemsList = items.map((item, index) => 
+        `${index + 1}️⃣ ${item.name}\n   ├ الكمية: ${item.quantity}\n   └ السعر: ${(item.price * item.quantity).toLocaleString()} دج`
+    ).join('\n\n');
+    
+    return `
+🟢 <b>طلب جديد - ${merchantName}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 <b>رقم الطلب:</b> <code>${orderId}</code>
+
+👤 <b>معلومات الزبون:</b>
+┌─────────────────────────
+├ 👨 <b>الاسم:</b> ${customerInfo.customerName}
+├ 📞 <b>الهاتف:</b> ${customerInfo.customerPhone}
+├ 📍 <b>العنوان:</b> ${customerInfo.customerAddress}
+└ 📝 <b>ملاحظات:</b> ${customerInfo.notes || 'لا توجد'}
+
+📦 <b>المنتجات المطلوبة:</b>
+${itemsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>إجمالي المنتجات:</b> ${subtotal.toLocaleString()} دج
+🚚 <b>رسوم التوصيل:</b> ${Math.round(total - subtotal).toLocaleString()} دج
+💎 <b>الإجمالي النهائي:</b> ${Math.round(total).toLocaleString()} دج
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ <b>الوقت المتوقع للتوصيل:</b> ${estimatedDays}
+
+✅ يرجى التواصل مع الزبون لتأكيد الطلب
+📅 ${new Date().toLocaleString('ar-EG')}
+    `;
+}
+
+// ===== [4.27.17] إنشاء رسالة تأكيد العميل =====
+function generateCustomerConfirmation(orderId, orderDate, items, total, estimatedDays, address) {
+    const itemsSummary = items.map(item => 
+        `• ${item.name} (${item.quantity}) × ${item.price.toLocaleString()} دج = ${(item.price * item.quantity).toLocaleString()} دج`
+    ).join('\n');
+    
+    return `
+🟢 <b>تم استلام طلبك بنجاح!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 <b>رقم الطلب:</b> <code>${orderId}</code>
+📅 <b>تاريخ الطلب:</b> ${orderDate}
+
+📦 <b>المنتجات المطلوبة:</b>
+${itemsSummary}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج
+🚚 <b>عنوان التوصيل:</b> ${address}
+⏰ <b>الوقت المتوقع:</b> ${estimatedDays}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ شكراً لتسوقك من <b>ناردو برو</b> ✨
+
+📞 سيتم التواصل معك قريباً لتأكيد الطلب
+    `;
+}
+
+// ===== [4.27.18] دالة إرسال رسائل تلغرام =====
+async function sendTelegramMessage(message, parseMode = 'HTML') {
+    try {
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.channelId,
+                text: message,
+                parse_mode: parseMode
+            })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('❌ خطأ في إرسال الرسالة:', error);
+    }
+}
+
+// ===== [4.27.19] حفظ الطلب في السجل =====
+function saveOrderToHistory(orderId, orderData) {
+    const ordersHistory = JSON.parse(localStorage.getItem('nardoo_orders_history') || '[]');
+    ordersHistory.unshift(orderData); // إضافة الطلب في البداية
+    localStorage.setItem('nardoo_orders_history', JSON.stringify(ordersHistory.slice(0, 50))); // حفظ آخر 50 طلب
+}
+
+// ===== [4.27.20] عرض نافذة نجاح الطلب =====
+function showOrderSuccessModal(orderId, total, estimatedDays) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        backdrop-filter: blur(10px);
+        z-index: 20001;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+                    border-radius: 30px;
+                    padding: 40px;
+                    text-align: center;
+                    border: 2px solid var(--gold);
+                    animation: slideUp 0.3s ease;
+                    max-width: 400px;">
+            <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
+            <h2 style="color: var(--gold); margin-bottom: 15px;">تم استلام طلبك بنجاح!</h2>
+            <p style="color: var(--text); margin-bottom: 10px;">
+                <strong>رقم الطلب:</strong><br>
+                <code style="font-size: 18px; background: rgba(255,215,0,0.1); padding: 5px 10px; border-radius: 8px;">${orderId}</code>
+            </p>
+            <p style="color: var(--text); margin-bottom: 10px;">
+                <strong>الإجمالي:</strong> ${total.toLocaleString()} دج
+            </p>
+            <p style="color: var(--text); margin-bottom: 20px;">
+                <strong>الوقت المتوقع:</strong> ${estimatedDays}
+            </p>
+            <button onclick="this.closest('div').parentElement.remove()" 
+                    style="background: var(--gold); color: black; padding: 12px 30px;
+                           border: none; border-radius: 30px; font-weight: bold;
+                           cursor: pointer; font-size: 16px;">
+                <i class="fas fa-check"></i> حسناً
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // إغلاق تلقائي بعد 5 ثواني
+    setTimeout(() => {
+        if (modal.parentElement) modal.remove();
+    }, 5000);
+}
+
+// ===== [4.27.21] دالة عرض سجل الطلبات =====
+function showOrdersHistory() {
+    const ordersHistory = JSON.parse(localStorage.getItem('nardoo_orders_history') || '[]');
+    
+    if (ordersHistory.length === 0) {
+        showNotification('📭 لا توجد طلبات سابقة', 'info');
+        return;
+    }
+    
+    let historyHTML = `
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    background: var(--bg-secondary); border-radius: 20px; padding: 30px;
+                    max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+                    z-index: 20002; border: 2px solid var(--gold);">
+            <h2 style="color: var(--gold); text-align: center; margin-bottom: 20px;">
+                <i class="fas fa-history"></i> سجل الطلبات
+            </h2>
+    `;
+    
+    ordersHistory.forEach(order => {
+        historyHTML += `
+            <div style="background: rgba(255,215,0,0.1); border-radius: 15px; padding: 15px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <strong style="color: var(--gold);">${order.orderId}</strong>
+                    <span style="color: var(--text-secondary);">${order.orderDate}</span>
+                </div>
+                <div style="color: var(--text);">
+                    <div>📦 عدد المنتجات: ${order.items.length}</div>
+                    <div>💰 الإجمالي: ${order.total.toLocaleString()} دج</div>
+                    <div>📊 الحالة: ${order.status === 'pending' ? '🟡 قيد المعالجة' : '🟢 مكتمل'}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    historyHTML += `
+            <button onclick="this.closest('div').remove()" 
+                    style="width: 100%; padding: 12px; background: var(--gold);
+                           border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">
+                إغلاق
+            </button>
+        </div>
+    `;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 20001;
+    `;
+    modal.innerHTML = historyHTML;
+    document.body.appendChild(modal);
+    
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+}
+// ===== [4.27.11] تأكيد ربط الزر =====
+document.addEventListener('DOMContentLoaded', function() {
+    // البحث عن زر إتمام الطلب
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    
+    if (checkoutBtn) {
+        console.log('✅ تم العثور على زر إتمام الطلب');
+        checkoutBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.checkoutCart();
+        };
+    } else {
+        console.log('⚠️ لم يتم العثور على زر إتمام الطلب، سيتم إنشاؤه تلقائياً');
+        
+        // إنشاء الزر إذا لم يكن موجوداً
+        const cartSidebar = document.getElementById('cartSidebar');
+        if (cartSidebar) {
+            const btn = document.createElement('button');
+            btn.id = 'checkoutBtn';
+            btn.className = 'btn-gold';
+            btn.style.cssText = 'width: 100%; padding: 15px; font-size: 18px; margin-top: 15px;';
+            btn.innerHTML = '<i class="fas fa-check-circle"></i> إتمام الطلب';
+            btn.onclick = () => window.checkoutCart();
+            cartSidebar.appendChild(btn);
+            console.log('✅ تم إنشاء زر إتمام الطلب تلقائياً');
+        }
+    }
+});
+    
 
 // ===== [4.28] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
@@ -1867,4 +2352,5 @@ window.viewMyProducts = viewMyProducts;
 window.showWelcomePopup = showWelcomePopup;
 
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
+
 
