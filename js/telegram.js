@@ -185,7 +185,7 @@ async function saveAdminToTelegramChannel() {
 🆔 *المعرف:* 19862
 👤 *الاسم:* azer
 📧 *البريد:* azer@admin.com
-🔑 *كلمة السر:* 123456
+🔑 *كلمة السر:* 19862
 👑 *الدور:* مدير
 📞 *الهاتف:* غير محدد
 📅 *تاريخ التسجيل:* ${new Date().toLocaleString('ar-EG')}
