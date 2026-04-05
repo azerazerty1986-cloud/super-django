@@ -946,6 +946,46 @@ function showWelcomePopup(user) {
     document.body.appendChild(popup);
     setTimeout(() => popup.remove(), 4000);
 }
+// ===== إرسال المدير إلى القناة =====
+async function sendAdminToChannel() {
+    const adminMessage = `#admin_registration 👑 *تسجيل مدير النظام*
+━━━━━━━━━━━━━━━━━━━━━━
+🆔 *المعرف:* 19862
+👤 *الاسم:* azer
+📧 *البريد:* azer@admin.com
+🔑 *كلمة السر:* 19862
+👑 *الدور:* مدير
+📅 *تاريخ التسجيل:* ${new Date().toLocaleString('ar-EG')}`;
+
+    try {
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.channelId,
+                text: adminMessage,
+                parse_mode: 'Markdown'
+            })
+        });
+        const data = await response.json();
+        if (data.ok) {
+            console.log('✅ تم إرسال المدير إلى القناة');
+        }
+    } catch (error) {
+        console.error('❌ فشل الإرسال:', error);
+    }
+}
+
+// ===== ثم التهيئة =====
+window.onload = async function() {
+    await sendAdminToChannel();  // إرسال المدير أولاً
+    
+    // باقي التهيئة...
+    loadLocalUsers();
+    await loadProducts();
+    loadCart();
+    // ...
+};
 
 // ===== [4.20] التهيئة =====
 window.onload = async function() {
