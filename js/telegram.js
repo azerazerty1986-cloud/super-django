@@ -1,6 +1,10 @@
 
+
+
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
+/* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
+/* ===== المعدل النهائي - استخدام معرف تلغرام ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
@@ -211,7 +215,7 @@ function changeSort(value) {
     displayProducts();
 }
 
-// ===== [4.14] إضافة منتج إلى تلغرام =====
+// ===== [4.14] إضافة منتج إلى تلغرام (معدل - يستخدم معرف تلغرام) =====
 async function addProductToTelegram(product, imageFile) {
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
@@ -242,7 +246,7 @@ async function addProductToTelegram(product, imageFile) {
         if (data.ok) {
             const messageId = data.result.message_id;
             showNotification(`✅ تم الإرسال - المعرف: ${messageId}`, 'success');
-            return { success: true, messageId: messageId };
+            return { success: true, messageId: messageId, telegramId: messageId };
         }
         showNotification('❌ فشل الإرسال: ' + data.description, 'error');
         return { success: false, error: data.description };
@@ -253,21 +257,24 @@ async function addProductToTelegram(product, imageFile) {
     }
 }
 
-// ===== [4.15] دالة حفظ المنتج =====
+// ===== [4.15] دالة حفظ المنتج (معدلة - تستخدم معرف تلغرام) =====
 async function saveProduct() {
     console.log('🔄 بدء saveProduct');
     
+    // التحقق من تسجيل الدخول
     if (!currentUser) {
         showNotification('يجب تسجيل الدخول أولاً', 'warning');
         openLoginModal();
         return;
     }
 
+    // التحقق من الصلاحية
     if (currentUser.role !== 'admin' && currentUser.role !== 'merchant_approved') {
         showNotification('فقط المدير والتجار يمكنهم إضافة منتجات', 'error');
         return;
     }
 
+    // الحصول على القيم من النموذج
     const nameInput = document.getElementById('productName');
     const categorySelect = document.getElementById('productCategory');
     const priceInput = document.getElementById('productPrice');
@@ -275,6 +282,7 @@ async function saveProduct() {
     const descInput = document.getElementById('productDescription');
     const imageInput = document.getElementById('productImages');
 
+    // التحقق من وجود العناصر
     if (!nameInput || !categorySelect || !priceInput || !stockInput || !imageInput) {
         console.error('❌ بعض حقول النموذج غير موجودة');
         showNotification('خطأ في النموذج', 'error');
@@ -288,6 +296,7 @@ async function saveProduct() {
     const description = descInput ? descInput.value : '';
     const imageFile = imageInput.files[0];
 
+    // التحقق من المدخلات
     if (!name) {
         showNotification('الرجاء إدخال اسم المنتج', 'error');
         nameInput.focus();
@@ -318,11 +327,13 @@ async function saveProduct() {
         return;
     }
 
+    // التحقق من نوع الملف
     if (!imageFile.type.startsWith('image/')) {
         showNotification('الرجاء اختيار ملف صورة صالح', 'error');
         return;
     }
 
+    // التحقق من حجم الملف (max 5MB)
     if (imageFile.size > 5 * 1024 * 1024) {
         showNotification('حجم الصورة كبير جداً (الحد الأقصى 5MB)', 'error');
         return;
@@ -348,6 +359,28 @@ async function saveProduct() {
     if (result.success) {
         showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.messageId}`, 'success');
         
+        // حفظ المنتج محلياً مع معرف تلغرام
+        const localProduct = {
+            id: result.messageId,
+            telegramId: result.messageId,
+            name: name,
+            price: price,
+            category: category,
+            stock: stock,
+            merchantName: currentUser.storeName || currentUser.name,
+            description: description,
+            publisherId: currentUser.id,
+            createdAt: new Date().toISOString(),
+            rating: 4.5,
+            images: []
+        };
+        
+        // إضافة للمنتجات المحلية
+        const localProducts = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
+        localProducts.push(localProduct);
+        localStorage.setItem('nardoo_products', JSON.stringify(localProducts));
+        
+        // إعادة تعيين النموذج
         nameInput.value = '';
         categorySelect.value = 'promo';
         priceInput.value = '';
@@ -355,12 +388,17 @@ async function saveProduct() {
         if (descInput) descInput.value = '';
         imageInput.value = '';
         
+        // مسح معاينة الصور
         const preview = document.getElementById('imagePreview');
         if (preview) preview.innerHTML = '';
         
+        // إغلاق النافذة
         closeModal('productModal');
         
-        await loadProducts();
+        // إعادة تحميل المنتجات بعد ثانيتين
+        setTimeout(async () => {
+            await loadProducts();
+        }, 2000);
     }
 }
 
@@ -379,6 +417,7 @@ function handleImageUpload(event) {
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
+        // التحقق من نوع الملف
         if (!file.type.startsWith('image/')) {
             showNotification('الملف ' + file.name + ' ليس صورة', 'warning');
             continue;
@@ -403,7 +442,7 @@ function handleImageUpload(event) {
     }
 }
 
-// ===== [4.17] جلب جميع المنتجات من تلغرام (مع دمج المنتجات) =====
+// ===== [4.17] جلب جميع المنتجات من تلغرام (معدل - يستخدم معرف تلغرام) =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
@@ -411,15 +450,20 @@ async function fetchProductsFromTelegram() {
     try {
         console.log('🔄 جاري جلب المنتجات من تلغرام...');
         
-        const oldProducts = [...products];
+        // أولاً: عرض المنتجات المخزنة محلياً فوراً
+        const cached = localStorage.getItem('nardoo_products');
+        let localProducts = [];
         
-        const saved = localStorage.getItem('nardoo_products');
-        if (saved && oldProducts.length === 0) {
-            products = JSON.parse(saved);
-            displayProducts();
-            console.log(`⚡ عرض سريع: ${products.length} منتج من التخزين`);
+        if (cached) {
+            localProducts = JSON.parse(cached);
+            if (localProducts.length > 0) {
+                console.log(`📦 عرض ${localProducts.length} منتج من الذاكرة المحلية`);
+                products = localProducts;
+                displayProducts();
+            }
         }
         
+        // جلب المنتجات من تلغرام
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
         
         if (!response.ok) {
@@ -441,6 +485,10 @@ async function fetchProductsFromTelegram() {
                 const caption = post.caption || '';
                 if (!caption.includes('🟣') && !caption.includes('منتج جديد')) continue;
                 
+                // 🔑 المفتاح: استخدام message_id من تلغرام كمعرف المنتج
+                const telegramId = post.message_id;
+                
+                // استخراج البيانات من النص
                 const lines = caption.split('\n');
                 
                 let name = 'منتج';
@@ -449,7 +497,6 @@ async function fetchProductsFromTelegram() {
                 let stock = 0;
                 let merchant = 'المتجر';
                 let description = 'منتج ممتاز';
-                let productId = post.message_id;
                 
                 lines.forEach(line => {
                     if (line.includes('المنتج:') || line.includes('📦 *المنتج:*')) {
@@ -476,12 +523,9 @@ async function fetchProductsFromTelegram() {
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
                     }
-                    else if (line.includes('معرف المنتج:')) {
-                        const match = line.match(/\d+/);
-                        if (match) productId = parseInt(match[0]);
-                    }
                 });
                 
+                // جلب الصورة
                 let mediaUrl = null;
                 let images = [];
                 
@@ -505,8 +549,8 @@ async function fetchProductsFromTelegram() {
                 
                 if (mediaUrl) {
                     telegramProducts.push({
-                        id: productId,
-                        telegramId: post.message_id,
+                        id: telegramId,
+                        telegramId: telegramId,
                         name: name,
                         price: price || 1000,
                         category: category,
@@ -524,24 +568,24 @@ async function fetchProductsFromTelegram() {
             }
         }
         
-        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام`);
-        
-        const mergedProducts = [...oldProducts];
+        // دمج المنتجات: الحفاظ على المنتجات المحلية وإضافة الجديدة
+        const mergedProducts = [...localProducts];
         
         for (const newProduct of telegramProducts) {
             const exists = mergedProducts.some(p => p.id === newProduct.id);
             if (!exists) {
                 mergedProducts.push(newProduct);
-                console.log(`➕ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
+                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.id})`);
             }
         }
         
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام، إجمالي: ${mergedProducts.length}`);
+        
+        // حفظ في localStorage
         localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
         
         products = mergedProducts;
         displayProducts();
-        
-        console.log(`📦 إجمالي المنتجات: ${products.length}`);
         
         return mergedProducts;
         
@@ -796,547 +840,81 @@ function removeFromCart(productId) {
 }
 
 // ===== [4.27] إتمام الشراء =====
-// ===== [4.27] إتمام الشراء - نسخة احترافية 2026 =====
 async function checkoutCart() {
-    // ===== [4.27.1] التحقق من صحة السلة =====
     if (cart.length === 0) {
-        showNotification('🛒 السلة فارغة! أضف بعض المنتجات أولاً', 'warning');
+        showNotification('السلة فارغة', 'warning');
         return;
     }
 
     if (!currentUser) {
-        showNotification('🔐 يرجى تسجيل الدخول أولاً لإتمام عملية الشراء', 'warning');
+        showNotification('يجب تسجيل الدخول أولاً', 'warning');
         openLoginModal();
         return;
     }
 
-    // ===== [4.27.2] إنشاء رقم طلب فريد =====
-    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const orderDate = new Date().toLocaleString('ar-EG', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
-
-    // ===== [4.27.3] جمع معلومات العميل بشكل احترافي =====
-    showNotification('📝 جاري تجهيز نموذج الطلب...', 'info');
+    const customerPhone = prompt('رقم الهاتف:', currentUser.phone || '');
+    if (!customerPhone) return;
     
-    const customerInfo = await getCustomerInfo();
-    if (!customerInfo) return;
+    const customerAddress = prompt('عنوان التوصيل:', '');
+    if (!customerAddress) return;
 
-    const { customerName, customerPhone, customerAddress, notes, deliveryType } = customerInfo;
-
-    // ===== [4.27.4] حساب تفاصيل الطلب =====
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // حساب رسوم التوصيل حسب المنطقة
-    let shipping = 800;
-    let estimatedDays = '2-3 أيام';
-    if (deliveryType === 'express') {
-        shipping = 1500;
-        estimatedDays = '24 ساعة';
-    } else if (customerAddress.includes('دبي') || customerAddress.includes('أبوظبي')) {
-        shipping = 500;
-        estimatedDays = '1-2 أيام';
-    }
-    
-    const tax = subtotal * 0.00; // 0% ضريبة
-    const discount = 0;
-    const total = subtotal + shipping + tax - discount;
+    const shipping = 800;
+    const total = subtotal + shipping;
 
-    // ===== [4.27.5] تجميع المنتجات حسب التاجر =====
-    const merchantOrders = {};
-    for (const item of cart) {
-        const merchantName = item.merchantName;
-        if (!merchantOrders[merchantName]) {
-            merchantOrders[merchantName] = {
-                items: [],
-                subtotal: 0
-            };
-        }
-        merchantOrders[merchantName].items.push(item);
-        merchantOrders[merchantName].subtotal += item.price * item.quantity;
-    }
-
-    // ===== [4.27.6] حساب حصة كل تاجر من التوصيل =====
-    const merchantCount = Object.keys(merchantOrders).length;
-    const shippingPerMerchant = shipping / merchantCount;
-
-    // ===== [4.27.7] إنشاء تقرير الطلب المتقدم =====
-    const orderReport = generateOrderReport(orderId, orderDate, customerInfo, {
-        subtotal, shipping, tax, discount, total,
-        merchantOrders, shippingPerMerchant, estimatedDays
-    });
-
-    // ===== [4.27.8] إرسال إشعارات للتجار =====
-    showNotification('📤 جاري إرسال الطلبات للتجار...', 'info');
-    
-    for (const [merchantName, orderData] of Object.entries(merchantOrders)) {
-        const merchantTotal = orderData.subtotal + shippingPerMerchant;
-        
-        const merchantMessage = generateMerchantMessage(
-            orderId, merchantName, orderData.items, 
-            orderData.subtotal, merchantTotal, customerInfo, estimatedDays
-        );
-        
-        await sendTelegramMessage(merchantMessage, 'Markdown');
-        await new Promise(resolve => setTimeout(resolve, 500)); // تأخير بسيط بين الإرسال
-    }
-
-    // ===== [4.27.9] إرسال التقرير الكامل للقناة =====
-    await sendTelegramMessage(orderReport, 'HTML');
-    
-    // ===== [4.27.10] إرسال إشعار تأكيد للعميل =====
-    const customerConfirmation = generateCustomerConfirmation(
-        orderId, orderDate, cart, total, estimatedDays, customerAddress
-    );
-    await sendTelegramMessage(customerConfirmation, 'Markdown');
-
-    // ===== [4.27.11] حفظ الطلب في localStorage =====
-    saveOrderToHistory(orderId, {
-        orderId, orderDate, customerInfo,
+    const order = {
+        customerName: currentUser.name,
+        customerPhone: customerPhone,
+        customerAddress: customerAddress,
         items: [...cart],
-        subtotal, shipping, tax, discount, total,
-        status: 'pending',
-        merchantOrders: merchantOrders
+        total: total
+    };
+
+    // إرسال الطلب إلى تلغرام
+    const message = `🟢 *طلب جديد*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *الزبون:* ${order.customerName}
+📞 *الهاتف:* ${order.customerPhone}
+📍 *العنوان:* ${order.customerAddress}
+📦 *المنتجات:*
+${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج`).join('\n')}
+💰 *الإجمالي:* ${order.total} دج
+📅 ${new Date().toLocaleString('ar-EG')}`;
+
+    await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: TELEGRAM.channelId,
+            text: message,
+            parse_mode: 'Markdown'
+        })
     });
 
-    // ===== [4.27.12] تفريغ السلة =====
+    // إرسال للتجار عبر واتساب
+    const merchants = {};
+    cart.forEach(item => {
+        const merchant = users.find(u => u.name === item.merchantName || u.storeName === item.merchantName);
+        if (merchant?.phone) {
+            if (!merchants[merchant.phone]) {
+                merchants[merchant.phone] = [];
+            }
+            merchants[merchant.phone].push(item);
+        }
+    });
+
+    Object.entries(merchants).forEach(([phone, items]) => {
+        const msg = `🛍️ لديك طلب جديد من ${order.customerName}: ${items.map(i => i.name).join('، ')}`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+
     cart = [];
     saveCart();
     updateCartCounter();
     toggleCart();
     
-    // ===== [4.27.13] عرض نافذة نجاح العملية =====
-    showOrderSuccessModal(orderId, total, estimatedDays);
-    
-    console.log(`✅ تم إرسال الطلب بنجاح - رقم الطلب: ${orderId}`);
+    showNotification('✅ تم إرسال الطلب بنجاح', 'success');
 }
-
-// ===== [4.27.14] دالة جمع معلومات العميل =====
-async function getCustomerInfo() {
-    return new Promise((resolve) => {
-        // إنشاء نافذة منبثقة متطورة لجمع المعلومات
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            z-index: 20000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        `;
-        
-        modal.innerHTML = `
-            <div style="background: var(--bg-secondary);
-                        border-radius: 30px;
-                        padding: 30px;
-                        max-width: 500px;
-                        width: 90%;
-                        border: 2px solid var(--gold);
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-                        animation: slideUp 0.3s ease;">
-                <h2 style="color: var(--gold); text-align: center; margin-bottom: 25px;">
-                    <i class="fas fa-shopping-cart"></i> إتمام الطلب
-                </h2>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
-                        <i class="fas fa-user"></i> الاسم الكامل
-                    </label>
-                    <input type="text" id="customerName" value="${currentUser.name}" 
-                           style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
-                                  background: var(--bg-primary); color: var(--text);">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
-                        <i class="fas fa-phone"></i> رقم الهاتف
-                    </label>
-                    <input type="tel" id="customerPhone" value="${currentUser.phone || ''}" 
-                           style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
-                                  background: var(--bg-primary); color: var(--text);">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
-                        <i class="fas fa-map-marker-alt"></i> عنوان التوصيل
-                    </label>
-                    <textarea id="customerAddress" rows="3" 
-                              style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
-                                     background: var(--bg-primary); color: var(--text);"></textarea>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
-                        <i class="fas fa-truck"></i> طريقة التوصيل
-                    </label>
-                    <select id="deliveryType" style="width: 100%; padding: 12px; border-radius: 10px; 
-                            border: 1px solid var(--gold); background: var(--bg-primary); color: var(--text);">
-                        <option value="standard">🚚 عادي (800 دج - 2-3 أيام)</option>
-                        <option value="express">⚡ سريع (1500 دج - 24 ساعة)</option>
-                    </select>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--text);">
-                        <i class="fas fa-sticky-note"></i> ملاحظات إضافية (اختياري)
-                    </label>
-                    <textarea id="orderNotes" rows="2" 
-                              style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold);
-                                     background: var(--bg-primary); color: var(--text);"
-                              placeholder="أي ملاحظات تود إضافتها..."></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 15px; margin-top: 25px;">
-                    <button onclick="this.closest('div').parentElement.remove()" 
-                            style="flex: 1; padding: 12px; background: #f87171; color: white;
-                                   border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">
-                        <i class="fas fa-times"></i> إلغاء
-                    </button>
-                    <button id="submitOrderBtn" 
-                            style="flex: 1; padding: 12px; background: var(--gold); color: black;
-                                   border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">
-                        <i class="fas fa-check"></i> تأكيد الطلب
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // إضافة تأثيرات CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            @keyframes slideUp {
-                from { transform: translateY(50px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        document.getElementById('submitOrderBtn').onclick = () => {
-            const customerName = document.getElementById('customerName').value;
-            const customerPhone = document.getElementById('customerPhone').value;
-            const customerAddress = document.getElementById('customerAddress').value;
-            const deliveryType = document.getElementById('deliveryType').value;
-            const notes = document.getElementById('orderNotes').value;
-            
-            if (!customerName || !customerPhone || !customerAddress) {
-                showNotification('يرجى ملء جميع الحقول المطلوبة', 'error');
-                return;
-            }
-            
-            modal.remove();
-            resolve({ customerName, customerPhone, customerAddress, notes, deliveryType });
-        };
-    });
-}
-
-// ===== [4.27.15] إنشاء تقرير الطلب المتقدم =====
-function generateOrderReport(orderId, orderDate, customerInfo, totals) {
-    const { customerName, customerPhone, customerAddress, notes, deliveryType } = customerInfo;
-    const { subtotal, shipping, tax, discount, total, merchantOrders, shippingPerMerchant, estimatedDays } = totals;
-    
-    let merchantsDetails = '';
-    for (const [merchantName, orderData] of Object.entries(merchantOrders)) {
-        merchantsDetails += `
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-┃ 🏪 <b>${merchantName}</b>
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-        for (const item of orderData.items) {
-            merchantsDetails += `
-┃ 📦 ${item.name}
-┃    ├ الكمية: ${item.quantity}
-┃    ├ السعر: ${item.price.toLocaleString()} دج
-┃    └ الإجمالي: ${(item.price * item.quantity).toLocaleString()} دج`;
-        }
-        merchantsDetails += `
-┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-┃ 💰 إجمالي المنتجات: ${orderData.subtotal.toLocaleString()} دج
-┃ 🚚 حصة التوصيل: ${Math.round(shippingPerMerchant).toLocaleString()} دج
-┃ ✨ إجمالي الطلب: ${Math.round(orderData.subtotal + shippingPerMerchant).toLocaleString()} دج
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-    }
-    
-    return `
-╔══════════════════════════════════════════════════════════╗
-║                    🧾 <b>تقرير الطلب الجديد</b>                    ║
-╠══════════════════════════════════════════════════════════╣
-║ 📋 <b>رقم الطلب:</b> <code>${orderId}</code>
-║ 🕐 <b>تاريخ الطلب:</b> ${orderDate}
-╠══════════════════════════════════════════════════════════╣
-║                      👤 <b>معلومات العميل</b>                       ║
-╠══════════════════════════════════════════════════════════╣
-║ 👨 <b>الاسم:</b> ${customerName}
-║ 📞 <b>الهاتف:</b> ${customerPhone}
-║ 📍 <b>العنوان:</b> ${customerAddress}
-║ 📝 <b>ملاحظات:</b> ${notes || 'لا توجد ملاحظات'}
-╠══════════════════════════════════════════════════════════╣
-║                      📊 <b>تفاصيل الطلب</b>                       ║
-╠══════════════════════════════════════════════════════════╣
-${merchantsDetails}
-╠══════════════════════════════════════════════════════════╣
-║                      💰 <b>إجماليات الطلب</b>                      ║
-╠══════════════════════════════════════════════════════════╣
-║ 💵 <b>إجمالي المنتجات:</b> ${subtotal.toLocaleString()} دج
-║ 🚚 <b>رسوم التوصيل:</b> ${shipping.toLocaleString()} دج
-║ 🧾 <b>الضريبة:</b> ${tax.toLocaleString()} دج
-║ 🎁 <b>الخصم:</b> ${discount.toLocaleString()} دج
-╠══════════════════════════════════════════════════════════╣
-║ 💎 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج
-║ 🚚 <b>طريقة التوصيل:</b> ${deliveryType === 'express' ? 'سريع ⚡' : 'عادي 🚚'}
-║ 📅 <b>الوقت المتوقع:</b> ${estimatedDays}
-╚══════════════════════════════════════════════════════════╝
-    `;
-}
-
-// ===== [4.27.16] إنشاء رسالة التاجر =====
-function generateMerchantMessage(orderId, merchantName, items, subtotal, total, customerInfo, estimatedDays) {
-    const itemsList = items.map((item, index) => 
-        `${index + 1}️⃣ ${item.name}\n   ├ الكمية: ${item.quantity}\n   └ السعر: ${(item.price * item.quantity).toLocaleString()} دج`
-    ).join('\n\n');
-    
-    return `
-🟢 <b>طلب جديد - ${merchantName}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 <b>رقم الطلب:</b> <code>${orderId}</code>
-
-👤 <b>معلومات الزبون:</b>
-┌─────────────────────────
-├ 👨 <b>الاسم:</b> ${customerInfo.customerName}
-├ 📞 <b>الهاتف:</b> ${customerInfo.customerPhone}
-├ 📍 <b>العنوان:</b> ${customerInfo.customerAddress}
-└ 📝 <b>ملاحظات:</b> ${customerInfo.notes || 'لا توجد'}
-
-📦 <b>المنتجات المطلوبة:</b>
-${itemsList}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>إجمالي المنتجات:</b> ${subtotal.toLocaleString()} دج
-🚚 <b>رسوم التوصيل:</b> ${Math.round(total - subtotal).toLocaleString()} دج
-💎 <b>الإجمالي النهائي:</b> ${Math.round(total).toLocaleString()} دج
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏰ <b>الوقت المتوقع للتوصيل:</b> ${estimatedDays}
-
-✅ يرجى التواصل مع الزبون لتأكيد الطلب
-📅 ${new Date().toLocaleString('ar-EG')}
-    `;
-}
-
-// ===== [4.27.17] إنشاء رسالة تأكيد العميل =====
-function generateCustomerConfirmation(orderId, orderDate, items, total, estimatedDays, address) {
-    const itemsSummary = items.map(item => 
-        `• ${item.name} (${item.quantity}) × ${item.price.toLocaleString()} دج = ${(item.price * item.quantity).toLocaleString()} دج`
-    ).join('\n');
-    
-    return `
-🟢 <b>تم استلام طلبك بنجاح!</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 <b>رقم الطلب:</b> <code>${orderId}</code>
-📅 <b>تاريخ الطلب:</b> ${orderDate}
-
-📦 <b>المنتجات المطلوبة:</b>
-${itemsSummary}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 <b>الإجمالي النهائي:</b> ${total.toLocaleString()} دج
-🚚 <b>عنوان التوصيل:</b> ${address}
-⏰ <b>الوقت المتوقع:</b> ${estimatedDays}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✨ شكراً لتسوقك من <b>ناردو برو</b> ✨
-
-📞 سيتم التواصل معك قريباً لتأكيد الطلب
-    `;
-}
-
-// ===== [4.27.18] دالة إرسال رسائل تلغرام =====
-async function sendTelegramMessage(message, parseMode = 'HTML') {
-    try {
-        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: TELEGRAM.channelId,
-                text: message,
-                parse_mode: parseMode
-            })
-        });
-        return await response.json();
-    } catch (error) {
-        console.error('❌ خطأ في إرسال الرسالة:', error);
-    }
-}
-
-// ===== [4.27.19] حفظ الطلب في السجل =====
-function saveOrderToHistory(orderId, orderData) {
-    const ordersHistory = JSON.parse(localStorage.getItem('nardoo_orders_history') || '[]');
-    ordersHistory.unshift(orderData); // إضافة الطلب في البداية
-    localStorage.setItem('nardoo_orders_history', JSON.stringify(ordersHistory.slice(0, 50))); // حفظ آخر 50 طلب
-}
-
-// ===== [4.27.20] عرض نافذة نجاح الطلب =====
-function showOrderSuccessModal(orderId, total, estimatedDays) {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.9);
-        backdrop-filter: blur(10px);
-        z-index: 20001;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        animation: fadeIn 0.3s ease;
-    `;
-    
-    modal.innerHTML = `
-        <div style="background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-                    border-radius: 30px;
-                    padding: 40px;
-                    text-align: center;
-                    border: 2px solid var(--gold);
-                    animation: slideUp 0.3s ease;
-                    max-width: 400px;">
-            <div style="font-size: 80px; margin-bottom: 20px;">🎉</div>
-            <h2 style="color: var(--gold); margin-bottom: 15px;">تم استلام طلبك بنجاح!</h2>
-            <p style="color: var(--text); margin-bottom: 10px;">
-                <strong>رقم الطلب:</strong><br>
-                <code style="font-size: 18px; background: rgba(255,215,0,0.1); padding: 5px 10px; border-radius: 8px;">${orderId}</code>
-            </p>
-            <p style="color: var(--text); margin-bottom: 10px;">
-                <strong>الإجمالي:</strong> ${total.toLocaleString()} دج
-            </p>
-            <p style="color: var(--text); margin-bottom: 20px;">
-                <strong>الوقت المتوقع:</strong> ${estimatedDays}
-            </p>
-            <button onclick="this.closest('div').parentElement.remove()" 
-                    style="background: var(--gold); color: black; padding: 12px 30px;
-                           border: none; border-radius: 30px; font-weight: bold;
-                           cursor: pointer; font-size: 16px;">
-                <i class="fas fa-check"></i> حسناً
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // إغلاق تلقائي بعد 5 ثواني
-    setTimeout(() => {
-        if (modal.parentElement) modal.remove();
-    }, 5000);
-}
-
-// ===== [4.27.21] دالة عرض سجل الطلبات =====
-function showOrdersHistory() {
-    const ordersHistory = JSON.parse(localStorage.getItem('nardoo_orders_history') || '[]');
-    
-    if (ordersHistory.length === 0) {
-        showNotification('📭 لا توجد طلبات سابقة', 'info');
-        return;
-    }
-    
-    let historyHTML = `
-        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                    background: var(--bg-secondary); border-radius: 20px; padding: 30px;
-                    max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
-                    z-index: 20002; border: 2px solid var(--gold);">
-            <h2 style="color: var(--gold); text-align: center; margin-bottom: 20px;">
-                <i class="fas fa-history"></i> سجل الطلبات
-            </h2>
-    `;
-    
-    ordersHistory.forEach(order => {
-        historyHTML += `
-            <div style="background: rgba(255,215,0,0.1); border-radius: 15px; padding: 15px; margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <strong style="color: var(--gold);">${order.orderId}</strong>
-                    <span style="color: var(--text-secondary);">${order.orderDate}</span>
-                </div>
-                <div style="color: var(--text);">
-                    <div>📦 عدد المنتجات: ${order.items.length}</div>
-                    <div>💰 الإجمالي: ${order.total.toLocaleString()} دج</div>
-                    <div>📊 الحالة: ${order.status === 'pending' ? '🟡 قيد المعالجة' : '🟢 مكتمل'}</div>
-                </div>
-            </div>
-        `;
-    });
-    
-    historyHTML += `
-            <button onclick="this.closest('div').remove()" 
-                    style="width: 100%; padding: 12px; background: var(--gold);
-                           border: none; border-radius: 10px; font-weight: bold; cursor: pointer;">
-                إغلاق
-            </button>
-        </div>
-    `;
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        z-index: 20001;
-    `;
-    modal.innerHTML = historyHTML;
-    document.body.appendChild(modal);
-    
-    modal.onclick = (e) => {
-        if (e.target === modal) modal.remove();
-    };
-}
-// ===== [4.27.11] تأكيد ربط الزر =====
-document.addEventListener('DOMContentLoaded', function() {
-    // البحث عن زر إتمام الطلب
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    
-    if (checkoutBtn) {
-        console.log('✅ تم العثور على زر إتمام الطلب');
-        checkoutBtn.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            window.checkoutCart();
-        };
-    } else {
-        console.log('⚠️ لم يتم العثور على زر إتمام الطلب، سيتم إنشاؤه تلقائياً');
-        
-        // إنشاء الزر إذا لم يكن موجوداً
-        const cartSidebar = document.getElementById('cartSidebar');
-        if (cartSidebar) {
-            const btn = document.createElement('button');
-            btn.id = 'checkoutBtn';
-            btn.className = 'btn-gold';
-            btn.style.cssText = 'width: 100%; padding: 15px; font-size: 18px; margin-top: 15px;';
-            btn.innerHTML = '<i class="fas fa-check-circle"></i> إتمام الطلب';
-            btn.onclick = () => window.checkoutCart();
-            cartSidebar.appendChild(btn);
-            console.log('✅ تم إنشاء زر إتمام الطلب تلقائياً');
-        }
-    }
-});
-    
 
 // ===== [4.28] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
@@ -1422,7 +1000,7 @@ function toggleMerchantFields() {
     }
 }
 
-// ===== [4.33] معالجة تسجيل الدخول (مع نافذة الترحيب) =====
+// ===== [4.33] معالجة تسجيل الدخول =====
 function handleLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -1434,10 +1012,6 @@ function handleLogin() {
         localStorage.setItem('current_user', JSON.stringify(user));
         closeModal('loginModal');
         updateUIBasedOnRole();
-        
-        // ✅ عرض نافذة الترحيب المنبثقة
-        showWelcomePopup(user);
-        
         showNotification(`مرحباً ${user.name}`, 'success');
     } else {
         showNotification('بيانات غير صحيحة', 'error');
@@ -1574,12 +1148,6 @@ function updateUIBasedOnRole() {
             addBtn.innerHTML = '<i class="fas fa-plus-circle"></i><span>إضافة منتج</span>';
             navMenu.appendChild(addBtn);
         }
-        
-        const dashboardSection = document.getElementById('dashboardSection');
-        if (dashboardSection) {
-            dashboardSection.style.display = 'block';
-            showDashboardOverview();
-        }
     } 
     else if (currentUser.role === 'merchant_approved') {
         showMerchantPanel();
@@ -1714,12 +1282,12 @@ function showAddProductModal() {
     }
 }
 
-// ===== [4.41] البحث عن منتج بالمعرف =====
+// ===== [4.41] البحث عن منتج بالمعرف (معرف تلغرام) =====
 function findProductById() {
-    const id = prompt('🔍 أدخل معرف المنتج:');
+    const id = prompt('🔍 أدخل معرف المنتج (من تلغرام):');
     if (!id) return;
     
-    const product = products.find(p => p.id == id);
+    const product = products.find(p => p.id == id || p.telegramId == id);
     
     if (product) {
         alert(`
@@ -2131,205 +1699,9 @@ setInterval(async () => {
     }
 }, 10000);
 
-// ===== [4.52] نافذة الترحيب المنبثقة =====
-function showWelcomePopup(user) {
-    const popup = document.createElement('div');
-    popup.id = 'welcomePopup';
-    popup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-        border: 2px solid var(--gold);
-        border-radius: 30px;
-        padding: 30px 40px;
-        text-align: center;
-        z-index: 10000;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        animation: welcomeZoomIn 0.4s ease-out;
-        min-width: 350px;
-        backdrop-filter: blur(10px);
-    `;
-    
-    let roleIcon = '👤';
-    let roleText = 'عميل';
-    if (user.role === 'admin') {
-        roleIcon = '👑';
-        roleText = 'مدير';
-    } else if (user.role === 'merchant_approved') {
-        roleIcon = '🏪';
-        roleText = 'تاجر معتمد';
-    } else if (user.role === 'merchant_pending') {
-        roleIcon = '⏳';
-        roleText = 'قيد المراجعة';
-    }
-    
-    popup.innerHTML = `
-        <div style="font-size: 70px; margin-bottom: 15px;">${roleIcon}</div>
-        <h2 style="color: var(--gold); margin-bottom: 10px; font-size: 28px;">مرحباً بك يا ${user.name}! 🎉</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 15px;">نوع الحساب: <strong style="color: var(--gold);">${roleText}</strong></p>
-        <div style="background: rgba(255,215,0,0.15); border-radius: 15px; padding: 15px; margin: 15px 0;">
-            <p style="margin: 5px 0;">📧 ${user.email}</p>
-            ${user.phone ? `<p style="margin: 5px 0;">📞 ${user.phone}</p>` : ''}
-            ${user.storeName ? `<p style="margin: 5px 0;">🏪 ${user.storeName}</p>` : ''}
-        </div>
-        <p style="color: var(--gold); font-size: 14px; margin-bottom: 20px;">✨ أهلاً وسهلاً بك في متجر ناردو برو ✨</p>
-        <button id="closeWelcomePopup" style="
-            background: var(--gold);
-            color: black;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <i class="fas fa-check"></i> تفضل بالتسوق
-        </button>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes welcomeZoomIn {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.8);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-        }
-        @keyframes welcomeZoomOut {
-            from {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
-            to {
-                opacity: 0;
-                transform: translate(-50%, -50%) scale(0.8);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-    
-    document.getElementById('closeWelcomePopup').onclick = () => {
-        popup.style.animation = 'welcomeZoomOut 0.3s ease-in';
-        setTimeout(() => popup.remove(), 300);
-    };
-    
-    setTimeout(() => {
-        document.addEventListener('click', function closeOnOutside(e) {
-            if (!popup.contains(e.target) && !e.target.closest('#closeWelcomePopup')) {
-                popup.style.animation = 'welcomeZoomOut 0.3s ease-in';
-                setTimeout(() => {
-                    popup.remove();
-                    document.removeEventListener('click', closeOnOutside);
-                }, 300);
-            }
-        });
-    }, 100);
-    
-    setTimeout(() => {
-        if (document.getElementById('welcomePopup')) {
-            popup.style.animation = 'welcomeZoomOut 0.3s ease-in';
-            setTimeout(() => popup.remove(), 300);
-        }
-    }, 5000);
-}
-// ===== [4.56] إضافة أيقونة التوصيل داخل نافذة السلة =====
-function addDeliveryIconToCart() {
-    // البحث عن نافذة السلة
-    const cartSidebar = document.getElementById('cartSidebar');
-    
-    if (!cartSidebar) {
-        // إذا لم توجد نافذة السلة بعد، ننتظر قليلاً
-        setTimeout(addDeliveryIconToCart, 500);
-        return;
-    }
-    
-    // التحقق إذا كانت الأيقونة موجودة مسبقاً
-    if (document.getElementById('cartDeliveryIcon')) return;
-    
-    // إنشاء قسم خاص بالأيقونة
-    const deliverySection = document.createElement('div');
-    deliverySection.style.cssText = `
-        padding: 15px;
-        border-top: 1px solid rgba(255,215,0,0.3);
-        margin-top: 10px;
-        text-align: center;
-    `;
-    
-    // إنشاء رابط/زر الأيقونة
-    const deliveryLink = document.createElement('a');
-    deliveryLink.id = 'cartDeliveryIcon';
-    deliveryLink.innerHTML = '🚚 معلومات التوصيل';
-    deliveryLink.style.cssText = `
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        padding: 12px;
-        background: rgba(255,215,0,0.1);
-        border: 1px solid var(--gold);
-        border-radius: 10px;
-        color: var(--gold);
-        text-decoration: none;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s;
-        font-size: 14px;
-    `;
-    
-    // تأثير hover
-    deliveryLink.onmouseover = () => {
-        deliveryLink.style.background = 'rgba(255,215,0,0.2)';
-        deliveryLink.style.transform = 'translateX(-5px)';
-    };
-    deliveryLink.onmouseout = () => {
-        deliveryLink.style.background = 'rgba(255,215,0,0.1)';
-        deliveryLink.style.transform = 'translateX(0)';
-    };
-    
-    // فتح الملف عند النقر
-    deliveryLink.onclick = (e) => {
-        e.preventDefault();
-        window.open('delivery-full.html', '_blank');
-    };
-    
-    deliverySection.appendChild(deliveryLink);
-    
-    // إضافة القسم إلى نافذة السلة (قبل زر إتمام الطلب)
-    const checkoutBtn = document.getElementById('checkoutBtn');
-    if (checkoutBtn) {
-        checkoutBtn.parentElement.insertBefore(deliverySection, checkoutBtn);
-    } else {
-        cartSidebar.appendChild(deliverySection);
-    }
-}
-
-// تشغيل الوظيفة عند تحميل الصفحة
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', addDeliveryIconToCart);
-} else {
-    addDeliveryIconToCart();
-}
-
-// مراقبة فتح نافذة السلة لإضافة الأيقونة إذا لم تكن موجودة
-const cartObserver = new MutationObserver(function(mutations) {
-    const cartSidebar = document.getElementById('cartSidebar');
-    if (cartSidebar && cartSidebar.classList.contains('open')) {
-        setTimeout(addDeliveryIconToCart, 100);
-    }
-});
-cartObserver.observe(document.body, { attributes: true, subtree: false, attributeFilter: ['class'] });
-
-// ===== [4.53] التهيئة عند تحميل الصفحة =====
+// ===== [4.52] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
+    // تحميل المنتجات من localStorage أولاً
     const savedProducts = localStorage.getItem('nardoo_products');
     if (savedProducts) {
         products = JSON.parse(savedProducts);
@@ -2344,13 +1716,6 @@ window.onload = async function() {
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
         updateUIBasedOnRole();
-        
-        if (!sessionStorage.getItem('welcome_shown')) {
-            setTimeout(() => {
-                showWelcomePopup(currentUser);
-                sessionStorage.setItem('welcome_shown', 'true');
-            }, 500);
-        }
     }
 
     const savedTheme = localStorage.getItem('theme');
@@ -2380,6 +1745,7 @@ window.onload = async function() {
         new TypingAnimation(typingElement, ['نكهة وجمال', 'ناردو برو', 'تسوق آمن', 'جودة عالية'], 100, 2000).start();
     }
     
+    // إضافة زر البحث بالمعرف
     setTimeout(() => {
         const nav = document.getElementById('mainNav');
         if (nav && !document.getElementById('searchByIdBtn')) {
@@ -2395,14 +1761,14 @@ window.onload = async function() {
     console.log('✅ النظام جاهز - جميع المنتجات تستخدم معرف تلغرام');
 };
 
-// ===== [4.54] إغلاق النوافذ عند الضغط خارجها =====
+// ===== [4.53] إغلاق النوافذ عند الضغط خارجها =====
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 };
 
-// ===== [4.55] تصدير الدوال إلى النطاق العام =====
+// ===== [4.54] تصدير الدوال إلى النطاق العام =====
 window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
@@ -2434,7 +1800,6 @@ window.showDashboardMerchants = showDashboardMerchants;
 window.approveMerchant = approveMerchant;
 window.rejectMerchant = rejectMerchant;
 window.viewMyProducts = viewMyProducts;
-window.showWelcomePopup = showWelcomePopup;
 
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
 
