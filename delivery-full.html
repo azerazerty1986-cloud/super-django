@@ -1448,6 +1448,547 @@
                 showNotification(`📦 تم إنشاء طلب إعادة تموين لـ ${product.name} (${quantity} قطعة)`, 'success');
             }
         }
+        // ============================================================
+// النقطة (34): نظام طلب الأدوار المتقدم (للمدير فقط)
+// الأدوار: تاجر، شركة، موزع، صانع محتوى، مسوق، مستشار
+// ============================================================
+
+// ===== [34.1] قائمة الأدوار المتاحة =====
+const AVAILABLE_ROLES = [
+    { id: 'merchant', name: 'تاجر', icon: '🏪', description: 'بيع المنتجات وإدارة المتجر', permissions: ['add_products', 'manage_inventory', 'view_orders'] },
+    { id: 'company', name: 'شركة', icon: '🏭', description: 'توريد منتجات بالجملة', permissions: ['bulk_upload', 'wholesale_prices', 'view_sales'] },
+    { id: 'distributor', name: 'موزع', icon: '🚚', description: 'توزيع المنتجات والتوصيل', permissions: ['manage_delivery', 'track_shipments', 'view_orders'] },
+    { id: 'content_creator', name: 'صانع محتوى', icon: '📱', description: 'إنشاء محتوى تسويقي', permissions: ['create_posts', 'manage_offers', 'view_analytics'] },
+    { id: 'marketer', name: 'مسوق', icon: '📢', description: 'تسويق المنتجات والعروض', permissions: ['create_campaigns', 'manage_coupons', 'view_promotions'] },
+    { id: 'consultant', name: 'مستشار', icon: '💡', description: 'استشارات وتحليل السوق', permissions: ['view_analytics', 'create_reports', 'advice_products'] }
+];
+
+// ===== [34.2] إضافة أيقونة طلب دور =====
+function addRoleRequestButton() {
+    // إزالة الزر القديم
+    const oldBtn = document.getElementById('roleRequestBtn');
+    if (oldBtn) oldBtn.remove();
+    
+    // إنشاء الزر
+    const roleBtn = document.createElement('div');
+    roleBtn.id = 'roleRequestBtn';
+    roleBtn.innerHTML = '<i class="fas fa-user-plus"></i>';
+    roleBtn.style.cssText = `
+        position: fixed;
+        bottom: 160px;
+        right: 20px;
+        width: 55px;
+        height: 55px;
+        background: linear-gradient(135deg, var(--info), var(--gold-dark));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        font-size: 24px;
+        color: white;
+    `;
+    roleBtn.title = 'طلب دور (تاجر، شركة، موزع، صانع محتوى)';
+    roleBtn.onmouseover = () => { roleBtn.style.transform = 'scale(1.1)'; };
+    roleBtn.onmouseout = () => { roleBtn.style.transform = 'scale(1)'; };
+    roleBtn.onclick = () => { showRoleRequestModal(); };
+    
+    document.body.appendChild(roleBtn);
+}
+
+// ===== [34.3] نافذة طلب الدور =====
+function showRoleRequestModal() {
+    // إزالة النافذة القديمة
+    const oldModal = document.getElementById('roleRequestModal');
+    if (oldModal) oldModal.remove();
+    
+    // إنشاء النافذة
+    const modal = document.createElement('div');
+    modal.id = 'roleRequestModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.95);
+        backdrop-filter: blur(10px);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: var(--bg-secondary);
+                    border-radius: 30px;
+                    max-width: 500px;
+                    width: 90%;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                    border: 2px solid var(--gold);
+                    animation: slideUp 0.3s ease;">
+            
+            <div style="position: sticky; top: 0; background: var(--bg-secondary);
+                        padding: 20px; border-bottom: 2px solid var(--gold);
+                        display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="color: var(--gold);"><i class="fas fa-user-plus"></i> طلب دور جديد</h3>
+                <button onclick="closeRoleRequestModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text);">&times;</button>
+            </div>
+            
+            <div style="padding: 20px;">
+                <p style="margin-bottom: 20px; text-align: center;">اختر الدور الذي تريد التقدم له:</p>
+                
+                <div id="rolesList" style="display: flex; flex-direction: column; gap: 12px;">
+                    ${AVAILABLE_ROLES.map(role => `
+                        <div class="role-option" data-role="${role.id}" onclick="selectRole('${role.id}')" 
+                             style="display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--bg-card); border-radius: 15px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s;">
+                            <div style="font-size: 30px;">${role.icon}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold; font-size: 16px;">${role.name}</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">${role.description}</div>
+                            </div>
+                            <i class="fas fa-chevron-left" style="color: var(--gold);"></i>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div id="roleFormContainer" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--glass);"></div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// ===== [34.4] اختيار دور وعرض النموذج =====
+let selectedRoleId = null;
+
+function selectRole(roleId) {
+    selectedRoleId = roleId;
+    const role = AVAILABLE_ROLES.find(r => r.id === roleId);
+    if (!role) return;
+    
+    // تحديث واجهة الاختيار
+    document.querySelectorAll('.role-option').forEach(opt => {
+        opt.style.borderColor = 'transparent';
+        if (opt.dataset.role === roleId) {
+            opt.style.borderColor = 'var(--gold)';
+            opt.style.background = 'var(--gold)10';
+        }
+    });
+    
+    // عرض النموذج
+    const formContainer = document.getElementById('roleFormContainer');
+    formContainer.style.display = 'block';
+    formContainer.innerHTML = `
+        <h4 style="color: var(--gold); margin-bottom: 15px;"><i class="fas fa-edit"></i> معلومات مقدم الطلب</h4>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">الاسم الكامل</label>
+            <input type="text" id="roleFullName" value="${currentUser?.name || ''}" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold); background: var(--bg-primary);">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">البريد الإلكتروني</label>
+            <input type="email" id="roleEmail" value="${currentUser?.email || ''}" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold); background: var(--bg-primary);">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">رقم الهاتف</label>
+            <input type="tel" id="rolePhone" value="${currentUser?.phone || ''}" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold); background: var(--bg-primary);">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">اسم المتجر/الشركة (إن وجد)</label>
+            <input type="text" id="roleStoreName" placeholder="مثال: متجر العطور - شركة التسويق" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold); background: var(--bg-primary);">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">الخبرات والمؤهلات</label>
+            <textarea id="roleExperience" rows="4" placeholder="اكتب خبراتك ومؤهلاتك لهذا الدور..." style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold); background: var(--bg-primary);"></textarea>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">سبب التقدم لهذا الدور</label>
+            <textarea id="roleReason" rows="3" placeholder="لماذا تريد الحصول على هذا الدور؟" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--gold); background: var(--bg-primary);"></textarea>
+        </div>
+        
+        <div class="form-row" style="margin-top: 20px;">
+            <button onclick="closeRoleRequestModal()" style="flex:1; padding: 12px; background: var(--danger); border: none; border-radius: 10px; color: white; cursor: pointer;">إلغاء</button>
+            <button onclick="submitRoleRequest()" style="flex:1; padding: 12px; background: var(--gold); border: none; border-radius: 10px; color: black; font-weight: bold; cursor: pointer;">إرسال الطلب</button>
+        </div>
+    `;
+}
+
+// ===== [34.5] إغلاق نافذة طلب الدور =====
+function closeRoleRequestModal() {
+    const modal = document.getElementById('roleRequestModal');
+    if (modal) modal.remove();
+}
+
+// ===== [34.6] إرسال طلب الدور إلى تلغرام =====
+async function submitRoleRequest() {
+    const role = AVAILABLE_ROLES.find(r => r.id === selectedRoleId);
+    if (!role) {
+        showNotification('الرجاء اختيار الدور أولاً', 'error');
+        return;
+    }
+    
+    const fullName = document.getElementById('roleFullName')?.value;
+    const email = document.getElementById('roleEmail')?.value;
+    const phone = document.getElementById('rolePhone')?.value;
+    const storeName = document.getElementById('roleStoreName')?.value;
+    const experience = document.getElementById('roleExperience')?.value;
+    const reason = document.getElementById('roleReason')?.value;
+    
+    if (!fullName || !email || !phone) {
+        showNotification('الرجاء ملء جميع الحقول الأساسية', 'error');
+        return;
+    }
+    
+    // إنشاء معرف فريد للطلب
+    const requestId = `REQ-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const requestDate = new Date().toLocaleString('ar-EG');
+    
+    // حفظ الطلب في localStorage
+    const requests = JSON.parse(localStorage.getItem('role_requests') || '[]');
+    requests.push({
+        id: requestId,
+        roleId: role.id,
+        roleName: role.name,
+        applicant: { fullName, email, phone, storeName, experience, reason },
+        date: requestDate,
+        status: 'pending'
+    });
+    localStorage.setItem('role_requests', JSON.stringify(requests));
+    
+    // ============================================================
+    // رسالة تلغرام مع أزرار تفاعلية (قبول / رفض)
+    // ============================================================
+    const message = `
+🟣 *طلب دور جديد - ${role.name}*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆔 *رقم الطلب:* ${requestId}
+👤 *مقدم الطلب:* ${fullName}
+📧 *البريد:* ${email}
+📞 *الهاتف:* ${phone}
+${storeName ? `🏪 *اسم المتجر/الشركة:* ${storeName}\n` : ''}
+🎭 *الدور المطلوب:* ${role.icon} ${role.name}
+📝 *الوصف:* ${role.description}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *الخبرات:* 
+${experience || 'لم يتم الإدخال'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 *سبب التقدم:* 
+${reason || 'لم يتم الإدخال'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🕐 *تاريخ الطلب:* ${requestDate}
+
+✅ يرجى مراجعة الطلب والموافقة أو الرفض
+    `;
+    
+    // إرسال الرسالة مع أزرار تفاعلية
+    await sendTelegramMessageWithButtons(requestId, role.id, fullName, message);
+    
+    showNotification(`✅ تم إرسال طلب ${role.name} بنجاح! سيتم الرد عليك قريباً`, 'success');
+    closeRoleRequestModal();
+}
+
+// ===== [34.7] إرسال رسالة تلغرام مع أزرار =====
+async function sendTelegramMessageWithButtons(requestId, roleId, applicantName, message) {
+    try {
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.channelId,
+                text: message,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '✅ قبول الطلب', callback_data: `approve_role_${requestId}_${roleId}_${applicantName}` },
+                            { text: '❌ رفض الطلب', callback_data: `reject_role_${requestId}` }
+                        ],
+                        [
+                            { text: '📋 تفاصيل أكثر', callback_data: `details_role_${requestId}` }
+                        ]
+                    ]
+                }
+            })
+        });
+        const data = await response.json();
+        console.log('📨 تم إرسال طلب الدور مع أزرار:', data);
+        return data;
+    } catch (error) {
+        console.error('❌ خطأ في إرسال رسالة تلغرام:', error);
+    }
+}
+
+// ===== [34.8] معالجة ردود تلغرام (الأزرار) =====
+let lastProcessedUpdateId = 0;
+let processedCallbacks = new Set();
+
+async function startTelegramCallbackListener() {
+    setInterval(async () => {
+        try {
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${lastProcessedUpdateId + 1}&timeout=30`);
+            const data = await response.json();
+            
+            if (data.ok && data.result) {
+                for (const update of data.result) {
+                    lastProcessedUpdateId = update.update_id;
+                    
+                    if (update.callback_query) {
+                        const callback = update.callback_query;
+                        const callbackData = callback.data;
+                        const callbackId = callback.id;
+                        const messageId = callback.message?.message_id;
+                        const uniqueId = `${callbackId}_${messageId}`;
+                        
+                        // تجنب المعالجة المكررة
+                        if (processedCallbacks.has(uniqueId)) continue;
+                        processedCallbacks.add(uniqueId);
+                        
+                        console.log('📥 استلام رد من تلغرام:', callbackData);
+                        
+                        if (callbackData.startsWith('approve_role_')) {
+                            const parts = callbackData.split('_');
+                            const requestId = parts[2];
+                            const roleId = parts[3];
+                            const applicantName = parts.slice(4).join('_');
+                            
+                            await approveRoleRequest(requestId, roleId, applicantName, callbackId);
+                        }
+                        else if (callbackData.startsWith('reject_role_')) {
+                            const requestId = callbackData.replace('reject_role_', '');
+                            await rejectRoleRequest(requestId, callbackId);
+                        }
+                        else if (callbackData.startsWith('details_role_')) {
+                            const requestId = callbackData.replace('details_role_', '');
+                            await sendRoleDetails(requestId, callbackId);
+                        }
+                        
+                        // إجابة على callback
+                        await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/answerCallbackQuery`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                callback_query_id: callbackId,
+                                text: '✅ تم استلام ردك'
+                            })
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ خطأ في الاستماع لتلغرام:', error);
+        }
+    }, 5000);
+}
+
+// ===== [34.9] قبول طلب الدور =====
+async function approveRoleRequest(requestId, roleId, applicantName, callbackId) {
+    // جلب الطلب من localStorage
+    const requests = JSON.parse(localStorage.getItem('role_requests') || '[]');
+    const request = requests.find(r => r.id === requestId);
+    
+    if (!request) {
+        await sendTelegramMessage(TELEGRAM.channelId, `❌ الطلب ${requestId} غير موجود`);
+        return;
+    }
+    
+    // تحديث حالة الطلب
+    request.status = 'approved';
+    localStorage.setItem('role_requests', JSON.stringify(requests));
+    
+    // إنشاء حساب للمستخدم الجديد
+    const role = AVAILABLE_ROLES.find(r => r.id === roleId);
+    const newUser = {
+        id: Date.now(),
+        name: request.applicant.fullName,
+        email: request.applicant.email,
+        phone: request.applicant.phone,
+        role: roleId,
+        roleName: role.name,
+        storeName: request.applicant.storeName || `${role.name} ${request.applicant.fullName}`,
+        status: 'approved',
+        createdAt: new Date().toISOString()
+    };
+    
+    // حفظ المستخدم
+    const users = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
+    users.push(newUser);
+    localStorage.setItem('nardoo_users', JSON.stringify(users));
+    
+    // إرسال رسالة قبول
+    const approvalMessage = `
+✅ *تم قبول طلبك بنجاح!*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *مقدم الطلب:* ${applicantName}
+🎭 *الدور:* ${role.icon} ${role.name}
+🆔 *رقم الطلب:* ${requestId}
+━━━━━━━━━━━━━━━━━━━━━━
+🎉 *تهانينا!* لقد تم قبول طلبك.
+🔑 يمكنك الآن الدخول إلى حسابك والاستفادة من صلاحيات ${role.name}.
+
+📧 البريد: ${request.applicant.email}
+🔒 كلمة المرور: تم إرسالها إلى بريدك
+
+🕐 ${new Date().toLocaleString('ar-EG')}
+    `;
+    
+    await sendTelegramMessage(TELEGRAM.channelId, approvalMessage, 'Markdown');
+    
+    // إرسال إشعار للمدير
+    await sendTelegramMessage(TELEGRAM.channelId, `✅ تم قبول طلب ${role.name} للمستخدم ${applicantName}`);
+    
+    showNotification(`✅ تم قبول طلب ${role.name} بنجاح`, 'success');
+}
+
+// ===== [34.10] رفض طلب الدور =====
+async function rejectRoleRequest(requestId, callbackId) {
+    const requests = JSON.parse(localStorage.getItem('role_requests') || '[]');
+    const request = requests.find(r => r.id === requestId);
+    
+    if (!request) {
+        await sendTelegramMessage(TELEGRAM.channelId, `❌ الطلب ${requestId} غير موجود`);
+        return;
+    }
+    
+    // تحديث حالة الطلب
+    request.status = 'rejected';
+    localStorage.setItem('role_requests', JSON.stringify(requests));
+    
+    // إرسال رسالة رفض
+    const rejectionMessage = `
+❌ *تم رفض طلبك*
+━━━━━━━━━━━━━━━━━━━━━━
+👤 *مقدم الطلب:* ${request.applicant.fullName}
+🎭 *الدور المطلوب:* ${request.roleName}
+🆔 *رقم الطلب:* ${requestId}
+━━━━━━━━━━━━━━━━━━━━━━
+📝 عذراً، لم يتم قبول طلبك في الوقت الحالي.
+💡 يمكنك التقدم مرة أخرى بعد تحسين ملفك الشخصي.
+
+🕐 ${new Date().toLocaleString('ar-EG')}
+    `;
+    
+    await sendTelegramMessage(TELEGRAM.channelId, rejectionMessage, 'Markdown');
+    
+    showNotification(`❌ تم رفض طلب ${request.roleName}`, 'info');
+}
+
+// ===== [34.11] إرسال تفاصيل الطلب =====
+async function sendRoleDetails(requestId, callbackId) {
+    const requests = JSON.parse(localStorage.getItem('role_requests') || '[]');
+    const request = requests.find(r => r.id === requestId);
+    
+    if (!request) {
+        await sendTelegramMessage(TELEGRAM.channelId, `❌ الطلب ${requestId} غير موجود`);
+        return;
+    }
+    
+    const detailsMessage = `
+📋 *تفاصيل الطلب - ${request.roleName}*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆔 *رقم الطلب:* ${request.id}
+👤 *مقدم الطلب:* ${request.applicant.fullName}
+📧 *البريد:* ${request.applicant.email}
+📞 *الهاتف:* ${request.applicant.phone}
+${request.applicant.storeName ? `🏪 *المتجر/الشركة:* ${request.applicant.storeName}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *الخبرات:*
+${request.applicant.experience || 'غير مذكور'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 *سبب التقدم:*
+${request.applicant.reason || 'غير مذكور'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📅 *تاريخ الطلب:* ${request.date}
+📊 *الحالة:* ${request.status === 'pending' ? '🟡 قيد المراجعة' : request.status === 'approved' ? '✅ مقبول' : '❌ مرفوض'}
+    `;
+    
+    await sendTelegramMessage(TELEGRAM.channelId, detailsMessage, 'Markdown');
+}
+
+// ===== [34.12] عرض طلبات الأدوار للمدير =====
+function showRoleRequestsForAdmin() {
+    if (currentUser?.role !== 'admin') {
+        showNotification('هذه الخاصية للمدير فقط', 'error');
+        return;
+    }
+    
+    const requests = JSON.parse(localStorage.getItem('role_requests') || '[]');
+    const pendingRequests = requests.filter(r => r.status === 'pending');
+    
+    if (pendingRequests.length === 0) {
+        showNotification('لا توجد طلبات دور جديدة', 'info');
+        return;
+    }
+    
+    let message = `📋 *طلبات الأدوار الجديدة (${pendingRequests.length})*\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    pendingRequests.forEach((r, i) => {
+        message += `${i+1}. 🎭 ${r.roleName} - ${r.applicant.fullName}\n`;
+        message += `   📞 ${r.applicant.phone}\n`;
+        message += `   🆔 ${r.id}\n\n`;
+    });
+    
+    sendTelegramMessage(TELEGRAM.channelId, message, 'Markdown');
+}
+
+// ===== [34.13] إضافة زر للمدير لعرض الطلبات =====
+function addAdminRoleRequestsButton() {
+    if (currentUser?.role !== 'admin') return;
+    
+    const existingBtn = document.getElementById('adminRoleBtn');
+    if (existingBtn) return;
+    
+    const adminBtn = document.createElement('button');
+    adminBtn.id = 'adminRoleBtn';
+    adminBtn.innerHTML = '<i class="fas fa-users"></i> طلبات الأدوار';
+    adminBtn.style.cssText = `
+        background: var(--info);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-left: 10px;
+    `;
+    adminBtn.onclick = () => { showRoleRequestsForAdmin(); };
+    
+    const userBar = document.querySelector('.user-bar div:last-child');
+    if (userBar) {
+        userBar.insertBefore(adminBtn, document.getElementById('themeToggle'));
+    }
+}
+
+// ===== [34.14] تهيئة نظام الأدوار =====
+function initRoleSystem() {
+    addRoleRequestButton();
+    addAdminRoleRequestsButton();
+    startTelegramCallbackListener();
+    
+    console.log('🎭 نظام طلب الأدوار جاهز - النقطة 34');
+}
+
+// استدعاء التهيئة
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initRoleSystem);
+} else {
+    setTimeout(initRoleSystem, 1500);
+}
+
+// ربط الدوال
+window.selectRole = selectRole;
+window.submitRoleRequest = submitRoleRequest;
+window.closeRoleRequestModal = closeRoleRequestModal;
+window.showRoleRequestsForAdmin = showRoleRequestsForAdmin;
 
         // ============================================================
         // دوال مساعدة
