@@ -1,7 +1,4 @@
 
-اساس تلغرام 
-
-
 /* ================================================================== */
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
@@ -10,7 +7,7 @@
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
-    botToken: '8576673096:AAHj80CdifTJNlOs6JgouHmjEXl0bM-8Shw',
+    botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
     channelId: '-1003822964890',
     adminId: '7461896689',
     apiUrl: 'https://api.telegram.org/bot'
