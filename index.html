@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -671,7 +669,7 @@
         <i class="fas fa-chevron-up"></i>
     </button>
 
-    <!-- ===== نافذة تسجيل الدخول ===== -->
+    <!-- ===== نافذة تسجيل الدخول (معدلة) ===== -->
     <div class="modal" id="loginModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -684,6 +682,7 @@
                 <button class="btn-outline-gold" onclick="switchAuthTab('register')">تسجيل</button>
             </div>
 
+            <!-- نموذج تسجيل الدخول -->
             <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
                 <div class="form-group">
                     <label>👤 اسم المستخدم</label>
@@ -696,6 +695,7 @@
                 <button type="submit" class="btn-gold" style="width:100%;">دخول</button>
             </form>
 
+            <!-- ===== نموذج التسجيل (معدل مع خيار المدير) ===== -->
             <form id="registerForm" style="display:none;" onsubmit="event.preventDefault(); handleRegister();">
                 <div class="form-group">
                     <label>👤 الاسم الكامل</label>
@@ -713,10 +713,30 @@
                     <label>📱 رقم الهاتف</label>
                     <input type="tel" class="form-control" id="regPhone" placeholder="05XXXXXXXX">
                 </div>
+                
+                <!-- ✅ خيار تسجيل كمدير (جديد) -->
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="isAdmin" onchange="toggleAdminFields()">
+                        <span><i class="fas fa-crown" style="color: gold;"></i> تسجيل كمدير (يتطلب رمز تحقق)</span>
+                    </label>
+                </div>
+                
+                <div id="adminWarning" style="display: none; background: rgba(255,215,0,0.15); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 12px;">
+                    <i class="fas fa-shield-alt" style="color: gold;"></i> <strong>تنبيه:</strong>
+                    <ul style="margin: 10px 0 0 20px; padding-right: 0;">
+                        <li>سيتم إرسال رمز تحقق (24 حرف + رقم) إلى قناة التلغرام</li>
+                        <li>أدخل الرمز في النافذة المنبثقة لإكمال التسجيل</li>
+                        <li>الرمز صالح لمدة 5 دقائق فقط</li>
+                        <li>بعد التحقق، ستحصل على صلاحيات مدير كاملة</li>
+                    </ul>
+                </div>
+                
+                <!-- ✅ خيار تسجيل كتاجر -->
                 <div class="form-group">
                     <label>
                         <input type="checkbox" id="isMerchant" onchange="toggleMerchantFields()">
-                        <span>تسجيل كتاجر</span>
+                        <span>🏪 تسجيل كتاجر</span>
                     </label>
                 </div>
                 
@@ -812,6 +832,26 @@
             channelId: '-1003822964890',
             apiUrl: 'https://api.telegram.org/bot'
         };
+        
+        // ========== دالة إظهار/إخفاء تحذير المدير ==========
+        function toggleAdminFields() {
+            const isAdmin = document.getElementById('isAdmin');
+            const adminWarning = document.getElementById('adminWarning');
+            const isMerchant = document.getElementById('isMerchant');
+            const merchantFields = document.getElementById('merchantFields');
+            
+            if (!isAdmin) return;
+            
+            if (adminWarning) {
+                adminWarning.style.display = isAdmin.checked ? 'block' : 'none';
+            }
+            
+            // إذا اختار مدير، نلغي اختيار تاجر
+            if (isAdmin.checked && isMerchant) {
+                isMerchant.checked = false;
+                if (merchantFields) merchantFields.style.display = 'none';
+            }
+        }
         
         // ========== متغيرات الريلز ==========
         let allReels = [];
@@ -1076,4 +1116,3 @@
     </script>
 </body>
 </html>
-
