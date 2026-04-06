@@ -2,9 +2,9 @@
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ================================================================== */
 
-// ===== [4.1] إعدادات تلغرام الأساسية (متوافقة مع الملف الرئيسي) =====
+// ===== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
-    botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',  // نفس التوكن من الملف الرئيسي
+    botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
     channelId: '-1003822964890',
     adminId: '7461896689',
     apiUrl: 'https://api.telegram.org/bot'
@@ -12,16 +12,38 @@ const TELEGRAM = {
 
 // ===== [4.2] المتغيرات العامة =====
 let products = [];
+let currentUser = null;
 let cart = [];
 let isDarkMode = true;
 let currentFilter = 'all';
 let searchTerm = '';
 let sortBy = 'newest';
+let users = [];
 let isLoading = false;
 let pendingVerificationCode = null;
 let verificationCodeExpiry = null;
 
-// ===== [4.3] دوال المساعدة والإشعارات =====
+// ===== [4.3] تحميل السلة =====
+function loadCart() {
+    const saved = localStorage.getItem('nardoo_cart');
+    cart = saved ? JSON.parse(saved) : [];
+    updateCartCounter();
+}
+
+function saveCart() {
+    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
+}
+
+function updateCartCounter() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const counter = document.getElementById('cartCounter');
+    const fixedCounter = document.getElementById('fixedCartCounter');
+    
+    if (counter) counter.textContent = count;
+    if (fixedCounter) fixedCounter.textContent = count;
+}
+
+// ===== [4.4] دوال المساعدة والإشعارات =====
 function showNotification(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) {
@@ -58,7 +80,7 @@ function showNotification(message, type = 'info') {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ===== [4.4] دالة مساعدة لجلب رابط الملف من تلغرام =====
+// ===== [4.5] دالة مساعدة لجلب رابط الملف من تلغرام =====
 async function getTelegramFileUrl(fileId) {
     try {
         const response = await fetch(
@@ -75,7 +97,7 @@ async function getTelegramFileUrl(fileId) {
     return null;
 }
 
-// ===== [4.5] دالة الحصول على اسم القسم =====
+// ===== [4.6] دالة الحصول على اسم القسم =====
 function getCategoryName(category) {
     const names = {
         'promo': 'برموسيو',
@@ -86,7 +108,7 @@ function getCategoryName(category) {
     return names[category] || 'أخرى';
 }
 
-// ===== [4.6] دالة حساب الوقت المنقضي =====
+// ===== [4.7] دالة حساب الوقت المنقضي =====
 function getTimeAgo(dateString) {
     if (!dateString) return '';
     
@@ -110,7 +132,7 @@ function getTimeAgo(dateString) {
     return 'منذ وقت';
 }
 
-// ===== [4.7] دالة توليد النجوم =====
+// ===== [4.8] دالة توليد النجوم =====
 function generateStars(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
@@ -132,7 +154,7 @@ function generateStars(rating) {
     return starsHTML;
 }
 
-// ===== [4.8] دالة الفرز =====
+// ===== [4.9] دالة الفرز =====
 function sortProducts(productsArray) {
     switch(sortBy) {
         case 'newest':
@@ -148,38 +170,26 @@ function sortProducts(productsArray) {
     }
 }
 
-// ===== [4.9] تغيير طريقة الفرز =====
 function changeSort(value) {
     sortBy = value;
     displayProducts();
 }
 
 // ===== [4.10] إضافة منتج إلى تلغرام =====
-async function addProductToTelegram(product, imageFile, currentUser) {
+async function addProductToTelegram(product, imageFile) {
     try {
         console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
         
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM.channelId);
         formData.append('photo', imageFile);
-        
-        let roleEmoji = '👤';
-        let roleText = 'مستخدم';
-        if (currentUser.role === 'admin') {
-            roleEmoji = '👑';
-            roleText = 'مدير';
-        } else if (currentUser.role === 'merchant') {
-            roleEmoji = '🏪';
-            roleText = 'تاجر';
-        }
-        
         formData.append('caption', `🟣 *منتج جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
 📦 *المنتج:* ${product.name}
 💰 *السعر:* ${product.price} دج
 🏷️ *القسم:* ${getCategoryName(product.category)}
 📊 *الكمية:* ${product.stock}
-${roleEmoji} *الناشر:* ${product.merchantName} (${roleText})
+👤 *الناشر:* ${product.merchantName}
 📝 *الوصف:* ${product.description || 'منتج ممتاز'}
 📅 ${new Date().toLocaleString('ar-EG')}
 
@@ -209,11 +219,10 @@ ${roleEmoji} *الناشر:* ${product.merchantName} (${roleText})
     }
 }
 
-// ===== [4.11] دالة حفظ المنتج (متوافقة مع نظام المستخدمين) =====
+// ===== [4.11] دالة حفظ المنتج =====
 async function saveProduct() {
     console.log('🔄 بدء saveProduct');
     
-    // التحقق من وجود مستخدم مسجل دخول
     const currentUser = Auth.getCurrentUser();
     if (!currentUser) {
         showNotification('❌ الرجاء تسجيل الدخول أولاً', 'error');
@@ -221,7 +230,6 @@ async function saveProduct() {
         return;
     }
     
-    // التحقق من صلاحيات المستخدم (مدير أو تاجر فقط)
     if (currentUser.role !== 'admin' && currentUser.role !== 'merchant') {
         showNotification('❌ ليس لديك صلاحية لإضافة منتجات', 'error');
         return;
@@ -296,31 +304,16 @@ async function saveProduct() {
         stock: stock,
         merchantName: currentUser.storeName || currentUser.name,
         merchantId: currentUser.userId,
-        description: description,
-        createdAt: new Date().toISOString()
+        description: description
     };
 
     console.log('📦 المنتج:', product);
     console.log('🖼️ الصورة:', imageFile.name, imageFile.type, imageFile.size);
 
-    const result = await addProductToTelegram(product, imageFile, currentUser);
+    const result = await addProductToTelegram(product, imageFile);
 
     if (result.success) {
         showNotification(`✅ تم إضافة المنتج بنجاح - المعرف: ${result.messageId}`, 'success');
-        
-        // حفظ المنتج في localStorage للمنتجات المحلية
-        const newProduct = {
-            id: result.messageId,
-            telegramId: result.messageId,
-            ...product,
-            rating: 4.5,
-            image: null,
-            images: [],
-            telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${result.messageId}`
-        };
-        
-        products.unshift(newProduct);
-        localStorage.setItem('nardoo_products', JSON.stringify(products));
         
         nameInput.value = '';
         categorySelect.value = 'promo';
@@ -427,7 +420,6 @@ async function fetchProductsFromTelegram() {
                 let productId = post.message_id;
                 let serialNumber = null;
                 
-                // استخراج الرقم التسلسلي
                 const serialMatch = caption.match(/NARD-SERIAL:\s*(NARD-[A-Z0-9-]+)/i);
                 if (serialMatch) serialNumber = serialMatch[1];
                 
@@ -451,7 +443,7 @@ async function fetchProductsFromTelegram() {
                         if (match) stock = parseInt(match[0]);
                     }
                     else if (line.includes('الناشر:') || line.includes('التاجر:')) {
-                        merchant = line.replace('الناشر:', '').replace('التاجر:', '').replace(/\([^)]*\)/g, '').trim();
+                        merchant = line.replace('الناشر:', '').replace('التاجر:', '').trim();
                     }
                     else if (line.includes('الوصف:')) {
                         description = line.replace('الوصف:', '').trim();
@@ -546,7 +538,7 @@ async function loadProducts() {
     await fetchProductsFromTelegram();
 }
 
-// ===== [4.15] عرض المنتجات (مع فلتر المنتجات الخاصة بالتاجر) =====
+// ===== [4.15] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
@@ -555,7 +547,6 @@ function displayProducts() {
     
     let filtered = products.filter(p => p.stock > 0);
     
-    // فلتر المنتجات الخاصة بالتاجر (إذا كان تاجراً)
     if (currentUser && currentUser.role === 'merchant' && currentFilter === 'my_products') {
         filtered = filtered.filter(p => p.merchantId === currentUser.userId || p.merchantName === currentUser.storeName);
     }
@@ -691,26 +682,6 @@ function addToCart(productId) {
     showNotification('تمت الإضافة إلى السلة', 'success');
 }
 
-// ===== [4.19] دوال السلة =====
-function loadCart() {
-    const saved = localStorage.getItem('nardoo_cart');
-    cart = saved ? JSON.parse(saved) : [];
-    updateCartCounter();
-}
-
-function saveCart() {
-    localStorage.setItem('nardoo_cart', JSON.stringify(cart));
-}
-
-function updateCartCounter() {
-    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const counter = document.getElementById('cartCounter');
-    const fixedCounter = document.getElementById('fixedCartCounter');
-    
-    if (counter) counter.textContent = count;
-    if (fixedCounter) fixedCounter.textContent = count;
-}
-
 function toggleCart() {
     const sidebar = document.getElementById('cartSidebar');
     if (sidebar) {
@@ -784,7 +755,7 @@ function removeFromCart(productId) {
     showNotification('تمت إزالة المنتج', 'info');
 }
 
-// ===== [4.20] إتمام الشراء =====
+// ===== [4.19] إتمام الشراء =====
 async function checkoutCart() {
     if (cart.length === 0) {
         showNotification('🛒 السلة فارغة! أضف بعض المنتجات أولاً', 'warning');
@@ -1196,7 +1167,7 @@ function showOrderSuccessModal(orderId, total, estimatedDays) {
     }, 5000);
 }
 
-// ===== [4.21] عرض تفاصيل المنتج =====
+// ===== [4.20] عرض تفاصيل المنتج =====
 function viewProductDetails(productId) {
     const product = products.find(p => p.id == productId);
     if (!product) return;
@@ -1250,7 +1221,116 @@ function viewProductDetails(productId) {
     modal.style.display = 'flex';
 }
 
-// ===== [4.22] إظهار نافذة إضافة منتج =====
+// ===== [4.21] دوال تسجيل دخول المدير عبر التلغرام =====
+
+async function sendVerificationCode() {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    pendingVerificationCode = code;
+    verificationCodeExpiry = Date.now() + 300000;
+    
+    const message = `🔐 *رمز التحقق الخاص بك*
+
+📱 \`${code}\`
+
+⏰ صالح لمدة 5 دقائق
+
+🔒 لا تشارك هذا الرمز مع أي شخص
+
+🆔 معرف المدير: ${TELEGRAM.adminId}`;
+    
+    try {
+        const url = `https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.channelId,
+                text: message,
+                parse_mode: 'Markdown'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            showNotification('✅ تم إرسال رمز التحقق إلى قناة التلغرام', 'success');
+            closeModal('loginModal');
+            openModal('verify2FAModal');
+        } else {
+            console.error('خطأ:', result);
+            showNotification('❌ فشل الإرسال: ' + result.description, 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        showNotification('❌ خطأ في الاتصال بالتلغرام', 'error');
+    }
+}
+
+async function verify2FACode() {
+    const enteredCode = document.getElementById('verificationCode').value;
+    
+    if (!enteredCode || enteredCode.length !== 6) {
+        showNotification('⚠️ أدخل رمزاً مكوناً من 6 أرقام', 'error');
+        return;
+    }
+    
+    if (Date.now() > verificationCodeExpiry) {
+        showNotification('❌ انتهت صلاحية الرمز، اطلب رمزاً جديداً', 'error');
+        closeModal('verify2FAModal');
+        return;
+    }
+    
+    if (enteredCode === pendingVerificationCode) {
+        let users = Auth.getUsers();
+        let admin = users.find(u => u.role === 'admin');
+        
+        if (!admin) {
+            admin = {
+                userId: Auth.generateUserId(),
+                name: 'مدير النظام',
+                email: 'admin@nardoo.com',
+                password: Auth.hashPassword('admin123'),
+                role: 'admin',
+                isVerified: true,
+                createdAt: new Date().toISOString(),
+                telegramId: TELEGRAM.adminId
+            };
+            users.push(admin);
+            Auth.saveUsers(users);
+        }
+        
+        localStorage.setItem('currentUserId', admin.userId);
+        Auth.updateUI();
+        updateUIBasedOnRole();
+        closeModal('verify2FAModal');
+        showNotification('✅ تم تسجيل الدخول كمدير بنجاح', 'success');
+        
+        setTimeout(() => location.reload(), 500);
+    } else {
+        showNotification('❌ رمز غير صحيح', 'error');
+    }
+}
+
+async function resendVerificationCode() {
+    showNotification('🔄 جاري إعادة إرسال الرمز...', 'info');
+    await sendVerificationCode();
+}
+
+function openLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+}
+
 function showAddProductModal() {
     const currentUser = Auth.getCurrentUser();
     if (!currentUser) {
@@ -1268,7 +1348,6 @@ function showAddProductModal() {
     if (modal) modal.style.display = 'flex';
 }
 
-// ===== [4.23] البحث عن منتج بالمعرف =====
 function findProductById() {
     const id = prompt('🔍 أدخل معرف المنتج:');
     if (!id) return;
@@ -1290,7 +1369,6 @@ ${product.serialNumber ? `الرقم التسلسلي: ${product.serialNumber}` 
     }
 }
 
-// ===== [4.24] دوال التمرير =====
 function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1305,7 +1383,6 @@ function toggleQuickTopButton() {
     quickTopBtn.classList.toggle('show', window.scrollY > 300);
 }
 
-// ===== [4.25] تبديل الثيم =====
 function toggleTheme() {
     isDarkMode = !isDarkMode;
     document.body.classList.toggle('light-mode', !isDarkMode);
@@ -1318,13 +1395,6 @@ function toggleTheme() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
 }
 
-// ===== [4.26] إغلاق النوافذ =====
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
-}
-
-// ===== [4.27] تحديث الواجهة حسب دور المستخدم =====
 function updateUIBasedOnRole() {
     const currentUser = Auth.getCurrentUser();
     const inventoryBtn = document.getElementById('inventoryBtn');
@@ -1353,7 +1423,6 @@ function updateUIBasedOnRole() {
     }
 }
 
-// ===== [4.28] إرسال إشعار عام =====
 async function sendNotificationToTelegram(text) {
     const message = `
 🟡 *إشعار*
@@ -1373,7 +1442,6 @@ ${text}
     });
 }
 
-// ===== [4.29] تأثيرات الكتابة =====
 class TypingAnimation {
     constructor(element, texts, speed = 100, delay = 2000) {
         this.element = element;
@@ -1417,7 +1485,7 @@ class TypingAnimation {
     }
 }
 
-// ===== [4.30] التهيئة عند تحميل الصفحة =====
+// ===== [4.22] التهيئة عند تحميل الصفحة =====
 window.onload = async function() {
     const savedProducts = localStorage.getItem('nardoo_products');
     if (savedProducts) {
@@ -1429,7 +1497,6 @@ window.onload = async function() {
     await loadProducts();
     loadCart();
     
-    // تحديث الواجهة بناءً على المستخدم الحالي
     updateUIBasedOnRole();
 
     const savedTheme = localStorage.getItem('theme');
@@ -1474,14 +1541,13 @@ window.onload = async function() {
     console.log('✅ نظام تلغرام جاهز ومتوافق مع الملف الرئيسي');
 };
 
-// ===== [4.31] إغلاق النوافذ عند الضغط خارجها =====
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
 };
 
-// ===== [4.32] تصدير الدوال إلى النطاق العام =====
+// ===== [4.23] تصدير الدوال =====
 window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
@@ -1504,5 +1570,10 @@ window.scrollToBottom = scrollToBottom;
 window.toggleTheme = toggleTheme;
 window.updateUIBasedOnRole = updateUIBasedOnRole;
 window.sendNotificationToTelegram = sendNotificationToTelegram;
+window.sendVerificationCode = sendVerificationCode;
+window.verify2FACode = verify2FACode;
+window.resendVerificationCode = resendVerificationCode;
+window.openLoginModal = openLoginModal;
+window.openModal = openModal;
 
-console.log('✅ نظام تلغرام جاهز - متوافق مع نظام المستخدمين والتجار والمديرين');
+console.log('✅ نظام تلغرام جاهز - شامل دخول المدير عبر التلغرام');
