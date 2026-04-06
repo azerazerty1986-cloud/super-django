@@ -22,18 +22,7 @@ let users = [];
 let adminData = null;
 let isLoading = false;
 
-// ===== [4.3] بيانات المدير الثابتة =====
-const FIXED_ADMIN = {
-    id: 19862,
-    name: 'azer',
-    email: 'azer@admin.com',
-    password: '19862',
-    role: 'admin',
-    phone: '',
-    createdAt: new Date().toISOString()
-};
-
-// ===== [4.4] إرسال المدير إلى القناة =====
+// ===== [4.3] الخطوة 1: إرسال المدير إلى القناة =====
 async function sendAdminToChannel() {
     const adminMessage = `#admin_registration 👑 *تسجيل مدير النظام*
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -42,12 +31,9 @@ async function sendAdminToChannel() {
 📧 *البريد:* azer@admin.com
 🔑 *كلمة السر:* 19862
 👑 *الدور:* مدير
-📞 *الهاتف:* غير محدد
 📅 *تاريخ التسجيل:* ${new Date().toLocaleString('ar-EG')}
 
-✅ *حالة الحساب:* معتمد
-━━━━━━━━━━━━━━━━━━━━━━
-🔐 هذا الحساب لديه صلاحيات كاملة في النظام`;
+✅ *حالة الحساب:* معتمد`;
 
     try {
         const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
@@ -63,29 +49,70 @@ async function sendAdminToChannel() {
         const data = await response.json();
         
         if (data.ok) {
-            console.log(`✅ تم إرسال المدير إلى القناة - معرف الرسالة: ${data.result.message_id}`);
-            return { success: true };
+            console.log('✅ الخطوة 1: تم إرسال المدير إلى القناة');
+            return { success: true, messageId: data.result.message_id };
         } else {
             console.error('❌ فشل إرسال المدير:', data.description);
             return { success: false, error: data.description };
         }
     } catch (error) {
-        console.error('❌ خطأ في إرسال المدير:', error);
+        console.error('❌ خطأ:', error);
         return { success: false, error: error.message };
     }
 }
 
-// ===== [4.5] إرسال المدير فوراً عند تحميل الصفحة =====
-(async function sendAdminImmediately() {
-    await sendAdminToChannel();
-})();
+// ===== [4.4] الخطوة 2: جلب المدير من القناة =====
+async function fetchAdminFromChannel() {
+    try {
+        console.log('🔄 الخطوة 2: جلب رسالة المدير من القناة...');
+        
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`);
+        const data = await response.json();
+        
+        if (data.ok && data.result) {
+            for (const update of data.result) {
+                const message = update.channel_post || update.message;
+                if (!message) continue;
+                
+                const text = message.caption || message.text || '';
+                
+                if (text.includes('#admin_registration') && text.includes('19862')) {
+                    console.log('✅ تم العثور على رسالة المدير');
+                    
+                    // استخراج البيانات من الرسالة
+                    const nameMatch = text.match(/الاسم:\s*([^\n]+)/);
+                    const emailMatch = text.match(/البريد:\s*([^\n]+)/);
+                    const passMatch = text.match(/كلمة السر:\s*([^\n]+)/);
+                    
+                    const admin = {
+                        id: 19862,
+                        name: nameMatch ? nameMatch[1].replace(/[*_]/g, '').trim() : 'azer',
+                        email: emailMatch ? emailMatch[1].replace(/[*_]/g, '').trim() : 'azer@admin.com',
+                        password: passMatch ? passMatch[1].replace(/[*_]/g, '').trim() : '19862',
+                        role: 'admin'
+                    };
+                    
+                    console.log('📝 تم استخراج البيانات:', { name: admin.name, email: admin.email });
+                    return admin;
+                }
+            }
+        }
+        
+        console.log('⚠️ لم يتم العثور على رسالة المدير');
+        return null;
+        
+    } catch (error) {
+        console.error('❌ خطأ في جلب المدير:', error);
+        return null;
+    }
+}
 
-// ===== [4.6] تحميل المستخدمين من localStorage =====
+// ===== [4.5] تحميل المستخدمين =====
 function loadLocalUsers() {
     const saved = localStorage.getItem('nardoo_users');
     if (saved) {
         users = JSON.parse(saved);
-        console.log(`📦 تم تحميل ${users.length} مستخدم من localStorage`);
+        console.log(`📦 تم تحميل ${users.length} مستخدم`);
     } else {
         users = [
             { 
@@ -96,8 +123,6 @@ function loadLocalUsers() {
                 role: 'merchant_approved',
                 phone: '0555111111',
                 storeName: 'متجر التجريبي',
-                merchantLevel: '2',
-                status: 'approved',
                 createdAt: new Date().toISOString()
             },
             { 
@@ -114,68 +139,27 @@ function loadLocalUsers() {
     }
 }
 
-// ===== [4.7] جلب المدير من القناة =====
-async function fetchAdminFromChannel() {
-    try {
-        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`);
-        const data = await response.json();
-        
-        if (data.ok && data.result) {
-            for (const update of data.result) {
-                const message = update.channel_post || update.message;
-                if (!message) continue;
-                
-                const text = message.caption || message.text || '';
-                if (text.includes('#admin_registration') && text.includes('19862')) {
-                    const nameMatch = text.match(/الاسم:\s*([^\n]+)/);
-                    const emailMatch = text.match(/البريد:\s*([^\n]+)/);
-                    const passMatch = text.match(/كلمة السر:\s*([^\n]+)/);
-                    
-                    return {
-                        id: 19862,
-                        name: nameMatch ? nameMatch[1].replace(/[*_]/g, '').trim() : 'azer',
-                        email: emailMatch ? emailMatch[1].replace(/[*_]/g, '').trim() : 'azer@admin.com',
-                        password: passMatch ? passMatch[1].replace(/[*_]/g, '').trim() : '19862',
-                        role: 'admin'
-                    };
-                }
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('❌ خطأ في جلب المدير:', error);
-        return null;
-    }
-}
-
-// ===== [4.8] تسجيل الدخول الموحد =====
+// ===== [4.6] الخطوة 3: تسجيل الدخول مع التحقق من القناة =====
 async function loginUser(email, password) {
-    // التحقق من المدير عبر تلغرام
-    const adminFromTelegram = await fetchAdminFromChannel();
+    console.log('🔐 محاولة تسجيل الدخول:', email);
     
-    if (adminFromTelegram && (email === adminFromTelegram.email || email === adminFromTelegram.name) && password === adminFromTelegram.password) {
-        currentUser = adminFromTelegram;
-        adminData = adminFromTelegram;
+    // الخطوة 2: جلب المدير من القناة
+    const adminFromChannel = await fetchAdminFromChannel();
+    
+    // مقارنة البيانات
+    if (adminFromChannel && 
+        (email === adminFromChannel.email || email === adminFromChannel.name) && 
+        password === adminFromChannel.password) {
+        
+        console.log('✅ الخطوة 3: تسجيل الدخول ناجح - مدير');
+        currentUser = adminFromChannel;
+        adminData = adminFromChannel;
         localStorage.setItem('current_user', JSON.stringify(currentUser));
         localStorage.setItem('admin_data', JSON.stringify(adminData));
         updateUIBasedOnRole();
         showWelcomePopup(currentUser);
         showNotification(`👑 مرحباً أيها المدير ${currentUser.name}`, 'success');
         closeModal('loginModal');
-        return true;
-    }
-    
-    // التحقق من المدير الثابت
-    if ((email === 'azer' || email === 'azer@admin.com') && password === '19862') {
-        currentUser = FIXED_ADMIN;
-        adminData = FIXED_ADMIN;
-        localStorage.setItem('current_user', JSON.stringify(currentUser));
-        localStorage.setItem('admin_data', JSON.stringify(adminData));
-        updateUIBasedOnRole();
-        showWelcomePopup(currentUser);
-        showNotification(`👑 مرحباً أيها المدير ${currentUser.name}`, 'success');
-        closeModal('loginModal');
-        await sendAdminToChannel();
         return true;
     }
     
@@ -184,21 +168,16 @@ async function loginUser(email, password) {
     
     if (localUser) {
         if (localUser.role === 'merchant_pending') {
-            showNotification('⏳ حسابك قيد المراجعة من قبل المدير', 'warning');
+            showNotification('⏳ حسابك قيد المراجعة', 'warning');
             return false;
         }
         
+        console.log('✅ تسجيل الدخول ناجح - مستخدم عادي');
         currentUser = localUser;
         localStorage.setItem('current_user', JSON.stringify(currentUser));
         updateUIBasedOnRole();
         showWelcomePopup(currentUser);
-        
-        if (localUser.role === 'merchant_approved') {
-            showNotification(`🏪 مرحباً أيها التاجر ${localUser.name}`, 'success');
-        } else {
-            showNotification(`مرحباً ${localUser.name}`, 'success');
-        }
-        
+        showNotification(`مرحباً ${localUser.name}`, 'success');
         closeModal('loginModal');
         return true;
     }
@@ -207,47 +186,11 @@ async function loginUser(email, password) {
     return false;
 }
 
-// ===== [4.9] تحديث الواجهة حسب الدور =====
-function updateUIBasedOnRole() {
-    const userBtn = document.getElementById('userBtn');
-    const dashboardBtn = document.getElementById('dashboardBtn');
-    const merchantPanel = document.getElementById('merchantPanelContainer');
-    
-    if (!currentUser) {
-        if (userBtn) userBtn.innerHTML = '<i class="fas fa-user"></i><span>حسابي</span>';
-        if (dashboardBtn) dashboardBtn.style.display = 'none';
-        if (merchantPanel) merchantPanel.style.display = 'none';
-        return;
-    }
-    
-    if (userBtn) {
-        if (currentUser.role === 'admin') {
-            userBtn.innerHTML = '<i class="fas fa-crown" style="color: #ffd700;"></i><span>المدير</span>';
-        } else if (currentUser.role === 'merchant_approved') {
-            userBtn.innerHTML = '<i class="fas fa-store" style="color: #ffd700;"></i><span>التاجر</span>';
-        } else {
-            userBtn.innerHTML = '<i class="fas fa-user"></i><span>حسابي</span>';
-        }
-    }
-    
-    if (currentUser.role === 'admin') {
-        if (dashboardBtn) dashboardBtn.style.display = 'flex';
-        const dashboardSection = document.getElementById('dashboardSection');
-        if (dashboardSection) dashboardSection.style.display = 'block';
-        showDashboardOverview();
-    }
-    
-    if (currentUser.role === 'merchant_approved') {
-        if (merchantPanel) merchantPanel.style.display = 'block';
-        showMerchantPanel();
-    }
-}
-
-// ===== [4.10] تسجيل مستخدم جديد =====
+// ===== [4.7] تسجيل مستخدم جديد =====
 async function registerLocalUser(userData) {
     const existingUser = users.find(u => u.email === userData.email);
     if (existingUser) {
-        showNotification('البريد الإلكتروني مستخدم بالفعل', 'error');
+        showNotification('البريد مستخدم بالفعل', 'error');
         return false;
     }
     
@@ -282,17 +225,17 @@ async function registerLocalUser(userData) {
     return true;
 }
 
-// ===== [4.11] تسجيل خروج =====
+// ===== [4.8] تسجيل خروج =====
 function logoutUser() {
     currentUser = null;
     localStorage.removeItem('current_user');
     updateUIBasedOnRole();
-    showNotification('👋 تم تسجيل الخروج بنجاح', 'info');
+    showNotification('👋 تم تسجيل الخروج', 'info');
     currentFilter = 'all';
     displayProducts();
 }
 
-// ===== [4.12] السلة =====
+// ===== [4.9] السلة =====
 function loadCart() {
     const saved = localStorage.getItem('nardoo_cart');
     cart = saved ? JSON.parse(saved) : [];
@@ -311,7 +254,7 @@ function updateCartCounter() {
     if (fixedCounter) fixedCounter.textContent = count;
 }
 
-// ===== [4.13] الإشعارات =====
+// ===== [4.10] الإشعارات =====
 function showNotification(message, type = 'info') {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -329,7 +272,7 @@ function showNotification(message, type = 'info') {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ===== [4.14] دوال المساعدة =====
+// ===== [4.11] دوال المساعدة =====
 function getCategoryName(category) {
     const names = { 'promo': 'بروموسيو', 'spices': 'توابل', 'cosmetic': 'كوسمتيك', 'other': 'منتوجات أخرى' };
     return names[category] || 'أخرى';
@@ -366,7 +309,7 @@ function sortProducts(arr) {
 
 function changeSort(value) { sortBy = value; displayProducts(); }
 
-// ===== [4.15] إضافة منتج =====
+// ===== [4.12] إضافة منتج =====
 async function addProductToTelegram(product, imageFile) {
     try {
         const formData = new FormData();
@@ -378,19 +321,19 @@ async function addProductToTelegram(product, imageFile) {
         const data = await response.json();
         
         if (data.ok) {
-            showNotification('✅ تم إرسال المنتج بنجاح', 'success');
+            showNotification('✅ تم إرسال المنتج', 'success');
             return { success: true };
         }
         showNotification('❌ فشل الإرسال', 'error');
         return { success: false };
     } catch (error) {
-        showNotification('❌ خطأ في الاتصال', 'error');
+        showNotification('❌ خطأ', 'error');
         return { success: false };
     }
 }
 
 async function saveProduct() {
-    if (!currentUser) return showNotification('يجب تسجيل الدخول أولاً', 'warning');
+    if (!currentUser) return showNotification('يجب تسجيل الدخول', 'warning');
     if (currentUser.role !== 'admin' && currentUser.role !== 'merchant_approved') return showNotification('غير مصرح', 'error');
     
     const name = document.getElementById('productName')?.value.trim();
@@ -400,7 +343,7 @@ async function saveProduct() {
     
     if (!name) return showNotification('أدخل اسم المنتج', 'error');
     if (!price || price <= 0) return showNotification('أدخل سعر صحيح', 'error');
-    if (!stock || stock <= 0) return showNotification('أدخل كمية صحيحة', 'error');
+    if (!stock || stock <= 0) return showNotification('أدخل كمية', 'error');
     if (!imageFile) return showNotification('اختر صورة', 'error');
     
     const product = { name, price, category: document.getElementById('productCategory')?.value, stock, merchantName: currentUser.storeName || currentUser.name, description: document.getElementById('productDescription')?.value || '' };
@@ -412,7 +355,7 @@ async function saveProduct() {
     }
 }
 
-// ===== [4.16] جلب المنتجات =====
+// ===== [4.13] جلب المنتجات =====
 async function fetchProductsFromTelegram() {
     if (isLoading) return products;
     isLoading = true;
@@ -460,7 +403,7 @@ async function fetchProductsFromTelegram() {
 
 async function loadProducts() { await fetchProductsFromTelegram(); }
 
-// ===== [4.17] عرض المنتجات =====
+// ===== [4.14] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
@@ -491,7 +434,7 @@ function displayProducts() {
 function filterProducts(category) { currentFilter = category; displayProducts(); }
 function searchProducts() { searchTerm = document.getElementById('searchInput')?.value || ''; displayProducts(); }
 
-// ===== [4.18] عمليات السلة =====
+// ===== [4.15] عمليات السلة =====
 function addToCart(productId) {
     const product = products.find(p => p.id == productId);
     if (!product || product.stock <= 0) return showNotification('غير متوفر', 'error');
@@ -514,10 +457,9 @@ function updateCartDisplay() {
     itemsDiv.innerHTML = cart.map(i => { total += i.price * i.quantity; return `<div>${i.name} x${i.quantity} = ${(i.price*i.quantity).toLocaleString()} دج <button onclick="removeFromCart(${i.productId})">🗑️</button></div>`; }).join('');
     if(totalSpan) totalSpan.textContent = `${total.toLocaleString()} دج`;
 }
-function updateCartItem(id, qty) { const i = cart.find(i=>i.productId==id); if(i && qty>0) i.quantity = qty; else removeFromCart(id); saveCart(); updateCartCounter(); updateCartDisplay(); }
-function removeFromCart(id) { cart = cart.filter(i=>i.productId!=id); saveCart(); updateCartCounter(); updateCartDisplay(); showNotification('تمت الإزالة', 'info'); }
+function removeFromCart(id) { cart = cart.filter(i => i.productId != id); saveCart(); updateCartCounter(); updateCartDisplay(); showNotification('تمت الإزالة', 'info'); }
 
-// ===== [4.19] إتمام الشراء =====
+// ===== [4.16] إتمام الشراء =====
 async function checkoutCart() {
     if (cart.length === 0) return showNotification('السلة فارغة', 'warning');
     if (!currentUser) return openLoginModal();
@@ -529,7 +471,7 @@ async function checkoutCart() {
     showNotification(`✅ تم إرسال طلبك ${orderId}`, 'success');
 }
 
-// ===== [4.20] عرض تفاصيل المنتج =====
+// ===== [4.17] عرض تفاصيل المنتج =====
 function viewProductDetails(id) {
     const p = products.find(p=>p.id==id);
     if(!p) return;
@@ -540,7 +482,7 @@ function viewProductDetails(id) {
     modal.style.display = 'flex';
 }
 
-// ===== [4.21] إدارة المستخدمين =====
+// ===== [4.18] إدارة المستخدمين =====
 function openLoginModal() { document.getElementById('loginModal').style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function switchAuthTab(tab) {
@@ -557,59 +499,105 @@ async function handleRegister() {
     switchAuthTab('login');
 }
 
-// ===== [4.22] لوحة التاجر =====
+// ===== [4.19] تحديث الواجهة =====
+function updateUIBasedOnRole() {
+    const userBtn = document.getElementById('userBtn');
+    const dashboardBtn = document.getElementById('dashboardBtn');
+    const merchantPanel = document.getElementById('merchantPanelContainer');
+    
+    if (!currentUser) {
+        if (userBtn) userBtn.innerHTML = '<i class="fas fa-user"></i><span>حسابي</span>';
+        if (dashboardBtn) dashboardBtn.style.display = 'none';
+        if (merchantPanel) merchantPanel.style.display = 'none';
+        return;
+    }
+    
+    if (userBtn) {
+        if (currentUser.role === 'admin') userBtn.innerHTML = '<i class="fas fa-crown" style="color:#ffd700"></i><span>المدير</span>';
+        else if (currentUser.role === 'merchant_approved') userBtn.innerHTML = '<i class="fas fa-store" style="color:#ffd700"></i><span>التاجر</span>';
+        else userBtn.innerHTML = '<i class="fas fa-user"></i><span>حسابي</span>';
+    }
+    
+    if (currentUser.role === 'admin') {
+        if (dashboardBtn) dashboardBtn.style.display = 'flex';
+        document.getElementById('dashboardSection').style.display = 'block';
+        showDashboardOverview();
+    }
+    if (currentUser.role === 'merchant_approved') {
+        if (merchantPanel) merchantPanel.style.display = 'block';
+        showMerchantPanel();
+    }
+}
+
 function showMerchantPanel() {
     const merchantProducts = products.filter(p => p.merchantName === currentUser?.storeName);
     const panel = document.getElementById('merchantPanelContainer');
     if(!panel) return;
     panel.innerHTML = `<div style="background:var(--glass);border:2px solid var(--gold);border-radius:20px;padding:30px;margin:20px 0"><h2>🏪 ${currentUser.storeName}</h2><div>المنتجات: ${merchantProducts.length}</div><button class="btn-gold" onclick="showAddProductModal()">➕ إضافة منتج</button></div>`;
 }
+
 function showAddProductModal() { if(currentUser && (currentUser.role==='admin'||currentUser.role==='merchant_approved')) document.getElementById('productModal').style.display='flex'; else showNotification('غير مصرح','error'); }
 
-// ===== [4.23] لوحة المدير =====
+// ===== [4.20] لوحة المدير =====
 function openDashboard() { if(currentUser?.role==='admin') document.getElementById('dashboardSection').style.display='block'; showDashboardOverview(); }
 function showDashboardOverview() { document.getElementById('dashboardContent').innerHTML = `<h3>📊 نظرة عامة</h3><div>المنتجات: ${products.length}</div><div>المستخدمين: ${users.length}</div><div>التجار: ${users.filter(u=>u.role==='merchant_approved').length}</div><button onclick="showDashboardMerchants()">📋 طلبات التجار</button>`; }
 function showDashboardMerchants() { const pending = users.filter(u=>u.role==='merchant_pending'); document.getElementById('dashboardContent').innerHTML = `<h3>طلبات التجار</h3>${pending.map(m=>`<div><h4>${m.storeName}</h4><button onclick="approveMerchant(${m.id})">✅ موافقة</button><button onclick="rejectMerchant(${m.id})">❌ رفض</button></div>`).join('')}<button onclick="showDashboardOverview()">رجوع</button>`; }
-function approveMerchant(id) { const u = users.find(u=>u.id==id); if(u) { u.role='merchant_approved'; localStorage.setItem('nardoo_users',JSON.stringify(users)); showNotification('✅ تمت الموافقة','success'); showDashboardMerchants(); } }
-function rejectMerchant(id) { const u = users.find(u=>u.id==id); if(u) { u.role='customer'; localStorage.setItem('nardoo_users',JSON.stringify(users)); showNotification('❌ تم الرفض','info'); showDashboardMerchants(); } }
+function approveMerchant(id) { const u = users.find(u=>u.id==id); if(u) { u.role='merchant_approved'; localStorage.setItem('nardoo_users',JSON.stringify(users)); showNotification('✅ تمت الموافقة','success'); showDashboardMerchants(); sendTelegramMessage(`✅ تمت الموافقة على تاجر: ${u.name}`); } }
+function rejectMerchant(id) { const u = users.find(u=>u.id==id); if(u) { u.role='customer'; localStorage.setItem('nardoo_users',JSON.stringify(users)); showNotification('❌ تم الرفض','info'); showDashboardMerchants(); sendTelegramMessage(`❌ تم رفض تاجر: ${u.name}`); } }
 
-// ===== [4.24] إرسال طلبات التجار =====
+// ===== [4.21] إرسال الطلبات =====
 async function sendMerchantRequestToTelegram(merchant) {
     const message = `🔵 *طلب انضمام تاجر جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم: ${merchant.id}\n🏪 المتجر: ${merchant.storeName}\n👤 التاجر: ${merchant.name}\n📧 البريد: ${merchant.email}`;
     await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode:'Markdown' }) });
 }
 async function sendTelegramMessage(msg) { try{ await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode:'Markdown' }) }); } catch(e){} }
 
-// ===== [4.25] دوال إضافية =====
+// ===== [4.22] دوال إضافية =====
 function findProductById() { const id = prompt('أدخل المعرف'); if(id) { const p = products.find(p=>p.id==id); if(p) viewProductDetails(p.id); else alert('غير موجود'); } }
 function scrollToTop() { window.scrollTo({top:0,behavior:'smooth'}); }
 function scrollToBottom() { window.scrollTo({top:document.documentElement.scrollHeight,behavior:'smooth'}); }
 function toggleTheme() { isDarkMode = !isDarkMode; document.body.classList.toggle('light-mode',!isDarkMode); localStorage.setItem('theme',isDarkMode?'dark':'light'); }
 function showWelcomePopup(user) { alert(`مرحباً ${user.name}!`); }
 
-// ===== [4.26] التهيئة النهائية =====
+// ===== [4.23] التهيئة النهائية - تطبيق الفكرة =====
 window.onload = async function() {
+    console.log('🚀 بدء التهيئة...');
+    
+    // الخطوة 1: إرسال المدير إلى القناة
     await sendAdminToChannel();
+    
+    // تحميل البيانات
     loadLocalUsers();
+    
     const savedProducts = localStorage.getItem('nardoo_products');
     if (savedProducts) { products = JSON.parse(savedProducts); displayProducts(); }
+    
     await loadProducts();
     loadCart();
+    
+    // استعادة الجلسة
     const savedUser = localStorage.getItem('current_user');
     if (savedUser) {
         const parsed = JSON.parse(savedUser);
-        if (parsed.id === 19862 && parsed.password === '19862') { currentUser = FIXED_ADMIN; updateUIBasedOnRole(); }
-        else { const localUser = users.find(u=>u.id===parsed.id); if(localUser) currentUser = localUser; updateUIBasedOnRole(); }
+        const localUser = users.find(u => u.id === parsed.id);
+        if (localUser) {
+            currentUser = localUser;
+            updateUIBasedOnRole();
+        }
     }
+    
+    // استعادة الثيم
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) { isDarkMode = savedTheme === 'dark'; document.body.classList.toggle('light-mode',!isDarkMode); }
+    
     setTimeout(() => { const loader = document.getElementById('loader'); if(loader) loader.style.display = 'none'; }, 1000);
-    console.log('✅ النظام جاهز - المدير: azer / 19862');
+    
+    console.log('✅ النظام جاهز - يمكن تسجيل الدخول كمدير: azer / 19862');
 };
 
 window.onclick = function(e) { if(e.target.classList?.contains('modal')) e.target.style.display = 'none'; };
 
-// ===== [4.27] تصدير الدوال =====
+// ===== [4.24] تصدير الدوال =====
 window.saveProduct = saveProduct;
 window.closeModal = closeModal;
 window.showNotification = showNotification;
@@ -619,7 +607,6 @@ window.filterProducts = filterProducts;
 window.searchProducts = searchProducts;
 window.addToCart = addToCart;
 window.toggleCart = toggleCart;
-window.updateCartItem = updateCartItem;
 window.removeFromCart = removeFromCart;
 window.checkoutCart = checkoutCart;
 window.viewProductDetails = viewProductDetails;
@@ -641,7 +628,8 @@ window.rejectMerchant = rejectMerchant;
 window.logoutUser = logoutUser;
 window.showWelcomePopup = showWelcomePopup;
 window.sendAdminToChannel = sendAdminToChannel;
+window.fetchAdminFromChannel = fetchAdminFromChannel;
 
 console.log('✅ نظام تلغرام المتكامل جاهز (55 نقطة)');
-console.log('👑 المدير: azer / 19862');
-console.log('📌 تم إرسال بيانات المدير إلى القناة');
+console.log('👑 تسجيل الدخول: azer / 19862');
+console.log('📡 تم تطبيق فكرة: إرسال ← جلب ← مقارنة ← نجاح');
