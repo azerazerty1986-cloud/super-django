@@ -947,6 +947,22 @@ function closeModal(modalId) {
     if (modal) modal.style.display = 'none';
 }
 
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+// 🔴                         الإضافة الجديدة                           🔴
+// 🔴 ============== [4.29.1] فتح نافذة تسجيل الدخول ============== 🔴
+// 🔴                                                                  🔴
+function openLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('✅ تم فتح نافذة تسجيل الدخول');
+    } else {
+        console.error('❌ عنصر loginModal غير موجود في الصفحة');
+    }
+}
+// 🔴                                                                  🔴
+// 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴 🔴
+
 // ===== [4.30] تحديث الواجهة حسب دور المستخدم =====
 function updateUIBasedOnRole() {
     if (!currentUser) return;
@@ -1611,6 +1627,7 @@ window.saveProduct = saveProduct;
 window.addProductToTelegram = addProductToTelegram;
 window.handleImageUpload = handleImageUpload;
 window.closeModal = closeModal;
+window.openLoginModal = openLoginModal;  // 🔴 تمت إضافة هذا السطر
 window.showNotification = showNotification;
 window.loadProducts = loadProducts;
 window.displayProducts = displayProducts;
@@ -1622,7 +1639,6 @@ window.updateCartItem = updateCartItem;
 window.removeFromCart = removeFromCart;
 window.checkoutCart = checkoutCart;
 window.viewProductDetails = viewProductDetails;
-window.openLoginModal = openLoginModal;
 window.showAddProductModal = showAddProductModal;
 window.findProductById = findProductById;
 window.scrollToTop = scrollToTop;
