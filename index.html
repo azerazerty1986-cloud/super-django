@@ -445,7 +445,7 @@
             padding-top: 15px;
         }
         
-        /* زر المخزون المتكامل */
+        /* ===== زر المخزون المتكامل (يظهر للمدير والتجار فقط) ===== */
         .inventory-link-btn {
             background: rgba(255,215,0,0.2);
             border-radius: 50%;
@@ -524,9 +524,11 @@
             </div>
                
             <div class="header-actions">
-                <!-- أيقونة فتح ملف inventory-cart-complete.html -->
-                <div class="inventory-link-btn" onclick="openInventoryComplete()" title="نظام المخزون المتكامل">
-                    <i class="fas fa-boxes"></i>
+                <!-- أيقونة المخزون المتكامل (تظهر للمدير والتجار فقط) -->
+                <div id="inventoryIconContainer" style="display: none;">
+                    <div class="inventory-link-btn" onclick="openInventoryComplete()" title="نظام إدارة المخزون المتكامل">
+                        <i class="fas fa-boxes"></i>
+                    </div>
                 </div>
                 <button class="action-btn" onclick="openLoginModal()" id="userBtn">
                     <i class="far fa-user"></i>
@@ -648,8 +650,10 @@
         <a class="nav-link" id="inventoryBtn" onclick="App.showInventory()" style="display:none;"><i class="fas fa-boxes"></i> المخزون</a>
         <a class="nav-link" id="deliveryBtn" onclick="App.showDeliveryDashboard()" style="display:none;"><i class="fas fa-truck"></i> التوصيل</a>
         <a class="nav-link" id="analyticsBtn" onclick="App.showAnalytics()" style="display:none;"><i class="fas fa-chart-line"></i> الإحصائيات</a>
-        <!-- رابط المخزون المتكامل في القائمة -->
-        <a class="nav-link" onclick="openInventoryComplete()"><i class="fas fa-archive"></i> المخزون المتكامل</a>
+        <!-- رابط المخزون المتكامل في القائمة (يظهر للمدير والتجار فقط) -->
+        <a class="nav-link" id="inventoryCompleteLink" onclick="openInventoryComplete()" style="display:none;">
+            <i class="fas fa-archive"></i> المخزون المتكامل
+        </a>
     </nav>
     
     <!-- ===== [02] الناشرون ===== -->
@@ -671,10 +675,10 @@
                 </div>
                 <div class="footer-col">
                     <h3>روابط سريعة</h3>
-                    <p><a href="#" onclick="filterProducts('all')">الرئيسية</a></p>
-                    <p><a href="#" onclick="filterProducts('promo')">برموسيو</a></p>
-                    <p><a href="#" onclick="filterProducts('spices')">توابل</a></p>
-                    <p><a href="#" onclick="filterProducts('cosmetic')">كوسمتيك</a></p>
+                    <p><a href="#" onclick="App.filterProducts('all')">الرئيسية</a></p>
+                    <p><a href="#" onclick="App.filterProducts('promo')">برموسيو</a></p>
+                    <p><a href="#" onclick="App.filterProducts('spices')">توابل</a></p>
+                    <p><a href="#" onclick="App.filterProducts('cosmetic')">كوسمتيك</a></p>
                 </div>
                 <div class="footer-col">
                     <h3>مساعدة</h3>
@@ -946,9 +950,45 @@
             }
         };
         
-        // ===== دالة فتح ملف المخزون المتكامل =====
+        // ===== دالة فتح نظام المخزون المتكامل (للمدير والتجار فقط) =====
         function openInventoryComplete() {
-            window.location.href = 'inventory-cart-complete.html';
+            // التحقق من وجود مستخدم مسجل الدخول
+            const currentUser = Auth.getCurrentUser();
+            
+            if (!currentUser) {
+                Utils.showNotification('⚠️ يرجى تسجيل الدخول أولاً', 'warning');
+                openLoginModal();
+                return;
+            }
+            
+            // التحقق من الصلاحيات: مدير أو تاجر فقط
+            if (currentUser.role === 'admin' || currentUser.role === 'merchant') {
+                // محاولة فتح الملف في نفس النافذة
+                try {
+                    window.location.href = 'inventory-cart-complete.html';
+                } catch(e) {
+                    Utils.showNotification('❌ الملف غير موجود، يرجى التأكد من وجود inventory-cart-complete.html', 'error');
+                }
+            } else {
+                Utils.showNotification('⛔ غير مصرح لك بالدخول - هذا القسم للمدير والتجار فقط', 'error');
+            }
+        }
+        
+        // ===== دالة تحديث ظهور أيقونة المخزون =====
+        function updateInventoryIconVisibility() {
+            const currentUser = Auth.getCurrentUser();
+            const iconContainer = document.getElementById('inventoryIconContainer');
+            const inventoryCompleteLink = document.getElementById('inventoryCompleteLink');
+            
+            // تظهر فقط للمدير أو التاجر
+            const shouldShow = currentUser && (currentUser.role === 'admin' || currentUser.role === 'merchant');
+            
+            if (iconContainer) {
+                iconContainer.style.display = shouldShow ? 'block' : 'none';
+            }
+            if (inventoryCompleteLink) {
+                inventoryCompleteLink.style.display = shouldShow ? 'inline-flex' : 'none';
+            }
         }
         
         // ===== نظام المصادقة =====
@@ -1016,6 +1056,9 @@
                     if (analyticsBtn) analyticsBtn.style.display = 'none';
                     if (addReelLink) addReelLink.style.display = 'none';
                 }
+                
+                // تحديث ظهور أيقونة المخزون المتكامل
+                updateInventoryIconVisibility();
             },
             logout: function() {
                 localStorage.removeItem('currentUserId');
@@ -1412,7 +1455,7 @@
         console.log('✅ النظام جاهز');
         console.log('📌 مستخدم تجريبي: user@demo.com / 123456');
         console.log('📌 مدير: عبر تلغرام - إرسال رمز إلى القناة');
-        console.log('📌 أيقونة المخزون المتكامل: زر بجانب الأيقونات العلوية و رابط في القائمة');
+        console.log('📌 أيقونة المخزون المتكامل تظهر فقط للمدير والتجار');
     </script>
 </body>
 </html>
