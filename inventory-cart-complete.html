@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو برو | متجر احترافي متكامل</title>
+    <title>ناردو برو | متجر احترافي متكامل - نشر تلقائي لتلجرام</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +31,7 @@
             --info: #60a5fa;
             --purple: #a855f7;
             --dark-card: #0f0f1a;
+            --telegram: #0088cc;
         }
 
         body {
@@ -158,6 +159,17 @@
             box-shadow: 0 8px 22px rgba(255,215,0,0.35);
         }
 
+        .btn-telegram {
+            background: linear-gradient(135deg, #0088cc, #006699);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,136,204,0.3);
+        }
+
+        .btn-telegram:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0,136,204,0.4);
+        }
+
         .btn-outline {
             background: transparent;
             border: 2px solid var(--gold);
@@ -267,6 +279,25 @@
             transform: translateY(-8px);
             border-color: rgba(255,215,0,0.6);
             box-shadow: 0 25px 35px -12px rgba(0,0,0,0.5);
+        }
+
+        .telegram-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(135deg, #0088cc, #006699);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .telegram-badge i {
+            font-size: 12px;
         }
 
         .product-images {
@@ -552,6 +583,24 @@
             color: #aaa;
         }
 
+        .publish-status {
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .published {
+            background: rgba(0,136,204,0.2);
+            color: #0088cc;
+        }
+
+        .not-published {
+            background: rgba(255,215,0,0.2);
+            color: var(--gold);
+        }
+
         @media (max-width: 680px) {
             .products-grid { grid-template-columns: 1fr; }
             .header { flex-direction: column; text-align: center; }
@@ -566,10 +615,11 @@
             <i class="fas fa-crown"></i>
             <div>
                 <h1>ناردو برو | المتجر الذهبي</h1>
-                <p>إدارة متقدمة - مخزون - منتجات - طلبات فورية</p>
+                <p>إدارة متقدمة - نشر تلقائي لتلجرام - مخزون - منتجات - طلبات فورية</p>
             </div>
         </div>
         <div class="stats">
+            <div class="stat-card"><i class="fab fa-telegram"></i><div class="number" id="statTelegram">✅</div><div class="label">البوت نشط</div></div>
             <div class="stat-card"><i class="fas fa-store"></i><div class="number" id="statTotal">0</div><div class="label">المنتجات</div></div>
             <div class="stat-card"><i class="fas fa-clipboard-list"></i><div class="number" id="statOrders">0</div><div class="label">الطلبات</div></div>
         </div>
@@ -577,6 +627,7 @@
 
     <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
         <button class="btn btn-gold" onclick="openAddProductModal()"><i class="fas fa-plus-circle"></i> إضافة منتج</button>
+        <button class="btn btn-telegram" onclick="testTelegramConnection()"><i class="fab fa-telegram"></i> اختبار اتصال تلجرام</button>
         <button class="btn btn-outline" onclick="window.location.reload()"><i class="fas fa-sync-alt"></i> تحديث</button>
     </div>
 
@@ -597,7 +648,7 @@
     <div id="inventoryTab" class="tab-content" style="display: none;">
         <div class="table-wrapper">
             <table>
-                <thead><tr><th>المنتج</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                <thead><tr><th>المنتج</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th>تلجرام</th><th>الإجراءات</th></tr></thead>
                 <tbody id="inventoryTable"></tbody>
             </table>
         </div>
@@ -618,20 +669,25 @@
     </div>
 </div>
 
-<div class="footer"><p>© 2026 ناردو برو - نظام متجر احترافي | إدارة متكاملة بدون سلة</p></div>
+<div class="footer"><p>© 2026 ناردو برو - نظام متجر احترافي | النشر التلقائي إلى قناة التلجرام</p></div>
 
 <!-- مودال إضافة منتج -->
 <div id="addProductModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header"><h2><i class="fas fa-gem"></i> منتج جديد</h2><button class="close-modal" onclick="closeAddProductModal()">&times;</button></div>
-        <form onsubmit="event.preventDefault(); addProduct();">
+        <div class="modal-header"><h2><i class="fas fa-gem"></i> منتج جديد - ينشر تلقائياً لتلجرام</h2><button class="close-modal" onclick="closeAddProductModal()">&times;</button></div>
+        <form onsubmit="event.preventDefault(); addProductAndPublish();">
             <div class="form-group"><label>اسم المنتج *</label><input type="text" id="productName" required></div>
-            <div class="form-group"><label>الوصف</label><textarea id="productDesc" rows="2"></textarea></div>
+            <div class="form-group"><label>الوصف</label><textarea id="productDesc" rows="2" placeholder="وصف المنتج..."></textarea></div>
             <div class="form-group"><label>السعر (دج) *</label><input type="number" id="productPrice" required min="0"></div>
             <div class="form-group"><label>الكمية الأولية *</label><input type="number" id="productQty" required min="0"></div>
-            <div class="form-group"><label>القسم</label><select id="productCategory"><option>توابل</option><option>كوسمتيك</option><option>بروموسيو</option><option>أخرى</option></select></div>
-            <div class="form-group"><label>صور المنتج</label><div class="image-upload" onclick="document.getElementById('productImages').click()"><i class="fas fa-cloud-upload-alt fa-2x"></i><p>اضغط لرفع الصور</p><input type="file" id="productImages" multiple accept="image/*" style="display:none" onchange="previewImages(this)"></div><div id="imagePreview" class="image-preview"></div></div>
-            <button type="submit" class="btn btn-gold" style="width:100%">حفظ المنتج</button>
+            <div class="form-group"><label>القسم</label><select id="productCategory">
+                <option value="توابل">توابل</option>
+                <option value="كوسمتيك">كوسمتيك</option>
+                <option value="بروموسيو">بروموسيو</option>
+                <option value="أخرى">أخرى</option>
+            </select></div>
+            <div class="form-group"><label>صور المنتج *</label><div class="image-upload" onclick="document.getElementById('productImages').click()"><i class="fas fa-cloud-upload-alt fa-2x"></i><p>اضغط لرفع الصور (ستنشر مع المنتج)</p><input type="file" id="productImages" multiple accept="image/*" style="display:none" onchange="previewImages(this)"></div><div id="imagePreview" class="image-preview"></div></div>
+            <button type="submit" class="btn btn-gold" style="width:100%"><i class="fab fa-telegram"></i> حفظ ونشر إلى تلجرام</button>
         </form>
     </div>
 </div>
@@ -655,26 +711,220 @@
 <div id="imageViewerModal" class="modal"><div class="modal-content" style="max-width:700px"><div class="modal-header"><h2>معرض الصور</h2><button class="close-modal" onclick="closeImageViewer()">&times;</button></div><div style="text-align:center"><img id="currentImage" style="max-width:100%; max-height:350px; border-radius:20px; margin-bottom:15px;"><div id="imageThumbnails" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;"></div></div></div></div>
 
 <script>
-    // ---------- البيانات الأساسية (تم حذف السلة نهائياً) ----------
+    // ===== إعدادات تلغرام =====
+    const TELEGRAM_CONFIG = {
+        botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
+        channelId: '-1003822964890',
+        apiUrl: 'https://api.telegram.org/bot'
+    };
+
+    // ===== البيانات الأساسية =====
     let products = JSON.parse(localStorage.getItem('nardo_products') || '[]');
     let orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
     let stockLog = JSON.parse(localStorage.getItem('nardo_stock_log') || '[]');
     let editProductId = null;
     let currentImages = [];
 
-    // تبويبات
-    function showTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.getElementById(tab + 'Tab').style.display = 'block';
-        document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        if (tab === 'products') renderProducts();
-        if (tab === 'inventory') renderInventory();
-        if (tab === 'stockLog') renderStockLog();
-        if (tab === 'orders') renderOrders();
+    // ===== دوال تلغرام =====
+    async function testTelegramConnection() {
+        showToast('🔍 جاري اختبار الاتصال بتلجرام...', 'info');
+        try {
+            const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/getMe`);
+            const data = await response.json();
+            if (data.ok) {
+                showToast(`✅ البوت متصل بنجاح! الاسم: ${data.result.first_name}`, 'success');
+                document.getElementById('statTelegram').innerHTML = '✅';
+            } else {
+                showToast('❌ فشل الاتصال بالبوت', 'error');
+                document.getElementById('statTelegram').innerHTML = '❌';
+            }
+        } catch (error) {
+            showToast('❌ خطأ في الاتصال: ' + error.message, 'error');
+            document.getElementById('statTelegram').innerHTML = '❌';
+        }
     }
 
-    // معاينة الصور
+    async function sendToTelegram(product, imageFile) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = async function() {
+                try {
+                    showToast('📤 جاري النشر إلى تلجرام...', 'info');
+                    
+                    // إنشاء نص المنشور
+                    const caption = `🟣 *منتج جديد في ناردو برو*
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *المنتج:* ${product.name}
+💰 *السعر:* ${product.price.toLocaleString()} دج
+🏷️ *القسم:* ${product.category}
+📊 *الكمية:* ${product.quantity}
+📝 *الوصف:* ${product.description || 'منتج ممتاز وعالي الجودة'}
+
+🛒 *للطلب:* التواصل عبر المتجر
+📅 ${new Date().toLocaleString('ar-EG', {timeZone: 'Africa/Algiers'})}
+
+#ناردو_برو #${product.category.replace(' ', '_')}`;
+
+                    // تحويل الصورة إلى Blob
+                    const blob = await (await fetch(reader.result)).blob();
+                    const formData = new FormData();
+                    formData.append('chat_id', TELEGRAM_CONFIG.channelId);
+                    formData.append('photo', blob, 'product.jpg');
+                    formData.append('caption', caption);
+                    formData.append('parse_mode', 'Markdown');
+
+                    const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.ok) {
+                        showToast(`✅ تم النشر بنجاح! معرف المنشور: ${data.result.message_id}`, 'success');
+                        resolve({ success: true, messageId: data.result.message_id, telegramId: data.result.message_id });
+                    } else {
+                        showToast('❌ فشل النشر: ' + data.description, 'error');
+                        reject(new Error(data.description));
+                    }
+                } catch (error) {
+                    showToast('❌ خطأ في النشر: ' + error.message, 'error');
+                    reject(error);
+                }
+            };
+            reader.readAsDataURL(imageFile);
+        });
+    }
+
+    // ===== دالة رئيسية لإضافة المنتج ونشره =====
+    async function addProductAndPublish() {
+        const name = document.getElementById('productName').value.trim();
+        const price = parseInt(document.getElementById('productPrice').value);
+        const quantity = parseInt(document.getElementById('productQty').value);
+        const description = document.getElementById('productDesc').value;
+        const category = document.getElementById('productCategory').value;
+        
+        if (!name) { showToast('الرجاء إدخال اسم المنتج', 'error'); return; }
+        if (isNaN(price) || price <= 0) { showToast('الرجاء إدخال سعر صحيح', 'error'); return; }
+        if (isNaN(quantity) || quantity < 0) { showToast('الرجاء إدخال كمية صحيحة', 'error'); return; }
+        
+        const imageInput = document.getElementById('productImages');
+        if (!imageInput.files || imageInput.files.length === 0) {
+            showToast('الرجاء اختيار صورة للمنتج للنشر في تلجرام', 'error');
+            return;
+        }
+        
+        const imageFile = imageInput.files[0];
+        
+        // إنشاء المنتج
+        const newProduct = {
+            id: Date.now(),
+            name: name,
+            price: price,
+            quantity: quantity,
+            description: description,
+            category: category,
+            images: currentImages.length > 0 ? currentImages : [],
+            createdAt: new Date().toISOString(),
+            published: false,
+            telegramId: null
+        };
+        
+        // النشر إلى تلجرام
+        try {
+            const result = await sendToTelegram(newProduct, imageFile);
+            newProduct.published = true;
+            newProduct.telegramId = result.messageId;
+            newProduct.publishedAt = new Date().toISOString();
+            
+            // حفظ المنتج
+            products.push(newProduct);
+            localStorage.setItem('nardo_products', JSON.stringify(products));
+            
+            // تسجيل في سجل المخزون
+            addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'إضافة منتج جديد ونشره لتلجرام');
+            
+            // تحديث الواجهة
+            renderProducts();
+            renderInventory();
+            renderStockLog();
+            updateStats();
+            
+            showToast(`✅ تم إضافة المنتج "${name}" ونشره إلى تلجرام بنجاح!`, 'success');
+            closeAddProductModal();
+            
+        } catch (error) {
+            showToast('❌ فشل النشر إلى تلجرام، ولكن تم حفظ المنتج محلياً', 'warning');
+            newProduct.published = false;
+            products.push(newProduct);
+            localStorage.setItem('nardo_products', JSON.stringify(products));
+            renderProducts();
+            renderInventory();
+            updateStats();
+            closeAddProductModal();
+        }
+    }
+
+    // ===== دالة إعادة النشر إلى تلجرام =====
+    async function republishToTelegram(productId) {
+        const product = products.find(p => p.id === productId);
+        if (!product) { showToast('المنتج غير موجود', 'error'); return; }
+        
+        if (!product.images || product.images.length === 0) {
+            showToast('لا توجد صور للمنتج لإعادة النشر', 'error');
+            return;
+        }
+        
+        showToast('📤 جاري إعادة النشر إلى تلجرام...', 'info');
+        
+        try {
+            // تحويل الصورة من base64 إلى blob
+            const response = await fetch(product.images[0]);
+            const blob = await response.blob();
+            
+            const caption = `🟣 *تحديث منتج - ناردو برو*
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *المنتج:* ${product.name}
+💰 *السعر:* ${product.price.toLocaleString()} دج
+🏷️ *القسم:* ${product.category}
+📊 *الكمية:* ${product.quantity}
+📝 *الوصف:* ${product.description || 'منتج ممتاز وعالي الجودة'}
+
+🛒 *للطلب:* التواصل عبر المتجر
+📅 ${new Date().toLocaleString('ar-EG', {timeZone: 'Africa/Algiers'})}
+
+#ناردو_برو #${product.category.replace(' ', '_')}`;
+
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM_CONFIG.channelId);
+            formData.append('photo', blob, 'product.jpg');
+            formData.append('caption', caption);
+            formData.append('parse_mode', 'Markdown');
+
+            const telegramResponse = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await telegramResponse.json();
+            
+            if (data.ok) {
+                product.telegramId = data.result.message_id;
+                product.published = true;
+                product.lastRepublished = new Date().toISOString();
+                localStorage.setItem('nardo_products', JSON.stringify(products));
+                showToast(`✅ تم إعادة نشر المنتج بنجاح!`, 'success');
+                renderProducts();
+                renderInventory();
+            } else {
+                showToast('❌ فشل إعادة النشر: ' + data.description, 'error');
+            }
+        } catch (error) {
+            showToast('❌ خطأ في إعادة النشر: ' + error.message, 'error');
+        }
+    }
+
+    // ===== باقي دوال النظام الأساسية =====
     function previewImages(input) {
         const preview = document.getElementById('imagePreview');
         preview.innerHTML = '';
@@ -692,9 +942,12 @@
             reader.readAsDataURL(file);
         }
     }
+    
     function removeImage(idx) { currentImages.splice(idx,1); renderImagePreview(); }
+    
     function renderImagePreview() {
         const preview = document.getElementById('imagePreview');
+        if(!preview) return;
         preview.innerHTML = '';
         currentImages.forEach((img,i) => {
             const div = document.createElement('div');
@@ -704,7 +957,6 @@
         });
     }
 
-    // عرض المنتجات
     function renderProducts() {
         const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
         const filtered = products.filter(p => p.name.toLowerCase().includes(search));
@@ -714,11 +966,36 @@
             let stockClass = p.quantity > 10 ? 'stock-high' : (p.quantity > 0 ? 'stock-low' : 'stock-out');
             let stockText = p.quantity > 10 ? 'متوفر بكثرة' : (p.quantity > 0 ? 'مخزون محدود' : 'غير متوفر');
             let imagesHtml = p.images && p.images.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}" onclick="viewImages(${p.id})">`).join('')}${p.images.length>3?`<div class="product-icon" style="width:70px;height:70px;cursor:pointer" onclick="viewImages(${p.id})"><i class="fas fa-ellipsis-h"></i> +${p.images.length-3}</div>`:''}</div>` : `<div class="product-icon"><i class="fas fa-tag"></i></div>`;
-            return `<div class="product-card">${imagesHtml}<div class="product-name">${p.name}</div><div class="product-price">${p.price.toLocaleString()} دج</div><div><span class="stock-badge ${stockClass}">${stockText} (${p.quantity})</span></div><div class="product-actions"><button class="btn btn-gold" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب مباشر</button><button class="btn btn-purple" onclick="publishProduct(${p.id})"><i class="fas fa-share-alt"></i> نشر</button></div></div>`;
+            const publishStatus = p.published ? 
+                `<span class="publish-status published"><i class="fab fa-telegram"></i> منشور (ID: ${p.telegramId || '✓'})</span>` : 
+                `<span class="publish-status not-published"><i class="fab fa-telegram"></i> غير منشور</span>`;
+            return `<div class="product-card">
+                ${p.published ? `<div class="telegram-badge"><i class="fab fa-telegram"></i> منشور</div>` : ''}
+                ${imagesHtml}
+                <div class="product-name">${p.name}</div>
+                <div class="product-price">${p.price.toLocaleString()} دج</div>
+                <div><span class="stock-badge ${stockClass}">${stockText} (${p.quantity})</span></div>
+                <div>${publishStatus}</div>
+                <div class="product-actions">
+                    <button class="btn btn-gold" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب مباشر</button>
+                    ${!p.published ? `<button class="btn btn-telegram" onclick="republishToTelegram(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : ''}
+                    <button class="btn btn-purple" onclick="shareProductLink(${p.id})"><i class="fas fa-share-alt"></i> مشاركة</button>
+                </div>
+            </div>`;
         }).join('');
     }
 
-    // الطلب المباشر بدون سلة
+    function shareProductLink(productId) {
+        const product = products.find(p => p.id === productId);
+        if(product && product.telegramId) {
+            const link = `https://t.me/c/${TELEGRAM_CONFIG.channelId.replace('-100', '')}/${product.telegramId}`;
+            navigator.clipboard.writeText(link);
+            showToast('📎 تم نسخ رابط المنتج من تلجرام!', 'success');
+        } else {
+            showToast('المنتج لم ينشر بعد على تلجرام', 'warning');
+        }
+    }
+
     function quickOrder(productId) {
         const product = products.find(p => p.id === productId);
         if(!product || product.quantity <= 0) { showToast('المنتج غير متوفر حالياً', 'error'); return; }
@@ -727,7 +1004,6 @@
         let quantityInt = parseInt(qty);
         if(isNaN(quantityInt) || quantityInt <=0) { showToast('كمية غير صالحة', 'error'); return; }
         if(quantityInt > product.quantity) { showToast(`الكمية المتاحة فقط ${product.quantity}`, 'warning'); return; }
-        // إنشاء الطلب
         const total = product.price * quantityInt;
         const newOrder = {
             id: Date.now(),
@@ -738,7 +1014,6 @@
         };
         orders.unshift(newOrder);
         localStorage.setItem('nardo_orders', JSON.stringify(orders));
-        // تحديث المخزون
         const oldQty = product.quantity;
         product.quantity -= quantityInt;
         addStockLog(product.id, product.name, 'remove', quantityInt, oldQty, product.quantity, `طلب مباشر #${newOrder.id}`);
@@ -751,9 +1026,6 @@
         showToast(`✅ تم إنشاء الطلب بنجاح! المبلغ: ${total.toLocaleString()} دج`, 'success');
     }
 
-    // نشر تجريبي
-    function publishProduct(id) { showToast('📢 ميزة النشر على المنصات قريباً', 'info'); }
-
     function viewImages(productId) {
         const p = products.find(pr => pr.id === productId);
         if(p && p.images?.length) {
@@ -762,13 +1034,20 @@
             document.getElementById('imageViewerModal').classList.add('active');
         } else showToast('لا توجد صور لهذا المنتج', 'warning');
     }
+    
     function closeImageViewer() { document.getElementById('imageViewerModal').classList.remove('active'); }
 
-    // المخزون
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable');
-        if(!products.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">لا توجد منتجات</td></tr>'; return; }
-        tbody.innerHTML = products.map(p => `<tr><td>${p.name}</td><td>${p.price.toLocaleString()} دج</td><td>${p.quantity}</td><td><span class="stock-badge ${p.quantity>10?'stock-high':(p.quantity>0?'stock-low':'stock-out')}">${p.quantity>0?'متاح':'نفد'}</span></td><td><button class="btn btn-gold" style="padding:6px 16px" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i> تعديل</button></td></tr>`).join('');
+        if(!products.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">لا توجد منتجات</td></tr>'; return; }
+        tbody.innerHTML = products.map(p => `<tr>
+            <td>${p.name}</td>
+            <td>${p.price.toLocaleString()} دج</td>
+            <td>${p.quantity}</td>
+            <td><span class="stock-badge ${p.quantity>10?'stock-high':(p.quantity>0?'stock-low':'stock-out')}">${p.quantity>0?'متاح':'نفد'}</span></td>
+            <td>${p.published ? `<i class="fab fa-telegram" style="color:#0088cc"></i> ${p.telegramId || '✓'}` : '<span style="color:#fbbf24">⏳ غير منشور</span>'}</td>
+            <td><button class="btn btn-gold" style="padding:6px 16px" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i> تعديل</button></td>
+        </tr>`).join('');
     }
 
     function addStockLog(pid, pname, op, qty, oldQ, newQ, reason='') {
@@ -787,6 +1066,7 @@
 
     function openEditStockModal(id) { editProductId=id; const p=products.find(p=>p.id===id); if(p){ document.getElementById('editProductName').value=p.name; document.getElementById('editCurrentQty').value=p.quantity; document.getElementById('editNewQty').value=0; document.getElementById('stockOperation').value='add'; document.getElementById('stockReason').value=''; document.getElementById('editStockModal').classList.add('active'); } }
     function closeEditStockModal() { document.getElementById('editStockModal').classList.remove('active'); editProductId=null; }
+    
     function updateStock() {
         const p=products.find(p=>p.id===editProductId); if(!p) return;
         const op=document.getElementById('stockOperation').value; const qtyVal=parseInt(document.getElementById('editNewQty').value); const reason=document.getElementById('stockReason').value;
@@ -801,29 +1081,19 @@
         closeEditStockModal();
     }
 
-    // الطلبات
     function renderOrders() {
         const container = document.getElementById('ordersContainer');
         if(!orders.length){ container.innerHTML='<div class="order-card" style="text-align:center"><i class="fas fa-inbox fa-3x"></i><p>لا توجد طلبات بعد</p></div>'; return; }
         container.innerHTML = orders.map(order => `<div class="order-card"><div style="display:flex; justify-content:space-between;"><div><i class="fas fa-receipt"></i> <strong>طلب #${order.id}</strong></div><span style="color:var(--gold)">${order.date}</span></div>${order.items.map(it=>`<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ffd70020"><span>${it.name} × ${it.quantity}</span><span>${(it.price*it.quantity).toLocaleString()} دج</span></div>`).join('')}<div style="margin-top:15px; border-top:2px solid gold; padding-top:12px; display:flex; justify-content:space-between"><strong>الإجمالي</strong><strong style="color:var(--success)">${order.total.toLocaleString()} دج</strong></div></div>`).join('');
     }
 
-    // إضافة منتج
-    function openAddProductModal() { document.getElementById('addProductModal').classList.add('active'); }
-    function closeAddProductModal() { document.getElementById('addProductModal').classList.remove('active'); document.getElementById('imagePreview').innerHTML=''; currentImages=[]; document.getElementById('addProductModal').querySelector('form').reset(); }
-    function addProduct() {
-        const name = document.getElementById('productName').value.trim();
-        const price = parseInt(document.getElementById('productPrice').value);
-        const quantity = parseInt(document.getElementById('productQty').value);
-        if(!name || isNaN(price) || price<=0) { showToast('اسم المنتج وسعر صالح مطلوب','error'); return; }
-        const newProd = { id: Date.now(), name, description: document.getElementById('productDesc').value, price, quantity: quantity||0, category: document.getElementById('productCategory').value, images: [...currentImages] };
-        products.push(newProd);
-        localStorage.setItem('nardo_products', JSON.stringify(products));
-        addStockLog(newProd.id, newProd.name, 'add', newProd.quantity, 0, newProd.quantity, 'إضافة منتج جديد');
-        renderProducts(); renderInventory(); renderStockLog(); updateStats();
-        showToast(`✅ تم إضافة ${name}`, 'success');
-        closeAddProductModal();
+    function openAddProductModal() { 
+        document.getElementById('addProductModal').classList.add('active');
+        currentImages = [];
+        document.getElementById('imagePreview').innerHTML = '';
+        document.getElementById('productImages').value = '';
     }
+    function closeAddProductModal() { document.getElementById('addProductModal').classList.remove('active'); document.getElementById('imagePreview').innerHTML=''; currentImages=[]; document.getElementById('addProductModal').querySelector('form').reset(); }
 
     function updateStats() {
         document.getElementById('statTotal').innerText = products.length;
@@ -832,8 +1102,27 @@
 
     function showToast(msg, type) { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
 
-    // البحث
-    document.addEventListener('DOMContentLoaded',()=>{ updateStats(); renderProducts(); if(document.getElementById('searchProducts')) document.getElementById('searchProducts').addEventListener('input',renderProducts); });
+    function showTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.getElementById(tab + 'Tab').style.display = 'block';
+        document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        if (tab === 'products') renderProducts();
+        if (tab === 'inventory') renderInventory();
+        if (tab === 'stockLog') renderStockLog();
+        if (tab === 'orders') renderOrders();
+    }
+
+    // ===== التهيئة =====
+    document.addEventListener('DOMContentLoaded',()=>{ 
+        updateStats(); 
+        renderProducts(); 
+        renderInventory();
+        renderStockLog();
+        renderOrders();
+        testTelegramConnection();
+        if(document.getElementById('searchProducts')) document.getElementById('searchProducts').addEventListener('input',renderProducts); 
+    });
 </script>
 </body>
 </html>
