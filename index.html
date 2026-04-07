@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
+html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -445,26 +445,6 @@
             padding-top: 15px;
         }
         
-        /* ===== زر المخزون المتكامل (يظهر للمدير والتجار فقط) ===== */
-        .inventory-link-btn {
-            background: rgba(255,215,0,0.2);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: gold;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-left: 10px;
-        }
-        .inventory-link-btn:hover {
-            background: gold;
-            color: black;
-            transform: scale(1.05);
-        }
-        
         @media (max-width: 768px) {
             .reel-video-card { width: 220px; }
             .reel-video-placeholder { height: 220px; }
@@ -524,12 +504,6 @@
             </div>
                
             <div class="header-actions">
-                <!-- أيقونة المخزون المتكامل (تظهر للمدير والتجار فقط) -->
-                <div id="inventoryIconContainer" style="display: none;">
-                    <div class="inventory-link-btn" onclick="openInventoryComplete()" title="نظام إدارة المخزون المتكامل">
-                        <i class="fas fa-boxes"></i>
-                    </div>
-                </div>
                 <button class="action-btn" onclick="openLoginModal()" id="userBtn">
                     <i class="far fa-user"></i>
                 </button>
@@ -539,6 +513,9 @@
                 </button>
                 <button class="action-btn" onclick="openDashboard()" id="dashboardBtn" style="display: none;">
                     <i class="fas fa-chart-line"></i>
+                </button>
+                <button class="action-btn" onclick="window.location.href='inventory-cart-complete.html'" id="inventoryCartBtn" title="إدارة المخزون والسلة" style="display: none;">
+                    <i class="fas fa-boxes"></i>
                 </button>
             </div>
         </div>
@@ -562,10 +539,15 @@
                         <i class="fas fa-sync-alt"></i> تحديث
                     </span>
                 </div>
-                <a href="add-reel.html" class="view-all-link" id="addReelLink" style="display: none;">
-                    <span>إضافة مقطع</span>
-                    <i class="fas fa-plus-circle"></i>
-                </a>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <a href="add-reel.html" class="view-all-link" id="addReelLink" style="display: none;">
+                        <span>إضافة مقطع</span>
+                        <i class="fas fa-plus-circle"></i>
+                    </a>
+                    <button class="view-all-link" onclick="window.location.href='add-reel.html'" id="addReelIconBtn" title="إضافة مقطع جديد" style="display: none; background: rgba(255,215,0,0.2); border: none; cursor: pointer; padding: 8px 15px; border-radius: 30px;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
             </div>
             <div class="reels-video-container" id="specialReelsContainer">
                 <div class="loading-reels">
@@ -650,10 +632,6 @@
         <a class="nav-link" id="inventoryBtn" onclick="App.showInventory()" style="display:none;"><i class="fas fa-boxes"></i> المخزون</a>
         <a class="nav-link" id="deliveryBtn" onclick="App.showDeliveryDashboard()" style="display:none;"><i class="fas fa-truck"></i> التوصيل</a>
         <a class="nav-link" id="analyticsBtn" onclick="App.showAnalytics()" style="display:none;"><i class="fas fa-chart-line"></i> الإحصائيات</a>
-        <!-- رابط المخزون المتكامل في القائمة (يظهر للمدير والتجار فقط) -->
-        <a class="nav-link" id="inventoryCompleteLink" onclick="openInventoryComplete()" style="display:none;">
-            <i class="fas fa-archive"></i> المخزون المتكامل
-        </a>
     </nav>
     
     <!-- ===== [02] الناشرون ===== -->
@@ -675,10 +653,10 @@
                 </div>
                 <div class="footer-col">
                     <h3>روابط سريعة</h3>
-                    <p><a href="#" onclick="App.filterProducts('all')">الرئيسية</a></p>
-                    <p><a href="#" onclick="App.filterProducts('promo')">برموسيو</a></p>
-                    <p><a href="#" onclick="App.filterProducts('spices')">توابل</a></p>
-                    <p><a href="#" onclick="App.filterProducts('cosmetic')">كوسمتيك</a></p>
+                    <p><a href="#" onclick="filterProducts('all')">الرئيسية</a></p>
+                    <p><a href="#" onclick="filterProducts('promo')">برموسيو</a></p>
+                    <p><a href="#" onclick="filterProducts('spices')">توابل</a></p>
+                    <p><a href="#" onclick="filterProducts('cosmetic')">كوسمتيك</a></p>
                 </div>
                 <div class="footer-col">
                     <h3>مساعدة</h3>
@@ -950,47 +928,6 @@
             }
         };
         
-        // ===== دالة فتح نظام المخزون المتكامل (للمدير والتجار فقط) =====
-        function openInventoryComplete() {
-            // التحقق من وجود مستخدم مسجل الدخول
-            const currentUser = Auth.getCurrentUser();
-            
-            if (!currentUser) {
-                Utils.showNotification('⚠️ يرجى تسجيل الدخول أولاً', 'warning');
-                openLoginModal();
-                return;
-            }
-            
-            // التحقق من الصلاحيات: مدير أو تاجر فقط
-            if (currentUser.role === 'admin' || currentUser.role === 'merchant') {
-                // محاولة فتح الملف في نفس النافذة
-                try {
-                    window.location.href = 'inventory-cart-complete.html';
-                } catch(e) {
-                    Utils.showNotification('❌ الملف غير موجود، يرجى التأكد من وجود inventory-cart-complete.html', 'error');
-                }
-            } else {
-                Utils.showNotification('⛔ غير مصرح لك بالدخول - هذا القسم للمدير والتجار فقط', 'error');
-            }
-        }
-        
-        // ===== دالة تحديث ظهور أيقونة المخزون =====
-        function updateInventoryIconVisibility() {
-            const currentUser = Auth.getCurrentUser();
-            const iconContainer = document.getElementById('inventoryIconContainer');
-            const inventoryCompleteLink = document.getElementById('inventoryCompleteLink');
-            
-            // تظهر فقط للمدير أو التاجر
-            const shouldShow = currentUser && (currentUser.role === 'admin' || currentUser.role === 'merchant');
-            
-            if (iconContainer) {
-                iconContainer.style.display = shouldShow ? 'block' : 'none';
-            }
-            if (inventoryCompleteLink) {
-                inventoryCompleteLink.style.display = shouldShow ? 'inline-flex' : 'none';
-            }
-        }
-        
         // ===== نظام المصادقة =====
         const Auth = {
             getUsers: function() {
@@ -1021,10 +958,12 @@
                 const currentUser = this.getCurrentUser();
                 const userBtn = document.getElementById('userBtn');
                 const dashboardBtn = document.getElementById('dashboardBtn');
+                const inventoryCartBtn = document.getElementById('inventoryCartBtn');
                 const inventoryBtn = document.getElementById('inventoryBtn');
                 const deliveryBtn = document.getElementById('deliveryBtn');
                 const analyticsBtn = document.getElementById('analyticsBtn');
                 const addReelLink = document.getElementById('addReelLink');
+                const addReelIconBtn = document.getElementById('addReelIconBtn');
                 
                 if (currentUser) {
                     if (userBtn) {
@@ -1034,13 +973,17 @@
                     
                     if (currentUser.role === 'admin') {
                         if (dashboardBtn) dashboardBtn.style.display = 'flex';
+                        if (inventoryCartBtn) inventoryCartBtn.style.display = 'flex';
                         if (inventoryBtn) inventoryBtn.style.display = 'inline-block';
                         if (deliveryBtn) deliveryBtn.style.display = 'inline-block';
                         if (analyticsBtn) analyticsBtn.style.display = 'inline-block';
                         if (addReelLink) addReelLink.style.display = 'flex';
+                        if (addReelIconBtn) addReelIconBtn.style.display = 'flex';
                         Utils.showNotification(`👑 مرحباً المدير ${currentUser.name}`, 'success');
-                    } else if (currentUser.role === 'merchant') {
+                    } else if (currentUser.role === 'merchant' || currentUser.role === 'merchant_approved') {
+                        if (inventoryCartBtn) inventoryCartBtn.style.display = 'flex';
                         if (inventoryBtn) inventoryBtn.style.display = 'inline-block';
+                        if (addReelIconBtn) addReelIconBtn.style.display = 'flex';
                         Utils.showNotification(`🏪 مرحباً التاجر ${currentUser.name}`, 'success');
                     } else {
                         Utils.showNotification(`👤 مرحباً ${currentUser.name}`, 'success');
@@ -1051,14 +994,13 @@
                         userBtn.title = 'تسجيل الدخول';
                     }
                     if (dashboardBtn) dashboardBtn.style.display = 'none';
+                    if (inventoryCartBtn) inventoryCartBtn.style.display = 'none';
                     if (inventoryBtn) inventoryBtn.style.display = 'none';
                     if (deliveryBtn) deliveryBtn.style.display = 'none';
                     if (analyticsBtn) analyticsBtn.style.display = 'none';
                     if (addReelLink) addReelLink.style.display = 'none';
+                    if (addReelIconBtn) addReelIconBtn.style.display = 'none';
                 }
-                
-                // تحديث ظهور أيقونة المخزون المتكامل
-                updateInventoryIconVisibility();
             },
             logout: function() {
                 localStorage.removeItem('currentUserId');
@@ -1119,40 +1061,42 @@
             }
         }
         
-        // ===== 1. إرسال رمز التحقق إلى القناة =====
+        // ===== 1. إرسال رمز التحقق إلى القناة (الكود المجرب) =====
         async function sendVerificationCode() {
-            const code = Math.floor(100000 + Math.random() * 900000).toString();
-            pendingVerificationCode = code;
-            verificationCodeExpiry = Date.now() + 300000;
-            
-            const message = `🔐 رمز التحقق الخاص بك:\n\n📱 ${code}\n\n⏰ صالح لمدة 5 دقائق\n\n🔒 لا تشارك هذا الرمز مع أي شخص`;
-            
-            try {
-                const url = `https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: TELEGRAM.channelId,
-                        text: message
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.ok) {
-                    Utils.showNotification('✅ تم إرسال رمز التحقق إلى القناة', 'success');
-                    closeModal('loginModal');
-                    Utils.openModal('verify2FAModal');
-                } else {
-                    console.error('خطأ:', result);
-                    Utils.showNotification('❌ فشل الإرسال: ' + result.description, 'error');
-                }
-            } catch (error) {
-                console.error(error);
-                Utils.showNotification('❌ خطأ في الاتصال بالتلغرام', 'error');
-            }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    pendingVerificationCode = code;
+    verificationCodeExpiry = Date.now() + 300000;
+    
+    // ✅ رسالة بسيطة بدون تنسيق معقد
+    const message = `🔐 رمز التحقق الخاص بك:\n\n📱 ${code}\n\n⏰ صالح لمدة 5 دقائق\n\n🔒 لا تشارك هذا الرمز مع أي شخص`;
+    
+    try {
+        const url = `https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: TELEGRAM.channelId,
+                text: message
+                // ✅ بدون parse_mode
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+            Utils.showNotification('✅ تم إرسال رمز التحقق إلى القناة', 'success');
+            closeModal('loginModal');
+            Utils.openModal('verify2FAModal');
+        } else {
+            console.error('خطأ:', result);
+            Utils.showNotification('❌ فشل الإرسال: ' + result.description, 'error');
         }
+    } catch (error) {
+        console.error(error);
+        Utils.showNotification('❌ خطأ في الاتصال بالتلغرام', 'error');
+    }
+}
         
         // ===== 2. التحقق من رمز المدير =====
         async function verify2FACode() {
@@ -1455,7 +1399,7 @@
         console.log('✅ النظام جاهز');
         console.log('📌 مستخدم تجريبي: user@demo.com / 123456');
         console.log('📌 مدير: عبر تلغرام - إرسال رمز إلى القناة');
-        console.log('📌 أيقونة المخزون المتكامل تظهر فقط للمدير والتجار');
     </script>
 </body>
 </html>
+
