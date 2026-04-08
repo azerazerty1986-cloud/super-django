@@ -1730,38 +1730,6 @@ window.resendVerificationCode = resendVerificationCode;
 window.handleUserLogin = handleUserLogin;
 window.handleMerchantRegister = handleMerchantRegister;
 
-// ===== [4.50] البصمة الثابتة للمنتجات فقط =====
-function getProductFingerprint() {
-    let fingerprint = localStorage.getItem('product_fingerprint');
-    if (!fingerprint) {
-        const digits = Math.floor(100000 + Math.random() * 900000).toString();
-        fingerprint = `نكهة وجمال | ${digits}`;
-        localStorage.setItem('product_fingerprint', fingerprint);
-    }
-    return fingerprint;
-}
-
-// ===== [4.51] إضافة البصمة على المنتجات فقط =====
-function addFingerprintToProducts() {
-    const fingerprint = getProductFingerprint();
-    const products = document.querySelectorAll('.product-card');
-    
-    products.forEach(product => {
-        if (product.querySelector('.product-fp')) return;
-        
-        const fp = document.createElement('div');
-        fp.className = 'product-fp';
-        fp.innerHTML = `<i class="fas fa-fingerprint"></i> ${fingerprint}`;
-        fp.style.cssText = 'margin:8px 0;padding:4px 12px;background:rgba(255,215,0,0.15);border-radius:20px;font-size:11px;color:#ffd700;text-align:center;font-family:monospace';
-        
-        const price = product.querySelector('.product-price');
-        if (price) price.insertAdjacentElement('afterend', fp);
-        else product.appendChild(fp);
-    });
-}
-
-// ===== [4.52] تشغيل البصمة =====
-setTimeout(addFingerprintToProducts, 500);
-setInterval(addFingerprintToProducts, 2000);
 console.log('✅ نظام تلغرام المتكامل جاهز - جميع المنتجات تستخدم معرف تلغرام');
 console.log('✅ جميع دوال المدير والتحقق الثنائي مضافة ومفعلة');
+
