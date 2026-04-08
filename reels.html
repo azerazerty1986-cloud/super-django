@@ -1,7 +1,4 @@
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ناردو برو - سلتي</title>
@@ -410,6 +407,7 @@
         };
         
         const CART_STORAGE_KEY = 'nardoo_cart';
+        const ORDERS_STORAGE_KEY = 'nardo_orders';
         
         let cart = [];
         let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
@@ -628,11 +626,39 @@
                     })
                 });
                 
+                // حفظ الطلب محلياً ليتمكن نظام إدارة المخزون من قراءته
+                saveOrderLocally(customerData, groupedStores, orderId, timestamp);
+                
                 return true;
             } catch (error) {
                 console.error('❌ خطأ في الإرسال:', error);
                 return false;
             }
+        }
+
+        // ========== حفظ الطلب محلياً ==========
+        function saveOrderLocally(customerData, groupedStores, orderId, timestamp) {
+            let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            
+            // تحويل الطلب المجمع إلى طلبات فردية لكل متجر لسهولة الفلترة في نظام المخزون
+            for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                const newOrder = {
+                    id: orderId,
+                    date: timestamp,
+                    customerName: customerData.name,
+                    customerPhone: customerData.phone,
+                    customerAddress: customerData.address,
+                    customerNotes: customerData.notes,
+                    storeID: storeID,
+                    storeName: storeData.storeName,
+                    items: storeData.items,
+                    total: storeData.total,
+                    status: 'قيد المعالجة'
+                };
+                allOrders.unshift(newOrder);
+            }
+            
+            localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
         }
 
         // فتح نافذة معلومات المشتري
