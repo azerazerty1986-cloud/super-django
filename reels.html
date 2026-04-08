@@ -1,6 +1,5 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ناردو برو - سلتي</title>
@@ -126,6 +125,7 @@
             font-size: 24px;
         }
         .merchant-name { font-size: 20px; font-weight: bold; color: var(--gold); }
+        .merchant-id { font-size: 12px; color: var(--text-secondary); font-family: monospace; margin-top: 5px; }
         .merchant-stats { display: flex; gap: 20px; font-size: 14px; color: var(--text-secondary); }
         .merchant-stats span { color: var(--gold); font-weight: bold; }
         .merchant-toggle { font-size: 20px; transition: transform 0.3s; }
@@ -287,7 +287,8 @@
             margin-bottom: 20px;
             text-align: center;
         }
-        .modal-content input, .modal-content textarea {
+        .modal-content input,
+        .modal-content textarea {
             width: 100%;
             padding: 12px;
             margin-bottom: 15px;
@@ -328,6 +329,7 @@
         .notification.success { background: var(--success); color: #000; }
         .notification.error { background: var(--error); color: #fff; }
         .notification.warning { background: var(--warning); color: #000; }
+        .notification.info { background: var(--info); color: #fff; }
         
         @keyframes slideIn {
             from { transform: translateY(-100px); opacity: 0; }
@@ -408,29 +410,29 @@
         const CART_STORAGE_KEY = 'nardoo_cart';
         
         let cart = [];
-        let merchantsState = JSON.parse(localStorage.getItem('merchants_state') || '{}');
+        let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
 
-        // ألوان متغيرة للتجار
-        let merchantColors = {};
+        // ألوان متغيرة للمتاجر
+        let storeColors = {};
 
-        function getMerchantColor(merchantName) {
-            if (!merchantColors[merchantName]) {
+        function getStoreColor(storeID) {
+            if (!storeColors[storeID]) {
                 const colors = ['merchant-color-0', 'merchant-color-1', 'merchant-color-2', 'merchant-color-3', 
                                'merchant-color-4', 'merchant-color-5', 'merchant-color-6', 'merchant-color-7', 
                                'merchant-color-8', 'merchant-color-9'];
-                const index = Object.keys(merchantColors).length % colors.length;
-                merchantColors[merchantName] = colors[index];
+                const index = Object.keys(storeColors).length % colors.length;
+                storeColors[storeID] = colors[index];
             }
-            return merchantColors[merchantName];
+            return storeColors[storeID];
         }
 
-        function saveMerchantsState() {
-            localStorage.setItem('merchants_state', JSON.stringify(merchantsState));
+        function saveStoresState() {
+            localStorage.setItem('stores_state', JSON.stringify(storesState));
         }
 
-        function toggleMerchant(merchantName) {
-            merchantsState[merchantName] = !merchantsState[merchantName];
-            saveMerchantsState();
+        function toggleStore(storeID) {
+            storesState[storeID] = !storesState[storeID];
+            saveStoresState();
             updateCartDisplay();
         }
 
@@ -498,7 +500,7 @@
                 showNotification('السلة فارغة', 'warning');
                 return;
             }
-            if (confirm('هل أنت متأكد من مسح جميع المنتجات؟')) {
+            if (confirm('هل تريد مسح السلة؟')) {
                 cart = [];
                 saveCart();
                 updateCartDisplay();
@@ -506,54 +508,58 @@
             }
         }
 
-        // تجميع المنتجات حسب التاجر
-        function groupByMerchant(items) {
+        // ========== تجميع المنتجات حسب معرف المتجر (storeID) ==========
+        function groupByStore(items) {
             const grouped = {};
             items.forEach(item => {
-                const merchant = item.merchantName || 'ناردو برو';
-                if (!grouped[merchant]) {
-                    grouped[merchant] = {
-                        name: merchant,
+                const storeID = item.storeID || 'unknown-store';
+                const storeName = item.storeName || 'ناردو برو';
+                
+                if (!grouped[storeID]) {
+                    grouped[storeID] = {
+                        storeID: storeID,
+                        storeName: storeName,
                         items: [],
                         total: 0,
                         count: 0
                     };
                 }
-                grouped[merchant].items.push(item);
-                grouped[merchant].total += item.price * item.quantity;
-                grouped[merchant].count += item.quantity;
+                grouped[storeID].items.push(item);
+                grouped[storeID].total += item.price * item.quantity;
+                grouped[storeID].count += item.quantity;
             });
             return grouped;
         }
 
         // ================================================================
-        // إرسال الطلب إلى تلغرام
+        // إرسال الطلب إلى تلغرام مع معرف المتجر واسم المشتري
         // ================================================================
-        async function sendOrderToTelegram(customerData, groupedMerchants, grandTotal) {
+        async function sendOrderToTelegram(customerData, groupedStores, grandTotal) {
             const timestamp = new Date().toLocaleString('ar-EG');
             const orderId = Math.floor(Math.random() * 1000000);
             
-            // إنشاء رسالة منظمة لكل تاجر على حدة
+            // إنشاء رسالة منظمة لكل متجر على حدة
             let allMessages = [];
             
-            for (const [merchantName, merchantData] of Object.entries(groupedMerchants)) {
+            for (const [storeID, storeData] of Object.entries(groupedStores)) {
                 let message = `🛍️ *فاتورة طلب جديد* 🛍️\n`;
                 message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `🏪 *التاجر:* ${merchantName}\n`;
+                message += `🏪 *المتجر:* ${storeData.storeName}\n`;
+                message += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
                 message += `👤 *المشتري:* ${customerData.name}\n`;
                 message += `📞 *الهاتف:* ${customerData.phone}\n`;
                 message += `📍 *العنوان:* ${customerData.address}\n`;
                 message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
                 message += `📦 *المنتجات المشتراة:*\n`;
                 
-                merchantData.items.forEach((item, idx) => {
+                storeData.items.forEach((item, idx) => {
                     const itemTotal = item.price * item.quantity;
                     message += `${idx + 1} • ${item.name}\n`;
                     message += `   الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج = ${itemTotal.toLocaleString()} دج\n`;
                 });
                 
                 message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `💰 *إجمالي التاجر:* ${merchantData.total.toLocaleString()} دج\n`;
+                message += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
                 message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
                 
                 if (customerData.notes) {
@@ -570,7 +576,7 @@
                 allMessages.push(message);
             }
             
-            // رسالة إجمالية للقناة
+            // رسالة إجمالية للقناة تتضمن معرفات المتاجر واسم المشتري
             let channelMessage = `🟢 *طلب جديد في النظام* 🟢\n`;
             channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
             channelMessage += `👤 *المشتري:* ${customerData.name}\n`;
@@ -579,12 +585,13 @@
             channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
             channelMessage += `📊 *تفاصيل الطلب:*\n`;
             
-            for (const [merchantName, merchantData] of Object.entries(groupedMerchants)) {
-                channelMessage += `\n🏪 ${merchantName}:\n`;
-                merchantData.items.forEach(item => {
+            for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                channelMessage += `\n🏪 ${storeData.storeName}\n`;
+                channelMessage += `🆔 معرف المتجر: \`${storeID}\`\n`;
+                storeData.items.forEach(item => {
                     channelMessage += `   • ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
                 });
-                channelMessage += `   📦 إجمالي: ${merchantData.total.toLocaleString()} دج\n`;
+                channelMessage += `   💰 إجمالي: ${storeData.total.toLocaleString()} دج\n`;
             }
             
             channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -595,7 +602,7 @@
             channelMessage += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
             
             try {
-                // إرسال رسالة لكل تاجر على حدة (للتلغرام)
+                // إرسال رسالة لكل متجر على حدة (للتلغرام)
                 for (const message of allMessages) {
                     await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                         method: 'POST',
@@ -627,7 +634,7 @@
         }
 
         // فتح نافذة معلومات المشتري
-        let pendingGroupedMerchants = null;
+        let pendingGroupedStores = null;
         let pendingGrandTotal = null;
         
         function openCustomerModal() {
@@ -636,10 +643,10 @@
                 return;
             }
             
-            const grouped = groupByMerchant(cart);
+            const grouped = groupByStore(cart);
             const grandTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             
-            pendingGroupedMerchants = grouped;
+            pendingGroupedStores = grouped;
             pendingGrandTotal = grandTotal;
             
             const modal = document.getElementById('customerModal');
@@ -656,7 +663,7 @@
         function closeModal() {
             const modal = document.getElementById('customerModal');
             if (modal) modal.style.display = 'none';
-            pendingGroupedMerchants = null;
+            pendingGroupedStores = null;
             pendingGrandTotal = null;
         }
         
@@ -688,7 +695,7 @@
                 notes: notes
             };
             
-            const success = await sendOrderToTelegram(customerData, pendingGroupedMerchants, pendingGrandTotal);
+            const success = await sendOrderToTelegram(customerData, pendingGroupedStores, pendingGrandTotal);
             
             if (success) {
                 // تفريغ السلة بعد إرسال الطلب بنجاح
@@ -720,25 +727,25 @@
                 return;
             }
 
-            const groupedMerchants = groupByMerchant(cart);
+            const groupedStores = groupByStore(cart);
             let grandTotal = 0;
             let grandCount = 0;
-            let merchantsHtml = '';
+            let storesHtml = '';
 
-            let merchantIndex = 0;
-            for (const [merchantName, merchantData] of Object.entries(groupedMerchants)) {
-                grandTotal += merchantData.total;
-                grandCount += merchantData.count;
+            let storeIndex = 0;
+            for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                grandTotal += storeData.total;
+                grandCount += storeData.count;
                 
-                const isCollapsed = merchantsState[merchantName] === true;
-                const colorClass = getMerchantColor(merchantName);
+                const isCollapsed = storesState[storeID] === true;
+                const colorClass = getStoreColor(storeID);
                 
                 let itemsHtml = '';
-                for (const item of merchantData.items) {
+                for (const item of storeData.items) {
                     const itemTotal = item.price * item.quantity;
                     
                     const thumbnailHtml = item.image ? 
-                        `<img src="${item.image}" alt="${item.name}" onerror="this.parentElement.innerHTML='<i class=\'fas fa-box\'></i>'">` :
+                        `<img src="${item.image}" alt="${item.name}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">` :
                         '<i class="fas fa-box"></i>';
                     
                     itemsHtml += `
@@ -759,24 +766,25 @@
                                 ${itemTotal.toLocaleString()} دج
                             </div>
                             <button class="cart-item-remove" onclick="removeFromCart(${item.id})">
-                                <i class="fas fa-trash"></i> حذف
+                                <i class="fas fa-trash-alt"></i> حذف
                             </button>
                         </div>
                     `;
                 }
                 
-                merchantsHtml += `
+                storesHtml += `
                     <div class="merchant-section ${colorClass}" style="border-right-width: 5px; border-right-style: solid;">
-                        <div class="merchant-header" onclick="toggleMerchant('${merchantName.replace(/'/g, "\\'")}')">
+                        <div class="merchant-header" onclick="toggleStore('${storeID.replace(/'/g, "\\'")}')">
                             <div class="merchant-info">
                                 <div class="merchant-avatar">
                                     <i class="fas fa-store"></i>
                                 </div>
                                 <div>
-                                    <div class="merchant-name">${merchantName}</div>
+                                    <div class="merchant-name">${storeData.storeName}</div>
+                                    <div class="merchant-id">معرف المتجر: ${storeID}</div>
                                     <div class="merchant-stats">
-                                        <span>📦 ${merchantData.count} منتج</span>
-                                        <span>💰 ${merchantData.total.toLocaleString()} دج</span>
+                                        <span>📦 ${storeData.count} منتج</span>
+                                        <span>💰 ${storeData.total.toLocaleString()} دج</span>
                                     </div>
                                 </div>
                             </div>
@@ -789,7 +797,7 @@
                         </div>
                     </div>
                 `;
-                merchantIndex++;
+                storeIndex++;
             }
 
             const summaryHtml = `
@@ -799,8 +807,8 @@
                         <span class="summary-value">${grandCount} قطعة</span>
                     </div>
                     <div class="summary-row">
-                        <span class="summary-label">عدد التجار:</span>
-                        <span class="summary-value">${Object.keys(groupedMerchants).length} تاجر</span>
+                        <span class="summary-label">عدد المتاجر:</span>
+                        <span class="summary-value">${Object.keys(groupedStores).length} متجر</span>
                     </div>
                     <div class="summary-row">
                         <span class="summary-label">الإجمالي النهائي:</span>
@@ -817,7 +825,7 @@
                 </div>
             `;
 
-            container.innerHTML = merchantsHtml + summaryHtml;
+            container.innerHTML = storesHtml + summaryHtml;
         }
 
         // الاستماع للتغييرات من الصفحات الأخرى
@@ -837,7 +845,7 @@
         window.updateCartQuantity = updateCartQuantity;
         window.removeFromCart = removeFromCart;
         window.clearCart = clearCart;
-        window.toggleMerchant = toggleMerchant;
+        window.toggleStore = toggleStore;
         window.openCustomerModal = openCustomerModal;
         window.closeModal = closeModal;
         window.submitOrder = submitOrder;
