@@ -1,6 +1,6 @@
 /* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
-/* ===== المعدل النهائي - مع ID ثابت للتاجر (بدون هاتف) ===== */
+/* ===== المعدل النهائي - مع ID ثابت للتاجر (اسم + رقم ثابت) ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
@@ -114,7 +114,7 @@ async function getTelegramFileUrl(fileId) {
 // ===== [4.9] دالة الحصول على اسم القسم =====
 function getCategoryName(category) {
     const names = {
-        'promo': 'برموسيو',
+        'promo': 'بروموسيو',
         'spices': 'توابل',
         'cosmetic': 'كوسمتيك',
         'other': 'منتوجات أخرى'
@@ -190,36 +190,71 @@ function changeSort(value) {
     displayProducts();
 }
 
-// ===== [4.50] نظام ID الثابت للتاجر =====
+// ===== [4.50] نظام ID الثابت للتاجر (اسم المستخدم + رقم ثابت) =====
 
-// دالة إنشاء ID فريد للتاجر (يعتمد على اسم المتجر + رقم عشوائي)
-function generateMerchantID(storeName, merchantId) {
-    const cleanName = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
-    const prefix = cleanName.substring(0, 4).toUpperCase();
-    const uniqueNum = merchantId.toString().slice(-4);
-    return `${prefix}${uniqueNum}`;
+// دالة إنشاء ID فريد للتاجر (يعتمد على اسم المستخدم + رقم ثابت)
+function generateMerchantID(storeName, merchantId, phoneNumber) {
+    // تنظيف الاسم من الرموز الخاصة وأخذ أول 6 أحرف
+    let cleanName = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
+    
+    // إذا كان الاسم فارغاً، استخدم "تاجر"
+    if (cleanName.length === 0) cleanName = 'تاجر';
+    
+    // أخذ أول 6 أحرف من الاسم
+    const namePart = cleanName.substring(0, 6).toUpperCase();
+    
+    // استخدام رقم ثابت (رقم الهاتف إن وجد، وإلا استخدم آخر 6 أرقام من الـ ID)
+    let fixedNumber;
+    if (phoneNumber && phoneNumber.length >= 4) {
+        // أخذ آخر 6 أرقام من رقم الهاتف (أو كل ما يوجد)
+        const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
+        fixedNumber = digitsOnly.slice(-6);
+        if (fixedNumber.length < 4) fixedNumber = merchantId.toString().slice(-6);
+    } else {
+        // استخدام آخر 6 أرقام من ID المستخدم
+        fixedNumber = merchantId.toString().slice(-6);
+    }
+    
+    // المعرف النهائي: اسم_المستخدم-الرقم_الثابت
+    const merchantID = `${namePart}-${fixedNumber}`;
+    
+    console.log(`✅ تم إنشاء معرف التاجر: ${merchantID} (الاسم: ${namePart}, الرقم: ${fixedNumber})`);
+    
+    return merchantID;
 }
 
-// دالة الحصول على ID التاجر أو إنشاؤه
+// دالة الحصول على ID التاجر أو إنشاؤه (مع دعم الرقم الثابت)
 function getOrCreateMerchantID(merchant) {
+    // إذا كان المعرف موجوداً مسبقاً، أعده مباشرة
     if (merchant.merchantFixedID) {
         return merchant.merchantFixedID;
     }
     
+    // الحصول على اسم المتجر أو اسم المستخدم
     const storeName = merchant.storeName || merchant.name;
-    const merchantID = generateMerchantID(storeName, merchant.id);
     
+    // الحصول على رقم الهاتف الثابت (إن وجد)
+    const phoneNumber = merchant.phone || '';
+    
+    // إنشاء معرف جديد
+    const merchantID = generateMerchantID(storeName, merchant.id, phoneNumber);
+    
+    // حفظ المعرف في كائن التاجر
     merchant.merchantFixedID = merchantID;
     merchant.merchantIDCreatedAt = new Date().toISOString();
+    merchant.merchantIDSource = (phoneNumber && phoneNumber.length >= 4) ? 'phone' : 'user_id';
     
+    // حفظ في localStorage
     const allUsers = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
     const userIndex = allUsers.findIndex(u => u.id === merchant.id);
     if (userIndex !== -1) {
         allUsers[userIndex].merchantFixedID = merchantID;
         allUsers[userIndex].merchantIDCreatedAt = new Date().toISOString();
+        allUsers[userIndex].merchantIDSource = merchant.merchantIDSource;
         localStorage.setItem('nardoo_users', JSON.stringify(allUsers));
     }
     
+    // إرسال إشعار للمدير
     sendMerchantIDNotification(merchant, merchantID);
     
     return merchantID;
@@ -227,14 +262,27 @@ function getOrCreateMerchantID(merchant) {
 
 // إرسال إشعار ID التاجر إلى تلغرام
 async function sendMerchantIDNotification(merchant, merchantID) {
+    const sourceText = merchant.merchantIDSource === 'phone' ? 'رقم الهاتف' : 'معرف المستخدم';
+    const parts = merchantID.split('-');
+    
     const message = `🆔 *تم إنشاء معرف تاجر جديد*
 ━━━━━━━━━━━━━━━━━━━━━━
 🏪 *المتجر:* ${merchant.storeName || merchant.name}
 👤 *التاجر:* ${merchant.name}
-🆔 *المعرف الثابت:* \`${merchantID}\`
+📞 *الرقم الثابت:* ${merchant.phone || merchant.id}
+🔗 *مصدر الرقم:* ${sourceText}
+
+🆔 *المعرف الثابت:*
+\`${merchantID}\`
+
+📊 *تقسيم المعرف:*
+▫️ *الاسم:* ${parts[0]}
+▫️ *الرقم:* ${parts[1]}
+
 📅 *تاريخ الإنشاء:* ${new Date().toLocaleString('ar-EG')}
 
-🔒 هذا المعرف خاص بالتاجر ويظهر على كل منتجاته`;
+🔒 هذا المعرف خاص بالتاجر ويظهر على كل منتجاته
+📌 صيغة المعرف: [اسم_المستخدم]-[رقم_ثابت]`;
 
     await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
         method: 'POST',
@@ -245,6 +293,16 @@ async function sendMerchantIDNotification(merchant, merchantID) {
             parse_mode: 'Markdown'
         })
     });
+}
+
+// عرض معرف التاجر بشكل منسق
+function formatMerchantID(merchantID) {
+    if (!merchantID) return 'غير متوفر';
+    const parts = merchantID.split('-');
+    if (parts.length === 2) {
+        return `${parts[0]}-${parts[1]}`;
+    }
+    return merchantID;
 }
 
 // ===== [4.14] إضافة منتج إلى تلغرام =====
@@ -365,9 +423,15 @@ async function saveProduct() {
         return;
     }
 
+    // الحصول على معرف التاجر الثابت (اسم + رقم)
     const merchantFixedID = getOrCreateMerchantID(currentUser);
     
     showNotification('جاري رفع المنتج...', 'info');
+
+    // إنشاء رقم منتج تسلسلي للتاجر
+    const merchantProducts = products.filter(p => p.merchantID === merchantFixedID);
+    const productNumber = String(merchantProducts.length + 1).padStart(3, '0');
+    const productCompositeID = `${merchantFixedID}-${productNumber}`;
 
     const product = {
         name: name,
@@ -377,6 +441,7 @@ async function saveProduct() {
         description: description,
         merchantName: currentUser.storeName || currentUser.name,
         merchantID: merchantFixedID,
+        productCompositeID: productCompositeID,
         rating: 4.5,
         createdAt: new Date().toISOString()
     };
@@ -393,7 +458,7 @@ async function saveProduct() {
         document.getElementById('productForm').reset();
         closeModal('productModal');
         displayProducts();
-        showNotification('✅ تم إضافة المنتج بنجاح', 'success');
+        showNotification(`✅ تم إضافة المنتج - المعرف: ${productCompositeID}`, 'success');
     }
 }
 
@@ -544,7 +609,9 @@ function displayProducts() {
 
     if (searchTerm) {
         filtered = filtered.filter(p => 
-            p.name.toLowerCase().includes(searchTerm.toLowerCase())
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (p.merchantID && p.merchantID.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (p.productCompositeID && p.productCompositeID.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }
 
@@ -585,6 +652,8 @@ function displayProducts() {
 
         const timeAgo = getTimeAgo(product.createdAt);
         const merchantID = product.merchantID || 'قيد الإنشاء';
+        const merchantIDParts = merchantID !== 'قيد الإنشاء' ? merchantID.split('-') : ['', ''];
+        const productCompositeID = product.productCompositeID || `${merchantID}-${String(product.id).slice(-3)}`;
 
         return `
             <div class="product-card" onclick="viewProductDetails(${product.id})">
@@ -592,12 +661,15 @@ function displayProducts() {
                     <i class="far fa-clock"></i> ${timeAgo}
                 </div>
                 
-                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:12px; font-weight:bold; z-index:10;">
-                    🆔 ${product.id}
+                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; font-family:monospace;">
+                    📦 ${productCompositeID}
                 </div>
                 
-                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.7); color:var(--gold); padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; direction:ltr;">
-                    👨‍💼 ${merchantID}
+                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.75); padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; direction:ltr; display: flex; align-items: center; gap: 4px;">
+                    <i class="fas fa-id-card" style="font-size: 10px; color: var(--gold);"></i>
+                    <span style="color: var(--gold);">${merchantIDParts[0] || '???'}</span>
+                    <span style="color: #888;">-</span>
+                    <span style="color: #aaa; font-family: monospace;">${merchantIDParts[1] || '???'}</span>
                 </div>
                 
                 <div class="product-gallery">
@@ -671,7 +743,8 @@ function addToCart(productId) {
             price: product.price,
             quantity: 1,
             merchantName: product.merchantName,
-            merchantID: product.merchantID
+            merchantID: product.merchantID,
+            productCompositeID: product.productCompositeID
         });
     }
 
@@ -792,7 +865,7 @@ async function checkoutCart() {
 📞 *الهاتف:* ${order.customerPhone}
 📍 *العنوان:* ${order.customerAddress}
 📦 *المنتجات:*
-${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج (تاجر: ${i.merchantID || i.merchantName})`).join('\n')}
+${order.items.map(i => `  • ${i.name} x${i.quantity} = ${i.price * i.quantity} دج (معرف: ${i.productCompositeID || i.merchantID})`).join('\n')}
 💰 *الإجمالي:* ${order.total} دج
 📅 ${new Date().toLocaleString('ar-EG')}`;
 
@@ -826,6 +899,10 @@ function viewProductDetails(productId) {
         ? product.images[0] 
         : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
 
+    const merchantID = product.merchantID || 'قيد الإنشاء';
+    const merchantIDParts = merchantID !== 'قيد الإنشاء' ? merchantID.split('-') : ['', ''];
+    const productCompositeID = product.productCompositeID || `${merchantID}-${String(product.id).slice(-3)}`;
+
     content.innerHTML = `
         <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
             <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
@@ -834,9 +911,21 @@ function viewProductDetails(productId) {
                     <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
                 </div>
                 <div>
-                    <p style="color: #888; margin-bottom: 10px;">🆔 المعرف: ${product.id}</p>
+                    <div style="background: rgba(255,215,0,0.15); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: #888;">📦 معرف المنتج:</span>
+                            <span style="color: var(--gold); font-family: monospace; font-weight: bold;">${productCompositeID}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #888;">🆔 معرف التاجر:</span>
+                            <span style="direction: ltr; font-family: monospace;">
+                                <span style="color: var(--gold);">${merchantIDParts[0]}</span>
+                                <span style="color: #888;">-</span>
+                                <span style="color: #aaa;">${merchantIDParts[1]}</span>
+                            </span>
+                        </div>
+                    </div>
                     <p style="color: #888; margin-bottom: 10px;">👤 الناشر: ${product.merchantName}</p>
-                    <p style="color: #888; margin-bottom: 10px;">🆔 معرف التاجر: ${product.merchantID || 'قيد الإنشاء'}</p>
                     <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
                     
                     <div class="product-rating" style="margin-bottom: 20px;">
@@ -949,6 +1038,7 @@ function showMerchantPanel() {
     if (!currentUser || currentUser.role !== 'merchant_approved') return;
     
     const merchantID = currentUser.merchantFixedID || 'لم يتم إنشاؤه بعد';
+    const merchantIDParts = merchantID !== 'لم يتم إنشاؤه بعد' ? merchantID.split('-') : ['', ''];
     const merchantProducts = products.filter(p => 
         p.merchantName === currentUser.storeName || 
         p.merchantName === currentUser.name
@@ -973,7 +1063,14 @@ function showMerchantPanel() {
             <div style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border-radius: 15px; padding: 20px; margin-bottom: 30px; text-align: center; border: 1px solid var(--gold);">
                 <i class="fas fa-id-card" style="font-size: 40px; color: var(--gold); margin-bottom: 10px;"></i>
                 <div style="font-size: 14px; color: var(--text-secondary);">معرف التاجر الثابت</div>
-                <div style="font-size: 32px; font-weight: bold; color: var(--gold); letter-spacing: 2px; margin: 10px 0;">${merchantID}</div>
+                <div style="font-size: 28px; font-weight: bold; color: var(--gold); letter-spacing: 1px; margin: 10px 0; direction: ltr;">
+                    <span style="color: var(--gold);">${merchantIDParts[0]}</span>
+                    <span style="color: #888;">-</span>
+                    <span style="color: #aaa;">${merchantIDParts[1] || '???'}</span>
+                </div>
+                <div style="font-size: 12px; color: #888; margin-top: 5px;">
+                    المصدر: ${currentUser.merchantIDSource === 'phone' ? 'رقم الهاتف' : 'معرف المستخدم'}
+                </div>
                 <div style="margin-top: 15px;">
                     <button class="btn-outline-gold" onclick="copyMerchantID()" style="padding: 5px 15px; font-size: 12px;">
                         <i class="fas fa-copy"></i> نسخ المعرف
@@ -1069,15 +1166,20 @@ function showAddProductModal() {
 
 // ===== [4.35] البحث عن منتج بالمعرف =====
 function findProductById() {
-    const id = prompt('🔍 أدخل معرف المنتج (من تلغرام):');
+    const id = prompt('🔍 أدخل معرف المنتج (الكامل مثل: NARD00-123456-001):');
     if (!id) return;
     
-    const product = products.find(p => p.id == id || p.telegramId == id);
+    const product = products.find(p => 
+        p.id == id || 
+        p.telegramId == id ||
+        p.productCompositeID == id ||
+        (p.productCompositeID && p.productCompositeID.includes(id))
+    );
     
     if (product) {
         alert(`
 🔍 المنتج موجود:
-المعرف: ${product.id}
+المعرف الكامل: ${product.productCompositeID || product.id}
 الاسم: ${product.name}
 السعر: ${product.price} دج
 التاجر: ${product.merchantName}
@@ -1091,7 +1193,7 @@ function findProductById() {
 
 // ===== [4.51] البحث عن منتجات التاجر بالمعرف الثابت =====
 function findProductsByMerchantID() {
-    const merchantID = prompt('🔍 أدخل معرف التاجر (مثال: NARD1234):');
+    const merchantID = prompt('🔍 أدخل معرف التاجر (مثال: NARD00-123456):');
     if (!merchantID) return;
     
     const merchantProducts = products.filter(p => p.merchantID === merchantID);
@@ -1102,7 +1204,7 @@ function findProductsByMerchantID() {
     }
     
     const productList = merchantProducts.map(p => 
-        `📦 ${p.name} - ${p.price} دج (ID: ${p.id})`
+        `📦 ${p.name} - ${p.price} دج (معرف: ${p.productCompositeID || p.id})`
     ).join('\n');
     
     alert(`🛍️ منتجات التاجر (${merchantID}):\n\n${productList}\n\n📊 إجمالي: ${merchantProducts.length} منتج`);
@@ -1127,12 +1229,14 @@ function displayProductsWithFilter(filterFunction) {
         const stockText = product.stock <= 0 ? 'غير متوفر' : product.stock < 5 ? `كمية محدودة (${product.stock})` : `متوفر (${product.stock})`;
         const imageUrl = product.images && product.images.length > 0 ? product.images[0] : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
         const timeAgo = getTimeAgo(product.createdAt);
+        const merchantIDParts = product.merchantID ? product.merchantID.split('-') : ['', ''];
+        const productCompositeID = product.productCompositeID || `${product.merchantID}-${String(product.id).slice(-3)}`;
         
         return `
             <div class="product-card" onclick="viewProductDetails(${product.id})">
                 <div class="product-time-badge"><i class="far fa-clock"></i> ${timeAgo}</div>
-                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:12px; font-weight:bold;">🆔 ${product.id}</div>
-                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.7); color:var(--gold); padding:5px 10px; border-radius:20px; font-size:11px;">👨‍💼 ${product.merchantID}</div>
+                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold;">📦 ${productCompositeID}</div>
+                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.7); padding:5px 10px; border-radius:20px; font-size:11px;"><span style="color:var(--gold);">${merchantIDParts[0]}</span><span style="color:#888;">-</span><span style="color:#aaa;">${merchantIDParts[1]}</span></div>
                 <div class="product-gallery"><img src="${imageUrl}" style="width:100%; height:250px; object-fit:cover;"></div>
                 <div class="product-info">
                     <div class="product-category"><i class="fas fa-tag"></i> ${getCategoryName(product.category)}</div>
@@ -1153,7 +1257,7 @@ function displayProductsWithFilter(filterFunction) {
 function copyMerchantID() {
     if (currentUser && currentUser.merchantFixedID) {
         navigator.clipboard.writeText(currentUser.merchantFixedID);
-        showNotification('✅ تم نسخ المعرف', 'success');
+        showNotification('✅ تم نسخ المعرف: ' + currentUser.merchantFixedID, 'success');
     }
 }
 
@@ -1163,7 +1267,7 @@ function scrollToTop() {
 }
 
 function scrollToBottom() {
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    window.scrollTo({ top: document.documentElement.scHeight, behavior: 'smooth' });
 }
 
 function toggleQuickTopButton() {
@@ -1297,10 +1401,11 @@ function approveMerchant(id) {
         user.role = 'merchant_approved';
         user.status = 'approved';
         
+        // إنشاء معرف التاجر الثابت (اسم + رقم)
         const merchantID = getOrCreateMerchantID(user);
         
         localStorage.setItem('nardoo_users', JSON.stringify(users));
-        showNotification('✅ تم الموافقة على التاجر', 'success');
+        showNotification(`✅ تم الموافقة على التاجر - المعرف: ${merchantID}`, 'success');
         
         if (document.getElementById('dashboardSection')?.style.display === 'block') {
             showDashboardMerchants();
@@ -1316,6 +1421,7 @@ function approveMerchant(id) {
 👤 *التاجر:* ${user.name}
 🏪 *المتجر:* ${user.storeName || user.name}
 🆔 *معرف التاجر:* \`${merchantID}\`
+📞 *الرقم الثابت:* ${user.phone || user.id}
 📧 *البريد:* ${user.email}
 🎉 *يمكنه الآن إضافة المنتجات*
 🕐 ${new Date().toLocaleString('ar-EG')}`,
@@ -1815,7 +1921,8 @@ window.onload = async function() {
         addMerchantSearchButton();
     }, 1000);
     
-    console.log('✅ النظام جاهز - جميع المنتجات تستخدم معرف تلغرام ومعرف تاجر ثابت');
+    console.log('✅ النظام جاهز - معرف التاجر = [اسم المستخدم]-[رقم ثابت]');
+    console.log('✅ معرف المنتج = [معرف التاجر]-[رقم تسلسلي]');
 };
 
 // ===== [4.49] إغلاق النوافذ عند الضغط خارجها =====
@@ -1862,5 +1969,6 @@ window.resendVerificationCode = resendVerificationCode;
 window.handleUserLogin = handleUserLogin;
 window.handleMerchantRegister = handleMerchantRegister;
 
-console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل تاجر (بدون هاتف)');
-console.log('✅ جميع دوال المدير والتحقق الثنائي مضافة ومفعلة');
+console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل تاجر (اسم + رقم ثابت)');
+console.log('✅ صيغة معرف التاجر: [اسم_المستخدم]-[رقم_الهاتف أو ID]');
+console.log('✅ صيغة معرف المنتج: [معرف_التاجر]-[رقم_تسلسلي]');
