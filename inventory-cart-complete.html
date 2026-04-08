@@ -108,7 +108,6 @@
             text-align: center;
             transition: all 0.25s;
             border: 1px solid rgba(255,215,0,0.2);
-            cursor: pointer;
         }
 
         .stat-card:hover {
@@ -131,6 +130,16 @@
         .stat-card .label {
             font-size: 12px;
             color: #aaa;
+        }
+
+        .merchant-id-box {
+            font-family: monospace;
+            font-size: 13px;
+            direction: ltr;
+            background: rgba(255,215,0,0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-top: 5px;
         }
 
         .btn {
@@ -185,6 +194,11 @@
             background: rgba(96,165,250,0.2);
             border: 1px solid var(--info);
             color: var(--info);
+        }
+
+        .btn-info:hover {
+            background: var(--info);
+            color: white;
         }
 
         .btn-purple {
@@ -631,10 +645,11 @@
             </div>
         </div>
         <div class="stats">
-            <div class="stat-card" id="merchantStatCard" onclick="openRegisterMerchantModal()">
+            <div class="stat-card" id="merchantStatCard">
                 <i class="fas fa-store"></i>
                 <div class="number" id="merchantDisplay">---</div>
-                <div class="label">معرف التاجر (اضغط)</div>
+                <div class="label">معرف التاجر</div>
+                <div class="merchant-id-box" id="merchantIDBox" style="font-size:10px"></div>
             </div>
             <div class="stat-card"><i class="fab fa-telegram"></i><div class="number" id="statTelegram">✅</div><div class="label">البوت جاهز</div></div>
             <div class="stat-card"><i class="fas fa-store"></i><div class="number" id="statTotal">0</div><div class="label">المنتجات</div></div>
@@ -694,23 +709,6 @@
 
 <div class="footer"><p>© 2026 ناردو برو - نظام متجر احترافي | المعرفات: [اسم_التاجر-رقم_ثابت-رقم_تسلسلي]</p></div>
 
-<!-- مودال تسجيل تاجر جديد -->
-<div id="registerMerchantModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2><i class="fas fa-store"></i> تسجيل تاجر جديد</h2>
-            <button class="close-modal" onclick="closeRegisterMerchantModal()">&times;</button>
-        </div>
-        <form onsubmit="event.preventDefault(); registerMerchant();">
-            <div class="form-group"><label>اسم المتجر (الاسم المختصر) *</label><input type="text" id="regStoreName" required placeholder="مثال: ناردو, زين, نور"></div>
-            <div class="form-group"><label>الاسم الكامل *</label><input type="text" id="regFullName" required></div>
-            <div class="form-group"><label>رقم الهاتف * (سيكون الرقم الثابت في المعرف)</label><input type="tel" id="regPhone" required placeholder="مثال: 0555123456"></div>
-            <div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="regEmail" placeholder="اختياري"></div>
-            <button type="submit" class="btn btn-gold" style="width:100%"><i class="fas fa-id-card"></i> تسجيل التاجر</button>
-        </form>
-    </div>
-</div>
-
 <!-- مودال إضافة المنتج -->
 <div id="addProductModal" class="modal">
     <div class="modal-content">
@@ -769,7 +767,7 @@
 </div>
 
 <script>
-    // ===== إعدادات تلغرام =====
+    // ===== إعدادات تلغرام (مستوردة من ملف التلجرام) =====
     const TELEGRAM_CONFIG = {
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
         channelId: '-1003822964890',
@@ -780,19 +778,17 @@
     let products = JSON.parse(localStorage.getItem('nardo_products') || '[]');
     let orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
     let stockLog = JSON.parse(localStorage.getItem('nardo_stock_log') || '[]');
-    let currentMerchant = JSON.parse(localStorage.getItem('current_merchant') || 'null');
+    let currentMerchant = null;
     let editProductId = null;
     let currentImages = [];
     let isAdminMode = false;
 
-    // ===== [دالة 1] إنشاء معرف التاجر (اسم مختصر + رقم ثابت من الهاتف) =====
+    // ===== [دالة من ملف التلجرام] إنشاء معرف التاجر (اسم مختصر + رقم ثابت من الهاتف) =====
     function generateMerchantID(storeName, merchantId, phoneNumber) {
-        // تنظيف الاسم وأخذ أول 6 أحرف
         let cleanName = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
         if (cleanName.length === 0) cleanName = 'تاجر';
         const namePart = cleanName.substring(0, 6).toUpperCase();
         
-        // الرقم الثابت: من رقم الهاتف إن وجد، وإلا من ID المستخدم
         let fixedNumber;
         if (phoneNumber && phoneNumber.length >= 4) {
             const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
@@ -802,12 +798,10 @@
             fixedNumber = merchantId.toString().slice(-6);
         }
         
-        const merchantID = `${namePart}-${fixedNumber}`;
-        console.log(`✅ تم إنشاء معرف التاجر: ${merchantID}`);
-        return merchantID;
+        return `${namePart}-${fixedNumber}`;
     }
 
-    // ===== [دالة 2] الحصول على معرف التاجر أو إنشاؤه =====
+    // ===== [دالة من ملف التلجرام] الحصول على معرف التاجر أو إنشاؤه =====
     function getOrCreateMerchantID(merchant) {
         if (merchant.merchantFixedID) return merchant.merchantFixedID;
         
@@ -818,25 +812,22 @@
         merchant.merchantFixedID = merchantID;
         merchant.merchantIDCreatedAt = new Date().toISOString();
         
-        // حفظ في localStorage
-        localStorage.setItem('current_merchant', JSON.stringify(merchant));
-        
         return merchantID;
     }
 
-    // ===== [دالة 3] الحصول على الرقم التسلسلي التالي للمنتج =====
+    // ===== [دالة من ملف التلجرام] الحصول على الرقم التسلسلي التالي للمنتج =====
     function getNextProductSerial(merchantID) {
         const merchantProducts = products.filter(p => p.merchantID === merchantID);
         const nextNumber = merchantProducts.length + 1;
-        return nextNumber.toString().padStart(3, '0'); // 001, 002, 003...
+        return nextNumber.toString().padStart(3, '0');
     }
 
-    // ===== [دالة 4] إنشاء معرف المنتج المركب =====
+    // ===== [دالة من ملف التلجرام] إنشاء معرف المنتج المركب =====
     function generateProductCompositeID(merchantID, serialNumber) {
         return `${merchantID}-${serialNumber}`;
     }
 
-    // ===== [دالة 5] عرض معرف التاجر بشكل منسق =====
+    // ===== [دالة من ملف التلجرام] تنسيق معرف التاجر =====
     function formatMerchantID(merchantID) {
         if (!merchantID) return 'غير متوفر';
         const parts = merchantID.split('-');
@@ -844,69 +835,83 @@
         return merchantID;
     }
 
-    // ===== [دالة 6] تحديث عرض التاجر في الواجهة =====
-    function updateMerchantDisplay() {
-        const merchantDisplay = document.getElementById('merchantDisplay');
-        if (merchantDisplay) {
-            if (currentMerchant && currentMerchant.merchantFixedID) {
-                merchantDisplay.innerHTML = currentMerchant.merchantFixedID;
-                merchantDisplay.style.direction = 'ltr';
-                merchantDisplay.style.fontFamily = 'monospace';
-                merchantDisplay.style.fontSize = '14px';
-            } else {
-                merchantDisplay.innerHTML = 'سجل الآن';
+    // ===== تحميل التاجر الحالي من localStorage (مستورد من ملف التلجرام) =====
+    function loadCurrentMerchant() {
+        // محاولة جلب التاجر من current_user (كما في ملف التلجرام)
+        const savedUser = localStorage.getItem('current_user');
+        if (savedUser) {
+            const user = JSON.parse(savedUser);
+            if (user.role === 'merchant_approved' || user.role === 'admin') {
+                currentMerchant = user;
+                getOrCreateMerchantID(currentMerchant);
+                localStorage.setItem('current_merchant', JSON.stringify(currentMerchant));
+                updateMerchantDisplay();
+                return;
             }
         }
-    }
-
-    // ===== فتح وإغلاق مودال تسجيل التاجر =====
-    function openRegisterMerchantModal() {
-        document.getElementById('registerMerchantModal').classList.add('active');
-    }
-    
-    function closeRegisterMerchantModal() {
-        document.getElementById('registerMerchantModal').classList.remove('active');
-    }
-
-    // ===== تسجيل تاجر جديد =====
-    function registerMerchant() {
-        const storeName = document.getElementById('regStoreName').value.trim();
-        const fullName = document.getElementById('regFullName').value.trim();
-        const phone = document.getElementById('regPhone').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
         
-        if (!storeName || !fullName || !phone) {
-            showToast('الرجاء ملء جميع الحقول المطلوبة', 'error');
+        // محاولة جلب التاجر من current_merchant
+        const savedMerchant = localStorage.getItem('current_merchant');
+        if (savedMerchant) {
+            currentMerchant = JSON.parse(savedMerchant);
+            getOrCreateMerchantID(currentMerchant);
+            updateMerchantDisplay();
             return;
         }
         
-        const newMerchant = {
+        // محاولة جلب أول تاجر معتمد من قائمة المستخدمين
+        const users = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
+        const approvedMerchant = users.find(u => u.role === 'merchant_approved');
+        if (approvedMerchant) {
+            currentMerchant = approvedMerchant;
+            getOrCreateMerchantID(currentMerchant);
+            localStorage.setItem('current_merchant', JSON.stringify(currentMerchant));
+            updateMerchantDisplay();
+            return;
+        }
+        
+        // إذا لم يوجد تاجر، قم بإنشاء تاجر افتراضي (للتجربة)
+        console.log('⚠️ لا يوجد تاجر مسجل، سيتم إنشاء تاجر تجريبي');
+        const defaultMerchant = {
             id: Date.now(),
-            name: fullName,
-            storeName: storeName,
-            phone: phone,
-            email: email || '',
+            name: 'تاجر تجريبي',
+            storeName: 'ناردو',
+            phone: '0555123456',
+            email: 'test@nardoo.com',
             role: 'merchant_approved',
             status: 'approved',
             createdAt: new Date().toISOString()
         };
+        currentMerchant = defaultMerchant;
+        getOrCreateMerchantID(currentMerchant);
+        localStorage.setItem('current_merchant', JSON.stringify(currentMerchant));
         
-        // إنشاء معرف التاجر الثابت
-        const merchantID = getOrCreateMerchantID(newMerchant);
-        
-        currentMerchant = newMerchant;
-        localStorage.setItem('current_merchant', JSON.stringify(newMerchant));
+        // حفظ في قائمة المستخدمين أيضاً
+        const allUsers = JSON.parse(localStorage.getItem('nardoo_users') || '[]');
+        if (!allUsers.find(u => u.id === defaultMerchant.id)) {
+            allUsers.push(defaultMerchant);
+            localStorage.setItem('nardoo_users', JSON.stringify(allUsers));
+        }
         
         updateMerchantDisplay();
-        closeRegisterMerchantModal();
+    }
+
+    // ===== تحديث عرض التاجر في الواجهة =====
+    function updateMerchantDisplay() {
+        const merchantDisplay = document.getElementById('merchantDisplay');
+        const merchantIDBox = document.getElementById('merchantIDBox');
         
-        showToast(`✅ تم تسجيل التاجر بنجاح! المعرف: ${merchantID}`, 'success');
-        
-        // إعادة تعيين النموذج
-        document.getElementById('regStoreName').value = '';
-        document.getElementById('regFullName').value = '';
-        document.getElementById('regPhone').value = '';
-        document.getElementById('regEmail').value = '';
+        if (merchantDisplay && currentMerchant) {
+            if (currentMerchant.merchantFixedID) {
+                merchantDisplay.innerHTML = currentMerchant.storeName || currentMerchant.name;
+                merchantIDBox.innerHTML = currentMerchant.merchantFixedID;
+                merchantIDBox.style.direction = 'ltr';
+                merchantIDBox.style.fontFamily = 'monospace';
+            } else {
+                merchantDisplay.innerHTML = currentMerchant.storeName || currentMerchant.name;
+                merchantIDBox.innerHTML = 'جاري الإنشاء...';
+            }
+        }
     }
 
     // ===== البحث عن منتج بالمعرف =====
@@ -936,7 +941,7 @@
         return cleaned.trim();
     }
 
-    // ===== إرسال إلى تلغرام =====
+    // ===== إرسال إلى تلغرام (مستورد من ملف التلجرام) =====
     async function sendToTelegram(product, imageFile) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -985,11 +990,10 @@
         });
     }
 
-    // ===== حفظ المنتج فقط (بدون نشر) =====
+    // ===== حفظ المنتج فقط =====
     function saveProductOnly() {
         if (!currentMerchant) {
-            showToast('⚠️ الرجاء تسجيل تاجر جديد أولاً', 'warning');
-            openRegisterMerchantModal();
+            showToast('⚠️ لا يوجد تاجر مسجل، الرجاء تسجيل الدخول أولاً', 'warning');
             return;
         }
         
@@ -1003,7 +1007,6 @@
         if (isNaN(price) || price <= 0) { showToast('الرجاء إدخال سعر صحيح', 'error'); return; }
         if (isNaN(quantity) || quantity < 0) { showToast('الرجاء إدخال كمية صحيحة', 'error'); return; }
         
-        // إنشاء المعرفات
         const merchantID = getOrCreateMerchantID(currentMerchant);
         const serialNumber = getNextProductSerial(merchantID);
         const productCompositeID = generateProductCompositeID(merchantID, serialNumber);
@@ -1039,11 +1042,10 @@
         closeAddProductModal();
     }
 
-    // ===== حفظ ونشر المنتج إلى تلغرام =====
+    // ===== حفظ ونشر المنتج =====
     async function saveAndPublishProduct() {
         if (!currentMerchant) {
-            showToast('⚠️ الرجاء تسجيل تاجر جديد أولاً', 'warning');
-            openRegisterMerchantModal();
+            showToast('⚠️ لا يوجد تاجر مسجل، الرجاء تسجيل الدخول أولاً', 'warning');
             return;
         }
         
@@ -1065,7 +1067,6 @@
         
         const imageFile = imageInput.files[0];
         
-        // إنشاء المعرفات
         const merchantID = getOrCreateMerchantID(currentMerchant);
         const serialNumber = getNextProductSerial(merchantID);
         const productCompositeID = generateProductCompositeID(merchantID, serialNumber);
@@ -1204,7 +1205,6 @@
 
     function closeImageViewer() { document.getElementById('imageViewerModal').classList.remove('active'); }
 
-    // ===== عرض جدول المخزون =====
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable');
         if(!products.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">لا توجد منتجات</td></tr>'; return; }
@@ -1220,7 +1220,6 @@
         </tr>`).join('');
     }
 
-    // ===== دوال سجل المخزون =====
     function addStockLog(pid, pname, op, qty, oldQ, newQ, reason='') {
         stockLog.unshift({ id:Date.now(), productId:pid, productName:pname, operation:op, quantity:qty, oldQty:oldQ, newQty:newQ, reason, date:new Date().toLocaleString('ar-EG') });
         if(stockLog.length > 800) stockLog = stockLog.slice(0,800);
@@ -1235,7 +1234,6 @@
 
     function clearStockLog() { if(confirm('مسح السجل؟')){ stockLog=[]; localStorage.setItem('nardo_stock_log','[]'); renderStockLog(); showToast('تم المسح','success'); } }
 
-    // ===== تعديل المخزون =====
     function openEditStockModal(id) { 
         editProductId=id; 
         const p=products.find(p=>p.id===id); 
@@ -1268,7 +1266,6 @@
         closeEditStockModal();
     }
 
-    // ===== الطلبات =====
     function renderOrders() {
         const container = document.getElementById('ordersContainer');
         if(!orders.length){ container.innerHTML='<div class="order-card" style="text-align:center"><i class="fas fa-inbox fa-3x"></i><p>لا توجد طلبات بعد</p></div>'; return; }
@@ -1299,7 +1296,6 @@
         showToast(`✅ تم إنشاء الطلب بنجاح! المبلغ: ${total.toLocaleString()} دج`, 'success');
     }
 
-    // ===== دوال المودال =====
     function openAddProductModal() { 
         document.getElementById('addProductModal').classList.add('active');
         currentImages = [];
@@ -1349,13 +1345,11 @@
         });
     }
 
-    // ===== الإحصائيات =====
     function updateStats() {
         document.getElementById('statTotal').innerText = products.length;
         document.getElementById('statOrders').innerText = orders.length;
     }
 
-    // ===== الإشعارات =====
     function showToast(msg, type) { 
         const t=document.createElement('div'); 
         t.className=`toast ${type}`; 
@@ -1364,7 +1358,6 @@
         setTimeout(()=>t.remove(),3000); 
     }
 
-    // ===== التبويبات =====
     function showTab(tab, event) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.getElementById(tab + 'Tab').style.display = 'block';
@@ -1384,14 +1377,15 @@
 
     // ===== التهيئة =====
     document.addEventListener('DOMContentLoaded', () => { 
+        loadCurrentMerchant();
         updateStats(); 
         renderProducts(); 
         renderInventory();
         renderStockLog();
         renderOrders();
-        updateMerchantDisplay();
         if(document.getElementById('searchProducts')) document.getElementById('searchProducts').addEventListener('input', renderProducts); 
         console.log('✅ النظام جاهز - صيغة المعرفات: [اسم_التاجر-رقم_ثابت-رقم_تسلسلي]');
+        console.log('📌 التاجر الحالي:', currentMerchant);
     });
 </script>
 </body>
