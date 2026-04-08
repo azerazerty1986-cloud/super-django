@@ -1480,36 +1480,69 @@
 
     function addFingerprintToProducts() {
         const fingerprint = getProductFingerprint();
-        const products = document.querySelectorAll('.product-card');
+        // البحث عن المنتجات في عدة كلاسات محتملة
+        const products = document.querySelectorAll('.product-card, .product-item, [class*="product"]');
         
         products.forEach(product => {
+            // تجنب إضافة البصمة مرتين لنفس المنتج
             if (product.querySelector('.product-fp')) return;
+            
+            // التأكد أن العنصر يحتوي على سعر (منتج حقيقي)
+            const price = product.querySelector('.product-price, [class*="price"]');
+            if (!price) return;
             
             const fp = document.createElement('div');
             fp.className = 'product-fp';
             fp.innerHTML = `<i class="fas fa-fingerprint"></i> ${fingerprint}`;
             fp.style.cssText = 'margin:8px 0;padding:4px 12px;background:rgba(255,215,0,0.15);border-radius:20px;font-size:11px;color:#ffd700;text-align:center;font-family:monospace';
             
-            const price = product.querySelector('.product-price');
-            if (price) price.insertAdjacentElement('afterend', fp);
-            else product.appendChild(fp);
+            // إضافة البصمة بعد السعر أو قبل الأزرار
+            const actions = product.querySelector('.product-actions, [class*="action"]');
+            if (actions) {
+                actions.insertAdjacentElement('beforebegin', fp);
+            } else if (price) {
+                price.insertAdjacentElement('afterend', fp);
+            } else {
+                product.appendChild(fp);
+            }
         });
     }
 
-    // تشغيل البصمة بعد تحميل الصفحة
+    // مراقبة تحميل المنتجات من App.renderProducts
+    const originalRenderProducts = window.App?.renderProducts;
+    if (window.App) {
+        window.App.renderProducts = function(...args) {
+            if (originalRenderProducts) originalRenderProducts.apply(this, args);
+            setTimeout(addFingerprintToProducts, 100);
+        };
+    }
+
+    // تشغيل البصمة بشكل متكرر لأن المنتجات تتحمّل ديناميكياً
+    const interval = setInterval(function() {
+        const productsExist = document.querySelectorAll('.product-card, .product-item').length > 0;
+        if (productsExist) {
+            addFingerprintToProducts();
+            // تقليل التكرار بعد أول ظهور للمنتجات
+            clearInterval(interval);
+            // لكن نستمر بالمراقبة عبر MutationObserver
+        }
+    }, 500);
+    
+    // مراقبة التغييرات في حاوية المنتجات
+    setTimeout(() => {
+        const container = document.getElementById('productsContainer');
+        if (container) {
+            const observer = new MutationObserver(function() {
+                addFingerprintToProducts();
+            });
+            observer.observe(container, { childList: true, subtree: true });
+        }
+    }, 500);
+    
+    // تأخير إضافي لضمان ظهور البصمة
     setTimeout(addFingerprintToProducts, 1000);
     setTimeout(addFingerprintToProducts, 2000);
     setTimeout(addFingerprintToProducts, 3000);
-    
-    // مراقبة إضافة منتجات جديدة
-    const observer = new MutationObserver(function() {
-        addFingerprintToProducts();
-    });
-    
-    setTimeout(() => {
-        const container = document.getElementById('productsContainer');
-        if (container) observer.observe(container, { childList: true, subtree: true });
-    }, 500);
 })();
 </script>
 </body>
