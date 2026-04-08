@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | نظام المتجر الذكي - معرفات متكاملة</title>
@@ -185,6 +183,12 @@
             transform: translateY(-2px);
         }
 
+        .btn-info {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            color: white;
+            box-shadow: 0 4px 12px rgba(96,165,250,0.3);
+        }
+
         .tabs {
             display: flex;
             gap: 12px;
@@ -283,6 +287,7 @@
             font-family: monospace;
             z-index: 10;
             direction: ltr;
+            border: 1px solid rgba(255,215,0,0.3);
         }
 
         .telegram-badge {
@@ -354,7 +359,6 @@
             border-radius: 50px;
             font-size: 13px;
             font-weight: 600;
-            margin: 10px 0;
         }
 
         .stock-high { background: rgba(74,222,128,0.2); color: #86efac; border:1px solid #4ade8033; }
@@ -498,7 +502,7 @@
             width: 80px;
             height: 80px;
             object-fit: cover;
-            border-radius: 16px;
+            border-radius: 12px;
             border: 2px solid var(--gold);
         }
 
@@ -581,10 +585,63 @@
             border-radius: 40px;
         }
 
+        .store-filter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.4);
+            padding: 8px 16px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,215,0,0.2);
+        }
+
+        .store-filter select {
+            background: transparent;
+            border: none;
+            color: var(--gold);
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .store-filter select:focus {
+            outline: none;
+        }
+
+        .store-info-banner {
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(0,0,0,0.3));
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .store-info-text {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .store-info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .store-info-item strong {
+            color: var(--gold);
+        }
+
         @media (max-width: 680px) {
             .products-grid { grid-template-columns: 1fr; }
             .header { flex-direction: column; text-align: center; }
             .stat-card { width: 100%; }
+            .store-info-banner { flex-direction: column; }
         }
     </style>
 </head>
@@ -611,17 +668,56 @@
         </div>
     </div>
 
+    <!-- معلومات المتجر الحالي -->
+    <div class="store-info-banner" id="storeInfoBanner">
+        <div class="store-info-text">
+            <div class="store-info-item">
+                <i class="fas fa-store"></i>
+                <div>
+                    <strong>المتجر الحالي:</strong>
+                    <span id="currentStoreName">---</span>
+                </div>
+            </div>
+            <div class="store-info-item">
+                <i class="fas fa-id-card"></i>
+                <div>
+                    <strong>معرف المتجر:</strong>
+                    <span id="currentStoreID" style="font-family: monospace;">---</span>
+                </div>
+            </div>
+            <div class="store-info-item">
+                <i class="fas fa-cube"></i>
+                <div>
+                    <strong>منتجات المتجر:</strong>
+                    <span id="storeProductCount">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; justify-content: space-between;">
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddProductModal()"><i class="fas fa-plus-circle"></i> إضافة منتج</button>
             <button class="btn btn-outline" onclick="window.location.reload()"><i class="fas fa-sync-alt"></i> تحديث</button>
             <button class="btn btn-info" onclick="findProductById()"><i class="fas fa-search"></i> بحث بالمعرف المركب</button>
         </div>
-        <div class="admin-mode-toggle">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="adminModeToggle" onchange="toggleAdminMode()">
-                <i class="fas fa-user-shield"></i> وضع المدير (عرض الكل)
-            </label>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div class="store-filter">
+                <i class="fas fa-filter"></i>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <span>تصفية حسب المتجر:</span>
+                    <select id="storeFilterSelect" onchange="filterByStore()">
+                        <option value="current">المتجر الحالي فقط</option>
+                        <option value="all">جميع المتاجر</option>
+                    </select>
+                </label>
+            </div>
+            <div class="admin-mode-toggle">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="adminModeToggle" onchange="toggleAdminMode()">
+                    <i class="fas fa-user-shield"></i> وضع المدير
+                </label>
+            </div>
         </div>
     </div>
 
@@ -659,7 +755,7 @@
     </div>
 </div>
 
-<div class="footer"><p>© 2026 ناردو برو | معرف المتجر: [اسم_المتجر-رقم_ثابت] | معرف المنتج: [اسم_المتجر-رقم_ثابت-رقم_تسلسلي]</p></div>
+<div class="footer"><p>© 2026 ناردو برو | معرف المتجر: [اسم_المتجر-رقم_ثابت] | معرف المنتج: [معرف_المتجر-رقم_تسلسلي]</p></div>
 
 <!-- مودال إضافة المنتج -->
 <div id="addProductModal" class="modal">
@@ -678,7 +774,7 @@
 </div>
 
 <!-- مودال تعديل المخزون -->
-<div id="editStockModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تعديل المخزون</h2><button class="close-modal" onclick="closeEditStockModal()">&times;</button></div><form onsubmit="event.preventDefault(); updateStock();"><div class="form-group"><label>المنتج</label><input type="text" id="editProductName" disabled></div><div class="form-group"><label>معرف المنتج</label><input type="text" id="editProductID" disabled></div><div class="form-group"><label>الكمية الحالية</label><input type="text" id="editCurrentQty" disabled></div><div class="form-group"><label>نوع العملية</label><select id="stockOperation"><option value="add">➕ إضافة</option><option value="remove">➖ سحب</option><option value="set">📝 تعيين</option></select></div><div class="form-group"><label>الكمية</label><input type="number" id="editNewQty" required min="0"></div><div class="form-group"><label>السبب</label><input type="text" id="stockReason" placeholder="مثال: جرد شهري"></div><button type="submit" class="btn btn-gold" style="width:100%">تحديث</button></form></div></div>
+<div id="editStockModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>تعديل المخزون</h2><button class="close-modal" onclick="closeEditStockModal()">&times;</button></div><form onsubmit="event.preventDefault(); updateStock();"><div class="form-group"><label>المنتج</label><input type="text" id="editProductName" disabled></div><div class="form-group"><label>معرف المنتج</label><input type="text" id="editProductID" disabled></div><div class="form-group"><label>معرف المتجر</label><input type="text" id="editProductStoreID" disabled></div><div class="form-group"><label>الكمية الحالية</label><input type="text" id="editCurrentQty" disabled></div><div class="form-group"><label>نوع العملية</label><select id="stockOperation"><option value="add">➕ إضافة</option><option value="remove">➖ سحب</option><option value="set">📝 تعيين</option></select></div><div class="form-group"><label>الكمية</label><input type="number" id="editNewQty" required min="0"></div><div class="form-group"><label>السبب</label><input type="text" id="stockReason" placeholder="مثال: جرد شهري"></div><button type="submit" class="btn btn-gold" style="width:100%">تحديث</button></form></div></div>
 
 <script>
     // ===================== إعدادات تلغرام =====================
@@ -691,6 +787,7 @@
     let editProductId = null;
     let currentImages = [];
     let isAdminMode = false;
+    let filterMode = 'current'; // 'current' أو 'all'
 
     // ========== إنشاء معرف المتجر الثابت بناءً على اسم المتجر ==========
     function generateStoreID(storeName) {
@@ -718,7 +815,7 @@
         return `${storeID}-${serialNumber}`;
     }
 
-    // تحميل بيانات المتجر الحالي
+    // ========== تحميل بيانات المتجر الحالي ==========
     function loadCurrentStore() {
         let stored = localStorage.getItem('current_store');
         if(stored) { 
@@ -729,22 +826,34 @@
                 name: 'ناردو ماركت',
                 storeName: 'ناردو ماركت',
                 phone: '0555123456',
-                role: 'store_owner'
+                address: 'الجزائر'
             };
-            localStorage.setItem('current_store', JSON.stringify(currentStore));
         }
         getOrCreateStoreID(currentStore);
         localStorage.setItem('current_store', JSON.stringify(currentStore));
+        
+        // تحديث عرض معلومات المتجر
         document.getElementById('merchantDisplay').innerHTML = currentStore.storeName;
         document.getElementById('merchantIDBox').innerHTML = currentStore.storeFixedID;
+        document.getElementById('currentStoreName').innerHTML = currentStore.storeName;
+        document.getElementById('currentStoreID').innerHTML = currentStore.storeFixedID;
+        
+        updateStoreProductCount();
     }
 
+    // ========== تحديث عدد منتجات المتجر الحالي ==========
+    function updateStoreProductCount() {
+        const storeProducts = products.filter(p => p.storeID === currentStore.storeFixedID);
+        document.getElementById('storeProductCount').innerHTML = storeProducts.length;
+    }
+
+    // ========== البحث عن منتج بالمعرف المركب ==========
     function findProductById() {
         const id = prompt('🔍 أدخل معرف المنتج المركب (مثال: ناردوماركت-582394-001):');
         if(!id) return;
         const product = products.find(p => p.productCompositeID === id);
         if(product) { 
-            alert(`✅ المنتج موجود:\n📦 المعرف: ${product.productCompositeID}\n🏷️ الاسم: ${product.name}\n💰 السعر: ${product.price} دج\n🏪 المتجر: ${product.storeName}\n📦 المخزون: ${product.quantity}`); 
+            alert(`✅ المنتج موجود:\n📦 المعرف: ${product.productCompositeID}\n🏷️ الاسم: ${product.name}\n💰 السعر: ${product.price} دج\n🏪 المتجر: ${product.storeName}\n🆔 معرف المتجر: ${product.storeID}\n📦 المخزون: ${product.quantity}`); 
         } else showToast('❌ لا يوجد منتج بهذا المعرف', 'error');
     }
 
@@ -789,7 +898,7 @@
         };
         products.push(newProduct);
         localStorage.setItem('nardo_products', JSON.stringify(products));
-        addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'إنشاء منتج جديد');
+        addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'إنشاء منتج جديد', newProduct.storeID);
         renderAll();
         showToast(`✅ تم حفظ المنتج "${name}" المعرف: ${compositeID}`, 'success');
         closeAddProductModal();
@@ -817,7 +926,7 @@
             newProduct.published = true; newProduct.telegramId = result.messageId; newProduct.publishedAt = new Date().toISOString();
             products.push(newProduct);
             localStorage.setItem('nardo_products', JSON.stringify(products));
-            addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'نشر فوري');
+            addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'نشر فوري', newProduct.storeID);
             renderAll();
             showToast(`✅ تم نشر المنتج "${name}" المعرف: ${compositeID}`, 'success');
             closeAddProductModal();
@@ -840,12 +949,35 @@
         } catch(e) { showToast('فشل النشر: '+e.message, 'error'); }
     }
 
+    // ========== عرض المنتجات مع الفلترة حسب المتجر ==========
     function renderProducts() {
         const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
-        let filtered = isAdminMode ? products : products.filter(p => p.published === true);
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || (p.productCompositeID && p.productCompositeID.includes(search)));
+        
+        // تطبيق الفلترة حسب وضع المدير والمتجر
+        let filtered = products;
+        
+        // إذا لم يكن وضع المدير، عرض المنتجات المنشورة فقط
+        if (!isAdminMode) {
+            filtered = filtered.filter(p => p.published === true);
+        }
+        
+        // إذا كان وضع الفلترة على المتجر الحالي، عرض منتجات المتجر الحالي فقط
+        if (filterMode === 'current') {
+            filtered = filtered.filter(p => p.storeID === currentStore.storeFixedID);
+        }
+        
+        // تطبيق البحث
+        filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(search) || 
+            (p.productCompositeID && p.productCompositeID.includes(search))
+        );
+        
         const container = document.getElementById('productsGrid');
-        if(!filtered.length) { container.innerHTML = '<div class="product-card" style="text-align:center"><i class="fas fa-box-open fa-3x"></i><p>لا توجد منتجات</p></div>'; return; }
+        if(!filtered.length) { 
+            container.innerHTML = '<div class="product-card" style="text-align:center"><i class="fas fa-box-open fa-3x"></i><p>لا توجد منتجات</p></div>'; 
+            return; 
+        }
+        
         container.innerHTML = filtered.map(p => {
             const stockClass = p.quantity > 10 ? 'stock-high' : (p.quantity > 0 ? 'stock-low' : 'stock-out');
             const stockText = p.quantity > 10 ? 'متوفر بكثرة' : (p.quantity > 0 ? 'مخزون محدود' : 'غير متوفر');
@@ -856,26 +988,246 @@
     }
 
     function viewProductImages(id) { const p=products.find(x=>x.id===id); if(p?.images?.length) { alert("📸 تم اختيار المنتج: "+p.name+"\nعدد الصور: "+p.images.length); } }
-    function renderInventory() { const tbody=document.getElementById('inventoryTable'); if(!products.length){tbody.innerHTML='<tr><td colspan="8" class="text-center">لا توجد منتجات</td></tr>';return;} tbody.innerHTML=products.map(p=>`<tr><td>${p.name}</td><td><span style="font-family:monospace;background:#ffd70020;padding:4px 8px;border-radius:12px;">${p.productCompositeID}</span></td><td>${p.storeID}</td><td>${p.price.toLocaleString()} دج</td><td>${p.quantity}</td><td><span class="stock-badge ${p.quantity>0?'stock-high':'stock-out'}">${p.quantity>0?'متاح':'نفد'}</span></td><td>${p.published?'✅ منشور':'⏳ مسودة'}</td><td><button class="btn btn-gold" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i> تعديل</button></td></tr>`).join(''); }
-    function addStockLog(pid,pname,op,qty,oldQ,newQ,reason=''){ stockLog.unshift({id:Date.now(),productId:pid,productName:pname,operation:op,quantity:qty,oldQty:oldQ,newQty:newQ,reason,date:new Date().toLocaleString('ar-EG')}); if(stockLog.length>500) stockLog=stockLog.slice(0,500); localStorage.setItem('nardo_stock_log',JSON.stringify(stockLog)); }
-    function renderStockLog(){ const c=document.getElementById('stockLogContainer'); if(!stockLog.length){c.innerHTML='<div style="text-align:center">لا توجد حركات</div>';return;} c.innerHTML=stockLog.map(l=>`<div class="stock-log-item"><div><strong style="color:gold">${l.productName}</strong><br>${l.operation==='add'?'➕ إضافة':(l.operation==='remove'?'➖ سحب':'📝 تعيين')} | ${l.quantity}<br><span style="font-size:12px">من ${l.oldQty} → ${l.newQty}</span>${l.reason?`<br>📌 ${l.reason}`:''}</div><div>${l.date}</div></div>`).join(''); }
-    function clearStockLog(){ if(confirm('مسح سجل المخزون؟')){ stockLog=[]; localStorage.setItem('nardo_stock_log','[]'); renderStockLog(); showToast('تم المسح','success'); } }
-    function openEditStockModal(id){ editProductId=id; const p=products.find(p=>p.id===id); if(p){ document.getElementById('editProductName').value=p.name; document.getElementById('editProductID').value=p.productCompositeID; document.getElementById('editCurrentQty').value=p.quantity; document.getElementById('editNewQty').value=0; document.getElementById('stockOperation').value='add'; document.getElementById('stockReason').value=''; document.getElementById('editStockModal').classList.add('active'); } }
-    function closeEditStockModal(){ document.getElementById('editStockModal').classList.remove('active'); editProductId=null; }
-    function updateStock(){ const p=products.find(p=>p.id===editProductId); if(!p)return; const op=document.getElementById('stockOperation').value; const qtyVal=parseInt(document.getElementById('editNewQty').value); const reason=document.getElementById('stockReason').value; if(isNaN(qtyVal)||qtyVal<0){showToast('كمية غير صالحة','error');return;} let oldQ=p.quantity,newQ=oldQ; if(op==='add'){newQ=oldQ+qtyVal;addStockLog(p.id,p.name,'add',qtyVal,oldQ,newQ,reason||'إضافة');showToast(`➕ تمت إضافة ${qtyVal}`,'success');} else if(op==='remove'){if(qtyVal>oldQ){showToast('الكمية أكبر من المخزون','error');return;}newQ=oldQ-qtyVal;addStockLog(p.id,p.name,'remove',qtyVal,oldQ,newQ,reason||'سحب');showToast(`➖ تم سحب ${qtyVal}`,'success');} else if(op==='set'){newQ=qtyVal;addStockLog(p.id,p.name,'set',Math.abs(newQ-oldQ),oldQ,newQ,reason||`تعيين إلى ${newQ}`);showToast(`📝 تم التعيين`,'success');} p.quantity=newQ; localStorage.setItem('nardo_products',JSON.stringify(products)); renderAll(); closeEditStockModal(); }
-    function renderOrders(){ const container=document.getElementById('ordersContainer'); if(!orders.length){container.innerHTML='<div class="order-card" style="text-align:center">لا توجد طلبات</div>';return;} container.innerHTML=orders.map(order=>`<div class="order-card"><div style="display:flex; justify-content:space-between;"><div><i class="fas fa-receipt"></i> طلب #${order.id}</div><span>${order.date}</span></div>${order.items.map(it=>`<div style="display:flex; justify-content:space-between;"><span>${it.name} × ${it.quantity}</span><span>${(it.price*it.quantity).toLocaleString()} دج</span></div>`).join('')}<div style="border-top:1px solid gold; margin-top:10px; padding-top:10px; display:flex; justify-content:space-between;"><strong>الإجمالي</strong><strong style="color:var(--success)">${order.total.toLocaleString()} دج</strong></div></div>`).join(''); }
-    function quickOrder(productId){ const p=products.find(p=>p.id===productId); if(!p||p.quantity<=0){showToast('المنتج غير متوفر','error');return;} const qty=prompt(`الكمية المطلوبة من "${p.name}" (المتاح: ${p.quantity})`,"1"); if(!qty)return; let qtyInt=parseInt(qty); if(isNaN(qtyInt)||qtyInt<=0||qtyInt>p.quantity){showToast('كمية غير صالحة','error');return;} const total=p.price*qtyInt; const newOrder={id:Date.now(),date:new Date().toLocaleString('ar-EG'),items:[{id:p.id,name:p.name,price:p.price,quantity:qtyInt}],total:total,status:'مكتمل'}; orders.unshift(newOrder); localStorage.setItem('nardo_orders',JSON.stringify(orders)); const old=p.quantity; p.quantity-=qtyInt; addStockLog(p.id,p.name,'remove',qtyInt,old,p.quantity,`طلب #${newOrder.id}`); localStorage.setItem('nardo_products',JSON.stringify(products)); renderAll(); showToast(`✅ طلب بقيمة ${total.toLocaleString()} دج`,'success'); }
-    function openAddProductModal(){ document.getElementById('addProductModal').classList.add('active'); currentImages=[]; document.getElementById('imagePreview').innerHTML=''; document.getElementById('productImages').value=''; }
-    function closeAddProductModal(){ document.getElementById('addProductModal').classList.remove('active'); }
-    function previewImages(input){ const preview=document.getElementById('imagePreview'); preview.innerHTML=''; currentImages=[]; for(let i=0;i<input.files.length;i++){ const file=input.files[i]; const reader=new FileReader(); reader.onload=e=>{ currentImages.push(e.target.result); const div=document.createElement('div'); div.className='image-preview-item'; div.innerHTML=`<img src="${e.target.result}"><div class="remove-image" onclick="removeImage(${currentImages.length-1})">×</div>`; preview.appendChild(div); }; reader.readAsDataURL(file); } }
-    function removeImage(idx){ currentImages.splice(idx,1); const preview=document.getElementById('imagePreview'); if(preview) preview.innerHTML=''; currentImages.forEach((img,i)=>{ const div=document.createElement('div'); div.className='image-preview-item'; div.innerHTML=`<img src="${img}"><div class="remove-image" onclick="removeImage(${i})">×</div>`; preview.appendChild(div); }); }
-    function updateStats(){ document.getElementById('statTotal').innerText=products.length; document.getElementById('statOrders').innerText=orders.length; }
-    function showToast(msg,type){ const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
-    function showTab(tab, event){ document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none'); document.getElementById(tab+'Tab').style.display='block'; document.querySelectorAll('.tab').forEach(btn=>btn.classList.remove('active')); if(event?.target) event.target.classList.add('active'); if(tab==='products') renderProducts(); if(tab==='inventory') renderInventory(); if(tab==='stockLog') renderStockLog(); if(tab==='orders') renderOrders(); }
-    function toggleAdminMode(){ isAdminMode=document.getElementById('adminModeToggle').checked; renderProducts(); showToast(isAdminMode?'وضع المدير: تظهر جميع المنتجات':'وضع الزبون: المنتجات المنشورة فقط','info'); }
-    function renderAll(){ renderProducts(); renderInventory(); renderStockLog(); renderOrders(); updateStats(); }
     
-    document.addEventListener('DOMContentLoaded',()=>{ loadCurrentStore(); updateStats(); renderProducts(); renderInventory(); renderStockLog(); renderOrders(); document.getElementById('searchProducts')?.addEventListener('input',renderProducts); console.log('✅ النظام جاهز - معرف المتجر:',currentStore?.storeFixedID); });
+    // ========== عرض جدول إدارة المخزون مع الفلترة ==========
+    function renderInventory() { 
+        const tbody=document.getElementById('inventoryTable'); 
+        
+        // فلترة المنتجات حسب المتجر الحالي إذا لم يكن وضع المدير
+        let filteredProducts = isAdminMode ? products : products.filter(p => p.storeID === currentStore.storeFixedID);
+        
+        if(!filteredProducts.length){
+            tbody.innerHTML='<tr><td colspan="8" class="text-center">لا توجد منتجات</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML=filteredProducts.map(p=>`<tr><td>${p.name}</td><td><span style="font-family:monospace;background:#ffd70020;padding:4px 8px;border-radius:12px;">${p.productCompositeID}</span></td><td><span style="font-family:monospace;">${p.storeID}</span></td><td>${p.price.toLocaleString()} دج</td><td>${p.quantity}</td><td><span class="stock-badge ${p.quantity>0?'stock-high':'stock-out'}">${p.quantity>0?'متاح':'نفد'}</span></td><td>${p.published?'✅ منشور':'⏳ مسودة'}</td><td><button class="btn btn-gold" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i> تعديل</button></td></tr>`).join(''); 
+    }
+    
+    function addStockLog(pid,pname,op,qty,oldQ,newQ,reason='', storeID=''){
+        stockLog.unshift({
+            id:Date.now(),
+            productId:pid,
+            productName:pname,
+            operation:op,
+            quantity:qty,
+            oldQty:oldQ,
+            newQty:newQ,
+            reason,
+            storeID: storeID || currentStore.storeFixedID,
+            date:new Date().toLocaleString('ar-EG')
+        }); 
+        if(stockLog.length>500) stockLog=stockLog.slice(0,500); 
+        localStorage.setItem('nardo_stock_log',JSON.stringify(stockLog)); 
+    }
+    
+    function renderStockLog(){ 
+        const c=document.getElementById('stockLogContainer'); 
+        
+        // فلترة سجل المخزون حسب المتجر الحالي إذا لم يكن وضع المدير
+        let filteredLog = isAdminMode ? stockLog : stockLog.filter(l => l.storeID === currentStore.storeFixedID);
+        
+        if(!filteredLog.length){
+            c.innerHTML='<div style="text-align:center">لا توجد حركات</div>';
+            return;
+        }
+        
+        c.innerHTML=filteredLog.map(l=>`<div class="stock-log-item"><div><strong style="color:gold">${l.productName}</strong><br>${l.operation==='add'?'➕ إضافة':(l.operation==='remove'?'➖ سحب':'📝 تعيين')} | ${l.quantity}<br><span style="font-size:12px">من ${l.oldQty} → ${l.newQty}</span>${l.reason?`<br>📌 ${l.reason}`:''}</div><div>${l.date}</div></div>`).join(''); 
+    }
+    
+    function clearStockLog(){ 
+        if(confirm('مسح سجل المخزون؟')){ 
+            stockLog=[]; 
+            localStorage.setItem('nardo_stock_log','[]'); 
+            renderStockLog(); 
+            showToast('تم المسح','success'); 
+        } 
+    }
+    
+    function openEditStockModal(id){ 
+        editProductId=id; 
+        const p=products.find(p=>p.id===id); 
+        if(p){ 
+            document.getElementById('editProductName').value=p.name; 
+            document.getElementById('editProductID').value=p.productCompositeID; 
+            document.getElementById('editProductStoreID').value=p.storeID;
+            document.getElementById('editCurrentQty').value=p.quantity; 
+            document.getElementById('editNewQty').value=0; 
+            document.getElementById('stockOperation').value='add'; 
+            document.getElementById('stockReason').value=''; 
+            document.getElementById('editStockModal').classList.add('active'); 
+        } 
+    }
+    
+    function closeEditStockModal(){ 
+        document.getElementById('editStockModal').classList.remove('active'); 
+        editProductId=null; 
+    }
+    
+    function updateStock(){ 
+        const p=products.find(p=>p.id===editProductId); 
+        if(!p)return; 
+        const op=document.getElementById('stockOperation').value; 
+        const qtyVal=parseInt(document.getElementById('editNewQty').value); 
+        const reason=document.getElementById('stockReason').value; 
+        if(isNaN(qtyVal)||qtyVal<0){showToast('كمية غير صالحة','error');return;} 
+        let oldQ=p.quantity,newQ=oldQ; 
+        if(op==='add'){
+            newQ=oldQ+qtyVal;
+            addStockLog(p.id,p.name,'add',qtyVal,oldQ,newQ,reason||'إضافة', p.storeID);
+            showToast(`➕ تمت إضافة ${qtyVal}`,'success');
+        } else if(op==='remove'){
+            if(qtyVal>oldQ){showToast('الكمية أكبر من المخزون','error');return;}
+            newQ=oldQ-qtyVal;
+            addStockLog(p.id,p.name,'remove',qtyVal,oldQ,newQ,reason||'سحب', p.storeID);
+            showToast(`➖ تم سحب ${qtyVal}`,'success');
+        } else if(op==='set'){
+            newQ=qtyVal;
+            addStockLog(p.id,p.name,'set',Math.abs(newQ-oldQ),oldQ,newQ,reason||`تعيين إلى ${newQ}`, p.storeID);
+            showToast(`📝 تم التعيين`,'success');
+        } 
+        p.quantity=newQ; 
+        localStorage.setItem('nardo_products',JSON.stringify(products)); 
+        renderAll(); 
+        closeEditStockModal(); 
+    }
+    
+    function renderOrders(){ 
+        const container=document.getElementById('ordersContainer'); 
+        if(!orders.length){
+            container.innerHTML='<div class="order-card" style="text-align:center">لا توجد طلبات</div>';
+            return;
+        }
+        container.innerHTML=orders.map(order=>`<div class="order-card"><div style="display:flex; justify-content:space-between;"><div><i class="fas fa-receipt"></i> طلب #${order.id}</div><span>${order.date}</span></div>${order.items.map(it=>`<div style="display:flex; justify-content:space-between;"><span>${it.name} × ${it.quantity}</span><span>${(it.price*it.quantity).toLocaleString()} دج</span></div>`).join('')}<div style="border-top:1px solid gold; margin-top:10px; padding-top:10px; display:flex; justify-content:space-between;"><strong>الإجمالي</strong><strong style="color:var(--success)">${order.total.toLocaleString()} دج</strong></div></div>`).join(''); 
+    }
+    
+    function quickOrder(productId){ 
+        const p=products.find(p=>p.id===productId); 
+        if(!p||p.quantity<=0){showToast('المنتج غير متوفر','error');return;} 
+        const qty=prompt(`الكمية المطلوبة من "${p.name}" (المتاح: ${p.quantity})`,"1"); 
+        if(!qty)return; 
+        let qtyInt=parseInt(qty); 
+        if(isNaN(qtyInt)||qtyInt<=0||qtyInt>p.quantity){showToast('كمية غير صالحة','error');return;} 
+        const total=p.price*qtyInt; 
+        const newOrder={
+            id:Date.now(),
+            date:new Date().toLocaleString('ar-EG'),
+            items:[{id:p.id,name:p.name,price:p.price,quantity:qtyInt}],
+            total
+        }; 
+        orders.push(newOrder); 
+        p.quantity-=qtyInt; 
+        localStorage.setItem('nardo_orders',JSON.stringify(orders)); 
+        localStorage.setItem('nardo_products',JSON.stringify(products)); 
+        addStockLog(p.id,p.name,'remove',qtyInt,p.quantity+qtyInt,p.quantity,'طلب مباشر', p.storeID); 
+        renderAll(); 
+        showToast(`✅ تم إنشاء الطلب #${newOrder.id}`,'success'); 
+    }
+    
+    function openAddProductModal(){ 
+        document.getElementById('addProductModal').classList.add('active'); 
+        currentImages=[]; 
+        document.getElementById('imagePreview').innerHTML=''; 
+        document.getElementById('productImages').value=''; 
+    }
+    
+    function closeAddProductModal(){ 
+        document.getElementById('addProductModal').classList.remove('active'); 
+    }
+    
+    function previewImages(input){ 
+        const preview=document.getElementById('imagePreview'); 
+        preview.innerHTML=''; 
+        currentImages=[]; 
+        for(let i=0;i<input.files.length;i++){ 
+            const file=input.files[i]; 
+            const reader=new FileReader(); 
+            reader.onload=e=>{ 
+                currentImages.push(e.target.result); 
+                const div=document.createElement('div'); 
+                div.className='image-preview-item'; 
+                div.innerHTML=`<img src="${e.target.result}"><div class="remove-image" onclick="removeImage(${currentImages.length-1})">×</div>`; 
+                preview.appendChild(div); 
+            }; 
+            reader.readAsDataURL(file); 
+        } 
+    }
+    
+    function removeImage(idx){ 
+        currentImages.splice(idx,1); 
+        const preview=document.getElementById('imagePreview'); 
+        if(preview) preview.innerHTML=''; 
+        currentImages.forEach((img,i)=>{ 
+            const div=document.createElement('div'); 
+            div.className='image-preview-item'; 
+            div.innerHTML=`<img src="${img}"><div class="remove-image" onclick="removeImage(${i})">×</div>`; 
+            preview.appendChild(div); 
+        }); 
+    }
+    
+    function updateStats(){ 
+        // عرض إجمالي المنتجات حسب وضع المدير
+        const totalProducts = isAdminMode ? products.length : products.filter(p => p.storeID === currentStore.storeFixedID).length;
+        document.getElementById('statTotal').innerText = totalProducts;
+        document.getElementById('statOrders').innerText=orders.length; 
+    }
+    
+    function showToast(msg,type){ 
+        const t=document.createElement('div'); 
+        t.className=`toast ${type}`; 
+        t.innerText=msg; 
+        document.body.appendChild(t); 
+        setTimeout(()=>t.remove(),3000); 
+    }
+    
+    function showTab(tab, event){ 
+        document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none'); 
+        document.getElementById(tab+'Tab').style.display='block'; 
+        document.querySelectorAll('.tab').forEach(btn=>btn.classList.remove('active')); 
+        if(event?.target) event.target.classList.add('active'); 
+        if(tab==='products') renderProducts(); 
+        if(tab==='inventory') renderInventory(); 
+        if(tab==='stockLog') renderStockLog(); 
+        if(tab==='orders') renderOrders(); 
+    }
+    
+    function toggleAdminMode(){ 
+        isAdminMode=document.getElementById('adminModeToggle').checked; 
+        renderProducts(); 
+        renderInventory();
+        updateStats();
+        showToast(isAdminMode?'وضع المدير: تظهر جميع المنتجات من جميع المتاجر':'وضع الزبون: المنتجات المنشورة فقط','info'); 
+    }
+
+    // ========== فلترة المنتجات حسب المتجر ==========
+    function filterByStore() {
+        filterMode = document.getElementById('storeFilterSelect').value;
+        renderProducts();
+        renderInventory();
+        renderStockLog();
+        const filterText = filterMode === 'current' ? 'المتجر الحالي فقط' : 'جميع المتاجر';
+        showToast(`تم التصفية: ${filterText}`, 'info');
+    }
+    
+    function renderAll(){ 
+        renderProducts(); 
+        renderInventory(); 
+        renderStockLog(); 
+        renderOrders(); 
+        updateStats();
+        updateStoreProductCount();
+    }
+    
+    document.addEventListener('DOMContentLoaded',()=>{ 
+        loadCurrentStore(); 
+        updateStats(); 
+        renderProducts(); 
+        renderInventory(); 
+        renderStockLog(); 
+        renderOrders(); 
+        document.getElementById('searchProducts')?.addEventListener('input',renderProducts); 
+        console.log('✅ النظام جاهز - معرف المتجر:',currentStore?.storeFixedID); 
+    });
 </script>
 </body>
 </html>
