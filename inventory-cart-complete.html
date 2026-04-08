@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو برو | متجر احترافي - نشر تلقائي لتلجرام</title>
+    <title>ناردو برو | متجر احترافي - بصمة ثابتة لكل تاجر</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -593,7 +593,6 @@
             color: var(--gold);
         }
 
-        /* وضع المدير - يظهر شريط تحكم */
         .admin-mode-toggle {
             display: flex;
             align-items: center;
@@ -610,6 +609,22 @@
             gap: 8px;
         }
 
+        .fingerprint-box {
+            background: rgba(255,215,0,0.15);
+            border: 1px solid var(--gold);
+            border-radius: 30px;
+            padding: 8px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            direction: ltr;
+            text-align: center;
+        }
+
+        .fingerprint-box i {
+            color: var(--gold);
+            margin-left: 8px;
+        }
+
         @media (max-width: 680px) {
             .products-grid { grid-template-columns: 1fr; }
             .header { flex-direction: column; text-align: center; }
@@ -624,7 +639,7 @@
             <i class="fas fa-crown"></i>
             <div>
                 <h1>ناردو برو | المتجر الذهبي</h1>
-                <p>إدارة متقدمة - نشر تلقائي لتلجرام - مخزون - طلبات فورية</p>
+                <p>بصمة ثابتة خاصة بكل تاجر - إدارة متقدمة</p>
             </div>
         </div>
         <div class="stats">
@@ -638,6 +653,10 @@
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddProductModal()"><i class="fas fa-plus-circle"></i> إضافة منتج</button>
             <button class="btn btn-outline" onclick="window.location.reload()"><i class="fas fa-sync-alt"></i> تحديث</button>
+        </div>
+        <div class="fingerprint-box">
+            <i class="fas fa-fingerprint"></i>
+            <span id="fingerprintDisplay">جاري التحميل...</span>
         </div>
         <div class="admin-mode-toggle">
             <label>
@@ -683,7 +702,7 @@
     </div>
 </div>
 
-<div class="footer"><p>© 2026 ناردو برو - نظام متجر احترافي | النشر التلقائي إلى قناة التلجرام</p></div>
+<div class="footer"><p>© 2026 ناردو برو - بصمة ثابتة خاصة بكل تاجر | النشر التلقائي إلى قناة التلجرام</p></div>
 
 <!-- مودال إضافة المنتج -->
 <div id="addProductModal" class="modal">
@@ -719,14 +738,14 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>اسم الناشر</label>
-                <input type="text" id="productPublisher" placeholder="مثال: ناردو برو">
+                <label>اسم الناشر (اسم التاجر)</label>
+                <input type="text" id="productPublisher" placeholder="مثال: متجر العرائس">
             </div>
             <div class="form-group">
                 <label>صور المنتج</label>
                 <div class="image-upload" onclick="document.getElementById('productImages').click()">
                     <i class="fas fa-cloud-upload-alt fa-2x"></i>
-                    <p>اضغط لرفع الصور (مطلوبة للنشر فقط)</p>
+                    <p>اضغط لرفع الصور (مطلوبة للنشر)</p>
                     <input type="file" id="productImages" multiple accept="image/*" style="display:none" onchange="previewImages(this)">
                 </div>
                 <div id="imagePreview" class="image-preview"></div>
@@ -784,9 +803,49 @@
     let stockLog = JSON.parse(localStorage.getItem('nardo_stock_log') || '[]');
     let editProductId = null;
     let currentImages = [];
-    let isAdminMode = false;  // وضع المدير: يعرض كل المنتجات (حتى غير المنشورة)
+    let isAdminMode = false;
 
-    // ===== [3] دالة تنظيف النص من الأحرف التي تسبب مشكلة في تلجرام =====
+    // ===== [3] البصمة الثابتة الخاصة بكل تاجر =====
+    // المفتاح: merchant_fingerprint_ + اسم التاجر (أو معرف فريد)
+    // يتم إنشاؤها مرة واحدة فقط عند أول نشر ولا تتغير أبداً
+    
+    function getMerchantId() {
+        // نحاول الحصول على معرف التاجر المخزن، أو إنشاء واحد جديد
+        let merchantId = localStorage.getItem('nardo_merchant_id');
+        if (!merchantId) {
+            // إنشاء معرف فريد للتاجر
+            merchantId = 'MERCH_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+            localStorage.setItem('nardo_merchant_id', merchantId);
+        }
+        return merchantId;
+    }
+    
+    function getMerchantFingerprint() {
+        const merchantId = getMerchantId();
+        const fingerprintKey = `nardo_fingerprint_${merchantId}`;
+        let fingerprint = localStorage.getItem(fingerprintKey);
+        
+        if (!fingerprint) {
+            // إنشاء بصمة جديدة لهذا التاجر - 6 أرقام عشوائية + اسم المتجر الأساسي
+            const randomDigits = Math.floor(100000 + Math.random() * 900000).toString();
+            // نأخذ اسم المتجر من localStorage أو نستخدم الاسم الافتراضي
+            let storeName = localStorage.getItem('nardo_store_name');
+            if (!storeName) {
+                storeName = "ناردو برو";
+                localStorage.setItem('nardo_store_name', storeName);
+            }
+            fingerprint = `${storeName} | ${randomDigits}`;
+            localStorage.setItem(fingerprintKey, fingerprint);
+        }
+        return fingerprint;
+    }
+    
+    function updateFingerprintDisplay() {
+        const fp = getMerchantFingerprint();
+        document.getElementById('fingerprintDisplay').innerHTML = `<i class="fas fa-fingerprint"></i> ${fp}`;
+    }
+    
+    // ===== [4] دالة تنظيف النص =====
     function cleanTelegramText(text) {
         if (!text) return '';
         let cleaned = text
@@ -807,21 +866,64 @@
         cleaned = cleaned.replace(/\s+/g, ' ');
         return cleaned.trim();
     }
-
-    // ===== [4] دالة إرسال إلى تلجرام =====
-    async function sendToTelegram(product, imageFile) {
+    
+    // ===== [5] إضافة العلامة المائية (البصمة الثابتة) على الصورة =====
+    async function addWatermarkToImage(imageDataUrl) {
         return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = async function() {
-                try {
-                    showToast('📤 جاري النشر إلى تلجرام...', 'info');
-                    
-                    const cleanName = cleanTelegramText(product.name);
-                    const cleanDesc = cleanTelegramText(product.description || 'منتج ممتاز وعالي الجودة');
-                    const cleanCategory = cleanTelegramText(product.category);
-                    const cleanPublisher = cleanTelegramText(product.publisher || 'ناردو برو');
-                    
-                    const caption = `🟣 منتج جديد في ناردو برو
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                const fingerprint = getMerchantFingerprint();
+                const fontSize = Math.max(20, Math.floor(canvas.width / 16));
+                ctx.font = `bold ${fontSize}px 'Cairo', 'Tahoma', sans-serif`;
+                ctx.shadowColor = "black";
+                ctx.shadowBlur = 6;
+                ctx.fillStyle = "#FFD700";
+                ctx.textAlign = "center";
+                
+                const textWidth = ctx.measureText(fingerprint).width;
+                const x = canvas.width / 2;
+                const y = canvas.height - 30;
+                
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = "rgba(0,0,0,0.65)";
+                ctx.fillRect(x - textWidth/2 - 15, y - fontSize - 8, textWidth + 30, fontSize + 16);
+                
+                ctx.fillStyle = "#FFD700";
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = "black";
+                ctx.fillText(fingerprint, x, y);
+                
+                resolve(canvas.toDataURL('image/jpeg', 0.92));
+            };
+            img.onerror = reject;
+            img.src = imageDataUrl;
+        });
+    }
+    
+    // ===== [6] دالة إرسال إلى تلجرام مع البصمة =====
+    async function sendToTelegram(product, watermarkedImageDataUrl) {
+        try {
+            showToast('📤 جاري النشر إلى تلجرام...', 'info');
+            
+            const blob = await (await fetch(watermarkedImageDataUrl)).blob();
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM_CONFIG.channelId);
+            formData.append('photo', blob, 'product_watermarked.jpg');
+            
+            const cleanName = cleanTelegramText(product.name);
+            const cleanDesc = cleanTelegramText(product.description || 'منتج ممتاز وعالي الجودة');
+            const cleanCategory = cleanTelegramText(product.category);
+            const cleanPublisher = cleanTelegramText(product.publisher || 'ناردو برو');
+            const fingerprint = getMerchantFingerprint();
+            
+            const caption = `🟣 ${fingerprint}
 ━━━━━━━━━━━━━━━━━━━━━━
 📦 المنتج: ${cleanName}
 💰 السعر: ${product.price.toLocaleString()} دج
@@ -834,39 +936,30 @@
 📅 ${new Date().toLocaleString('ar-EG', {timeZone: 'Africa/Algiers'})}
 
 #ناردو_برو #${cleanCategory.replace(/\s/g, '_')}`;
-
-                    const blob = await (await fetch(reader.result)).blob();
-                    const formData = new FormData();
-                    formData.append('chat_id', TELEGRAM_CONFIG.channelId);
-                    formData.append('photo', blob, 'product.jpg');
-                    formData.append('caption', caption);
-
-                    const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendPhoto`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const data = await response.json();
-                    
-                    if (data.ok) {
-                        showToast(`✅ تم النشر بنجاح!`, 'success');
-                        resolve({ success: true, messageId: data.result.message_id, telegramId: data.result.message_id });
-                    } else {
-                        console.error('خطأ تلجرام:', data);
-                        showToast('❌ فشل النشر: ' + data.description, 'error');
-                        reject(new Error(data.description));
-                    }
-                } catch (error) {
-                    console.error('خطأ:', error);
-                    showToast('❌ خطأ في النشر: ' + error.message, 'error');
-                    reject(error);
-                }
-            };
-            reader.readAsDataURL(imageFile);
-        });
+            
+            formData.append('caption', caption);
+            
+            const response = await fetch(`${TELEGRAM_CONFIG.apiUrl}${TELEGRAM_CONFIG.botToken}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.ok) {
+                showToast(`✅ تم النشر بنجاح!`, 'success');
+                return { success: true, messageId: data.result.message_id };
+            } else {
+                throw new Error(data.description);
+            }
+        } catch (error) {
+            console.error('خطأ:', error);
+            showToast('❌ فشل النشر: ' + error.message, 'error');
+            throw error;
+        }
     }
-
-    // ===== [5] حفظ المنتج فقط (بدون نشر) =====
+    
+    // ===== [7] حفظ المنتج فقط =====
     function saveProductOnly() {
         const name = document.getElementById('productName').value.trim();
         const price = parseInt(document.getElementById('productPrice').value);
@@ -890,7 +983,8 @@
             images: currentImages.length > 0 ? currentImages : [],
             createdAt: new Date().toISOString(),
             published: false,
-            telegramId: null
+            telegramId: null,
+            merchantId: getMerchantId()
         };
         
         products.push(newProduct);
@@ -898,16 +992,13 @@
         
         addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'إضافة منتج جديد (بدون نشر)');
         
-        renderProducts();
-        renderInventory();
-        renderStockLog();
-        updateStats();
+        renderAll();
         
         showToast(`✅ تم حفظ المنتج "${name}" بنجاح (غير منشور)`, 'success');
         closeAddProductModal();
     }
-
-    // ===== [6] حفظ ونشر المنتج =====
+    
+    // ===== [8] حفظ ونشر المنتج مع البصمة الثابتة =====
     async function saveAndPublishProduct() {
         const name = document.getElementById('productName').value.trim();
         const price = parseInt(document.getElementById('productPrice').value);
@@ -926,53 +1017,95 @@
             return;
         }
         
-        const imageFile = imageInput.files[0];
+        // التأكد من وجود البصمة (سيتم إنشاؤها إن لم توجد)
+        updateFingerprintDisplay();
         
-        const newProduct = {
-            id: Date.now(),
-            name: name,
-            price: price,
-            quantity: quantity,
-            description: description,
-            category: category,
-            publisher: publisher,
-            images: currentImages.length > 0 ? currentImages : [],
-            createdAt: new Date().toISOString(),
-            published: false,
-            telegramId: null
+        const firstImageFile = imageInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            try {
+                // إضافة العلامة المائية (البصمة الثابتة)
+                const watermarkedImage = await addWatermarkToImage(e.target.result);
+                
+                // حفظ الصور الأصلية للعرض في المتجر
+                const originalImages = [];
+                for (let i = 0; i < imageInput.files.length; i++) {
+                    const f = imageInput.files[i];
+                    const origReader = new FileReader();
+                    const origData = await new Promise((resolve) => {
+                        origReader.onload = (ev) => resolve(ev.target.result);
+                        origReader.readAsDataURL(f);
+                    });
+                    originalImages.push(origData);
+                }
+                
+                const newProduct = {
+                    id: Date.now(),
+                    name: name,
+                    price: price,
+                    quantity: quantity,
+                    description: description,
+                    category: category,
+                    publisher: publisher,
+                    images: originalImages,
+                    createdAt: new Date().toISOString(),
+                    published: false,
+                    telegramId: null,
+                    merchantId: getMerchantId()
+                };
+                
+                const result = await sendToTelegram(newProduct, watermarkedImage);
+                newProduct.published = true;
+                newProduct.telegramId = result.messageId;
+                newProduct.publishedAt = new Date().toISOString();
+                
+                products.push(newProduct);
+                localStorage.setItem('nardo_products', JSON.stringify(products));
+                
+                addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'إضافة منتج جديد ونشره لتلجرام');
+                
+                renderAll();
+                
+                showToast(`✅ تم إضافة المنتج "${name}" ونشره بالبصمة: ${getMerchantFingerprint()}`, 'success');
+                closeAddProductModal();
+                
+            } catch (error) {
+                showToast('⚠️ فشل النشر إلى تلجرام، ولكن تم حفظ المنتج محلياً', 'warning');
+                const originalImages = [];
+                for (let i = 0; i < imageInput.files.length; i++) {
+                    const f = imageInput.files[i];
+                    const origReader = new FileReader();
+                    const origData = await new Promise((resolve) => {
+                        origReader.onload = (ev) => resolve(ev.target.result);
+                        origReader.readAsDataURL(f);
+                    });
+                    originalImages.push(origData);
+                }
+                const newProduct = {
+                    id: Date.now(),
+                    name: name,
+                    price: price,
+                    quantity: quantity,
+                    description: description,
+                    category: category,
+                    publisher: publisher,
+                    images: originalImages,
+                    createdAt: new Date().toISOString(),
+                    published: false,
+                    telegramId: null,
+                    merchantId: getMerchantId()
+                };
+                products.push(newProduct);
+                localStorage.setItem('nardo_products', JSON.stringify(products));
+                renderAll();
+                closeAddProductModal();
+            }
         };
-        
-        try {
-            const result = await sendToTelegram(newProduct, imageFile);
-            newProduct.published = true;
-            newProduct.telegramId = result.messageId;
-            newProduct.publishedAt = new Date().toISOString();
-            
-            products.push(newProduct);
-            localStorage.setItem('nardo_products', JSON.stringify(products));
-            
-            addStockLog(newProduct.id, newProduct.name, 'add', newProduct.quantity, 0, newProduct.quantity, 'إضافة منتج جديد ونشره لتلجرام');
-            
-            renderProducts();
-            renderInventory();
-            renderStockLog();
-            updateStats();
-            
-            showToast(`✅ تم إضافة المنتج "${name}" ونشره إلى تلجرام بنجاح!`, 'success');
-            closeAddProductModal();
-            
-        } catch (error) {
-            showToast('⚠️ فشل النشر إلى تلجرام، ولكن تم حفظ المنتج محلياً', 'warning');
-            products.push(newProduct);
-            localStorage.setItem('nardo_products', JSON.stringify(products));
-            renderProducts();
-            renderInventory();
-            updateStats();
-            closeAddProductModal();
-        }
+        reader.readAsDataURL(firstImageFile);
     }
-
-    // ===== [7] نشر منتج موجود مسبقاً =====
+    
+    // ===== [9] نشر منتج موجود مسبقاً =====
     async function publishExistingProduct(productId) {
         const product = products.find(p => p.id === productId);
         if (!product) { showToast('المنتج غير موجود', 'error'); return; }
@@ -990,27 +1123,23 @@
         showToast('📤 جاري النشر إلى تلجرام...', 'info');
         
         try {
-            const response = await fetch(product.images[0]);
-            const blob = await response.blob();
-            const imageFile = new File([blob], 'product.jpg', { type: blob.type });
-            
-            const result = await sendToTelegram(product, imageFile);
+            const watermarkedImage = await addWatermarkToImage(product.images[0]);
+            const result = await sendToTelegram(product, watermarkedImage);
             
             product.published = true;
             product.telegramId = result.messageId;
             product.publishedAt = new Date().toISOString();
             localStorage.setItem('nardo_products', JSON.stringify(products));
             
-            renderProducts();
-            renderInventory();
+            renderAll();
             
-            showToast(`✅ تم نشر المنتج "${product.name}" إلى تلجرام بنجاح!`, 'success');
+            showToast(`✅ تم نشر المنتج "${product.name}" بالبصمة: ${getMerchantFingerprint()}`, 'success');
         } catch (error) {
             showToast('❌ فشل النشر: ' + error.message, 'error');
         }
     }
-
-    // ===== [8] إعادة النشر (تحديث) =====
+    
+    // ===== [10] إعادة النشر =====
     async function republishToTelegram(productId) {
         const product = products.find(p => p.id === productId);
         if (!product) { showToast('المنتج غير موجود', 'error'); return; }
@@ -1023,41 +1152,30 @@
         showToast('📤 جاري إعادة النشر إلى تلجرام...', 'info');
         
         try {
-            const response = await fetch(product.images[0]);
-            const blob = await response.blob();
-            const imageFile = new File([blob], 'product.jpg', { type: blob.type });
-            
-            const result = await sendToTelegram(product, imageFile);
+            const watermarkedImage = await addWatermarkToImage(product.images[0]);
+            const result = await sendToTelegram(product, watermarkedImage);
             
             product.telegramId = result.messageId;
             product.lastRepublished = new Date().toISOString();
             localStorage.setItem('nardo_products', JSON.stringify(products));
             
-            showToast(`✅ تم إعادة نشر المنتج بنجاح!`, 'success');
-            renderProducts();
-            renderInventory();
+            showToast(`✅ تم إعادة نشر المنتج بنجاح بالبصمة: ${getMerchantFingerprint()}`, 'success');
+            renderAll();
         } catch (error) {
             showToast('❌ خطأ في إعادة النشر: ' + error.message, 'error');
         }
     }
-
-    // ===== [9] عرض المنتجات (مع شرط النشر) =====
+    
+    // ===== [11] عرض المنتجات =====
     function renderProducts() {
         const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
         
         let filtered;
         
         if (isAdminMode) {
-            // ✅ المدير يرى كل المنتجات (منشورة وغير منشورة)
-            filtered = products.filter(p => 
-                p.name.toLowerCase().includes(search)
-            );
+            filtered = products.filter(p => p.name.toLowerCase().includes(search));
         } else {
-            // ✅ الزبون/الجمهور يرى فقط المنتجات المنشورة
-            filtered = products.filter(p => 
-                p.published === true && 
-                p.name.toLowerCase().includes(search)
-            );
+            filtered = products.filter(p => p.published === true && p.name.toLowerCase().includes(search));
         }
         
         const container = document.getElementById('productsGrid');
@@ -1080,7 +1198,6 @@
                 `<span class="publish-status published"><i class="fab fa-telegram"></i> منشور</span>` : 
                 `<span class="publish-status not-published"><i class="fab fa-telegram"></i> غير منشور</span>`;
             
-            // أزرار إضافية للمدير
             const adminButtons = isAdminMode && !p.published ? 
                 `<button class="btn btn-telegram" onclick="publishExistingProduct(${p.id})" style="font-size:12px; padding:6px 12px;">
                     <i class="fab fa-telegram"></i> نشر
@@ -1110,15 +1227,8 @@
             </div>`;
         }).join('');
     }
-
-    // ===== [10] تبديل وضع المدير =====
-    function toggleAdminMode() {
-        isAdminMode = document.getElementById('adminModeToggle').checked;
-        renderProducts();
-        showToast(isAdminMode ? '🛡️ وضع المدير: تظهر جميع المنتجات' : '👥 وضع الزبون: تظهر المنتجات المنشورة فقط', 'info');
-    }
-
-    // ===== [11] مشاركة رابط المنتج =====
+    
+    // ===== [12] مشاركة رابط المنتج =====
     function shareProductLink(productId) {
         const product = products.find(p => p.id === productId);
         if(product && product.telegramId) {
@@ -1129,8 +1239,8 @@
             showToast('المنتج لم ينشر بعد على تلجرام', 'warning');
         }
     }
-
-    // ===== [12] طلب سريع =====
+    
+    // ===== [13] طلب سريع =====
     function quickOrder(productId) {
         const product = products.find(p => p.id === productId);
         if(!product || product.quantity <= 0) { showToast('المنتج غير متوفر حالياً', 'error'); return; }
@@ -1160,8 +1270,8 @@
         renderOrders();
         showToast(`✅ تم إنشاء الطلب بنجاح! المبلغ: ${total.toLocaleString()} دج`, 'success');
     }
-
-    // ===== [13] عرض الصور =====
+    
+    // ===== [14] عرض الصور =====
     function viewImages(productId) {
         const p = products.find(pr => pr.id === productId);
         if(p && p.images?.length) {
@@ -1172,11 +1282,11 @@
     }
     
     function closeImageViewer() { document.getElementById('imageViewerModal').classList.remove('active'); }
-
-    // ===== [14] عرض المخزون =====
+    
+    // ===== [15] عرض المخزون =====
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable');
-        if(!products.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد منتجات</td></td>'; return; }
+        if(!products.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد منتجات</td></tr>'; return; }
         tbody.innerHTML = products.map(p => `<tr>
             <td>${p.name}</td>
             <td>${p.price.toLocaleString()} دج</td>
@@ -1185,25 +1295,25 @@
             <td><i class="fas fa-user-edit"></i> ${p.publisher || 'ناردو برو'}</td>
             <td>${p.published ? `<i class="fab fa-telegram" style="color:#0088cc"></i> منشور` : '<span style="color:#fbbf24">⏳ غير منشور</span>'}</td>
             <td><button class="btn btn-gold" style="padding:6px 16px" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i> تعديل</button></td>
-          </tr>`).join('');
+           </tr>`).join('');
     }
-
-    // ===== [15] سجل المخزون =====
+    
+    // ===== [16] سجل المخزون =====
     function addStockLog(pid, pname, op, qty, oldQ, newQ, reason='') {
         stockLog.unshift({ id:Date.now(), productId:pid, productName:pname, operation:op, quantity:qty, oldQty:oldQ, newQty:newQ, reason, date:new Date().toLocaleString('ar-EG') });
         if(stockLog.length > 800) stockLog = stockLog.slice(0,800);
         localStorage.setItem('nardo_stock_log', JSON.stringify(stockLog));
     }
-
+    
     function renderStockLog() {
         const container = document.getElementById('stockLogContainer');
-        if(!stockLog.length) { container.innerHTML = '<div class="card" style="text-align:center">لا توجد حركات مخزون</div>'; return; }
+        if(!stockLog.length) { container.innerHTML = '<div class="order-card" style="text-align:center">لا توجد حركات مخزون</div>'; return; }
         container.innerHTML = stockLog.map(log => `<div class="stock-log-item"><div><strong style="color:var(--gold)">${log.productName}</strong><br><span>${log.operation==='add'?'➕ إضافة':(log.operation==='remove'?'➖ سحب':'📝 تعيين')} | الكمية: ${log.quantity}</span><br><span style="font-size:12px">من ${log.oldQty} → إلى ${log.newQty}</span>${log.reason?`<br><span>📌 ${log.reason}</span>`:''}</div><div class="date">${log.date}</div></div>`).join('');
     }
-
+    
     function clearStockLog() { if(confirm('مسح السجل بالكامل؟')){ stockLog=[]; localStorage.setItem('nardo_stock_log','[]'); renderStockLog(); showToast('تم مسح السجل','success'); } }
-
-    // ===== [16] تعديل المخزون =====
+    
+    // ===== [17] تعديل المخزون =====
     function openEditStockModal(id) { editProductId=id; const p=products.find(p=>p.id===id); if(p){ document.getElementById('editProductName').value=p.name; document.getElementById('editCurrentQty').value=p.quantity; document.getElementById('editNewQty').value=0; document.getElementById('stockOperation').value='add'; document.getElementById('stockReason').value=''; document.getElementById('editStockModal').classList.add('active'); } }
     function closeEditStockModal() { document.getElementById('editStockModal').classList.remove('active'); editProductId=null; }
     
@@ -1217,18 +1327,18 @@
         else if(op==='set'){ newQ=qtyVal; let diff=Math.abs(newQ-oldQ); addStockLog(p.id,p.name,'set',diff,oldQ,newQ,reason||`تعيين إلى ${newQ}`); showToast(`📝 تم تعيين الكمية إلى ${newQ}`,'success');}
         p.quantity=newQ;
         localStorage.setItem('nardo_products',JSON.stringify(products));
-        renderProducts(); renderInventory(); renderStockLog(); updateStats();
+        renderAll();
         closeEditStockModal();
     }
-
-    // ===== [17] عرض الطلبات =====
+    
+    // ===== [18] عرض الطلبات =====
     function renderOrders() {
         const container = document.getElementById('ordersContainer');
         if(!orders.length){ container.innerHTML='<div class="order-card" style="text-align:center"><i class="fas fa-inbox fa-3x"></i><p>لا توجد طلبات بعد</p></div>'; return; }
         container.innerHTML = orders.map(order => `<div class="order-card"><div style="display:flex; justify-content:space-between;"><div><i class="fas fa-receipt"></i> <strong>طلب #${order.id}</strong></div><span style="color:var(--gold)">${order.date}</span></div>${order.items.map(it=>`<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #ffd70020"><span>${it.name} × ${it.quantity}</span><span>${(it.price*it.quantity).toLocaleString()} دج</span></div>`).join('')}<div style="margin-top:15px; border-top:2px solid gold; padding-top:12px; display:flex; justify-content:space-between"><strong>الإجمالي</strong><strong style="color:var(--success)">${order.total.toLocaleString()} دج</strong></div></div>`).join('');
     }
-
-    // ===== [18] دوال المودال =====
+    
+    // ===== [19] دوال المودال =====
     function openAddProductModal() { 
         document.getElementById('addProductModal').classList.add('active');
         currentImages = [];
@@ -1241,8 +1351,8 @@
         document.getElementById('productPublisher').value = '';
     }
     function closeAddProductModal() { document.getElementById('addProductModal').classList.remove('active'); document.getElementById('imagePreview').innerHTML=''; currentImages=[]; document.getElementById('addProductModal').querySelector('form').reset(); }
-
-    // ===== [19] معاينة الصور =====
+    
+    // ===== [20] معاينة الصور =====
     function previewImages(input) {
         const preview = document.getElementById('imagePreview');
         preview.innerHTML = '';
@@ -1274,17 +1384,17 @@
             preview.appendChild(div);
         });
     }
-
-    // ===== [20] الإحصائيات =====
+    
+    // ===== [21] الإحصائيات =====
     function updateStats() {
         document.getElementById('statTotal').innerText = products.length;
         document.getElementById('statOrders').innerText = orders.length;
     }
-
-    // ===== [21] الإشعارات =====
+    
+    // ===== [22] الإشعارات =====
     function showToast(msg, type) { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
-
-    // ===== [22] التبويبات =====
+    
+    // ===== [23] التبويبات =====
     function showTab(tab, event) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.getElementById(tab + 'Tab').style.display = 'block';
@@ -1295,9 +1405,24 @@
         if (tab === 'stockLog') renderStockLog();
         if (tab === 'orders') renderOrders();
     }
-
-    // ===== [23] التهيئة =====
+    
+    function toggleAdminMode() {
+        isAdminMode = document.getElementById('adminModeToggle').checked;
+        renderProducts();
+        showToast(isAdminMode ? '🛡️ وضع المدير: تظهر جميع المنتجات' : '👥 وضع الزبون: تظهر المنتجات المنشورة فقط', 'info');
+    }
+    
+    function renderAll() {
+        updateStats();
+        renderProducts();
+        renderInventory();
+        renderStockLog();
+        renderOrders();
+    }
+    
+    // ===== [24] التهيئة =====
     document.addEventListener('DOMContentLoaded',()=>{ 
+        updateFingerprintDisplay();
         updateStats(); 
         renderProducts(); 
         renderInventory();
