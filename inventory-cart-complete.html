@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | نظام المتجر الذكي - جلب من تلغرام</title>
@@ -1036,35 +1034,81 @@
             return;
         }
         
-        container.innerHTML = filteredOrders.map(order => `
-            <div class="order-card" id="order-${order.id}">
-                <div class="order-header">
-                    <div><strong><i class="fas fa-receipt"></i> طلب #${order.id}</strong></div>
-                    <div style="font-size: 12px; color: #aaa;">${order.date}</div>
-                </div>
-                <div class="order-customer-info">
-                    <div><strong>👤 المشتري:</strong> ${order.customerName || 'غير معروف'}</div>
-                    <div><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</div>
-                    <div><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</div>
-                    ${order.customerNotes ? `<div><strong>📝 ملاحظات:</strong> ${order.customerNotes}</div>` : ''}
-                    ${isAdminMode ? `<div><strong>🏪 المتجر:</strong> ${order.storeName} (${order.storeID})</div>` : ''}
-                </div>
-                <div class="order-items">
-                    ${order.items.map(it => `
-                        <div style="display:flex; justify-content:space-between; margin-bottom: 5px; font-size: 14px;">
-                            <span>${it.name} × ${it.quantity}</span>
-                            <span>${(it.price * it.quantity).toLocaleString()} دج</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="border-top:1px solid rgba(255,215,0,0.2); margin-top:10px; padding-top:10px; display:flex; justify-content:space-between; align-items: center;">
-                    <div><strong>الإجمالي:</strong> <span style="color:var(--success); font-weight: bold;">${order.total.toLocaleString()} دج</span></div>
-                    <button class="btn btn-info" style="padding: 5px 15px; font-size: 12px;" onclick="exportOrderToPDF(${order.id})">
-                        <i class="fas fa-file-pdf"></i> تصدير PDF
-                    </button>
-                </div>
+        let html = `
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>المشتري</th>
+                            <th>المنتج</th>
+                            <th>الكمية</th>
+                            <th>السعر</th>
+                            <th>الإجمالي</th>
+                            <th>التاريخ</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        filteredOrders.forEach(order => {
+            order.items.forEach((it, index) => {
+                // البحث عن صورة المنتج
+                const product = products.find(p => p.id === it.id || p.productCompositeID === it.id);
+                const imgSrc = (product && product.images && product.images.length > 0) ? product.images[0] : 'https://via.placeholder.com/50';
+                
+                html += `
+                    <tr>
+                        ${index === 0 ? `<td rowspan="${order.items.length}">
+                            <div style="font-weight:bold">${order.customerName || 'غير معروف'}</div>
+                            <div style="font-size:11px; color:#aaa">${order.customerPhone || ''}</div>
+                        </td>` : ''}
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <img src="${imgSrc}" style="width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid var(--gold);">
+                                <div>
+                                    <div style="font-size:13px; font-weight:600;">${it.name}</div>
+                                    <div style="font-size:10px; color:var(--gold);">${it.id || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${it.quantity}</td>
+                        <td>${it.price.toLocaleString()} دج</td>
+                        <td>${(it.price * it.quantity).toLocaleString()} دج</td>
+                        ${index === 0 ? `<td rowspan="${order.items.length}" style="font-size:12px;">${order.date}</td>` : ''}
+                        ${index === 0 ? `<td rowspan="${order.items.length}">
+                            <div style="display:flex; flex-direction:column; gap:5px;">
+                                <button class="btn btn-success" style="padding: 5px 10px; font-size: 11px;" onclick="replyToOrder(${order.id})">
+                                    <i class="fas fa-reply"></i> رد
+                                </button>
+                                <button class="btn btn-info" style="padding: 5px 10px; font-size: 11px;" onclick="exportOrderToPDF(${order.id})">
+                                    <i class="fas fa-file-pdf"></i> PDF
+                                </button>
+                            </div>
+                        </td>` : ''}
+                    </tr>
+                `;
+            });
+        });
+        
+        html += `
+                    </tbody>
+                </table>
             </div>
-        `).join(''); 
+        `;
+        
+        container.innerHTML = html;
+    }
+
+    function replyToOrder(orderId) {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+        
+        const replyMsg = prompt(`الرد على المشتري: ${order.customerName}\nأدخل رسالة الرد:`, "تم استلام طلبك وجاري التجهيز...");
+        if (replyMsg) {
+            showToast(`✅ تم إرسال الرد: ${replyMsg}`, 'success');
+            // هنا يمكن إضافة منطق إرسال الرد عبر تلغرام أو وسيلة أخرى مستقبلاً
+        }
     }
 
     async function exportOrderToPDF(orderId) {
