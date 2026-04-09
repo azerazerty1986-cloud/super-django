@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | نظام المتجر الذكي - جلب من تلغرام</title>
@@ -917,8 +915,36 @@
             const imagesHtml = p.images?.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}" onclick="viewProductImages(${p.id})">`).join('')}${p.images.length>3?`<div class="product-icon" style="width:70px;height:70px;cursor:pointer" onclick="viewProductImages(${p.id})"><i class="fas fa-ellipsis-h"></i> +${p.images.length-3}</div>`:''}</div>` : `<div class="product-icon"><i class="fas fa-tag"></i></div>`;
             const [storePart, fixedPart] = p.storeID ? p.storeID.split('-') : ['', ''];
             const sourceIcon = p.source === 'telegram' ? '<i class="fab fa-telegram" style="font-size:12px; margin-right:5px;"></i>' : '<i class="fas fa-database" style="font-size:12px; margin-right:5px;"></i>';
-            return `<div class="product-card"><div class="product-id-badge">📦 ${p.productCompositeID}</div><div class="merchant-id-badge"><span style="color:gold;">${storePart}</span>-<span>${fixedPart}</span> ${sourceIcon}</div>${p.published ? `<div class="telegram-badge"><i class="fab fa-telegram"></i> منشور</div>` : ''}${imagesHtml}<div class="product-name">${p.name}</div><div class="product-price">${p.price.toLocaleString()} دج</div><div><span class="stock-badge ${stockClass}">${stockText} (${p.quantity})</span></div><div class="product-actions"><button class="btn btn-gold" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب مباشر</button>${isAdminMode && !p.published ? `<button class="btn btn-telegram" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : ''}</div></div>`;
+            
+            return `
+                <div class="product-card">
+                    <div class="product-id-badge">📦 ${p.productCompositeID}</div>
+                    <div class="merchant-id-badge"><span style="color:gold;">${storePart}</span>-<span>${fixedPart}</span> ${sourceIcon}</div>
+                    ${p.published ? `<div class="telegram-badge"><i class="fab fa-telegram"></i> منشور</div>` : ''}
+                    ${imagesHtml}
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-price">${p.price.toLocaleString()} دج</div>
+                    <div><span class="stock-badge ${stockClass}">${stockText} (${p.quantity})</span></div>
+                    <div class="product-actions">
+                        <button class="btn btn-gold" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب مباشر</button>
+                        ${isAdminMode ? `
+                            <button class="btn btn-info" style="padding: 10px 15px;" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-outline" style="border-color:var(--error); color:var(--error); padding: 10px 15px;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash-alt"></i></button>
+                        ` : ''}
+                        ${isAdminMode && !p.published ? `<button class="btn btn-telegram" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : ''}
+                    </div>
+                </div>
+            `;
         }).join('');
+    }
+
+    function deleteProduct(id) {
+        if(confirm('هل أنت متأكد من حذف هذا المنتج نهائياً؟')) {
+            products = products.filter(p => p.id !== id);
+            localStorage.setItem('nardo_products', JSON.stringify(products));
+            renderAll();
+            showToast('تم حذف المنتج بنجاح', 'success');
+        }
     }
 
     function viewProductImages(id) { 
