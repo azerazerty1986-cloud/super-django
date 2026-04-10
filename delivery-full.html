@@ -1,7 +1,4 @@
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>إدارة التوصيل والموزعين | ناردو برو</title>
@@ -1174,6 +1171,28 @@
             window.history.back();
         }
 
+        function checkPendingDelivery() {
+            const pending = localStorage.getItem('nardo_pending_delivery');
+            if (pending) {
+                const data = JSON.parse(pending);
+                openDeliveryModal();
+                
+                // ملء الحقول
+                setTimeout(() => {
+                    if (document.getElementById('deliveryOrderId')) document.getElementById('deliveryOrderId').value = data.orderId || '';
+                    if (document.getElementById('deliveryCustomer')) document.getElementById('deliveryCustomer').value = data.customer || '';
+                    if (document.getElementById('deliveryPhone')) document.getElementById('deliveryPhone').value = data.phone || '';
+                    if (document.getElementById('deliveryAmount')) document.getElementById('deliveryAmount').value = data.amount || '';
+                    if (document.getElementById('deliveryAddress')) document.getElementById('deliveryAddress').value = data.address || '';
+                    if (document.getElementById('deliveryNotes')) document.getElementById('deliveryNotes').value = `المنتجات: ${data.items || ''}`;
+                    
+                    // مسح البيانات من localStorage بعد الملء
+                    localStorage.removeItem('nardo_pending_delivery');
+                    showNotification('📦 تم استيراد بيانات الطلب تلقائياً', 'success');
+                }, 500);
+            }
+        }
+
         // ================================================================
         // ===== [07] دوال إرسال تلغرام
         // ================================================================
@@ -1296,6 +1315,7 @@ ${action === 'approved' ? `👨‍💼 *وافق عليه:* ${distributor.approv
 
         window.onload = function() {
             updateStats();
+            checkPendingDelivery();
             console.log('✅ صفحة إدارة التوصيل والموزعين جاهزة');
             console.log('✅ المستخدم الحالي:', currentUser);
             console.log('✅ عدد الطلبات:', deliveries.length);
