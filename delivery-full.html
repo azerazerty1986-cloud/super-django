@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>إدارة التوصيل والموزعين | ناردو برو</title>
@@ -1057,13 +1055,37 @@
         async function updateDeliveryStatus(id, status) {
             const delivery = deliveries.find(d => d.id == id);
             if (delivery) {
+                const oldStatus = delivery.status;
                 delivery.status = status;
                 delivery.updatedAt = new Date().toISOString();
+                
+                // 🆕 إذا تم تغيير الحالة إلى "مكتمل" (completed/delivered)
+                if (status === 'completed' || status === 'delivered') {
+                    // مزامنة المخزون
+                    const syncResult = syncInventoryAfterDelivery(id);
+                    
+                    if (syncResult.success) {
+                        showNotification(
+                            `✅ تم تسليم الطلب ومزامنة المخزون (${syncResult.updatedCount} منتج)`, 
+                            'success'
+                        );
+                        
+                        // إضافة ملاحظة المزامنة إلى الطلب
+                        delivery.syncNote = `تمت مزامنة ${syncResult.updatedCount} منتج`;
+                        delivery.syncedAt = new Date().toISOString();
+                        
+                        // إرسال إشعار مزامنة المخزون
+                        await sendInventorySyncNotification(delivery, syncResult);
+                    } else {
+                        showNotification('⚠️ تم تسليم الطلب لكن فشلت مزامنة المخزون', 'warning');
+                    }
+                }
+                
                 localStorage.setItem('nardoo_deliveries', JSON.stringify(deliveries));
-
+                
                 await sendDeliveryStatusUpdate(delivery);
 
-                showNotification('✅ تم تحديث حالة الطلب', 'success');
+                showNotification(`✅ تم تحديث حالة الطلب إلى "${getStatusText(status)}"`, 'success');
                 loadDeliveries();
                 updateStats();
             }
@@ -1196,6 +1218,211 @@
         }
 
         // ================================================================
+        // ===== [04.5] دوال مزامنة المخزون بعد التوصيل
+        // ================================================================
+
+        function syncInventoryAfterDelivery(deliveryId) {
+            const delivery = deliveries.find(d => d.id == deliveryId);
+            if (!delivery) {
+                console.error('❌ طلب التوصيل غير موجود');
+                return false;
+            }
+            
+            // جلب الطلب الأصلي من nardo_orders
+            const orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
+            const originalOrder = orders.find(o => 
+                o.originalOrderId == delivery.orderId || 
+                o.id == delivery.orderId || 
+                o.orderId == delivery.orderId
+            );
+            
+            if (!originalOrder) {
+                console.warn('⚠️ لم يتم العثور على الطلب الأصلي في nardo_orders');
+                return false;
+            }
+            
+            // جلب المنتجات الحالية
+            const products = JSON.parse(localStorage.getItem('nardo_products') || '[]');
+            let updatedCount = 0;
+            const updatedProducts = [];
+            
+            // تحديث المخزون لكل منتج في الطلب
+            originalOrder.items.forEach(item => {
+                const product = products.find(p => p.id === item.id);
+                
+                if (product) {
+                    // تسجيل الكمية القديمة
+                    const oldQuantity = product.quantity;
+                    
+                    // إنقاص المخزون (لأن الطلب تم تسليمه)
+                    // ملاحظة: في cart.html تم إنقاص المخزون مؤقتاً عند الطلب
+                    // هنا نتأكد من المزامنة النهائية ونسجل الحركة
+                    
+                    // إضافة سجل حركة مخزون
+                    addStockLogForDelivery(
+                        product.id,
+                        product.name,
+                        item.quantity,
+                        oldQuantity,
+                        product.quantity,
+                        `تسليم طلب #${delivery.orderId}`,
+                        product.storeID
+                    );
+                    
+                    updatedProducts.push({
+                        name: product.name,
+                        quantity: item.quantity,
+                        remaining: product.quantity
+                    });
+                    
+                    updatedCount++;
+                }
+            });
+            
+            // حفظ المنتجات المحدثة
+            localStorage.setItem('nardo_products', JSON.stringify(products));
+            
+            // تحديث حالة الطلب الأصلي إلى "تم التسليم"
+            if (originalOrder) {
+                originalOrder.status = 'delivered';
+                originalOrder.deliveredAt = new Date().toISOString();
+                originalOrder.deliveryId = deliveryId;
+                localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            }
+            
+            console.log(`✅ تمت مزامنة المخزون لـ ${updatedCount} منتج`);
+            
+            return {
+                success: true,
+                updatedCount: updatedCount,
+                products: updatedProducts
+            };
+        }
+
+        // ================================================================
+        // دالة مساعدة: إضافة سجل مخزون من عملية التوصيل
+        // ================================================================
+        function addStockLogForDelivery(productId, productName, quantity, oldQty, newQty, reason, storeID) {
+            let stockLog = JSON.parse(localStorage.getItem('nardo_stock_log') || '[]');
+            
+            const logEntry = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                productId: productId,
+                productName: productName,
+                operation: 'delivery_complete',
+                quantity: quantity,
+                oldQty: oldQty,
+                newQty: newQty,
+                reason: reason,
+                storeID: storeID,
+                date: new Date().toLocaleString('ar-EG'),
+                source: 'delivery_system'
+            };
+            
+            stockLog.unshift(logEntry);
+            
+            // الحفاظ على آخر 500 سجل فقط
+            if (stockLog.length > 500) {
+                stockLog = stockLog.slice(0, 500);
+            }
+            
+            localStorage.setItem('nardo_stock_log', JSON.stringify(stockLog));
+        }
+
+        // ================================================================
+        // دالة معالجة التتبع من cart.html
+        // ================================================================
+        function handleTrackingFromCart() {
+            const trackingData = localStorage.getItem('nardo_tracking_order');
+            
+            if (trackingData) {
+                const data = JSON.parse(trackingData);
+                
+                // البحث عن الطلب في قائمة التوصيل
+                const delivery = deliveries.find(d => 
+                    d.orderId == data.orderId || 
+                    d.id == data.orderId
+                );
+                
+                if (delivery) {
+                    // عرض نتيجة التتبع
+                    document.getElementById('trackingInput').value = data.orderId;
+                    trackDelivery();
+                    
+                    // إظهار رسالة ترحيب
+                    showNotification(`🔍 تتبع الطلب #${data.orderId}`, 'info');
+                } else {
+                    // الطلب موجود في الأرشيف لكن لم يتم إنشاء طلب توصيل له بعد
+                    showNotification('ℹ️ هذا الطلب لم يتم إرساله للتوصيل بعد', 'info');
+                    
+                    // عرض بيانات الطلب للمستخدم
+                    const resultDiv = document.getElementById('trackingResult');
+                    if (resultDiv) {
+                        resultDiv.innerHTML = `
+                            <div class="card" style="margin-top: 20px;">
+                                <h3 style="color: var(--gold); margin-bottom: 20px;">📦 معلومات الطلب #${data.orderId}</h3>
+                                <div style="margin-bottom: 20px;">
+                                    <div style="margin-bottom: 10px;">
+                                        <strong>الحالة:</strong> 
+                                        <span class="status-badge ${getStatusClass(data.status)}">${getStatusText(data.status)}</span>
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong>المتجر:</strong> ${data.storeName || 'غير محدد'}
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong>الزبون:</strong> ${data.customer}
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong>العنوان:</strong> ${data.address || 'غير محدد'}
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong>المنتجات:</strong> ${data.items}
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong>المبلغ:</strong> ${data.amount?.toLocaleString() || '0'} دج
+                                    </div>
+                                    <div style="margin-bottom: 20px;">
+                                        <strong>تاريخ الطلب:</strong> ${data.date}
+                                    </div>
+                                </div>
+                                <div style="background: rgba(255, 215, 0, 0.1); padding: 15px; border-radius: 10px; text-align: center;">
+                                    <i class="fas fa-info-circle" style="color: var(--info);"></i>
+                                    <p style="margin-top: 10px;">سيتم إرسال الطلب للتوصيل قريباً. تابع هذه الصفحة لاحقاً.</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // مسح بيانات التتبع بعد الاستخدام
+                localStorage.removeItem('nardo_tracking_order');
+            }
+        }
+
+        // دوال مساعدة لعرض الحالة
+        function getStatusClass(status) {
+            const classes = {
+                'pending': 'status-pending',
+                'received': 'status-received',
+                'approved': 'status-approved',
+                'in_transit': 'status-active',
+                'delivered': 'status-approved'
+            };
+            return classes[status] || 'status-pending';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'pending': '⏳ قيد المعالجة',
+                'received': '📦 وصل للتاجر',
+                'approved': '✅ تم تعيين الموزع',
+                'in_transit': '🚚 قيد التوصيل',
+                'delivered': '✅ تم التسليم'
+            };
+            return texts[status] || status;
+        }
+
+        // ================================================================
         // ===== [07] دوال إرسال تلغرام
         // ================================================================
 
@@ -1284,6 +1511,39 @@ ${action === 'approved' ? `👨‍💼 *وافق عليه:* ${distributor.approv
             }
         }
 
+        // ================================================================
+        // إرسال إشعار تلغرام عند مزامنة المخزون
+        // ================================================================
+        async function sendInventorySyncNotification(delivery, syncResult) {
+            const message = `
+🔄 *مزامنة المخزون بعد التوصيل*
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *رقم الطلب:* ${delivery.orderId}
+👤 *الزبون:* ${delivery.customer}
+✅ *الحالة:* تم التسليم ومزامنة المخزون
+📊 *المنتجات المحدثة:* ${syncResult.updatedCount}
+
+${syncResult.products.map(p => `• ${p.name}: -${p.quantity} (المتبقي: ${p.remaining})`).join('\n')}
+
+🕐 ${new Date().toLocaleString('ar-EG')}
+━━━━━━━━━━━━━━━━━━━━━━
+✅ *جاهز لطلبات جديدة*`;
+
+            try {
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM.channelId,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            } catch (error) {
+                console.error('خطأ في إرسال إشعار المزامنة:', error);
+            }
+        }
+
         async function sendDeliveryStatusUpdate(delivery) {
             const statusText = delivery.status === 'pending' ? '⏳ قيد الانتظار' : 
                               delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : '✅ مكتمل';
@@ -1318,7 +1578,21 @@ ${action === 'approved' ? `👨‍💼 *وافق عليه:* ${distributor.approv
         window.onload = function() {
             updateStats();
             checkPendingDelivery();
-            console.log('✅ صفحة إدارة التوصيل والموزعين جاهزة');
+            
+            // 🆕 معالجة التتبع من cart.html
+            handleTrackingFromCart();
+            
+            // 🆕 التحقق من وجود معامل source في URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const source = urlParams.get('source');
+            if (source === 'tracking') {
+                // التبديل إلى تبويب التتبع تلقائياً
+                setTimeout(() => {
+                    switchTab('tracking');
+                }, 300);
+            }
+            
+            console.log('✅ نظام التوصيل مع مزامنة المخزون جاهز');
             console.log('✅ المستخدم الحالي:', currentUser);
             console.log('✅ عدد الطلبات:', deliveries.length);
             console.log('✅ عدد الموزعين:', distributors.length);
