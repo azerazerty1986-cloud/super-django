@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي</title>
@@ -109,6 +107,8 @@
         .btn-telegram { background: linear-gradient(135deg, #0088cc, #006699); color: white; }
         .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
         .btn-info { background: linear-gradient(135deg, #60a5fa, #3b82f6); color: white; }
+        .btn-success { background: linear-gradient(135deg, #4ade80, #22c55e); color: white; }
+        .btn-error { background: linear-gradient(135deg, #f87171, #ef4444); color: white; }
         .btn-sm { padding: 5px 12px; font-size: 12px; }
 
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; margin-bottom: 20px; }
@@ -141,13 +141,12 @@
         .modal-close { background: none; border: none; color: var(--gold); font-size: 28px; cursor: pointer; }
         .form-group { margin-bottom: 18px; }
         .form-group label { display: block; margin-bottom: 6px; color: var(--gold); font-weight: 700; font-size: 13px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.15); border-radius: 24px; color: white; font-family: 'Cairo', sans-serif; }
-        .image-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-        .image-preview img { width: 70px; height: 70px; border-radius: 12px; border: 1px solid var(--gold); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,215,0,0.15); border-radius: 12px; color: white; font-family: 'Cairo', sans-serif; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+        .image-preview { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .image-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--gold); }
 
-        /* أنماط بطاقات الطلبات الجديدة */
-        .orders-container { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
-        .order-card { background: linear-gradient(145deg, rgba(25,25,45,0.95), rgba(15,15,30,0.98)); border: 1px solid rgba(255,215,0,0.2); border-radius: 20px; padding: 18px; transition: all 0.2s ease; }
+        .order-card { background: linear-gradient(145deg, rgba(25,25,45,0.9), rgba(15,15,30,0.95)); border: 1px solid rgba(255,215,0,0.15); border-radius: 24px; padding: 20px; margin-bottom: 20px; }
         .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,215,0,0.15); }
         .order-customer-info { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 12px; font-size: 13px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 8px; }
         .order-items { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
@@ -251,7 +250,22 @@
             <h3><i class="fas fa-receipt"></i> سجل الطلبات</h3>
             <button class="btn btn-outline" style="padding:6px 16px;" onclick="clearOrders()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
-        <div id="ordersContainer" class="orders-container"></div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>التاريخ</th>
+                        <th>العميل</th>
+                        <th>المنتجات</th>
+                        <th>الإجمالي</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody"></tbody>
+            </table>
+        </div>
+        <div id="ordersContainer" style="display:none;"></div>
     </div>
 </div>
 
@@ -667,7 +681,8 @@
             storeID: p.storeID,
             storeName: p.storeName,
             items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt }],
-            total: total
+            total: total,
+            status: 'pending'
         });
         p.quantity -= qtyInt;
         localStorage.setItem('nardo_orders', JSON.stringify(orders));
@@ -691,20 +706,59 @@
             format: 'a4'
         });
 
-        const element = document.getElementById(`order-${orderId}`);
-        if (!element) {
-            showToast('❌ لم يتم العثور على عنصر الطلب', 'error');
-            return;
-        }
+        const tempDiv = document.createElement('div');
+        tempDiv.className = 'order-card';
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.width = '800px';
+        tempDiv.style.background = '#ffffff';
+        tempDiv.style.color = '#000000';
+        tempDiv.style.padding = '40px';
         
-        const originalStyle = element.style.cssText;
-        element.style.background = '#ffffff';
-        element.style.color = '#000000';
-        element.style.padding = '40px';
-        element.style.borderRadius = '0';
+        tempDiv.innerHTML = `
+            <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;">
+                <h1 style="margin:0;">فاتورة طلب #${order.id}</h1>
+                <p style="margin:5px 0;">متجر: ${order.storeName}</p>
+            </div>
+            <div style="margin-bottom:20px;">
+                <p><strong>التاريخ:</strong> ${order.date}</p>
+                <p><strong>العميل:</strong> ${order.customerName || 'غير معروف'}</p>
+                <p><strong>الهاتف:</strong> ${order.customerPhone || '---'}</p>
+                <p><strong>العنوان:</strong> ${order.customerAddress || '---'}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                <thead>
+                    <tr style="background:#f0f0f0;">
+                        <th style="border:1px solid #000; padding:10px; text-align:right;">المنتج</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">الكمية</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">السعر</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${order.items.map(it => `
+                        <tr>
+                            <td style="border:1px solid #000; padding:10px;">${it.name}</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.quantity}</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.price.toLocaleString()} دج</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${(it.price * it.quantity).toLocaleString()} دج</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:bold; background:#f0f0f0;">
+                        <td colspan="3" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
+                        <td style="border:1px solid #000; padding:10px; text-align:center;">${order.total.toLocaleString()} دج</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div style="text-align:center; margin-top:40px; font-size:12px;">شكرًا لتعاملكم معنا</div>
+        `;
+        
+        document.body.appendChild(tempDiv);
         
         try {
-            const canvas = await html2canvas(element, {
+            const canvas = await html2canvas(tempDiv, {
                 scale: 2,
                 backgroundColor: '#ffffff',
                 useCORS: true,
@@ -723,55 +777,84 @@
             console.error('PDF Error:', error);
             showToast('❌ فشل تصدير PDF', 'error');
         } finally {
-            element.style.cssText = originalStyle;
+            document.body.removeChild(tempDiv);
         }
     }
 
-    // ========== دالة عرض الطلبات الجديدة ==========
+    // ========== وظائف الطلبات الجديدة ==========
+    function deleteOrder(orderId) {
+        if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+            orders = orders.filter(o => o.id !== orderId);
+            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            renderOrders();
+            updateStats();
+            showToast('تم حذف الطلب', 'success');
+        }
+    }
+
+    function deliverOrder(orderId) {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+            order.status = 'delivered';
+            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            renderOrders();
+            showToast('تم تحديث حالة الطلب إلى: تم التوصيل', 'success');
+        }
+    }
+
+    function callCustomer(phone) {
+        if (!phone) {
+            showToast('رقم الهاتف غير متوفر', 'warning');
+            return;
+        }
+        window.location.href = `tel:${phone}`;
+    }
+
+    // ========== دالة عرض الطلبات الجديدة (جدول ومفلتر) ==========
     function renderOrders() {
-        const container = document.getElementById('ordersContainer');
-        if (!container) return;
+        const tbody = document.getElementById('ordersTableBody');
+        if (!tbody) return;
         
         orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
         
         let filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
         
         if(!filteredOrders.length){
-            container.innerHTML='<div class="order-card" style="text-align:center">لا توجد طلبات لهذا المتجر</div>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">لا توجد طلبات لهذا المتجر</td></tr>';
             return;
         }
         
-        container.innerHTML = filteredOrders.map(order => `
-            <div class="order-card" id="order-${order.id}">
-                <div class="order-header">
-                    <div><strong><i class="fas fa-receipt"></i> طلب #${order.id}</strong></div>
-                    <div style="font-size: 12px; color: #aaa;">${order.date}</div>
-                </div>
-                
-                <div class="order-customer-info">
-                    <div><strong>👤 المشتري:</strong> ${order.customerName || 'غير معروف'}</div>
-                    <div><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</div>
-                    <div><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</div>
-                    ${order.customerNotes ? `<div><strong>📝 ملاحظات:</strong> ${order.customerNotes}</div>` : ''}
-                    <div><strong>🏪 المتجر:</strong> ${order.storeName} (${order.storeID})</div>
-                </div>
-                
-                <div class="order-items">
-                    ${order.items.map(it => `
-                        <div style="display:flex; justify-content:space-between; margin-bottom: 5px; font-size: 14px;">
-                            <span>${it.name} × ${it.quantity}</span>
-                            <span>${(it.price * it.quantity).toLocaleString()} دج</span>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div style="border-top:1px solid rgba(255,215,0,0.2); margin-top:10px; padding-top:10px; display:flex; justify-content:space-between; align-items: center;">
-                    <div><strong>الإجمالي:</strong> <span style="color:var(--success); font-weight: bold;">${order.total.toLocaleString()} دج</span></div>
-                    <button class="btn btn-info" style="padding: 5px 15px; font-size: 12px;" onclick="exportOrderToPDF(${order.id})">
-                        <i class="fas fa-file-pdf"></i> تصدير PDF
-                    </button>
-                </div>
-            </div>
+        tbody.innerHTML = filteredOrders.map(order => `
+            <tr style="${order.status === 'delivered' ? 'opacity: 0.7; background: rgba(74, 222, 128, 0.05);' : ''}">
+                <td><strong>#${order.id}</strong></td>
+                <td>${order.date}</td>
+                <td>
+                    <div>${order.customerName || 'غير معروف'}</div>
+                    <div style="font-size:11px; color:#aaa;">${order.customerPhone || '---'}</div>
+                </td>
+                <td>
+                    <div style="font-size:12px;">
+                        ${order.items.map(it => `${it.name} (${it.quantity})`).join('، ')}
+                    </div>
+                </td>
+                <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                <td>
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="تم التوصيل" ${order.status === 'delivered' ? 'disabled' : ''}>
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone}')" title="اتصال">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
         `).join('');
     }
 
