@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -86,6 +84,7 @@
             position: sticky;
             top: 70px;
             z-index: 999;
+            flex-wrap: wrap;
         }
         .tab-btn { padding: 10px 28px; border-radius: 40px; background: transparent; color: var(--text-secondary); font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; border: none; font-family: 'Cairo', sans-serif; }
         .tab-btn:hover { background: rgba(255,215,0,0.1); color: var(--gold); }
@@ -164,11 +163,13 @@
 
         @media (max-width: 768px) {
             .top-navbar { flex-direction: column; }
-            .tabs-bar { overflow-x: auto; justify-content: flex-start; }
+            .tabs-bar { overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; }
             .tab-btn { padding: 6px 16px; font-size: 12px; white-space: nowrap; }
             .products-grid { grid-template-columns: 1fr; }
             .toolbar { flex-direction: column; }
             .search-box { max-width: 100%; }
+            .table-container { overflow-x: scroll; }
+            .data-table { min-width: 600px; }
         }
     </style>
 </head>
@@ -250,7 +251,7 @@
     </div>
 
     <div id="ordersTab" class="tab-content" style="display: none;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <h3><i class="fas fa-receipt"></i> سجل الطلبات</h3>
             <button class="btn btn-outline" style="padding:6px 16px;" onclick="clearOrders()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
@@ -263,13 +264,13 @@
                         <th>العميل</th>
                         <th>المنتجات</th>
                         <th>الإجمالي</th>
+                        <th>الحالة</th>
                         <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="ordersTableBody"></tbody>
             </table>
         </div>
-        <div id="ordersContainer" style="display:none;"></div>
     </div>
 </div>
 
@@ -675,7 +676,7 @@
         let qtyInt = parseInt(qty);
         if (isNaN(qtyInt) || qtyInt <= 0 || qtyInt > p.quantity) { showToast('كمية غير صالحة', 'error'); return; }
         const total = p.price * qtyInt;
-        orders.unshift({
+        const newOrder = {
             id: Date.now(),
             date: new Date().toLocaleString('ar-EG'),
             customerName: 'طلب مباشر',
@@ -687,16 +688,46 @@
             items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt }],
             total: total,
             status: 'pending'
-        });
+        };
+        orders.unshift(newOrder);
         p.quantity -= qtyInt;
         localStorage.setItem('nardo_orders', JSON.stringify(orders));
         localStorage.setItem('nardo_products', JSON.stringify(products));
         addStockLog(p.id, p.name, 'remove', qtyInt, p.quantity + qtyInt, p.quantity, 'طلب', p.storeID);
         renderAll();
-        showToast(`✅ تم إنشاء الطلب`, 'success');
+        showToast(`✅ تم إنشاء الطلب #${newOrder.id}`, 'success');
     }
 
-    // ========== دالة تصدير PDF المحسنة ==========
+    // ========== دوال الطلبات ==========
+    function deleteOrder(orderId) {
+        if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+            orders = orders.filter(o => o.id !== orderId);
+            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            renderOrders();
+            updateStats();
+            showToast('تم حذف الطلب', 'success');
+        }
+    }
+
+    function deliverOrder(orderId) {
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+            order.status = order.status === 'delivered' ? 'pending' : 'delivered';
+            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            renderOrders();
+            showToast(order.status === 'delivered' ? '✅ تم تسليم الطلب' : '🔄 تم إعادة الطلب إلى قيد المعالجة', 'success');
+        }
+    }
+
+    function callCustomer(phone) {
+        if (!phone) {
+            showToast('رقم الهاتف غير متوفر', 'warning');
+            return;
+        }
+        window.location.href = `tel:${phone}`;
+    }
+
+    // ========== دالة تصدير PDF ==========
     async function exportOrderToPDF(orderId) {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
@@ -711,24 +742,24 @@
         });
 
         const tempDiv = document.createElement('div');
-        tempDiv.className = 'order-card';
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
         tempDiv.style.width = '800px';
         tempDiv.style.background = '#ffffff';
         tempDiv.style.color = '#000000';
         tempDiv.style.padding = '40px';
+        tempDiv.style.fontFamily = 'Cairo, sans-serif';
         
         tempDiv.innerHTML = `
-            <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;">
-                <h1 style="margin:0;">فاتورة طلب #${order.id}</h1>
-                <p style="margin:5px 0;">متجر: ${order.storeName}</p>
+            <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #daa520; padding-bottom:10px;">
+                <h1 style="margin:0; color:#daa520;">فاتورة طلب #${order.id}</h1>
+                <p style="margin:5px 0;">🏪 متجر: ${order.storeName}</p>
             </div>
             <div style="margin-bottom:20px;">
-                <p><strong>التاريخ:</strong> ${order.date}</p>
-                <p><strong>العميل:</strong> ${order.customerName || 'غير معروف'}</p>
-                <p><strong>الهاتف:</strong> ${order.customerPhone || '---'}</p>
-                <p><strong>العنوان:</strong> ${order.customerAddress || '---'}</p>
+                <p><strong>📅 التاريخ:</strong> ${order.date}</p>
+                <p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p>
+                <p><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</p>
+                <p><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</p>
             </div>
             <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
                 <thead>
@@ -756,7 +787,7 @@
                     </tr>
                 </tfoot>
             </table>
-            <div style="text-align:center; margin-top:40px; font-size:12px;">شكرًا لتعاملكم معنا</div>
+            <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">شكرًا لتعاملكم مع ناردو برو</div>
         `;
         
         document.body.appendChild(tempDiv);
@@ -785,139 +816,74 @@
         }
     }
 
-    // ========== وظائف الطلبات الجديدة ==========
-    function deleteOrder(orderId) {
-        if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
-            orders = orders.filter(o => o.id !== orderId);
-            localStorage.setItem('nardo_orders', JSON.stringify(orders));
-            renderOrders();
-            updateStats();
-            showToast('تم حذف الطلب', 'success');
-        }
-    }
-
-    function deliverOrder(orderId) {
-        const order = orders.find(o => o.id === orderId);
-        if (order) {
-            order.status = 'delivered';
-            localStorage.setItem('nardo_orders', JSON.stringify(orders));
-            renderOrders();
-            showToast('تم تحديث حالة الطلب إلى: تم التوصيل', 'success');
-        }
-    }
-
-    function callCustomer(phone) {
-        if (!phone) {
-            showToast('رقم الهاتف غير متوفر', 'warning');
-            return;
-        }
-        window.location.href = `tel:${phone}`;
-    }
-
-    // ========== دالة عرض الطلبات (جدول وبطاقات) ==========
+    // ========== دالة عرض الطلبات المصححة ==========
     function renderOrders() {
         const tbody = document.getElementById('ordersTableBody');
-        const container = document.getElementById('ordersContainer');
         
+        // جلب الطلبات من localStorage
         orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
         
-        // فلترة الطلبات حسب المتجر (ما لم يكن المدير - سنفترض isAdminMode غير موجود حالياً أو false)
-        const isAdminMode = typeof isAdminMode !== 'undefined' ? isAdminMode : false;
-        let filteredOrders = isAdminMode ? orders : orders.filter(order => order.storeID === currentStore.storeFixedID);
+        // فلترة الطلبات حسب المتجر الحالي
+        let filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
         
-        // تحديث الجدول (للعرض المكتبي)
-        if (tbody) {
-            if(!filteredOrders.length){
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">لا توجد طلبات لهذا المتجر</td></tr>';
-            } else {
-                tbody.innerHTML = filteredOrders.map(order => `
-                    <tr style="${order.status === 'delivered' ? 'opacity: 0.7; background: rgba(74, 222, 128, 0.05);' : ''}">
-                        <td><strong>#${order.id}</strong></td>
-                        <td>${order.date}</td>
-                        <td>
-                            <div>${order.customerName || 'غير معروف'}</div>
-                            <div style="font-size:11px; color:#aaa;">${order.customerPhone || '---'}</div>
-                        </td>
-                        <td>
-                            <div style="font-size:12px;">
-                                ${order.items.map(it => `${it.name} (${it.quantity})`).join('، ')}
-                            </div>
-                        </td>
-                        <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
-                        <td>
-                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
-                                    <i class="fas fa-file-pdf"></i>
-                                </button>
-                                <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="تم التوصيل" ${order.status === 'delivered' ? 'disabled' : ''}>
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone}')" title="اتصال">
-                                    <i class="fas fa-phone"></i>
-                                </button>
-                                <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-            }
+        if (!tbody) return;
+        
+        if (filteredOrders.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px;">
+                <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
+                لا توجد طلبات لهذا المتجر
+            </td></tr>`;
+        } else {
+            tbody.innerHTML = filteredOrders.map(order => `
+                <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
+                    <td><strong>#${order.id}</strong></td>
+                    <td style="font-size:12px;">${order.date}</td>
+                    <td>
+                        <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                        <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                    </td>
+                    <td>
+                        <div style="font-size:12px; max-width:200px;">
+                            ${order.items.map(it => `<span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">${it.name} (${it.quantity})</span>`).join('')}
+                        </div>
+                    </td>
+                    <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                    <td>
+                        <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
+                            ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
+                                <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
+                            </button>
+                            <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
-
-        // تحديث البطاقات (للعرض المتجاوب إذا لزم الأمر)
-        if (container) {
-            if(!filteredOrders.length){
-                container.innerHTML = '<div class="order-card" style="text-align:center">لا توجد طلبات لهذا المتجر</div>';
-            } else {
-                container.innerHTML = filteredOrders.map(order => `
-                    <div class="order-card" id="order-${order.id}">
-                        <div class="order-header">
-                            <div><strong><i class="fas fa-receipt"></i> طلب #${order.id}</strong></div>
-                            <div style="font-size: 12px; color: #aaa;">${order.date}</div>
-                        </div>
-                        
-                        <div class="order-customer-info">
-                            <div><strong>👤 المشتري:</strong> ${order.customerName || 'غير معروف'}</div>
-                            <div><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</div>
-                            <div><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</div>
-                            ${order.customerNotes ? `<div><strong>📝 ملاحظات:</strong> ${order.customerNotes}</div>` : ''}
-                            ${isAdminMode ? `<div><strong>🏪 المتجر:</strong> ${order.storeName} (${order.storeID})</div>` : ''}
-                        </div>
-                        
-                        <div class="order-items">
-                            ${order.items.map(it => `
-                                <div style="display:flex; justify-content:space-between; margin-bottom: 5px; font-size: 14px;">
-                                    <span>${it.name} × ${it.quantity}</span>
-                                    <span>${(it.price * it.quantity).toLocaleString()} دج</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <div style="border-top:1px solid rgba(255,215,0,0.2); margin-top:10px; padding-top:10px; display:flex; justify-content:space-between; align-items: center;">
-                            <div><strong>الإجمالي:</strong> <span style="color:var(--success); font-weight: bold;">${order.total.toLocaleString()} دج</span></div>
-                            <div style="display:flex; gap:5px;">
-                                <button class="btn btn-info" style="padding: 5px 15px; font-size: 12px;" onclick="exportOrderToPDF(${order.id})">
-                                    <i class="fas fa-file-pdf"></i> تصدير PDF
-                                </button>
-                                <button class="btn btn-success" style="padding: 5px 15px; font-size: 12px;" onclick="deliverOrder(${order.id})" ${order.status === 'delivered' ? 'disabled' : ''}>
-                                    <i class="fas fa-check"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
+        
+        // تحديث الإحصائيات
+        updateStats();
     }
 
     function clearOrders() {
-        if(confirm('هل أنت متأكد من مسح جميع الطلبات؟ لا يمكن التراجع عن هذه الخطوة.')) {
+        if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟ لا يمكن التراجع عن هذه الخطوة.')) {
             localStorage.setItem('nardo_orders', '[]');
             orders = [];
             renderOrders();
             updateStats();
-            showToast('تم مسح جميع الطلبات', 'success');
+            showToast('🗑️ تم مسح جميع الطلبات', 'success');
         }
     }
 
@@ -935,7 +901,7 @@
         container.innerHTML = filtered.map(p => {
             const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
             const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
-            const imgHtml = p.images?.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}">`).join('')}</div>` : '';
+            const imgHtml = p.images?.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}" onclick="window.open('${img}','_blank')">`).join('')}</div>` : '';
             const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
             
             return `
@@ -957,13 +923,11 @@
         }).join('');
     }
 
-
-
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable');
         let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد منتجات</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">لا توجد منتجات</td></tr>';
             return;
         }
         tbody.innerHTML = filtered.map(p => `
@@ -1066,6 +1030,19 @@
         document.body.appendChild(t);
         setTimeout(() => t.remove(), 3000);
     }
+
+    // ========== الاستماع للتغييرات في localStorage ==========
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'nardo_orders') {
+            orders = JSON.parse(e.newValue || '[]');
+            renderOrders();
+            updateStats();
+        }
+        if (e.key === 'nardo_products') {
+            products = JSON.parse(e.newValue || '[]');
+            renderAll();
+        }
+    });
 
     // ========== تشغيل التطبيق ==========
     document.addEventListener('DOMContentLoaded', () => {
