@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي</title>
@@ -397,10 +395,71 @@
             showToast('جاري جلب البيانات من تلغرام...', 'info');
             const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
             const data = await response.json();
-            if (data.ok) {
-                showToast(`تم العثور على ${data.result.length} تحديث`, 'success');
+            if (data.ok && data.result && data.result.length > 0) {
+                let ordersAdded = 0;
+                data.result.forEach(update => {
+                    // معالجة الرسائل النصية من تيليغرام
+                    if (update.message && update.message.text) {
+                        const messageText = update.message.text;
+                        const chatId = update.message.chat.id;
+                        const senderName = update.message.from?.first_name || 'عميل من تيليغرام';
+                        const senderPhone = update.message.from?.username || '';
+                        
+                        // تحليل الرسالة للبحث عن معرف المنتج أو اسمه
+                        const productMatch = messageText.match(/#([A-Z0-9-]+)|منتج:\s*(.+?)(?:\n|$)/i);
+                        if (productMatch) {
+                            const productId = productMatch[1] || productMatch[2];
+                            const product = products.find(p => 
+                                p.productCompositeID === productId || 
+                                p.name.includes(productId)
+                            );
+                            
+                            if (product) {
+                                // استخراج الكمية من الرسالة
+                                const qtyMatch = messageText.match(/كمية:\s*(\d+)|الكمية:\s*(\d+)|(\d+)\s*وحدة/i);
+                                const quantity = qtyMatch ? parseInt(qtyMatch[1] || qtyMatch[2] || qtyMatch[3]) : 1;
+                                
+                                if (quantity > 0 && quantity <= product.quantity) {
+                                    const total = product.price * quantity;
+                                    const newOrder = {
+                                        id: Date.now() + Math.random(),
+                                        date: new Date().toLocaleString('ar-EG'),
+                                        customerName: senderName,
+                                        customerPhone: senderPhone,
+                                        customerAddress: 'من تيليغرام',
+                                        customerNotes: messageText,
+                                        storeID: product.storeID,
+                                        storeName: product.storeName,
+                                        items: [{ id: product.id, name: product.name, price: product.price, quantity: quantity }],
+                                        total: total,
+                                        status: 'pending',
+                                        source: 'telegram',
+                                        telegramChatId: chatId,
+                                        telegramUpdateId: update.update_id
+                                    };
+                                    orders.unshift(newOrder);
+                                    product.quantity -= quantity;
+                                    addStockLog(product.id, product.name, 'remove', quantity, product.quantity + quantity, product.quantity, 'طلب من تيليغرام', product.storeID);
+                                    ordersAdded++;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                if (ordersAdded > 0) {
+                    localStorage.setItem('nardo_orders', JSON.stringify(orders));
+                    localStorage.setItem('nardo_products', JSON.stringify(products));
+                    renderAll();
+                    showToast(`✅ تم إضافة ${ordersAdded} طلب من تيليغرام`, 'success');
+                } else {
+                    showToast(`تم العثور على ${data.result.length} تحديث لكن لم يتم العثور على طلبات صحيحة`, 'info');
+                }
+            } else {
+                showToast('لا توجد تحديثات جديدة', 'info');
             }
         } catch (error) {
+            console.error('خطأ في جلب البيانات من تلغرام:', error);
             showToast('فشل جلب البيانات من تلغرام', 'error');
         }
     }
