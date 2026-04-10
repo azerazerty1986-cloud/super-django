@@ -149,6 +149,11 @@
         .image-preview { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
         .image-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--gold); }
 
+        .order-card { background: linear-gradient(145deg, rgba(25,25,45,0.9), rgba(15,15,30,0.95)); border: 1px solid rgba(255,215,0,0.15); border-radius: 24px; padding: 20px; margin-bottom: 20px; }
+        .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,215,0,0.15); }
+        .order-customer-info { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 12px; font-size: 13px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 8px; }
+        .order-items { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+
         .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 24px; font-weight: 600; z-index: 3000; background: rgba(0,0,0,0.9); border: 1px solid; animation: slideIn 0.3s ease; }
         .toast.success { border-color: var(--success); color: var(--success); }
         .toast.error { border-color: var(--error); color: var(--error); }
@@ -318,19 +323,17 @@
     let editProductId = null;
     let currentImages = [];
 
-    // ========== 1. cleanTelegramText ==========
+    // ========== تنظيف النص للتيليجرام ==========
     function cleanTelegramText(text) { 
         return text ? text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '').trim() : ''; 
     }
 
-    // ========== 2. generateStoreID ==========
     function generateStoreID(storeName) {
         let clean = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '').substring(0, 8).toUpperCase();
         if (!clean) clean = 'متجري';
         return `${clean}-${Math.floor(Math.random() * 900000 + 100000)}`;
     }
 
-    // ========== 3. loadCurrentStore ==========
     function loadCurrentStore() {
         let stored = localStorage.getItem('current_store');
         if(stored) { 
@@ -353,24 +356,21 @@
         updateStoreProductCount();
     }
 
-    // ========== 4. updateStoreProductCount ==========
     function updateStoreProductCount() {
         const count = products.filter(p => p.storeID === currentStore.storeFixedID).length;
         document.getElementById('storeProductCount').innerHTML = count;
     }
 
-    // ========== 5. showStoreInfo ==========
     function showStoreInfo() {
         alert(`🏪 ${currentStore.storeName}\n🆔 المعرف: ${currentStore.storeFixedID}\n📞 ${currentStore.phone || 'غير مسجل'}\n📍 ${currentStore.address || 'غير مسجل'}`);
     }
 
-    // ========== 6. getNextProductSerial ==========
     function getNextProductSerial(storeID) {
         const storeProducts = products.filter(p => p.storeID === storeID);
         return (storeProducts.length + 1).toString().padStart(3, '0');
     }
 
-    // ========== 7. sendToTelegram ==========
+    // ========== إرسال إلى تيليجرام ==========
     async function sendToTelegram(product, imageFile) {
         try {
             showToast('📤 جاري النشر إلى قناة التلغرام...', 'info');
@@ -409,7 +409,7 @@
         }
     }
 
-    // ========== 8. fetchProductsFromTelegram ==========
+    // ========== جلب المنتجات من التلغرام ==========
     async function fetchProductsFromTelegram() {
         try {
             showToast('جاري الجلب من القناة...', 'info');
@@ -465,7 +465,6 @@
         }
     }
 
-    // ========== 9. saveProductOnly ==========
     function saveProductOnly() {
         const name = document.getElementById('productName').value.trim();
         const price = parseInt(document.getElementById('productPrice').value);
@@ -504,7 +503,6 @@
         showToast(`✅ تم حفظ ${name}`, 'success');
     }
 
-    // ========== 10. saveAndPublishProduct ==========
     async function saveAndPublishProduct() {
         const name = document.getElementById('productName').value.trim();
         const price = parseInt(document.getElementById('productPrice').value);
@@ -555,7 +553,6 @@
         showToast(result.success ? `✅ تم حفظ ونشر ${name}` : `⚠️ تم حفظ ${name} ولكن فشل النشر`, result.success ? 'success' : 'warning');
     }
 
-    // ========== 11. publishExistingProduct ==========
     async function publishExistingProduct(productId) {
         const product = products.find(p => p.id === productId);
         if (!product) { showToast('المنتج غير موجود', 'error'); return; }
@@ -580,7 +577,6 @@
         }
     }
 
-    // ========== 12. findProductById ==========
     function findProductById() {
         const id = prompt('أدخل معرف المنتج:');
         if (!id) return;
@@ -589,7 +585,6 @@
         else showToast('المنتج غير موجود', 'error');
     }
 
-    // ========== 13. deleteProduct ==========
     function deleteProduct(id) {
         if (confirm('هل أنت متأكد من الحذف؟')) {
             products = products.filter(p => p.id !== id);
@@ -599,7 +594,6 @@
         }
     }
 
-    // ========== 14. addStockLog ==========
     function addStockLog(pid, pname, op, qty, oldQ, newQ, reason = '', storeID = null) {
         const targetStoreID = storeID || currentStore?.storeFixedID;
         stockLog.unshift({
@@ -618,7 +612,6 @@
         localStorage.setItem('nardo_stock_log', JSON.stringify(stockLog));
     }
 
-    // ========== 15. openEditStockModal ==========
     function openEditStockModal(id) {
         editProductId = id;
         const p = products.find(p => p.id === id);
@@ -633,13 +626,11 @@
         }
     }
 
-    // ========== 16. closeEditStockModal ==========
     function closeEditStockModal() {
         document.getElementById('editStockModal').classList.remove('active');
         editProductId = null;
     }
 
-    // ========== 17. updateStock ==========
     function updateStock() {
         const p = products.find(p => p.id === editProductId);
         if (!p) return;
@@ -669,7 +660,6 @@
         closeEditStockModal();
     }
 
-    // ========== 18. clearStockLog ==========
     function clearStockLog() {
         if (confirm('مسح سجل المخزون؟')) {
             stockLog = [];
@@ -679,7 +669,6 @@
         }
     }
 
-    // ========== 19. quickOrder ==========
     function quickOrder(productId) {
         const p = products.find(p => p.id === productId);
         if (!p || p.quantity <= 0) { showToast('المنتج غير متوفر', 'error'); return; }
@@ -710,7 +699,7 @@
         showToast(`✅ تم إنشاء الطلب #${newOrder.id}`, 'success');
     }
 
-    // ========== 20. deleteOrder ==========
+    // ========== دوال الطلبات ==========
     function deleteOrder(orderId) {
         if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
             orders = orders.filter(o => o.id !== orderId);
@@ -721,7 +710,6 @@
         }
     }
 
-    // ========== 21. deliverOrder ==========
     function deliverOrder(orderId) {
         const order = orders.find(o => o.id === orderId);
         if (order) {
@@ -732,7 +720,6 @@
         }
     }
 
-    // ========== 22. callCustomer ==========
     function callCustomer(phone) {
         if (!phone) {
             showToast('رقم الهاتف غير متوفر', 'warning');
@@ -741,7 +728,7 @@
         window.location.href = `tel:${phone}`;
     }
 
-    // ========== 23. exportOrderToPDF ==========
+    // ========== دالة تصدير PDF ==========
     async function exportOrderToPDF(orderId) {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
@@ -830,10 +817,14 @@
         }
     }
 
-    // ========== 24. renderOrders ==========
+    // ========== دالة عرض الطلبات المصححة ==========
     function renderOrders() {
         const tbody = document.getElementById('ordersTableBody');
+        
+        // جلب الطلبات من localStorage
         orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
+        
+        // فلترة الطلبات حسب المتجر الحالي
         let filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
         
         if (!tbody) return;
@@ -865,20 +856,31 @@
                     </td>
                     <td>
                         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                            <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF"><i class="fas fa-file-pdf"></i></button>
-                            <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}"><i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i></button>
-                            <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل"><i class="fas fa-truck"></i></button>
-                            <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال"><i class="fas fa-phone"></i></button>
-                            <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
+                                <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
+                            </button>
+                            <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
+                                <i class="fas fa-truck"></i>
+                            </button>
+                            <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
             `).join('');
         }
+        
+        // تحديث الإحصائيات
         updateStats();
     }
 
-    // ========== 25. clearOrders ==========
     function clearOrders() {
         if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟ لا يمكن التراجع عن هذه الخطوة.')) {
             localStorage.setItem('nardo_orders', '[]');
@@ -889,7 +891,6 @@
         }
     }
 
-    // ========== 26. renderProducts ==========
     function renderProducts() {
         const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
         let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
@@ -926,7 +927,6 @@
         }).join('');
     }
 
-    // ========== 27. renderInventory ==========
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable');
         let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
@@ -948,7 +948,6 @@
         `).join('');
     }
 
-    // ========== 28. renderStockLog ==========
     function renderStockLog() {
         const container = document.getElementById('stockLogContainer');
         let filtered = stockLog.filter(l => l.storeID === currentStore.storeFixedID);
@@ -968,7 +967,6 @@
         `).join('');
     }
 
-    // ========== 29. updateStats ==========
     function updateStats() {
         const myProducts = products.filter(p => p.storeID === currentStore.storeFixedID).length;
         const myOrders = orders.filter(o => o.storeID === currentStore.storeFixedID).length;
@@ -977,7 +975,6 @@
         updateStoreProductCount();
     }
 
-    // ========== 30. renderAll ==========
     function renderAll() {
         renderProducts();
         renderInventory();
@@ -986,7 +983,6 @@
         updateStats();
     }
 
-    // ========== 31. showTab ==========
     function showTab(tabName, btn) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
         document.getElementById(tabName + 'Tab').style.display = 'block';
@@ -998,7 +994,6 @@
         if (tabName === 'orders') renderOrders();
     }
 
-    // ========== 32. openAddProductModal ==========
     function openAddProductModal() {
         document.getElementById('addProductModal').classList.add('active');
         currentImages = [];
@@ -1010,12 +1005,10 @@
         document.getElementById('productQty').value = '';
     }
 
-    // ========== 33. closeAddProductModal ==========
     function closeAddProductModal() {
         document.getElementById('addProductModal').classList.remove('active');
     }
 
-    // ========== 34. previewImages ==========
     function previewImages(input) {
         const preview = document.getElementById('imagePreview');
         preview.innerHTML = '';
@@ -1033,27 +1026,27 @@
         }
     }
 
-    // ========== 35. openDeliveryPage ==========
     function openDeliveryPage() {
         window.open('delivery-full.html', '_blank');
     }
 
-    // ========== 36. sendToDelivery ==========
     function sendToDelivery(orderId) {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
+        
+        // تخزين بيانات الطلب في localStorage ليتم التقاطها في صفحة التوصيل
         localStorage.setItem('nardo_pending_delivery', JSON.stringify({
             orderId: order.id,
             customer: order.customerName,
             phone: order.customerPhone,
-            address: order.customerAddress || '',
+            address: order.customerAddress || '', // قد لا يكون موجوداً في الطلب الأصلي
             amount: order.total,
             items: order.items.map(it => `${it.name} (${it.quantity})`).join(', ')
         }));
+        
         openDeliveryPage();
     }
 
-    // ========== 37. showToast ==========
     function showToast(msg, type) {
         const t = document.createElement('div');
         t.className = `toast ${type}`;
@@ -1063,7 +1056,7 @@
         setTimeout(() => t.remove(), 3000);
     }
 
-    // ========== تحديث تلقائي عند تغير localStorage ==========
+    // ========== الاستماع للتغييرات في localStorage ==========
     window.addEventListener('storage', (e) => {
         if (e.key === 'nardo_orders') {
             orders = JSON.parse(e.newValue || '[]');
@@ -1085,3 +1078,4 @@
 </script>
 </body>
 </html>
+
