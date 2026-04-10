@@ -1,7 +1,4 @@
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ناردو برو - سلتي</title>
@@ -349,6 +346,41 @@
             .cart-actions { flex-direction: column; }
             .merchant-stats { flex-direction: column; gap: 5px; }
         }
+
+        /* أرشيف الطلبات */
+        .order-archive { margin-top: 40px; border-top: 2px dashed rgba(255, 215, 0, 0.2); padding-top: 30px; }
+        .order-card {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .order-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+            padding-bottom: 10px;
+        }
+        .order-id { font-weight: bold; color: var(--gold); }
+        .order-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+        .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); }
+        .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        
+        .order-details { font-size: 14px; }
+        .order-merchant { color: var(--gold); margin-bottom: 5px; }
+        .order-items-list { margin: 10px 0; color: var(--text-secondary); }
+        .order-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .order-actions .btn { padding: 8px 15px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -381,6 +413,11 @@
         <div class="cart-section">
             <h2 class="section-title"><i class="fas fa-shopping-basket"></i> المنتجات المضافة</h2>
             <div id="cartContainer"></div>
+        </div>
+
+        <div class="order-archive">
+            <h2 class="section-title"><i class="fas fa-history"></i> أرشيف طلباتي (تتبع الحالة)</h2>
+            <div id="ordersArchiveContainer"></div>
         </div>
     </div>
 
@@ -541,72 +578,76 @@
             const timestamp = new Date().toLocaleString('ar-EG');
             const orderId = Math.floor(Math.random() * 1000000);
             
-            // إنشاء رسالة منظمة لكل متجر على حدة
-            let allMessages = [];
-            
-            for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                let message = `🛍️ *فاتورة طلب جديد* 🛍️\n`;
-                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `🏪 *المتجر:* ${storeData.storeName}\n`;
-                message += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
-                message += `👤 *المشتري:* ${customerData.name}\n`;
-                message += `📞 *الهاتف:* ${customerData.phone}\n`;
-                message += `📍 *العنوان:* ${customerData.address}\n`;
-                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `📦 *المنتجات المشتراة:*\n`;
+            try {
+                // رسالة إجمالية للقناة تتضمن معرفات المتاجر واسم المشتري
+                let channelMessage = `🟢 *طلب جديد في النظام* 🟢\n`;
+                channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                channelMessage += `👤 *المشتري:* ${customerData.name}\n`;
+                channelMessage += `📞 *الهاتف:* ${customerData.phone}\n`;
+                channelMessage += `📍 *العنوان:* ${customerData.address}\n`;
+                channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                channelMessage += `📊 *تفاصيل الطلب:*\n`;
                 
-                storeData.items.forEach((item, idx) => {
-                    const itemTotal = item.price * item.quantity;
-                    message += `${idx + 1} • ${item.name}\n`;
-                    message += `   الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج = ${itemTotal.toLocaleString()} دج\n`;
-                });
-                
-                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
-                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                
-                if (customerData.notes) {
-                    message += `📝 *ملاحظات:* ${customerData.notes}\n`;
-                    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                    channelMessage += `\n🏪 ${storeData.storeName}\n`;
+                    channelMessage += `🆔 معرف المتجر: \`${storeID}\`\n`;
+                    storeData.items.forEach(item => {
+                        channelMessage += `   • ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                    });
+                    channelMessage += `   💰 إجمالي: ${storeData.total.toLocaleString()} دج\n`;
                 }
                 
-                message += `🆔 *رقم الطلب:* ${orderId}\n`;
-                message += `📅 *التاريخ:* ${timestamp}\n`;
-                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-                message += `✅ *حالة الطلب:* قيد المعالجة\n`;
-                message += `🔗 *ناردو برو - نظام التسوق الذكي*`;
-                
-                allMessages.push(message);
-            }
-            
-            // رسالة إجمالية للقناة تتضمن معرفات المتاجر واسم المشتري
-            let channelMessage = `🟢 *طلب جديد في النظام* 🟢\n`;
-            channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-            channelMessage += `👤 *المشتري:* ${customerData.name}\n`;
-            channelMessage += `📞 *الهاتف:* ${customerData.phone}\n`;
-            channelMessage += `📍 *العنوان:* ${customerData.address}\n`;
-            channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-            channelMessage += `📊 *تفاصيل الطلب:*\n`;
-            
-            for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                channelMessage += `\n🏪 ${storeData.storeName}\n`;
-                channelMessage += `🆔 معرف المتجر: \`${storeID}\`\n`;
-                storeData.items.forEach(item => {
-                    channelMessage += `   • ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                channelMessage += `💰 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n`;
+                channelMessage += `🆔 *رقم الطلب:* ${orderId}\n`;
+                channelMessage += `📅 *التاريخ:* ${timestamp}\n`;
+                channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                channelMessage += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
+
+                // إرسال رسالة إجمالية للقناة
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM.channelId,
+                        text: channelMessage,
+                        parse_mode: 'Markdown'
+                    })
                 });
-                channelMessage += `   💰 إجمالي: ${storeData.total.toLocaleString()} دج\n`;
-            }
-            
-            channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-            channelMessage += `💰 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n`;
-            channelMessage += `🆔 *رقم الطلب:* ${orderId}\n`;
-            channelMessage += `📅 *التاريخ:* ${timestamp}\n`;
-            channelMessage += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-            channelMessage += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
-            
-            try {
-                // إرسال رسالة لكل متجر على حدة (للتلغرام)
-                for (const message of allMessages) {
+
+                // إرسال رسالة لكل متجر على حدة وحفظ الطلب
+                for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                    let message = `🛍️ *فاتورة طلب جديد* 🛍️\n`;
+                    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    message += `🏪 *المتجر:* ${storeData.storeName}\n`;
+                    message += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
+                    message += `👤 *المشتري:* ${customerData.name}\n`;
+                    message += `📞 *الهاتف:* ${customerData.phone}\n`;
+                    message += `📍 *العنوان:* ${customerData.address}\n`;
+                    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    message += `📦 *المنتجات المشتراة:*\n`;
+                    
+                    storeData.items.forEach((item, idx) => {
+                        const itemTotal = item.price * item.quantity;
+                        message += `${idx + 1} • ${item.name}\n`;
+                        message += `   الكمية: ${item.quantity} × ${item.price.toLocaleString()} دج = ${itemTotal.toLocaleString()} دج\n`;
+                    });
+                    
+                    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    message += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
+                    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    
+                    if (customerData.notes) {
+                        message += `📝 *ملاحظات:* ${customerData.notes}\n`;
+                        message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    }
+                    
+                    message += `🆔 *رقم الطلب:* ${orderId}\n`;
+                    message += `📅 *التاريخ:* ${timestamp}\n`;
+                    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    message += `✅ *حالة الطلب:* قيد المعالجة\n`;
+                    message += `🔗 *ناردو برو - نظام التسوق الذكي*`;
+
                     await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -618,17 +659,6 @@
                     });
                 }
                 
-                // إرسال رسالة إجمالية للقناة
-                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: TELEGRAM.channelId,
-                        text: channelMessage,
-                        parse_mode: 'Markdown'
-                    })
-                });
-                
                 // حفظ الطلب محلياً ليتمكن نظام إدارة المخزون من قراءته
                 saveOrderLocally(customerData, groupedStores, orderId, timestamp);
                 
@@ -639,14 +669,15 @@
             }
         }
 
-        // ========== حفظ الطلب محلياً ==========
+        // ========== حفظ الطلب محلياً وتحديث الأرشيف ==========
         function saveOrderLocally(customerData, groupedStores, orderId, timestamp) {
             let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
             
             // تحويل الطلب المجمع إلى طلبات فردية لكل متجر لسهولة الفلترة في نظام المخزون
             for (const [storeID, storeData] of Object.entries(groupedStores)) {
                 const newOrder = {
-                    id: orderId,
+                    id: orderId + '-' + storeID, // معرف فريد لكل بطاقة تاجر
+                    originalOrderId: orderId,
                     date: timestamp,
                     customerName: customerData.name,
                     customerPhone: customerData.phone,
@@ -656,12 +687,106 @@
                     storeName: storeData.storeName,
                     items: storeData.items,
                     total: storeData.total,
-                    status: 'قيد المعالجة'
+                    status: 'pending' // pending, received, approved
                 };
                 allOrders.unshift(newOrder);
             }
             
             localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+            renderOrdersArchive();
+        }
+
+        function renderOrdersArchive() {
+            const container = document.getElementById('ordersArchiveContainer');
+            if (!container) return;
+            
+            const allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            
+            if (allOrders.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:var(--text-secondary);">لا توجد طلبات سابقة</p>';
+                return;
+            }
+            
+            container.innerHTML = allOrders.map(order => {
+                let statusClass = 'status-pending';
+                let statusText = '⏳ قيد المعالجة';
+                
+                if (order.status === 'received') {
+                    statusClass = 'status-received';
+                    statusText = '📦 وصل للتاجر';
+                } else if (order.status === 'approved') {
+                    statusClass = 'status-approved';
+                    statusText = '✅ تم تعيين الموزع';
+                }
+                
+                return `
+                    <div class="order-card">
+                        <div class="order-card-header">
+                            <span class="order-id">#${order.originalOrderId || order.id}</span>
+                            <span class="order-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="order-details">
+                            <div class="order-merchant"><i class="fas fa-store"></i> المتجر: ${order.storeName}</div>
+                            <div style="font-size:12px; color:var(--text-secondary);">${order.date}</div>
+                            <div class="order-items-list">
+                                ${order.items.map(it => `• ${it.name} (${it.quantity})`).join('<br>')}
+                            </div>
+                            <div style="font-weight:bold; color:var(--success);">الإجمالي: ${order.total.toLocaleString()} دج</div>
+                        </div>
+                        <div class="order-actions">
+                            ${order.status === 'pending' ? `<button class="btn btn-info" onclick="updateOrderStatus('${order.id}', 'received')">تأكيد الوصول للتاجر</button>` : ''}
+                            ${order.status === 'received' ? `<button class="btn btn-success" onclick="updateOrderStatus('${order.id}', 'approved')">الموافقة على الموزع</button>` : ''}
+                            <button class="btn btn-danger" onclick="deleteOrderArchive('${order.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
+            let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            const orderIndex = allOrders.findIndex(o => o.id === orderId);
+            
+            if (orderIndex !== -1) {
+                allOrders[orderIndex].status = newStatus;
+                localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+                
+                // إرسال إشعار للتلغرام عن تحديث الحالة
+                const order = allOrders[orderIndex];
+                let statusMsg = newStatus === 'received' ? '📦 وصل للتاجر' : '✅ تم تعيين الموزع';
+                
+                let message = `🔄 *تحديث حالة الطلب* 🔄\n`;
+                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                message += `🆔 *رقم الطلب:* #${order.originalOrderId || order.id}\n`;
+                message += `🏪 *المتجر:* ${order.storeName}\n`;
+                message += `👤 *المشتري:* ${order.customerName}\n`;
+                message += `📍 *الحالة الجديدة:* ${statusMsg}\n`;
+                message += `📅 *التاريخ:* ${new Date().toLocaleString('ar-EG')}\n`;
+                message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+                
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM.channelId,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                
+                renderOrdersArchive();
+                showNotification('✓ تم تحديث حالة الطلب وإرسال إشعار', 'success');
+            }
+        }
+
+        function deleteOrderArchive(orderId) {
+            if (confirm('هل تريد حذف هذا الطلب من الأرشيف؟')) {
+                let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+                allOrders = allOrders.filter(o => o.id !== orderId);
+                localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+                renderOrdersArchive();
+                showNotification('✓ تم حذف الطلب من الأرشيف', 'success');
+            }
         }
 
         // فتح نافذة معلومات المشتري
@@ -871,6 +996,7 @@
 
         // تحميل البيانات
         loadCart();
+        renderOrdersArchive();
         
         // تصدير الدوال
         window.updateCartQuantity = updateCartQuantity;
