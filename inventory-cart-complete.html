@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي</title>
@@ -400,48 +398,88 @@
             if (data.ok && data.result && data.result.length > 0) {
                 let ordersAdded = 0;
                 data.result.forEach(update => {
-                    // معالجة الرسائل النصية من تيليغرام
-                    if (update.message && update.message.text) {
-                        const messageText = update.message.text;
-                        const chatId = update.message.chat.id;
-                        const senderName = update.message.from?.first_name || 'عميل من تيليغرام';
-                        const senderPhone = update.message.from?.username || '';
+                    // معالجة الرسائل النصية من تيليغرام أو وصف الصور (Caption)
+                    const messageText = update.message?.text || update.message?.caption || update.channel_post?.text || update.channel_post?.caption;
+                    if (messageText) {
+                        const chatId = update.message?.chat.id || update.channel_post?.chat.id;
                         
-                        // تحليل الرسالة للبحث عن معرف المنتج أو اسمه
-                        const productMatch = messageText.match(/#([A-Z0-9-]+)|منتج:\s*(.+?)(?:\n|$)/i);
-                        if (productMatch) {
-                            const productId = productMatch[1] || productMatch[2];
-                            const product = products.find(p => 
-                                p.productCompositeID === productId || 
-                                p.name.includes(productId)
-                            );
-                            
-                            if (product) {
-                                // استخراج الكمية من الرسالة
-                                const qtyMatch = messageText.match(/كمية:\s*(\d+)|الكمية:\s*(\d+)|(\d+)\s*وحدة/i);
-                                const quantity = qtyMatch ? parseInt(qtyMatch[1] || qtyMatch[2] || qtyMatch[3]) : 1;
+                        // 1. استخراج بيانات المشتري
+                        const customerMatch = messageText.match(/المشتري:\s*(.+)/);
+                        const phoneMatch = messageText.match(/الهاتف:\s*(.+)/);
+                        const addressMatch = messageText.match(/العنوان:\s*(.+)/);
+                        const notesMatch = messageText.match(/ملاحظات:\s*(.+)/);
+                        
+                        const customerName = customerMatch ? customerMatch[1].trim() : 'عميل تيليغرام';
+                        const customerPhone = phoneMatch ? phoneMatch[1].trim() : '';
+                        const customerAddress = addressMatch ? addressMatch[1].trim() : 'تيليغرام';
+                        const customerNotes = notesMatch ? notesMatch[1].trim() : '';
+
+                        // 2. استخراج المنتجات (يدعم منتج واحد أو قائمة)
+                        // التنسيق المتوقع: "• اسم المنتج-ID" أو "• ID"
+                        const productLines = messageText.match(/•\s*(.+)/g);
+                        if (productLines) {
+                            let orderItems = [];
+                            let orderTotal = 0;
+                            let firstProductStoreID = null;
+                            let firstProductStoreName = null;
+
+                            productLines.forEach(line => {
+                                const cleanLine = line.replace('•', '').trim();
+                                // البحث عن المنتج في القائمة المحلية باستخدام الاسم أو الـ ID
+                                const product = products.find(p => 
+                                    cleanLine.includes(p.productCompositeID) || 
+                                    p.name === cleanLine ||
+                                    cleanLine.startsWith(p.name)
+                                );
+
+                                if (product) {
+                                    // البحث عن الكمية في السطر التالي للرصاصة
+                                    const qtyRegex = new RegExp(`${cleanLine}[\\s\\S]*?الكمية:\\s*(\\d+)`, 'i');
+                                    const qtyInText = messageText.match(qtyRegex);
+                                    const quantity = qtyInText ? parseInt(qtyInText[1]) : 1;
+
+                                    if (quantity > 0) {
+                                        orderItems.push({
+                                            id: product.id,
+                                            name: product.name,
+                                            price: product.price,
+                                            quantity: quantity
+                                        });
+                                        orderTotal += (product.price * quantity);
+                                        
+                                        // حفظ بيانات المتجر من أول منتج
+                                        if (!firstProductStoreID) {
+                                            firstProductStoreID = product.storeID;
+                                            firstProductStoreName = product.storeName;
+                                        }
+
+                                        // تحديث المخزون
+                                        product.quantity -= quantity;
+                                        addStockLog(product.id, product.name, 'remove', quantity, product.quantity + quantity, product.quantity, 'طلب تلقائي من تيليغرام', product.storeID);
+                                    }
+                                }
+                            });
+
+                            if (orderItems.length > 0) {
+                                const orderIdMatch = messageText.match(/رقم الطلب:\s*(\d+)/);
+                                const newOrder = {
+                                    id: orderIdMatch ? parseInt(orderIdMatch[1]) : Date.now(),
+                                    date: new Date().toLocaleString('ar-EG'),
+                                    customerName: customerName,
+                                    customerPhone: customerPhone,
+                                    customerAddress: customerAddress,
+                                    customerNotes: customerNotes,
+                                    storeID: firstProductStoreID || currentStore.storeFixedID,
+                                    storeName: firstProductStoreName || currentStore.storeName,
+                                    items: orderItems,
+                                    total: orderTotal,
+                                    status: 'pending',
+                                    source: 'telegram_invoice'
+                                };
                                 
-                                if (quantity > 0 && quantity <= product.quantity) {
-                                    const total = product.price * quantity;
-                                    const newOrder = {
-                                        id: Date.now() + Math.random(),
-                                        date: new Date().toLocaleString('ar-EG'),
-                                        customerName: senderName,
-                                        customerPhone: senderPhone,
-                                        customerAddress: 'من تيليغرام',
-                                        customerNotes: messageText,
-                                        storeID: product.storeID,
-                                        storeName: product.storeName,
-                                        items: [{ id: product.id, name: product.name, price: product.price, quantity: quantity }],
-                                        total: total,
-                                        status: 'pending',
-                                        source: 'telegram',
-                                        telegramChatId: chatId,
-                                        telegramUpdateId: update.update_id
-                                    };
+                                // تجنب تكرار نفس الطلب (بناءً على ID الطلب من تيليغرام)
+                                if (!orders.some(o => o.id === newOrder.id)) {
                                     orders.unshift(newOrder);
-                                    product.quantity -= quantity;
-                                    addStockLog(product.id, product.name, 'remove', quantity, product.quantity + quantity, product.quantity, 'طلب من تيليغرام', product.storeID);
                                     ordersAdded++;
                                 }
                             }
@@ -453,16 +491,16 @@
                     localStorage.setItem('nardo_orders', JSON.stringify(orders));
                     localStorage.setItem('nardo_products', JSON.stringify(products));
                     renderAll();
-                    showToast(`✅ تم إضافة ${ordersAdded} طلب من تيليغرام`, 'success');
+                    showToast(`✅ تم سحب ${ordersAdded} طلب جديد بنجاح`, 'success');
                 } else {
-                    showToast(`تم العثور على ${data.result.length} تحديث لكن لم يتم العثور على طلبات صحيحة`, 'info');
+                    showToast('لم يتم العثور على طلبات جديدة بتنسيق الفاتورة', 'info');
                 }
             } else {
-                showToast('لا توجد تحديثات جديدة', 'info');
+                showToast('لا توجد تحديثات جديدة في القناة', 'info');
             }
         } catch (error) {
-            console.error('خطأ في جلب البيانات من تلغرام:', error);
-            showToast('فشل جلب البيانات من تلغرام', 'error');
+            console.error('Telegram Error:', error);
+            showToast('حدث خطأ أثناء جلب الطلبات', 'error');
         }
     }
 
