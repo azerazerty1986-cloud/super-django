@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو برو | المتجر الذكي - نشر إلى القناة</title>
+    <title>ناردو برو | المتجر الذكي</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -212,7 +212,7 @@
     <div class="toolbar">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchProducts" placeholder="ابحث عن منتج...">
+            <input type="text" id="searchProducts" placeholder="ابحث عن منتج (بالاسم أو المعرف)...">
         </div>
         <button class="btn btn-info" style="padding:8px 18px;" onclick="findProductById()"><i class="fas fa-search"></i> بحث بالمعرف</button>
     </div>
@@ -300,7 +300,7 @@
     let editProductId = null;
     let currentImages = [];
 
-    // ========== الدالة 4: تنظيف النص من الرموز الخاصة ==========
+    // ========== تنظيف النص للتيليجرام ==========
     function cleanTelegramText(text) { 
         return text ? text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '').trim() : ''; 
     }
@@ -347,31 +347,29 @@
         return (storeProducts.length + 1).toString().padStart(3, '0');
     }
 
-    // ========== الدالة 1: sendToTelegram - إرسال منتج مع صورته إلى قناة التليجرام ==========
+    // ========== إرسال إلى تيليجرام (صورة أصلية بدون تعديل) ==========
     async function sendToTelegram(product, imageFile) {
         try {
             showToast('📤 جاري النشر إلى قناة التلغرام...', 'info');
             
-            // الدالة 5: قالب caption المنسق
+            // الكابشن مع المعرف بشكل واضح
             const caption = `🟣 *منتج جديد في ناردو برو*
 ━━━━━━━━━━━━━━━━━━
 📦 *المنتج:* ${cleanTelegramText(product.name)}
 💰 *السعر:* ${product.price.toLocaleString()} دج
 🏷️ *القسم:* ${product.category || 'عام'}
 📊 *الكمية:* ${product.quantity}
-🆔 *المعرف المركب:* \`${product.productCompositeID}\`
+🆔 *معرف المنتج:* \`${product.productCompositeID}\`
 🏪 *المتجر:* ${product.storeName}
 🆔 *معرف المتجر:* \`${product.storeID}\`
 📝 *الوصف:* ${cleanTelegramText(product.description || 'لا يوجد وصف')}`;
             
-            // إنشاء FormData لإرسال الصورة
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('photo', imageFile);
             formData.append('caption', caption);
             formData.append('parse_mode', 'Markdown');
             
-            // إرسال إلى التلغرام
             const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendPhoto`, {
                 method: 'POST',
                 body: formData
@@ -454,7 +452,7 @@
         }
     }
 
-    // ========== حفظ المنتج فقط ==========
+    // ========== حفظ المنتج فقط (بدون نشر) ==========
     function saveProductOnly() {
         const name = document.getElementById('productName').value.trim();
         const price = parseInt(document.getElementById('productPrice').value);
@@ -498,7 +496,7 @@
         showToast(`✅ تم حفظ ${name}`, 'success');
     }
 
-    // ========== الدالة 3: saveAndPublishProduct - حفظ ونشر إلى القناة ==========
+    // ========== حفظ ونشر إلى القناة (صورة أصلية بدون تعديل) ==========
     async function saveAndPublishProduct() {
         const name = document.getElementById('productName').value.trim();
         const price = parseInt(document.getElementById('productPrice').value);
@@ -541,7 +539,7 @@
             telegramId: null
         };
         
-        // استدعاء sendToTelegram للنشر أولاً
+        // إرسال الصورة الأصلية بدون تعديل إلى تيليجرام
         const result = await sendToTelegram(newProduct, imageFile);
         
         if (result.success) {
@@ -563,7 +561,7 @@
         }
     }
 
-    // ========== الدالة 2: publishExistingProduct - نشر منتج موجود مسبقاً ==========
+    // ========== نشر منتج موجود مسبقاً (صورة أصلية بدون تعديل) ==========
     async function publishExistingProduct(productId) {
         const product = products.find(p => p.id === productId);
         if (!product) {
@@ -587,7 +585,7 @@
             const blob = await response.blob();
             const imageFile = new File([blob], 'product.jpg', { type: blob.type });
             
-            // استدعاء sendToTelegram
+            // إرسال الصورة الأصلية بدون تعديل
             const result = await sendToTelegram(product, imageFile);
             
             if (result.success) {
@@ -608,7 +606,7 @@
         const id = prompt('أدخل معرف المنتج:');
         if (!id) return;
         const product = products.find(p => p.productCompositeID === id);
-        if(product) alert(`✅ ${product.name}\n💰 ${product.price} دج\n📦 المخزون: ${product.quantity}`);
+        if(product) alert(`✅ ${product.name}\n💰 ${product.price} دج\n📦 المخزون: ${product.quantity}\n🆔 المعرف: ${product.productCompositeID}`);
         else showToast('المنتج غير موجود', 'error');
     }
 
@@ -817,14 +815,14 @@
         let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
         
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد منتجات</tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد منتجات</td></tr>';
             return;
         }
         
         tbody.innerHTML = filtered.map(p => `
             <tr>
                 <td><strong>${p.name}</strong></td>
-                <td><span style="font-family:monospace;">${p.productCompositeID || '---'}</span></td>
+                <td><span style="font-family:monospace; background:rgba(255,215,0,0.15); padding:4px 8px; border-radius:12px;">${p.productCompositeID || '---'}</span></td>
                 <td style="color:var(--success);">${p.price.toLocaleString()} دج</td>
                 <td style="font-weight:800;">${p.quantity}</td>
                 <td><span class="stock-status ${p.quantity>0?'high':'out'}">${p.quantity>0?'متاح':'نفد'}</span></td>
@@ -861,7 +859,7 @@
         let filtered = orders.filter(o => o.storeID === currentStore.storeFixedID);
         
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد طلبات</tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد طلبات</td></tr>';
             return;
         }
         
