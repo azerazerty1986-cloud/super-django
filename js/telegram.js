@@ -357,6 +357,49 @@ function generateProductCompositeID(storeID, serialNumber) {
     return `${storeID}-${serialNumber}`;
 }
 
+// ===== [4.14] إضافة منتج إلى تلغرام =====
+async function addProductToTelegram(product, imageFile) {
+    try {
+        console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
+        
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM.channelId);
+        formData.append('photo', imageFile);
+        formData.append('caption', `🟣 *منتج جديد في ${product.storeName}*
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *المنتج:* ${product.name}
+💰 *السعر:* ${product.price.toLocaleString()} دج
+🏷️ *القسم:* ${getCategoryName(product.category)}
+📊 *الكمية:* ${product.stock}
+🏪 *المتجر:* ${product.storeName}
+🆔 *معرف المتجر:* \`${product.storeID}\`
+🔢 *معرف المنتج:* \`${product.productCompositeID}\`
+📝 *الوصف:* ${product.description || 'منتج ممتاز'}
+📅 ${new Date().toLocaleString('ar-EG')}
+
+✅ للطلب: تواصل مع المتجر مباشرة`);
+
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendPhoto`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        console.log('📥 رد تلغرام:', data);
+        
+        if (data.ok) {
+            const messageId = data.result.message_id;
+            showNotification(`✅ تم الإرسال - المعرف: ${messageId}`, 'success');
+            return { success: true, messageId: messageId, telegramId: messageId };
+        }
+        showNotification('❌ فشل الإرسال: ' + data.description, 'error');
+        return { success: false, error: data.description };
+    } catch (error) {
+        console.error('❌ خطأ:', error);
+        showNotification('❌ خطأ في الاتصال', 'error');
+        return { success: false, error: error.message };
+    }
+}
 
 // ===== [4.15] دالة حفظ المنتج =====
 async function saveProduct() {
@@ -487,6 +530,151 @@ async function saveProduct() {
 }
 
 // ===== [4.16] جلب المنتجات من تلغرام =====
+async function fetchProductsFromTelegram() {
+    try {
+        isLoading = true;
+        console.log('🔄 جاري جلب المنتجات من تلغرام...');
+        
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+        const data = await response.json();
+        
+        if (!data.ok) {
+            throw new Error('فشل الاتصال بـ Telegram API');
+        }
+        
+        const localProducts = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
+        const telegramProducts = [];
+        
+        if (data.result) {
+            for (const update of data.result) {
+                const post = update.channel_post || update.message;
+                if (!post || !post.photo) continue;
+                
+                const caption = post.caption || '';
+                const lines = caption.split('\n');
+                
+                let name = 'منتج';
+                let price = 1000;
+                let category = 'other';
+                let stock = 10;
+                let storeName = 'ناردو برو';
+                let storeID = '';
+                let productCompositeID = '';
+                let description = '';
+                
+                for (const line of lines) {
+                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
+                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
+                    if (line.includes('القسم:')) {
+                        const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
+                        if (catValue === 'توابل') category = 'spices';
+                        else if (catValue === 'كوسمتيك') category = 'cosmetic';
+                        else if (catValue === 'بروموسيو') category = 'promo';
+                        else category = catValue;
+                    }
+                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
+                    if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim() || storeName;
+                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
+                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim() || productCompositeID;
+                    if (line.includes('الوصف:')) description = line.split(':')[1]?.trim() || description;
+                }
+                
+                const telegramId = post.message_id;
+                let mediaUrl = null;
+                let images = [];
+                
+                if (post.photo) {
+                    const fileId = post.photo[post.photo.length - 1].file_id;
+                    const fileResponse = await fetch(
+                        `https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${fileId}`
+                    );
+                    const fileData = await fileResponse.json();
+                    
+                    if (fileData.ok) {
+                        mediaUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                        images = [mediaUrl];
+                    }
+                }
+                
+                if (images.length === 0) {
+                    images = ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"];
+                    mediaUrl = images[0];
+                }
+                
+                if (mediaUrl) {
+                    // استخراج الرقم التسلسلي من المعرف المركب
+                    let serialNumber = '';
+                    let extractedStoreID = storeID;
+                    if (productCompositeID) {
+                        const parts = productCompositeID.split('-');
+                        if (parts.length >= 3) {
+                            extractedStoreID = `${parts[0]}-${parts[1]}`;
+                            serialNumber = parts[2];
+                        } else if (parts.length === 2) {
+                            extractedStoreID = productCompositeID;
+                            serialNumber = '001';
+                        }
+                    }
+                    
+                    telegramProducts.push({
+                        id: telegramId,
+                        telegramId: telegramId,
+                        name: name,
+                        price: price || 1000,
+                        category: category,
+                        stock: stock || 10,
+                        storeName: storeName,
+                        storeID: extractedStoreID || storeID,
+                        productCompositeID: productCompositeID || `${extractedStoreID || storeID}-001`,
+                        serialNumber: serialNumber || '001',
+                        description: description,
+                        rating: 4.5,
+                        image: mediaUrl,
+                        images: images,
+                        telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${post.message_id}`,
+                        createdAt: new Date(post.date * 1000).toISOString(),
+                        dateStr: getTimeAgo(post.date)
+                    });
+                }
+            }
+        }
+        
+        const mergedProducts = [...localProducts];
+        
+        for (const newProduct of telegramProducts) {
+            const exists = mergedProducts.some(p => p.id === newProduct.id || p.telegramId === newProduct.telegramId);
+            if (!exists) {
+                mergedProducts.push(newProduct);
+                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.productCompositeID})`);
+            }
+        }
+        
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام، إجمالي: ${mergedProducts.length}`);
+        
+        localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
+        
+        products = mergedProducts;
+        displayProducts();
+        
+        return mergedProducts;
+        
+    } catch (error) {
+        console.error('❌ خطأ في جلب المنتجات:', error);
+        showNotification('فشل الاتصال بتلغرام، عرض المنتجات المخزنة', 'warning');
+        
+        const saved = localStorage.getItem('nardoo_products');
+        if (saved) {
+            products = JSON.parse(saved);
+            displayProducts();
+            return products;
+        }
+        
+        return [];
+        
+    } finally {
+        isLoading = false;
+    }
+}
 
 // ===== [4.18] تحميل المنتجات وعرضها =====
 async function loadProducts() {
@@ -836,22 +1024,7 @@ function viewProductDetails(productId) {
                     <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
                 </div>
                 <div>
-                    <div style="background: rgba(255,215,0,0.15); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <span style="color: #888;">📦 معرف المنتج:</span>
-                            <span style="color: var(--gold); font-family: monospace; font-weight: bold;">${productCompositeID}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #888;">🆔 معرف المتجر:</span>
-                            <span style="direction: ltr; font-family: monospace;">
-                                <span style="color: var(--gold);">${storeIDParts[0]}</span>
-                                <span style="color: #888;">-</span>
-                                <span style="color: #aaa;">${storeIDParts[1]}</span>
-                            </span>
-                        </div>
-                    </div>
-                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${product.storeName || product.merchantName || 'ناردو برو'}</p>
-                    <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
+                    
                     
                     <div class="product-rating" style="margin-bottom: 20px;">
                         <div class="stars-container">${generateStars(product.rating || 4.5)}</div>
@@ -1896,5 +2069,4 @@ window.handleStoreRegister = handleStoreRegister;
 console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل متجر (اسم المتجر + رقم ثابت)');
 console.log('✅ صيغة معرف المتجر: [اسم_المتجر]-[رقم_الهاتف أو رقم_عشوائي]');
 console.log('✅ صيغة معرف المنتج: [معرف_المتجر]-[رقم_تسلسلي]');
-
 
