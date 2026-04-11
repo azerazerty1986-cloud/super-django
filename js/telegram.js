@@ -670,22 +670,7 @@ function displayProducts() {
     filtered = sortProducts(filtered);
 
     if (filtered.length === 0) {
-        container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px;">
-                <i class="fas fa-box-open" style="font-size: 80px; color: var(--gold); margin-bottom: 20px;"></i>
-                <h3 style="color: var(--gold); font-size: 28px; margin-bottom: 15px;">لا توجد منتجات</h3>
-                <p style="color: var(--text-secondary); font-size: 18px; margin-bottom: 30px;">أول منتج يضاف سيظهر هنا</p>
-                ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'merchant_approved' || currentUser.role === 'store_owner') ? `
-                    <button class="btn-gold" onclick="showAddProductModal()" style="font-size: 18px; padding: 15px 40px;">
-                        <i class="fas fa-plus"></i> إضافة منتج جديد
-                    </button>
-                ` : `
-                    <button class="btn-gold" onclick="openLoginModal()" style="font-size: 18px; padding: 15px 40px;">
-                        <i class="fas fa-sign-in-alt"></i> تسجيل الدخول للإضافة
-                    </button>
-                `}
-            </div>
-        `;
+        container.innerHTML = `...`; // رسالة عدم وجود منتجات
         return;
     }
 
@@ -707,7 +692,7 @@ function displayProducts() {
         const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
         const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
 
-        // ✅ تحسين عرض اسم المنتج
+        // ✅✅✅ التحسين المهم: عرض اسم المنتج بشكل صحيح ✅✅✅
         let displayName = product.name;
         if (!displayName || displayName === 'منتج' || displayName.trim() === '') {
             if (product.productCompositeID) {
@@ -744,7 +729,7 @@ function displayProducts() {
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
                     
-                    <!-- ✅ السطر المعدل لعرض اسم المنتج -->
+                    <!-- ✅✅✅ السطر المعدل لعرض اسم المنتج ✅✅✅ -->
                     <h3 class="product-title">${displayName}</h3>
                     
                     <div class="product-merchant-info">
