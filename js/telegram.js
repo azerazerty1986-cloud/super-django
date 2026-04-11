@@ -778,13 +778,14 @@ function displayProducts() {
 
                 <div class="product-info" style="padding: 15px;">
                     
-                    <!-- ===== اسم المنتج تحت الوقت مباشرة ===== -->
-                    <h3 class="product-title" style="font-size: 20px; font-weight: bold; color: var(--gold); margin: 10px 0 8px 0; text-align: right;">
-                        ${product.name}
-                    </h3>
-                    
-                    <div class="product-category" style="margin-bottom: 8px;">
-                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
+                    <!-- ===== اسم المنتج جنب الفئة (صف واحد) ===== -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <div class="product-category">
+                            <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
+                        </div>
+                        <h3 class="product-title" style="font-size: 18px; font-weight: bold; color: var(--gold); margin: 0;">
+                            ${product.name}
+                        </h3>
                     </div>
                     
                     <div class="product-merchant-info" style="margin-bottom: 8px;">
@@ -816,7 +817,6 @@ function displayProducts() {
         `;
     }).join('');
 }
-
 // ===== [4.20] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
