@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -324,9 +323,60 @@
         apiUrl: 'https://api.telegram.org/bot'
     };
 
-    let products = JSON.parse(localStorage.getItem('nardo_products') || '[]');
-    let orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
-    let stockLog = JSON.parse(localStorage.getItem('nardo_stock_log') || '[]');
+    // ========== إدارة التخزين الآمن ==========
+    const safeLocalStorage = {
+        set: function(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    console.warn('⚠️ مساحة التخزين ممتلئة، جاري تنظيف البيانات القديمة...');
+                    this.autoCleanup();
+                    try {
+                        localStorage.setItem(key, JSON.stringify(value));
+                        return true;
+                    } catch (retryError) {
+                        showToast('❌ فشل التخزين: المساحة ممتلئة جداً، يرجى مسح السجل يدوياً', 'error');
+                        return false;
+                    }
+                }
+                return false;
+            }
+        },
+        get: function(key, defaultValue = '[]') {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : JSON.parse(defaultValue);
+            } catch (e) {
+                return JSON.parse(defaultValue);
+            }
+        },
+        autoCleanup: function() {
+            // حذف أقدم الطلبات لتوفير مساحة (الاحتفاظ بآخر 100 طلب)
+            let allOrders = this.get('nardo_orders');
+            if (allOrders.length > 100) {
+                allOrders = allOrders.slice(0, 100);
+                localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
+            }
+            // حذف سجل الحركات القديم (الاحتفاظ بآخر 100 حركة)
+            let logs = this.get('nardo_stock_log');
+            if (logs.length > 100) {
+                logs = logs.slice(-100);
+                localStorage.setItem('nardo_stock_log', JSON.stringify(logs));
+            }
+            // تنظيف معرفات الرسائل المعالجة (الاحتفاظ بآخر 300)
+            let processedIds = this.get('nardo_processed_telegram_ids');
+            if (processedIds.length > 300) {
+                processedIds = processedIds.slice(-300);
+                localStorage.setItem('nardo_processed_telegram_ids', JSON.stringify(processedIds));
+            }
+        }
+    };
+
+    let products = safeLocalStorage.get('nardo_products');
+    let orders = safeLocalStorage.get('nardo_orders');
+    let stockLog = safeLocalStorage.get('nardo_stock_log');
     let currentStore = null;
     let editProductId = null;
     let currentImages = [];
@@ -356,7 +406,7 @@
             };
         }
         if (!currentStore.storeFixedID) currentStore.storeFixedID = generateStoreID(currentStore.storeName);
-        localStorage.setItem('current_store', JSON.stringify(currentStore));
+        safeLocalStorage.set('current_store', currentStore);
         
         document.getElementById('currentStoreName').innerHTML = currentStore.storeName;
         document.getElementById('currentStoreID').innerHTML = currentStore.storeFixedID;
@@ -464,7 +514,7 @@
                     newCount++;
                 }
             }
-            localStorage.setItem('nardo_products', JSON.stringify(products));
+            safeLocalStorage.set('nardo_products', products);
             renderAll();
             showToast(`تم جلب ${newCount} منتج جديد`, 'success');
         } catch(e) {
@@ -547,7 +597,8 @@
                         name: product.name,
                         price: product.price,
                         quantity: quantity,
-                        image: product.images?.[0] || ''
+                        // لا نخزن رابط الصورة الكامل في الطلب لتوفير المساحة، سنأخذه من المنتج عند العرض
+                        image: (product.images?.[0] || '').startsWith('data:') ? '' : (product.images?.[0] || '')
                     }],
                     total: orderData.total || (product.price * quantity),
                     status: 'pending',
@@ -568,10 +619,10 @@
                 newOrdersCount++;
             }
             
-            // حفظ البيانات
-            localStorage.setItem('nardo_orders', JSON.stringify(orders));
-            localStorage.setItem('nardo_products', JSON.stringify(products));
-            localStorage.setItem('nardo_processed_telegram_ids', JSON.stringify(processedIds));
+            // حفظ البيانات بشكل آمن
+            safeLocalStorage.set('nardo_orders', orders);
+            safeLocalStorage.set('nardo_products', products);
+            safeLocalStorage.set('nardo_processed_telegram_ids', processedIds);
             
             // تحديث الواجهة
             renderAll();
@@ -682,7 +733,7 @@
             telegramId: null
         };
         products.push(newProduct);
-        localStorage.setItem('nardo_products', JSON.stringify(products));
+        safeLocalStorage.set('nardo_products', products);
         addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, 'إنشاء منتج', newProduct.storeID);
         renderAll();
         closeAddProductModal();
@@ -732,7 +783,7 @@
             newProduct.publishedAt = new Date().toISOString();
         }
         products.push(newProduct);
-        localStorage.setItem('nardo_products', JSON.stringify(products));
+        safeLocalStorage.set('nardo_products', products);
         addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, result.success ? 'إنشاء ونشر' : 'إنشاء منتج', newProduct.storeID);
         renderAll();
         closeAddProductModal();
@@ -1044,7 +1095,7 @@
         const tbody = document.getElementById('ordersTableBody');
         if (!tbody) return;
         
-        orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
+        orders = safeLocalStorage.get('nardo_orders');
         const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
         
         if (filteredOrders.length === 0) {
@@ -1059,7 +1110,12 @@
         } else {
             tbody.innerHTML = filteredOrders.map(order => {
                 const firstItem = order.items[0];
-                const productImage = firstItem?.image || '';
+                // محاولة جلب الصورة من المنتج إذا لم تكن موجودة في الطلب
+                let productImage = firstItem?.image;
+                if (!productImage) {
+                    const p = products.find(prod => prod.productCompositeID === firstItem?.productCompositeID);
+                    productImage = p?.images?.[0] || '';
+                }
                 const imageHtml = productImage 
                     ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--gold);" onerror="this.src='https://via.placeholder.com/40/ffd700/000000?text=?'">`
                     : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
@@ -1121,7 +1177,7 @@
 
     function clearOrders() {
         if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟ لا يمكن التراجع عن هذه الخطوة.')) {
-            localStorage.setItem('nardo_orders', '[]');
+            safeLocalStorage.set('nardo_orders', []);
             orders = [];
             renderOrders();
             updateStats();
@@ -1296,12 +1352,12 @@
     // ========== الاستماع للتغييرات في localStorage ==========
     window.addEventListener('storage', (e) => {
         if (e.key === 'nardo_orders') {
-            orders = JSON.parse(e.newValue || '[]');
+            orders = safeLocalStorage.get('nardo_orders');
             renderOrders();
             updateStats();
         }
         if (e.key === 'nardo_products') {
-            products = JSON.parse(e.newValue || '[]');
+            products = safeLocalStorage.get('nardo_products');
             renderAll();
         }
     });
