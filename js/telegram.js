@@ -1012,10 +1012,6 @@ function viewProductDetails(productId) {
         ? product.images[0] 
         : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
 
-    const storeID = product.storeID || 'غير محدد';
-    const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
-    const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
-
     content.innerHTML = `
         <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
             <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
