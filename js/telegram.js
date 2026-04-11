@@ -522,7 +522,7 @@ async function fetchProductsFromTelegram() {
                 let description = '';
                 
                 for (const line of lines) {
-                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
+                    if (line.includes('المنتج:')) name = line.substring(line.indexOf(':') + 1).trim() || name;
                     if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
                     if (line.includes('القسم:')) {
                         const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
