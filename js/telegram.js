@@ -641,6 +641,7 @@ async function loadProducts() {
 }
 
 // ===== [4.19] عرض المنتجات =====
+// ===== [4.19] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
@@ -706,6 +707,17 @@ function displayProducts() {
         const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
         const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
 
+        // ✅ تحسين عرض اسم المنتج
+        let displayName = product.name;
+        if (!displayName || displayName === 'منتج' || displayName.trim() === '') {
+            if (product.productCompositeID) {
+                const serial = product.productCompositeID.split('-').pop();
+                displayName = `📦 منتج ${serial}`;
+            } else {
+                displayName = '✨ منتج ناردو';
+            }
+        }
+
         return `
             <div class="product-card" onclick="viewProductDetails(${product.id})">
                 <div class="product-time-badge">
@@ -732,7 +744,8 @@ function displayProducts() {
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
                     
-                    <h3 class="product-title">${product.name}</h3>
+                    <!-- ✅ السطر المعدل لعرض اسم المنتج -->
+                    <h3 class="product-title">${displayName}</h3>
                     
                     <div class="product-merchant-info">
                         <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
@@ -759,6 +772,7 @@ function displayProducts() {
     }).join('');
 }
 
+    
 // ===== [4.20] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
