@@ -1,4 +1,5 @@
 
+/* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
 /* ===== المعدل النهائي - مع ID ثابت للمتجر (اسم المتجر + رقم ثابت) ===== */
 /* ================================================================== */
@@ -357,7 +358,49 @@ function generateProductCompositeID(storeID, serialNumber) {
     return `${storeID}-${serialNumber}`;
 }
 
+// ===== [4.14] إضافة منتج إلى تلغرام =====
+async function addProductToTelegram(product, imageFile) {
+    try {
+        console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
+        
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM.channelId);
+        formData.append('photo', imageFile);
+        formData.append('caption', `🟣 *منتج جديد في ${product.storeName}*
+━━━━━━━━━━━━━━━━━━━━━━
+📦 *المنتج:* ${product.name}
+💰 *السعر:* ${product.price.toLocaleString()} دج
+🏷️ *القسم:* ${getCategoryName(product.category)}
+📊 *الكمية:* ${product.stock}
+🏪 *المتجر:* ${product.storeName}
+🆔 *معرف المتجر:* \`${product.storeID}\`
+🔢 *معرف المنتج:* \`${product.productCompositeID}\`
+📝 *الوصف:* ${product.description || 'منتج ممتاز'}
+📅 ${new Date().toLocaleString('ar-EG')}
 
+✅ للطلب: تواصل مع المتجر مباشرة`);
+
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendPhoto`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        console.log('📥 رد تلغرام:', data);
+        
+        if (data.ok) {
+            const messageId = data.result.message_id;
+            showNotification(`✅ تم الإرسال - المعرف: ${messageId}`, 'success');
+            return { success: true, messageId: messageId, telegramId: messageId };
+        }
+        showNotification('❌ فشل الإرسال: ' + data.description, 'error');
+        return { success: false, error: data.description };
+    } catch (error) {
+        console.error('❌ خطأ:', error);
+        showNotification('❌ خطأ في الاتصال', 'error');
+        return { success: false, error: error.message };
+    }
+}
 
 // ===== [4.15] دالة حفظ المنتج =====
 async function saveProduct() {
@@ -466,8 +509,7 @@ async function saveProduct() {
         merchantID: currentUser.merchantFixedID || null  // للتوافق مع الإصدارات السابقة
     };
 
-    // تم حذف إرسال المنتج إلى تلغرام بناءً على طلب المستخدم
-    const result = { success: true, telegramId: Date.now().toString() };
+    const result = await addProductToTelegram(product, imageFile);
     
     if (result.success) {
         product.id = result.telegramId;
@@ -522,7 +564,7 @@ async function fetchProductsFromTelegram() {
                 let description = '';
                 
                 for (const line of lines) {
-                    if (line.includes('المنتج:')) name = line.substring(line.indexOf(':') + 1).trim() || name;
+                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
                     if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
                     if (line.includes('القسم:')) {
                         const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
@@ -641,7 +683,6 @@ async function loadProducts() {
 }
 
 // ===== [4.19] عرض المنتجات =====
-// ===== [4.19] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
@@ -670,7 +711,22 @@ function displayProducts() {
     filtered = sortProducts(filtered);
 
     if (filtered.length === 0) {
-        container.innerHTML = `...`; // رسالة عدم وجود منتجات
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px;">
+                <i class="fas fa-box-open" style="font-size: 80px; color: var(--gold); margin-bottom: 20px;"></i>
+                <h3 style="color: var(--gold); font-size: 28px; margin-bottom: 15px;">لا توجد منتجات</h3>
+                <p style="color: var(--text-secondary); font-size: 18px; margin-bottom: 30px;">أول منتج يضاف سيظهر هنا</p>
+                ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'merchant_approved' || currentUser.role === 'store_owner') ? `
+                    <button class="btn-gold" onclick="showAddProductModal()" style="font-size: 18px; padding: 15px 40px;">
+                        <i class="fas fa-plus"></i> إضافة منتج جديد
+                    </button>
+                ` : `
+                    <button class="btn-gold" onclick="openLoginModal()" style="font-size: 18px; padding: 15px 40px;">
+                        <i class="fas fa-sign-in-alt"></i> تسجيل الدخول للإضافة
+                    </button>
+                `}
+            </div>
+        `;
         return;
     }
 
@@ -691,17 +747,6 @@ function displayProducts() {
         const storeID = product.storeID || 'غير محدد';
         const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
         const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
-
-        // ✅✅✅ التحسين المهم: عرض اسم المنتج بشكل صحيح ✅✅✅
-        let displayName = product.name;
-        if (!displayName || displayName === 'منتج' || displayName.trim() === '') {
-            if (product.productCompositeID) {
-                const serial = product.productCompositeID.split('-').pop();
-                displayName = `📦 منتج ${serial}`;
-            } else {
-                displayName = '✨ منتج ناردو';
-            }
-        }
 
         return `
             <div class="product-card" onclick="viewProductDetails(${product.id})">
@@ -729,8 +774,7 @@ function displayProducts() {
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
                     
-                    <!-- ✅✅✅ السطر المعدل لعرض اسم المنتج ✅✅✅ -->
-                    <h3 class="product-title">${displayName}</h3>
+                    <h3 class="product-title">${product.name}</h3>
                     
                     <div class="product-merchant-info">
                         <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
@@ -757,7 +801,6 @@ function displayProducts() {
     }).join('');
 }
 
-    
 // ===== [4.20] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
@@ -2004,7 +2047,7 @@ window.onclick = function(event) {
 
 // ===== [4.50] تصدير الدوال إلى النطاق العام =====
 window.saveProduct = saveProduct;
-// window.addProductToTelegram = addProductToTelegram; // تم الحذف
+window.addProductToTelegram = addProductToTelegram;
 window.closeModal = closeModal;
 window.openLoginModal = openLoginModal;
 window.showNotification = showNotification;
@@ -2042,3 +2085,4 @@ window.handleStoreRegister = handleStoreRegister;
 console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل متجر (اسم المتجر + رقم ثابت)');
 console.log('✅ صيغة معرف المتجر: [اسم_المتجر]-[رقم_الهاتف أو رقم_عشوائي]');
 console.log('✅ صيغة معرف المنتج: [معرف_المتجر]-[رقم_تسلسلي]');
+
