@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -476,54 +474,64 @@
     // ========== دوال التلغرام لجلب الطلبات ==========
     async function fetchOrdersFromTelegram() {
         try {
-            showToast('📡 جاري جلب الطلبات من قناة التلغرام...', 'info');
+            showToast('📡 جاري جلب الطلبات من التلغرام...', 'info');
             
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`);
+            // زيادة الحد لضمان جلب المزيد من التحديثات
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100&offset=-100`);
             const data = await response.json();
             
-            if (!data.ok) throw new Error('فشل الاتصال بقناة التلغرام');
+            if (!data.ok) throw new Error('فشل الاتصال بـ Telegram API');
             
             let newOrdersCount = 0;
             let processedIds = JSON.parse(localStorage.getItem('nardo_processed_telegram_ids') || '[]');
             
+            // التأكد من وجود المصفوفة orders
+            if (!Array.isArray(orders)) orders = [];
+
             for (const update of data.result || []) {
-                const post = update.channel_post || update.message;
+                const post = update.channel_post || update.message || update.edited_channel_post || update.edited_message;
                 if (!post || !post.text) continue;
                 
-                if (processedIds.includes(post.message_id)) continue;
+                // استخدام id التحديث أو id الرسالة للتحقق من المعالجة
+                const uniqueId = post.message_id;
+                if (processedIds.includes(uniqueId)) continue;
                 
                 const text = post.text;
                 
-                if (!text.includes(currentStore.storeFixedID)) continue;
+                // التحقق من أن الرسالة تخص المتجر الحالي (أو تحتوي على معرف منتج صالح)
+                if (!text.includes(currentStore.storeFixedID) && !text.match(/(\S+-\d{3}-\d+)/)) continue;
                 
                 const orderData = extractOrderDataFromText(text);
                 
                 if (!orderData || !orderData.productID) continue;
                 
+                // البحث عن المنتج في كل المنتجات وليس فقط المتجر الحالي للتأكد
                 const product = products.find(p => p.productCompositeID === orderData.productID);
                 
                 if (!product) {
                     console.warn(`المنتج ${orderData.productID} غير موجود في المخزون`);
                     continue;
                 }
+
+                // التأكد من أن الطلب يخص هذا المتجر
+                if (product.storeID !== currentStore.storeFixedID) continue;
                 
                 const existingOrder = orders.find(o => o.telegramOrderId === orderData.orderNumber);
                 if (existingOrder) {
-                    processedIds.push(post.message_id);
-                    localStorage.setItem('nardo_processed_telegram_ids', JSON.stringify(processedIds));
+                    processedIds.push(uniqueId);
                     continue;
                 }
                 
                 const quantity = orderData.quantity;
+                // تحديث المخزون فقط إذا كانت الكمية متوفرة
                 if (product.quantity < quantity) {
-                    showToast(`⚠️ الكمية غير متوفرة للمنتج ${product.name} (المتبقي: ${product.quantity})`, 'warning');
-                    continue;
+                    console.warn(`⚠️ الكمية غير كافية للمنتج ${product.name}`);
                 }
                 
                 const newOrder = {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(),
                     telegramOrderId: orderData.orderNumber,
-                    telegramMessageId: post.message_id,
+                    telegramMessageId: uniqueId,
                     date: orderData.date || new Date().toLocaleString('ar-EG'),
                     customerName: orderData.customerName,
                     customerPhone: orderData.customerPhone,
@@ -546,28 +554,30 @@
                 
                 orders.unshift(newOrder);
                 
+                // تحديث الكمية في المخزون
                 const oldQty = product.quantity;
-                product.quantity -= quantity;
+                product.quantity = Math.max(0, product.quantity - quantity);
                 
-                addStockLog(product.id, product.name, 'remove', quantity, oldQty, product.quantity, `طلب من تلغرام #${orderData.orderNumber}`, product.storeID);
+                if (typeof addStockLog === 'function') {
+                    addStockLog(product.id, product.name, 'remove', quantity, oldQty, product.quantity, `طلب تلغرام #${orderData.orderNumber}`, product.storeID);
+                }
                 
-                processedIds.push(post.message_id);
+                processedIds.push(uniqueId);
                 newOrdersCount++;
             }
             
+            // حفظ البيانات
             localStorage.setItem('nardo_orders', JSON.stringify(orders));
             localStorage.setItem('nardo_products', JSON.stringify(products));
             localStorage.setItem('nardo_processed_telegram_ids', JSON.stringify(processedIds));
             
-            renderOrders();
-            renderInventory();
-            renderProducts();
-            updateStats();
+            // تحديث الواجهة
+            renderAll();
             
             if (newOrdersCount > 0) {
-                showToast(`✅ تم جلب ${newOrdersCount} طلب جديد من التلغرام`, 'success');
+                showToast(`✅ تم جلب ${newOrdersCount} طلب جديد`, 'success');
             } else {
-                showToast('📭 لا توجد طلبات جديدة للمتجر الحالي', 'info');
+                showToast('📭 لا توجد طلبات جديدة حالياً', 'info');
             }
             
         } catch (error) {
@@ -579,60 +589,63 @@
     // ========== دالة استخراج البيانات من نص الرسالة ==========
     function extractOrderDataFromText(text) {
         try {
+            // تحسين الأنماط لتكون أكثر مرونة مع المسافات والرموز التعبيرية
             const patterns = {
-                storeID: /معرف المتجر:\s*([^\n]+)/,
-                customerName: /المشتري:\s*([^\n]+?)(?:\s+الهاتف:|$)/,
-                customerPhone: /الهاتف:\s*([^\n]+)/,
-                customerAddress: /العنوان:\s*([^\n]+)/,
-                productID: /(\S+-\d{3}-\d+)/,
-                quantity: /الكمية:\s*\(?\s*(\d+)/,
-                total: /أمالي المتجر:\s*(\d+)/,
-                notes: /ملاحظات:\s*([^\n]+)/,
-                orderNumber: /رقم الطلب:\s*(\d+)/,
-                date: /التاريخ:\s*([^\n]+)/
+                storeID: /(?:معرف المتجر|ID المتجر):\s*([^\n]+)/i,
+                customerName: /(?:المشتري|الاسم|الزبون):\s*([^\n|]+)/i,
+                customerPhone: /(?:الهاتف|رقم الهاتف|الجوال):\s*([\d\s+]+)/i,
+                customerAddress: /(?:العنوان|الموقع):\s*([^\n]+)/i,
+                productID: /([A-Z0-9]+-\d{3}-\d+)/i, // نمط معرف المنتج
+                quantity: /(?:الكمية|العدد):\s*(\d+)/i,
+                total: /(?:إجمالي|السعر الإجمالي|المجموع):\s*(\d+)/i,
+                notes: /(?:ملاحظات|ملاحظة):\s*([^\n]+)/i,
+                orderNumber: /(?:رقم الطلب|طلب رقم):\s*(\d+)/i,
+                date: /(?:التاريخ|بتاريخ):\s*([^\n]+)/i
             };
             
-            const storeID = text.match(patterns.storeID)?.[1]?.trim();
-            const customerName = text.match(patterns.customerName)?.[1]?.trim();
-            const customerPhone = text.match(patterns.customerPhone)?.[1]?.trim();
-            const customerAddress = text.match(patterns.customerAddress)?.[1]?.trim();
-            const productID = text.match(patterns.productID)?.[1]?.trim();
+            const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
+            let customerName = (text.match(patterns.customerName)?.[1] || '').trim();
+            const customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
+            const customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
+            const productID = (text.match(patterns.productID)?.[0] || '').trim();
+            
+            // تنظيف اسم العميل من الهاتف إذا التصق به
+            if (customerName.includes('الهاتف')) {
+                customerName = customerName.split('الهاتف')[0].trim();
+            }
             
             let quantity = 1;
             const qtyMatch = text.match(patterns.quantity);
             if (qtyMatch) {
                 quantity = parseInt(qtyMatch[1]);
-            }
-            
-            const complexQtyMatch = text.match(/الكمية:\s*\(?\s*(\d+)\s*[×x]\s*\d+/);
-            if (complexQtyMatch) {
-                quantity = parseInt(complexQtyMatch[1]);
+            } else {
+                // محاولة البحث عن كمية في أنماط أخرى مثل (2x)
+                const altQtyMatch = text.match(/\((\d+)\s*[x×*]/i) || text.match(/[x×*]\s*(\d+)\)/i);
+                if (altQtyMatch) quantity = parseInt(altQtyMatch[1]);
             }
             
             const total = parseInt(text.match(patterns.total)?.[1] || '0');
-            const notes = text.match(patterns.notes)?.[1]?.trim();
-            const orderNumber = text.match(patterns.orderNumber)?.[1]?.trim();
-            const date = text.match(patterns.date)?.[1]?.trim();
+            const notes = (text.match(patterns.notes)?.[1] || '').trim();
+            const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
+            const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
             
-            if (!productID) {
-                return null;
-            }
+            if (!productID) return null;
             
             return {
                 storeID,
-                customerName: customerName || 'عميل',
-                customerPhone: customerPhone || '',
-                customerAddress: customerAddress || '',
+                customerName: customerName || 'عميل تلغرام',
+                customerPhone,
+                customerAddress,
                 productID,
                 quantity,
                 total,
                 notes,
-                orderNumber: orderNumber || Date.now().toString(),
-                date: date || new Date().toLocaleString('ar-EG')
+                orderNumber,
+                date
             };
             
         } catch (error) {
-            console.error('خطأ في استخراج البيانات:', error);
+            console.error('Error extracting order data:', error);
             return null;
         }
     }
@@ -1297,6 +1310,12 @@
         loadCurrentStore();
         renderAll();
         document.getElementById('searchProducts')?.addEventListener('input', renderProducts);
+        
+        // جلب الطلبات تلقائياً عند فتح الصفحة
+        setTimeout(fetchOrdersFromTelegram, 2000);
+        
+        // جلب الطلبات دورياً كل 2 دقيقة
+        setInterval(fetchOrdersFromTelegram, 120000);
     });
 </script>
 </body>
