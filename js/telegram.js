@@ -562,22 +562,47 @@ async function fetchProductsFromTelegram() {
 	                let productCompositeID = '';
 	                let description = '';
 	                
-	                for (const line of lines) {
-	                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim();
-	                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
-	                    if (line.includes('القسم:')) {
-	                        const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
-	                        if (catValue === 'توابل') category = 'spices';
-	                        else if (catValue === 'كوسمتيك') category = 'cosmetic';
-	                        else if (catValue === 'بروموسيو') category = 'promo';
-	                        else category = catValue;
-	                    }
-	                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
-	                    if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim();
-	                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim();
-	                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim();
-	                    if (line.includes('الوصف:')) description = line.split(':')[1]?.trim();
-	                }
+		                for (const line of lines) {
+		                    // البحث المرن عن الكلمات المفتاحية (يدعم وجود رموز تعبيرية قبلها)
+		                    if (line.includes('المنتج:')) {
+		                        const parts = line.split('المنتج:');
+		                        if (parts.length > 1) name = parts[1].trim();
+		                    }
+		                    if (line.includes('السعر:')) {
+		                        const parts = line.split('السعر:');
+		                        if (parts.length > 1) price = parseInt(parts[1].replace(/[^0-9]/g, '')) || price;
+		                    }
+		                    if (line.includes('القسم:')) {
+		                        const parts = line.split('القسم:');
+		                        if (parts.length > 1) {
+		                            const catValue = parts[1].trim().toLowerCase();
+		                            if (catValue.includes('توابل')) category = 'spices';
+		                            else if (catValue.includes('كوسمتيك')) category = 'cosmetic';
+		                            else if (catValue.includes('بروموسيو')) category = 'promo';
+		                            else category = 'other';
+		                        }
+		                    }
+		                    if (line.includes('الكمية:')) {
+		                        const parts = line.split('الكمية:');
+		                        if (parts.length > 1) stock = parseInt(parts[1].replace(/[^0-9]/g, '')) || stock;
+		                    }
+		                    if (line.includes('المتجر:')) {
+		                        const parts = line.split('المتجر:');
+		                        if (parts.length > 1) storeName = parts[1].trim();
+		                    }
+		                    if (line.includes('معرف المتجر:')) {
+		                        const parts = line.split('معرف المتجر:');
+		                        if (parts.length > 1) storeID = parts[1].trim();
+		                    }
+		                    if (line.includes('معرف المنتج:')) {
+		                        const parts = line.split('معرف المنتج:');
+		                        if (parts.length > 1) productCompositeID = parts[1].trim();
+		                    }
+		                    if (line.includes('الوصف:')) {
+		                        const parts = line.split('الوصف:');
+		                        if (parts.length > 1) description = parts[1].trim();
+		                    }
+		                }
 	                
 	                // التأكد من عدم استخدام المعرفات كأسماء إذا كانت الحقول فارغة
 	                if (!name || name === productCompositeID) name = 'منتج ناردو';
