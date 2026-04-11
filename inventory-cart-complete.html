@@ -1377,5 +1377,90 @@
         setInterval(fetchOrdersFromTelegram, 120000);
     });
 </script>
+    // ========== دالة حساب الوقت المنقضي ==========
+function getTimeAgo(dateString) {
+    if (!dateString) return 'الآن';
+    const now = new Date();
+    const productDate = new Date(dateString);
+    const diffInSeconds = Math.floor((now - productDate) / 1000);
+    
+    if (diffInSeconds < 60) return 'الآن';
+    if (diffInSeconds < 3600) return `منذ ${Math.floor(diffInSeconds / 60)} دقيقة`;
+    if (diffInSeconds < 86400) return `منذ ${Math.floor(diffInSeconds / 3600)} ساعة`;
+    if (diffInSeconds < 604800) return `منذ ${Math.floor(diffInSeconds / 86400)} يوم`;
+    return 'منذ وقت';
+}
+
+// ========== دالة عرض المنتجات المعدلة ==========
+function renderProducts() {
+    const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
+    let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
+    filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || (p.productCompositeID && p.productCompositeID.toLowerCase().includes(search)));
+    
+    const container = document.getElementById('productsGrid');
+    if (!filtered.length) {
+        container.innerHTML = '<div style="text-align:center; padding:60px;"><i class="fas fa-box-open fa-3x"></i><p>لا توجد منتجات</p><button class="btn btn-telegram" onclick="fetchProductsFromTelegram()">جلب من تلغرام</button></div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(p => {
+        const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
+        const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
+        const imgHtml = p.images?.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}" onclick="window.open('${img}','_blank')">`).join('')}</div>` : '';
+        const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
+        
+        const storeID = p.storeID || 'غير محدد';
+        const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
+        const productCompositeID = p.productCompositeID || `${storeID}-${p.serialNumber || '001'}`;
+        
+        const timeAgo = getTimeAgo(p.createdAt);
+        
+        return `
+            <div class="product-card" style="position: relative; min-height: 550px;">
+                <div style="margin-bottom: 10px; padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; display: inline-block; font-size: 11px;">
+                    <i class="far fa-clock"></i> ${timeAgo}
+                </div>
+                
+                <div style="position: absolute; top: 50px; left: 15px; z-index: 10; direction: rtl; text-align: right;">
+                    <div style="background: linear-gradient(135deg, var(--gold), #ffb347); color: #111; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; margin-bottom: 6px; font-family: monospace; white-space: nowrap;">
+                        📦 ${productCompositeID}
+                    </div>
+                    <div style="background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; direction: ltr; display: inline-block; white-space: nowrap;">
+                        <i class="fas fa-store" style="font-size: 9px; color: var(--gold);"></i>
+                        <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span>
+                        <span style="color: #888;">-</span>
+                        <span style="color: #aaa; font-family: monospace;">${storeIDParts[1] || '???'}</span>
+                    </div>
+                </div>
+                
+                ${publishedBadge}
+                ${imgHtml}
+                
+                <div class="product-name" style="font-size: 24px; font-weight: 900; margin: 15px 0 8px 0; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                    ${p.name}
+                </div>
+                
+                <div class="product-price" style="font-size: 26px; font-weight: 900; color: var(--success); margin: 10px 0;">
+                    ${p.price.toLocaleString()} دج
+                </div>
+                
+                <div style="margin: 10px 0;">
+                    <span class="stock-status ${stockClass}" style="font-size: 13px; padding: 5px 15px;">
+                        <i class="fas ${p.quantity > 0 ? 'fa-check-circle' : 'fa-times-circle'}"></i> ${stockText}
+                    </span>
+                </div>
+                
+                ${p.description ? `<div style="color: var(--text-secondary); font-size: 12px; margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 12px;">📝 ${p.description.substring(0, 80)}${p.description.length > 80 ? '...' : ''}</div>` : ''}
+                
+                <div class="product-actions" style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-gold" onclick="quickOrder(${p.id})" style="flex: 1;"><i class="fas fa-shopping-bag"></i> طلب</button>
+                    <button class="btn btn-outline" onclick="openEditStockModal(${p.id})" style="flex: 1;"><i class="fas fa-edit"></i> تعديل</button>
+                    ${!p.published ? `<button class="btn btn-telegram" onclick="publishExistingProduct(${p.id})" style="flex: 1;"><i class="fab fa-telegram"></i> نشر</button>` : ''}
+                    <button class="btn btn-outline" style="border-color:var(--error);color:var(--error); flex: 0.5;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 </body>
 </html>
