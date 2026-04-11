@@ -1002,55 +1002,6 @@ ${order.items.map(i => `  • ${i.name} x${i.quantity} = ${(i.price * i.quantity
 }
 
 // ===== [4.28] عرض تفاصيل المنتج =====
-function viewProductDetails(productId) {
-    const product = products.find(p => p.id == productId);
-    if (!product) return;
-
-    const modal = document.getElementById('productDetailModal');
-    const content = document.getElementById('productDetailContent');
-
-    const imageUrl = product.images && product.images.length > 0 
-        ? product.images[0] 
-        : "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
-
-    content.innerHTML = `
-        <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
-            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                <div>
-                    <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
-                </div>
-                <div>
-                    
-                    
-                    <div class="product-rating" style="margin-bottom: 20px;">
-                        <div class="stars-container">${generateStars(product.rating || 4.5)}</div>
-                        <span class="rating-value">${(product.rating || 4.5).toFixed(1)}</span>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <span style="font-size: 32px; color: var(--gold);">${product.price.toLocaleString()} دج</span>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <span>${product.stock} قطعة متوفرة</span>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px;">
-                        <button class="btn-gold" onclick="addToCart(${product.id}); closeModal('productDetailModal')">
-                            أضف للسلة
-                        </button>
-                        <button class="btn-outline-gold" onclick="closeModal('productDetailModal')">
-                            إغلاق
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    modal.style.display = 'flex';
-}
 
 // ===== [4.29] إغلاق النوافذ =====
 function closeModal(modalId) {
