@@ -683,6 +683,8 @@ async function loadProducts() {
 }
 
 // ===== [4.19] عرض المنتجات =====
+
+// ===== [4.19] عرض المنتجات =====
 function displayProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
@@ -750,19 +752,22 @@ function displayProducts() {
 
         return `
             <div class="product-card" onclick="viewProductDetails(${product.id})">
-                <div class="product-time-badge">
+                <!-- الوقت في الأعلى -->
+                <div class="product-time-badge" style="margin-bottom: 10px;">
                     <i class="far fa-clock"></i> ${timeAgo}
                 </div>
                 
-                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; font-family:monospace;">
-                    📦 ${productCompositeID}
-                </div>
-                
-                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.75); padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; direction:ltr; display: flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-store" style="font-size: 10px; color: var(--gold);"></i>
-                    <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span>
-                    <span style="color: #888;">-</span>
-                    <span style="color: #aaa; font-family: monospace;">${storeIDParts[1] || '???'}</span>
+                <!-- المعرفات واحد تحت الآخر في الجهة اليسرى -->
+                <div style="position:absolute; top:50px; left:15px; z-index:10; direction:rtl; text-align:right;">
+                    <div style="background:var(--gold); color:black; padding:4px 8px; border-radius:20px; font-size:11px; font-weight:bold; margin-bottom:5px; font-family:monospace;">
+                        📦 ${productCompositeID}
+                    </div>
+                    <div style="background:rgba(0,0,0,0.75); padding:4px 8px; border-radius:20px; font-size:11px; font-weight:bold; direction:ltr; display:inline-block;">
+                        <i class="fas fa-store" style="font-size: 10px; color: var(--gold);"></i>
+                        <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span>
+                        <span style="color: #888;">-</span>
+                        <span style="color: #aaa; font-family: monospace;">${storeIDParts[1] || '???'}</span>
+                    </div>
                 </div>
                 
                 <div class="product-gallery">
@@ -774,7 +779,8 @@ function displayProducts() {
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
                     
-                    <h3 class="product-title">${product.name}</h3>
+                    <!-- اسم المنتج تحت الوقت -->
+                    <h3 class="product-title" style="margin-top: 5px;">${product.name}</h3>
                     
                     <div class="product-merchant-info">
                         <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
@@ -800,7 +806,6 @@ function displayProducts() {
         `;
     }).join('');
 }
-
 // ===== [4.20] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
