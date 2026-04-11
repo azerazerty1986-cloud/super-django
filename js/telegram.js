@@ -531,8 +531,6 @@ async function fetchProductsFromTelegram() {
                     }
                     if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
                     if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim() || storeName;
-                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
-                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim() || productCompositeID;
                     if (line.includes('الوصف:')) description = line.split(':')[1]?.trim() || description;
                 }
                 
