@@ -751,18 +751,19 @@ function displayProducts() {
         const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
 
         return `
-            <div class="product-card" onclick="viewProductDetails(${product.id})">
-                <!-- الوقت في الأعلى -->
-                <div class="product-time-badge" style="margin-bottom: 10px;">
+            <div class="product-card" onclick="viewProductDetails(${product.id})" style="position: relative;">
+                
+                <!-- ===== الوقت في الأعلى ===== -->
+                <div class="product-time-badge" style="margin-bottom: 8px; padding: 5px 10px; background: rgba(0,0,0,0.6); border-radius: 20px; display: inline-block; font-size: 12px;">
                     <i class="far fa-clock"></i> ${timeAgo}
                 </div>
                 
-                <!-- المعرفات واحد تحت الآخر في الجهة اليسرى -->
-                <div style="position:absolute; top:50px; left:15px; z-index:10; direction:rtl; text-align:right;">
-                    <div style="background:var(--gold); color:black; padding:4px 8px; border-radius:20px; font-size:11px; font-weight:bold; margin-bottom:5px; font-family:monospace;">
+                <!-- ===== المعرفات في الجهة اليسرى واحد تحت الآخر ===== -->
+                <div style="position: absolute; top: 45px; left: 12px; z-index: 10; direction: rtl; text-align: right;">
+                    <div style="background: var(--gold); color: black; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 6px; font-family: monospace; white-space: nowrap;">
                         📦 ${productCompositeID}
                     </div>
-                    <div style="background:rgba(0,0,0,0.75); padding:4px 8px; border-radius:20px; font-size:11px; font-weight:bold; direction:ltr; display:inline-block;">
+                    <div style="background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; direction: ltr; display: inline-block; white-space: nowrap;">
                         <i class="fas fa-store" style="font-size: 10px; color: var(--gold);"></i>
                         <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span>
                         <span style="color: #888;">-</span>
@@ -770,34 +771,43 @@ function displayProducts() {
                     </div>
                 </div>
                 
-                <div class="product-gallery">
-                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
+                <!-- ===== صورة المنتج ===== -->
+                <div class="product-gallery" style="margin-top: 5px;">
+                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 10px;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
                 </div>
 
-                <div class="product-info">
-                    <div class="product-category">
+                <div class="product-info" style="padding: 15px;">
+                    
+                    <!-- ===== اسم المنتج تحت الوقت مباشرة ===== -->
+                    <h3 class="product-title" style="font-size: 20px; font-weight: bold; color: var(--gold); margin: 10px 0 8px 0; text-align: right;">
+                        ${product.name}
+                    </h3>
+                    
+                    <div class="product-category" style="margin-bottom: 8px;">
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
                     
-                    <!-- اسم المنتج تحت الوقت -->
-                    <h3 class="product-title" style="margin-top: 5px;">${product.name}</h3>
-                    
-                    <div class="product-merchant-info">
+                    <div class="product-merchant-info" style="margin-bottom: 8px;">
                         <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
                     </div>
                     
-                    <div class="product-rating">
-                        <div class="stars-container">
+                    <div class="product-rating" style="margin-bottom: 8px;">
+                        <div class="stars-container" style="display: inline-block;">
                             ${generateStars(product.rating || 4.5)}
                         </div>
                         <span class="rating-value">${(product.rating || 4.5).toFixed(1)}</span>
                     </div>
                     
-                    <div class="product-price">${product.price.toLocaleString()} <small>دج</small></div>
-                    <div class="product-stock ${stockClass}">${stockText}</div>
+                    <div class="product-price" style="font-size: 22px; font-weight: bold; color: var(--gold); margin: 10px 0;">
+                        ${product.price.toLocaleString()} <small style="font-size: 14px;">دج</small>
+                    </div>
+                    
+                    <div class="product-stock ${stockClass}" style="margin-bottom: 12px;">
+                        ${stockText}
+                    </div>
                     
                     <div class="product-actions" onclick="event.stopPropagation()">
-                        <button class="add-to-cart" onclick="addToCart(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
+                        <button class="add-to-cart" onclick="addToCart(${product.id})" ${product.stock <= 0 ? 'disabled' : ''} style="width: 100%; padding: 12px; background: var(--gold); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
                             <i class="fas fa-shopping-cart"></i> أضف للسلة
                         </button>
                     </div>
@@ -806,6 +816,7 @@ function displayProducts() {
         `;
     }).join('');
 }
+
 // ===== [4.20] فلترة المنتجات =====
 function filterProducts(category) {
     currentFilter = category;
