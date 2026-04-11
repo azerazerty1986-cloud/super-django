@@ -1,4 +1,4 @@
-/* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
+
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
 /* ===== المعدل النهائي - مع ID ثابت للمتجر (اسم المتجر + رقم ثابت) ===== */
 /* ================================================================== */
@@ -774,33 +774,30 @@ function displayProducts() {
         const timeAgo = getTimeAgo(product.createdAt);
         const storeID = product.storeID || 'غير محدد';
         const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
-        const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
+	        const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
 
-        return `
-            <div class="product-card" onclick="viewProductDetails(${product.id})">
-                <div class="product-time-badge">
-                    <i class="far fa-clock"></i> ${timeAgo}
-                </div>
-                
+	        return `
+		            <div class="product-card" onclick="viewProductDetails(${product.id})">
+	                <div class="product-time-badge">
+	                    <i class="far fa-clock"></i> ${timeAgo}
+	                </div>
+	                
+	                <div class="product-name-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+	                    ${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}
+	                </div>
 
-                
+	                <div class="product-gallery">
+	                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
+	                </div>
 
-                
-                <div class="product-gallery">
-                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
-                </div>
-
-                <div class="product-info">
-                    <div class="product-category">
-                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
-                    </div>
-                    
-	                    <h3 class="product-title">${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}</h3>
-	                    
-	                    <div class="product-merchant-info">
-	                        <i class="fas fa-store"></i> ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'متجر ناردو')}
+	                <div class="product-info">
+	                    <div class="product-category">
+	                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
 	                    </div>
-                    
+	                    
+		                    <div class="product-merchant-info">
+		                        <i class="fas fa-store"></i> ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'متجر ناردو')}
+		                    </div>
                     <div class="product-rating">
                         <div class="stars-container">
                             ${generateStars(product.rating || 4.5)}
@@ -2060,4 +2057,3 @@ window.handleStoreRegister = handleStoreRegister;
 console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل متجر (اسم المتجر + رقم ثابت)');
 console.log('✅ صيغة معرف المتجر: [اسم_المتجر]-[رقم_الهاتف أو رقم_عشوائي]');
 console.log('✅ صيغة معرف المنتج: [معرف_المتجر]-[رقم_تسلسلي]');
-
