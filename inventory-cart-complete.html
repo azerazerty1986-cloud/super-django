@@ -1,6 +1,3 @@
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -478,39 +475,32 @@
                 const caption = post.caption || '';
                 let name = 'منتج', price = 1000, stock = 10, storeID = '', storeName = '', productID = '', desc = '';
                 const lines = caption.split('\n');
-	                for (const line of lines) {
-	                    // تنظيف السطر من علامات Markdown مثل * و ` لضمان استخراج النص النقي
-	                    const cleanLine = line.replace(/[\*`]/g, '').trim();
-	                    
-	                    if (cleanLine.includes('المنتج:')) {
-	                        const parts = cleanLine.split('المنتج:');
-	                        if (parts.length > 1) name = parts[1].trim();
-	                    }
-	                    if (cleanLine.includes('السعر:')) {
-	                        const parts = cleanLine.split('السعر:');
-	                        if (parts.length > 1) price = parseInt(parts[1].replace(/[^0-9]/g, '')) || price;
-	                    }
-	                    if (cleanLine.includes('الكمية:')) {
-	                        const parts = cleanLine.split('الكمية:');
-	                        if (parts.length > 1) stock = parseInt(parts[1].replace(/[^0-9]/g, '')) || stock;
-	                    }
-	                    if (cleanLine.includes('المتجر:')) {
-	                        const parts = cleanLine.split('المتجر:');
-	                        if (parts.length > 1) storeName = parts[1].trim();
-	                    }
-	                    if (cleanLine.includes('معرف المتجر:')) {
-	                        const parts = cleanLine.split('معرف المتجر:');
-	                        if (parts.length > 1) storeID = parts[1].trim();
-	                    }
-	                    if (cleanLine.includes('معرف المنتج:')) {
-	                        const parts = cleanLine.split('معرف المنتج:');
-	                        if (parts.length > 1) productID = parts[1].trim();
-	                    }
-	                    if (cleanLine.includes('الوصف:')) {
-	                        const parts = cleanLine.split('الوصف:');
-	                        if (parts.length > 1) desc = parts[1].trim();
-	                    }
-	                }
+		                for (const line of lines) {
+		                    // تنظيف السطر من علامات Markdown والرموز التعبيرية في البداية
+		                    const cleanLine = line.replace(/[\*`]/g, '').trim();
+		                    
+		                    // استخدام Regex للبحث عن الكلمات المفتاحية بمرونة أكبر
+		                    const nameMatch = cleanLine.match(/المنتج\s*:\s*(.+)/);
+		                    if (nameMatch) name = nameMatch[1].trim();
+		                    
+		                    const priceMatch = cleanLine.match(/السعر\s*:\s*([\d,]+)/);
+		                    if (priceMatch) price = parseInt(priceMatch[1].replace(/,/g, '')) || price;
+		                    
+		                    const stockMatch = cleanLine.match(/الكمية\s*:\s*(\d+)/);
+		                    if (stockMatch) stock = parseInt(stockMatch[1]) || stock;
+		                    
+		                    const storeNameMatch = cleanLine.match(/المتجر\s*:\s*(.+)/);
+		                    if (storeNameMatch && !cleanLine.includes('معرف')) storeName = storeNameMatch[1].trim();
+		                    
+		                    const storeIDMatch = cleanLine.match(/معرف المتجر\s*:\s*(.+)/);
+		                    if (storeIDMatch) storeID = storeIDMatch[1].trim();
+		                    
+		                    const productIDMatch = cleanLine.match(/معرف المنتج\s*:\s*(.+)/);
+		                    if (productIDMatch) productID = productIDMatch[1].trim();
+		                    
+		                    const descMatch = cleanLine.match(/الوصف\s*:\s*(.+)/);
+		                    if (descMatch) desc = descMatch[1].trim();
+		                }
 	                
 	                // منع استخدام المعرفات كبدائل للأسماء في الواجهة
 	                if (!name || name === productID) name = 'منتج ناردو';
@@ -1094,13 +1084,16 @@
             const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
             const productCompositeID = p.productCompositeID || `${storeID}-${p.serialNumber || '001'}`;
             const timeAgo = getTimeAgo(p.createdAt);
-	            return `
-	                <div class="product-card" style="position: relative; min-height: 550px;">
-	                    <div style="margin-bottom: 10px; padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; display: inline-block; font-size: 11px;"><i class="far fa-clock"></i> ${timeAgo}</div>
-	                    
-	                    ${publishedBadge}
-	                    ${imgHtml}
-	                    <div class="product-name" style="font-size: 24px; font-weight: 900; margin: 15px 0 8px 0; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent;">${(p.name === p.productCompositeID) ? 'منتج ناردو' : (p.name || 'منتج ناردو')}</div>
+		            return `
+		                <div class="product-card" style="position: relative; min-height: 550px;">
+		                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+		                        <div style="padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; font-size: 11px;"><i class="far fa-clock"></i> ${timeAgo}</div>
+		                        <div style="padding: 4px 12px; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 11px; color: var(--gold); font-weight: bold;"><i class="fas fa-store"></i> ${p.storeName || 'متجر ناردو'}</div>
+		                    </div>
+		                    
+		                    ${publishedBadge}
+		                    ${imgHtml}
+		                    <div class="product-name" style="font-size: 24px; font-weight: 900; margin: 15px 0 8px 0; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent;">${(p.name === p.productCompositeID) ? 'منتج ناردو' : (p.name || 'منتج ناردو')}</div>
                     <div class="product-price" style="font-size: 26px; font-weight: 900; color: var(--success); margin: 10px 0;">${p.price.toLocaleString()} دج</div>
                     <div style="margin: 10px 0;"><span class="stock-status ${stockClass}" style="font-size: 13px; padding: 5px 15px;"><i class="fas ${p.quantity > 0 ? 'fa-check-circle' : 'fa-times-circle'}"></i> ${stockText}</span></div>
                     ${p.description ? `<div style="color: var(--text-secondary); font-size: 12px; margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 12px;">📝 ${p.description.substring(0, 80)}${p.description.length > 80 ? '...' : ''}</div>` : ''}
