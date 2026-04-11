@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -591,51 +589,50 @@
     // ========== دالة استخراج البيانات من نص الرسالة ==========
     function extractOrderDataFromText(text) {
         try {
-            // تحسين الأنماط لتكون أكثر مرونة مع المسافات والرموز التعبيرية
+            // أنماط متطورة لاستخراج البيانات من رسالة الفاتورة الجديدة
             const patterns = {
-                storeID: /(?:معرف المتجر|ID المتجر):\s*([^\n]+)/i,
-                customerName: /(?:المشتري|الاسم|الزبون):\s*([^\n|]+)/i,
-                customerPhone: /(?:الهاتف|رقم الهاتف|الجوال):\s*([\d\s+]+)/i,
-                customerAddress: /(?:العنوان|الموقع):\s*([^\n]+)/i,
-                productID: /([A-Z0-9]+-\d{3}-\d+)/i, // نمط معرف المنتج
-                quantity: /(?:الكمية|العدد):\s*(\d+)/i,
-                total: /(?:إجمالي|السعر الإجمالي|المجموع):\s*(\d+)/i,
-                notes: /(?:ملاحظات|ملاحظة):\s*([^\n]+)/i,
-                orderNumber: /(?:رقم الطلب|طلب رقم):\s*(\d+)/i,
-                date: /(?:التاريخ|بتاريخ):\s*([^\n]+)/i
+                storeID: /معرف المتجر:\s*([^\n]+)/,
+                customerName: /المشتري:\s*([^\n]+)/,
+                customerPhone: /الهاتف:\s*([^\n]+)/,
+                customerAddress: /العنوان:\s*([^\n]+)/,
+                // استخراج معرف المنتج (مثل ناردومار-189295-009)
+                productID: /([A-Z0-9\u0600-\u06FF]+-\d+-\d+)/i,
+                // استخراج الكمية (تأتي بعد "الكمية: " مباشرة)
+                quantity: /الكمية:\s*(\d+)/,
+                // إجمالي المتجر
+                total: /إجمالي المتجر:\s*([\d,]+)/,
+                notes: /ملاحظات:\s*([^\n]+)/,
+                orderNumber: /رقم الطلب:\s*(\d+)/,
+                date: /التاريخ:\s*([^\n]+)/
             };
             
             const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
-            let customerName = (text.match(patterns.customerName)?.[1] || '').trim();
+            const customerName = (text.match(patterns.customerName)?.[1] || '').trim();
             const customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
             const customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
-            const productID = (text.match(patterns.productID)?.[0] || '').trim();
-            
-            // تنظيف اسم العميل من الهاتف إذا التصق به
-            if (customerName.includes('الهاتف')) {
-                customerName = customerName.split('الهاتف')[0].trim();
-            }
+            const productIDMatch = text.match(patterns.productID);
+            const productID = productIDMatch ? productIDMatch[0].trim() : '';
             
             let quantity = 1;
             const qtyMatch = text.match(patterns.quantity);
             if (qtyMatch) {
                 quantity = parseInt(qtyMatch[1]);
-            } else {
-                // محاولة البحث عن كمية في أنماط أخرى مثل (2x)
-                const altQtyMatch = text.match(/\((\d+)\s*[x×*]/i) || text.match(/[x×*]\s*(\d+)\)/i);
-                if (altQtyMatch) quantity = parseInt(altQtyMatch[1]);
             }
             
-            const total = parseInt(text.match(patterns.total)?.[1] || '0');
+            const totalStr = (text.match(patterns.total)?.[1] || '0').replace(/,/g, '');
+            const total = parseInt(totalStr);
             const notes = (text.match(patterns.notes)?.[1] || '').trim();
             const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
             const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
             
-            if (!productID) return null;
+            if (!productID) {
+                console.warn("فشل استخراج معرف المنتج من النص:", text);
+                return null;
+            }
             
             return {
                 storeID,
-                customerName: customerName || 'عميل تلغرام',
+                customerName: customerName || 'عميل ناردو',
                 customerPhone,
                 customerAddress,
                 productID,
