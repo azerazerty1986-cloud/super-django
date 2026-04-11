@@ -553,31 +553,35 @@ async function fetchProductsFromTelegram() {
                 const caption = post.caption || '';
                 const lines = caption.split('\n');
                 
-                let name = 'منتج';
-                let price = 1000;
-                let category = 'other';
-                let stock = 10;
-                let storeName = 'ناردو برو';
-                let storeID = '';
-                let productCompositeID = '';
-                let description = '';
-                
-                for (const line of lines) {
-                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
-                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
-                    if (line.includes('القسم:')) {
-                        const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
-                        if (catValue === 'توابل') category = 'spices';
-                        else if (catValue === 'كوسمتيك') category = 'cosmetic';
-                        else if (catValue === 'بروموسيو') category = 'promo';
-                        else category = catValue;
-                    }
-                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
-                    if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim() || storeName;
-                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
-                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim() || productCompositeID;
-                    if (line.includes('الوصف:')) description = line.split(':')[1]?.trim() || description;
-                }
+	                let name = '';
+	                let price = 1000;
+	                let category = 'other';
+	                let stock = 10;
+	                let storeName = '';
+	                let storeID = '';
+	                let productCompositeID = '';
+	                let description = '';
+	                
+	                for (const line of lines) {
+	                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim();
+	                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
+	                    if (line.includes('القسم:')) {
+	                        const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
+	                        if (catValue === 'توابل') category = 'spices';
+	                        else if (catValue === 'كوسمتيك') category = 'cosmetic';
+	                        else if (catValue === 'بروموسيو') category = 'promo';
+	                        else category = catValue;
+	                    }
+	                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
+	                    if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim();
+	                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim();
+	                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim();
+	                    if (line.includes('الوصف:')) description = line.split(':')[1]?.trim();
+	                }
+	                
+	                // التأكد من عدم استخدام المعرفات كأسماء إذا كانت الحقول فارغة
+	                if (!name || name === productCompositeID) name = 'منتج ناردو';
+	                if (!storeName || storeName === storeID) storeName = 'متجر ناردو';
                 
                 const telegramId = post.message_id;
                 let mediaUrl = null;
@@ -766,11 +770,11 @@ function displayProducts() {
                         <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
                     </div>
                     
-                    <h3 class="product-title">${product.name}</h3>
-                    
-                    <div class="product-merchant-info">
-                        <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
-                    </div>
+	                    <h3 class="product-title">${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}</h3>
+	                    
+	                    <div class="product-merchant-info">
+	                        <i class="fas fa-store"></i> ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'متجر ناردو')}
+	                    </div>
                     
                     <div class="product-rating">
                         <div class="stars-container">
@@ -1011,14 +1015,14 @@ function viewProductDetails(productId) {
 
     content.innerHTML = `
         <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
-            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
+	            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
                 <div>
                     <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
                 </div>
                 <div>
 
-                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${product.storeName || product.merchantName || 'ناردو برو'}</p>
+	                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'ناردو برو')}</p>
                     <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
                     
                     <div class="product-rating" style="margin-bottom: 20px;">
