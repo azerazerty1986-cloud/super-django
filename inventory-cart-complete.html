@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -405,8 +404,9 @@
         if (!currentStore.storeFixedID) currentStore.storeFixedID = generateStoreID(currentStore.storeName);
         safeLocalStorage.set('current_store', currentStore);
         
-        document.getElementById('currentStoreName').innerHTML = currentStore.storeName;
-        document.getElementById('currentStoreID').innerHTML = currentStore.storeFixedID;
+	        document.getElementById('currentStoreName').innerHTML = currentStore.storeName;
+	        // تم إخفاء معرف المتجر من الواجهة بناءً على طلب المستخدم
+	        if (document.getElementById('currentStoreID')) document.getElementById('currentStoreID').style.display = 'none';
         document.getElementById('circleStoreName').innerHTML = currentStore.storeName.length > 12 ? currentStore.storeName.substring(0,10)+'..' : currentStore.storeName;
         updateStoreProductCount();
     }
@@ -476,15 +476,43 @@
                 const caption = post.caption || '';
                 let name = 'منتج', price = 1000, stock = 10, storeID = '', storeName = '', productID = '', desc = '';
                 const lines = caption.split('\n');
-                for (const line of lines) {
-                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
-                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]) || price;
-                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]) || stock;
-                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
-                    if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim() || storeName;
-                    if (line.includes('معرف المنتج:')) productID = line.split(':')[1]?.trim() || productID;
-                    if (line.includes('الوصف:')) desc = line.split(':')[1]?.trim() || desc;
-                }
+	                for (const line of lines) {
+	                    // تنظيف السطر من علامات Markdown مثل * و ` لضمان استخراج النص النقي
+	                    const cleanLine = line.replace(/[\*`]/g, '').trim();
+	                    
+	                    if (cleanLine.includes('المنتج:')) {
+	                        const parts = cleanLine.split('المنتج:');
+	                        if (parts.length > 1) name = parts[1].trim();
+	                    }
+	                    if (cleanLine.includes('السعر:')) {
+	                        const parts = cleanLine.split('السعر:');
+	                        if (parts.length > 1) price = parseInt(parts[1].replace(/[^0-9]/g, '')) || price;
+	                    }
+	                    if (cleanLine.includes('الكمية:')) {
+	                        const parts = cleanLine.split('الكمية:');
+	                        if (parts.length > 1) stock = parseInt(parts[1].replace(/[^0-9]/g, '')) || stock;
+	                    }
+	                    if (cleanLine.includes('المتجر:')) {
+	                        const parts = cleanLine.split('المتجر:');
+	                        if (parts.length > 1) storeName = parts[1].trim();
+	                    }
+	                    if (cleanLine.includes('معرف المتجر:')) {
+	                        const parts = cleanLine.split('معرف المتجر:');
+	                        if (parts.length > 1) storeID = parts[1].trim();
+	                    }
+	                    if (cleanLine.includes('معرف المنتج:')) {
+	                        const parts = cleanLine.split('معرف المنتج:');
+	                        if (parts.length > 1) productID = parts[1].trim();
+	                    }
+	                    if (cleanLine.includes('الوصف:')) {
+	                        const parts = cleanLine.split('الوصف:');
+	                        if (parts.length > 1) desc = parts[1].trim();
+	                    }
+	                }
+	                
+	                // منع استخدام المعرفات كبدائل للأسماء في الواجهة
+	                if (!name || name === productID) name = 'منتج ناردو';
+	                if (!storeName || storeName === storeID) storeName = 'متجر ناردو';
                 const fileId = post.photo[post.photo.length - 1].file_id;
                 const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                 const fileData = await fileRes.json();
@@ -1064,16 +1092,13 @@
             const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
             const productCompositeID = p.productCompositeID || `${storeID}-${p.serialNumber || '001'}`;
             const timeAgo = getTimeAgo(p.createdAt);
-            return `
-                <div class="product-card" style="position: relative; min-height: 550px;">
-                    <div style="margin-bottom: 10px; padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; display: inline-block; font-size: 11px;"><i class="far fa-clock"></i> ${timeAgo}</div>
-                    <div style="position: absolute; top: 50px; left: 15px; z-index: 10; direction: rtl; text-align: right;">
-                        <div style="background: linear-gradient(135deg, var(--gold), #ffb347); color: #111; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; margin-bottom: 6px; font-family: monospace; white-space: nowrap;">📦 ${productCompositeID}</div>
-                        <div style="background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; direction: ltr; display: inline-block; white-space: nowrap;"><i class="fas fa-store" style="font-size: 9px; color: var(--gold);"></i> <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span> <span style="color: #888;">-</span> <span style="color: #aaa; font-family: monospace;">${storeIDParts[1] || '???'}</span></div>
-                    </div>
-                    ${publishedBadge}
-                    ${imgHtml}
-                    <div class="product-name" style="font-size: 24px; font-weight: 900; margin: 15px 0 8px 0; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent;">${p.name}</div>
+	            return `
+	                <div class="product-card" style="position: relative; min-height: 550px;">
+	                    <div style="margin-bottom: 10px; padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; display: inline-block; font-size: 11px;"><i class="far fa-clock"></i> ${timeAgo}</div>
+	                    
+	                    ${publishedBadge}
+	                    ${imgHtml}
+	                    <div class="product-name" style="font-size: 24px; font-weight: 900; margin: 15px 0 8px 0; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent;">${(p.name === p.productCompositeID) ? 'منتج ناردو' : (p.name || 'منتج ناردو')}</div>
                     <div class="product-price" style="font-size: 26px; font-weight: 900; color: var(--success); margin: 10px 0;">${p.price.toLocaleString()} دج</div>
                     <div style="margin: 10px 0;"><span class="stock-status ${stockClass}" style="font-size: 13px; padding: 5px 15px;"><i class="fas ${p.quantity > 0 ? 'fa-check-circle' : 'fa-times-circle'}"></i> ${stockText}</span></div>
                     ${p.description ? `<div style="color: var(--text-secondary); font-size: 12px; margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 12px;">📝 ${p.description.substring(0, 80)}${p.description.length > 80 ? '...' : ''}</div>` : ''}
@@ -1090,7 +1115,7 @@
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">لا توجد منتجات</td></tr>';
             return;
         }
-        tbody.innerHTML = filtered.map(p => `<tr><td><strong>${p.name}</strong></td><td><span style="font-family:monospace; background:rgba(255,215,0,0.15); padding:4px 8px; border-radius:12px;">${p.productCompositeID || '---'}</span></td><td style="color:var(--success);">${p.price.toLocaleString()} دج</td><td style="font-weight:800;">${p.quantity}</td><td><span class="stock-status ${p.quantity>0?'high':'out'}">${p.quantity>0?'متاح':'نفد'}</span></td><td>${p.source === 'telegram' ? '<i class="fab fa-telegram"></i> تلغرام' : 'محلي'}</td><td>${!p.published ? `<button class="btn btn-telegram btn-sm" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : '<span style="color:var(--success);">✅ منشور</span>'}</td><td><button class="btn btn-gold btn-sm" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i></button></td></tr>`).join('');
+	        tbody.innerHTML = filtered.map(p => `<tr><td><strong>${(p.name === p.productCompositeID) ? 'منتج ناردو' : (p.name || 'منتج ناردو')}</strong></td><td><span style="font-family:monospace; background:rgba(255,215,0,0.15); padding:4px 8px; border-radius:12px; display:none;">${p.productCompositeID || '---'}</span><span style="color:#888; font-size:11px;">مخفي</span></td><td style="color:var(--success);">${p.price.toLocaleString()} دج</td><td style="font-weight:800;">${p.quantity}</td><td><span class="stock-status ${p.quantity>0?'high':'out'}">${p.quantity>0?'متاح':'نفد'}</span></td><td>${p.source === 'telegram' ? '<i class="fab fa-telegram"></i> تلغرام' : 'محلي'}</td><td>${!p.published ? `<button class="btn btn-telegram btn-sm" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : '<span style="color:var(--success);">✅ منشور</span>'}</td><td><button class="btn btn-gold btn-sm" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i></button></td></tr>`).join('');
     }
 
     function renderStockLog() {
