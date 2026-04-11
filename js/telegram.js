@@ -515,8 +515,7 @@ async function fetchProductsFromTelegram() {
                 let category = 'other';
                 let stock = 10;
                 let storeName = 'ناردو برو';
-                let storeID = '';
-                let productCompositeID = '';
+                
                 let description = '';
                 
                 for (const line of lines) {
