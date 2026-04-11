@@ -782,9 +782,9 @@ function displayProducts() {
 	                    <i class="far fa-clock"></i> ${timeAgo}
 	                </div>
 	                
-	                <div class="product-name-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-	                    ${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}
-	                </div>
+		                <div class="product-name-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+		                    ${product.name || 'منتج ناردو'}
+		                </div>
 
 	                <div class="product-gallery">
 	                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
