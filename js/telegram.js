@@ -6,7 +6,7 @@ const TELEGRAM = {
     apiUrl: 'https://api.telegram.org/bot'
 };
 
-// == [4.2] المتغيرات العامة =====
+// ===== [4.2] المتغيرات العامة =====
 let products = [];
 let currentUser = null;
 let currentStore = null;      
@@ -122,14 +122,26 @@ async function loadProductsFromTelegramChannel() {
                 if (!post) continue;
                 const caption = post.caption || post.text || '';
                 const lines = caption.split('\n');
-                let productData = {
-                    id: post.message_id, name: '', price: 1000, category: 'other', stock: 10,
-                    storeName: 'متجر ناردو', storeID: 'NARDO-000000', description: caption,
-                    images: [], createdAt: new Date(post.date * 1000).toISOString(), rating: 4.5
-                };
+	                // استخراج السطر الأول كاسم للمنتج تلقائياً (تنظيف الرموز)
+	                const firstLine = lines.find(l => l.trim().length > 0) || '';
+	                const extractedName = firstLine.replace(/[*#_~]/g, '').replace('المنتج:', '').trim();
+	                
+	                let productData = {
+	                    id: post.message_id, 
+	                    name: extractedName || 'منتج جديد', 
+	                    price: 1000, 
+	                    category: 'other', 
+	                    stock: 10,
+	                    storeName: 'متجر ناردو', 
+	                    storeID: 'NARDO-000000', 
+	                    description: caption,
+	                    images: [], 
+	                    createdAt: new Date(post.date * 1000).toISOString(), 
+	                    rating: 4.5
+	                };
+
 	                for (const line of lines) {
 	                    const trimmedLine = line.trim();
-	                    if (trimmedLine.includes('المنتج:')) productData.name = trimmedLine.split('المنتج:')[1]?.trim();
 	                    if (trimmedLine.includes('السعر:')) productData.price = parseInt(trimmedLine.split('السعر:')[1]?.replace(/[^0-9]/g, '') || 1000);
 	                    if (trimmedLine.includes('القسم:')) {
 	                        const cat = trimmedLine.split('القسم:')[1]?.trim().toLowerCase();
@@ -140,22 +152,13 @@ async function loadProductsFromTelegramChannel() {
 	                    if (trimmedLine.includes('الكمية:')) productData.stock = parseInt(trimmedLine.split('الكمية:')[1]?.replace(/[^0-9]/g, '') || 10);
 	                    if (trimmedLine.includes('المتجر:')) productData.storeName = trimmedLine.split('المتجر:')[1]?.trim();
 	                }
-                if (post.photo && post.photo.length > 0) {
-                    const fileId = post.photo[post.photo.length - 1].file_id;
-                    const fRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                    const fData = await fRes.json();
-                    if (fData.ok) productData.images = [`https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fData.result.file_path}`];
-                }
-		                if (!productData.name) {
-		                    // محاولة استخراج أول سطر غير فارغ كاسم للمنتج
-		                    const firstLine = lines.find(l => l.trim().length > 0);
-		                    if (firstLine) {
-		                        // تنظيف السطر من أي رموز أو كلمات زائدة
-		                        productData.name = firstLine.replace(/[*#_~]/g, '').trim();
-		                    } else {
-		                        productData.name = `منتج ناردو #${post.message_id}`;
-		                    }
-		                }
+
+	                if (post.photo && post.photo.length > 0) {
+	                    const fileId = post.photo[post.photo.length - 1].file_id;
+	                    const fRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+	                    const fData = await fRes.json();
+	                    if (fData.ok) productData.images = [`https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fData.result.file_path}`];
+	                }
                 telegramProducts.push(productData);
             }
             const existing = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
