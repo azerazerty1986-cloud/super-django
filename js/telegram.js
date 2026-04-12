@@ -1,5 +1,6 @@
-
-// ===== [4.1] إعدادات تلغرام الأساسية =====
+// ===== تلجرام  =====
+// ===== تلجرام  =====
+//==== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
     botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
     channelId: '-1003822964890',
@@ -168,32 +169,38 @@ function displayProducts() {
     if (searchTerm) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     container.innerHTML = filtered.map(product => {
-        const imageUrl = product.images?.[0] || "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
-        return `
-            <div class="product-card" style="border: 1px solid #ddd; border-radius: 15px; overflow: hidden; background: var(--bg-secondary); margin-bottom: 20px; transition: transform 0.3s;">
-                <div style="position: relative; height: 200px; overflow: hidden;">
-                    <img src="${imageUrl}" alt="${product.name}" onclick="viewProductDetails(${product.id})" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;">
-                    <div style="position: absolute; top: 10px; right: 10px; background: var(--gold); color: black; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">
-                        ${getCategoryName(product.category)}
-                    </div>
-                </div>
-                <div style="padding: 15px;">
-                    <h3 onclick="viewProductDetails(${product.id})" style="margin: 0 0 10px 0; font-size: 18px; color: var(--text-primary); cursor: pointer;">${product.name}</h3>
-                    <p style="margin: 0 0 5px 0; font-size: 14px; color: #888;"><i class="fas fa-store"></i> ${product.storeName || 'متجر ناردو'}</p>
-                    <div style="margin-bottom: 10px;">${generateStars(product.rating)}</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <span style="font-size: 20px; font-weight: bold; color: var(--gold);">${product.price.toLocaleString()} دج</span>
-                            <p style="margin: 0; font-size: 12px; color: #666;">الكمية: ${product.stock} قطعة</p>
-                        </div>
-                        <button onclick="addToCart(${product.id})" style="background: var(--gold); color: black; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; font-weight: bold;">
-                            <i class="fas fa-cart-plus"></i> أضف للسلة
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+	        const imageUrl = product.images?.[0] || "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
+	        const publishDate = new Date(product.createdAt).toLocaleString('ar-DZ', { 
+	            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+	        });
+	        return `
+	            <div class="product-card" style="border: 1px solid #ddd; border-radius: 15px; overflow: hidden; background: var(--bg-secondary); margin-bottom: 20px; transition: transform 0.3s;">
+	                <div style="position: relative; height: 200px; overflow: hidden;">
+	                    <img src="${imageUrl}" alt="${product.name}" onclick="viewProductDetails(${product.id})" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;">
+	                    <div style="position: absolute; top: 10px; right: 10px; background: var(--gold); color: black; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+	                        ${getCategoryName(product.category)}
+	                    </div>
+	                </div>
+	                <div style="padding: 15px;">
+	                    <h3 onclick="viewProductDetails(${product.id})" style="margin: 0 0 10px 0; font-size: 18px; color: var(--text-primary); cursor: pointer;">${product.name}</h3>
+	                    <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px;">
+	                        <p style="margin: 0; font-size: 14px; color: #888;"><i class="fas fa-store"></i> ${product.storeName || 'متجر ناردو'}</p>
+	                        <p style="margin: 0; font-size: 12px; color: #666;"><i class="far fa-clock"></i> نُشر في: ${publishDate}</p>
+	                    </div>
+	                    <div style="margin-bottom: 10px;">${generateStars(product.rating)}</div>
+	                    <div style="display: flex; justify-content: space-between; align-items: center;">
+	                        <div>
+	                            <span style="font-size: 20px; font-weight: bold; color: var(--gold);">${product.price.toLocaleString()} دج</span>
+	                            <p style="margin: 0; font-size: 12px; color: #666;">الكمية: ${product.stock} قطعة</p>
+	                        </div>
+	                        <button onclick="addToCart(${product.id})" style="background: var(--gold); color: black; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; font-weight: bold;">
+	                            <i class="fas fa-cart-plus"></i> أضف للسلة
+	                        </button>
+	                    </div>
+	                </div>
+	            </div>
+	        `;
+	    }).join('');
 }
 
 // ===== [4.6] السلة والطلبات =====
@@ -313,25 +320,31 @@ function viewProductDetails(productId) {
     const content = document.getElementById('productDetailContent');
     if (!modal || !content) return;
     const imageUrl = product.images?.[0] || "https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال";
-    content.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; padding: 20px; background: var(--bg-primary); border-radius: 20px;">
-            <div style="height: 400px; border-radius: 15px; overflow: hidden;"><img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;"></div>
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <h2 style="color: var(--gold); margin: 0;">${product.name}</h2>
-                <p style="margin: 0; color: #888;">🏪 المتجر: <strong>${product.storeName}</strong></p>
-                <div style="font-size: 24px; font-weight: bold; color: var(--gold);">${product.price.toLocaleString()} دج</div>
-                <div style="color: #bbb;">${product.description || 'وصف المنتج...'}</div>
-                <div style="border-top: 1px solid #333; padding-top: 15px;">
-                    <h4 style="color: var(--gold);">💬 التعليقات</h4>
-                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; font-size: 13px; color: #aaa;">لا توجد تعليقات بعد.</div>
-                </div>
-                <div style="display: flex; gap: 15px; margin-top: auto;">
-                    <button onclick="addToCart(${product.id}); closeModal('productDetailModal')" style="flex: 1; background: var(--gold); color: black; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer;">أضف للسلة</button>
-                    <button onclick="closeModal('productDetailModal')" style="flex: 0.5; background: transparent; border: 1px solid #555; color: white; padding: 15px; border-radius: 12px; cursor: pointer;">إغلاق</button>
-                </div>
-            </div>
-        </div>
-    `;
+	    const publishDate = new Date(product.createdAt).toLocaleString('ar-DZ', { 
+	        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+	    });
+	    content.innerHTML = `
+	        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; padding: 20px; background: var(--bg-primary); border-radius: 20px;">
+	            <div style="height: 400px; border-radius: 15px; overflow: hidden;"><img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;"></div>
+	            <div style="display: flex; flex-direction: column; gap: 15px;">
+	                <h2 style="color: var(--gold); margin: 0;">${product.name}</h2>
+	                <div style="display: flex; flex-direction: column; gap: 5px;">
+	                    <p style="margin: 0; color: #888;">🏪 المتجر: <strong>${product.storeName}</strong></p>
+	                    <p style="margin: 0; font-size: 12px; color: #666;"><i class="far fa-clock"></i> نُشر في: ${publishDate}</p>
+	                </div>
+	                <div style="font-size: 24px; font-weight: bold; color: var(--gold);">${product.price.toLocaleString()} دج</div>
+	                <div style="color: #bbb;">${product.description || 'وصف المنتج...'}</div>
+	                <div style="border-top: 1px solid #333; padding-top: 15px;">
+	                    <h4 style="color: var(--gold);">💬 التعليقات</h4>
+	                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; font-size: 13px; color: #aaa;">لا توجد تعليقات بعد.</div>
+	                </div>
+	                <div style="display: flex; gap: 15px; margin-top: auto;">
+	                    <button onclick="addToCart(${product.id}); closeModal('productDetailModal')" style="flex: 1; background: var(--gold); color: black; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer;">أضف للسلة</button>
+	                    <button onclick="closeModal('productDetailModal')" style="flex: 0.5; background: transparent; border: 1px solid #555; color: white; padding: 15px; border-radius: 12px; cursor: pointer;">إغلاق</button>
+	                </div>
+	            </div>
+	        </div>
+	    `;
     modal.style.display = 'flex';
 }
 
