@@ -1,6 +1,4 @@
-// ===== تلجرام  =====
-// ===== تلجرام  =====
-//==== [4.1] إعدادات تلغرام الأساسية =====
+// ==== [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
     botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
     channelId: '-1003822964890',
@@ -129,25 +127,30 @@ async function loadProductsFromTelegramChannel() {
                     storeName: 'متجر ناردو', storeID: 'NARDO-000000', description: caption,
                     images: [], createdAt: new Date(post.date * 1000).toISOString(), rating: 4.5
                 };
-                for (const line of lines) {
-                    if (line.includes('المنتج:')) productData.name = line.split('المنتج:')[1]?.trim();
-                    if (line.includes('السعر:')) productData.price = parseInt(line.split('السعر:')[1]?.replace(/[^0-9]/g, '') || 1000);
-                    if (line.includes('القسم:')) {
-                        const cat = line.split('القسم:')[1]?.trim().toLowerCase();
-                        if (cat?.includes('توابل')) productData.category = 'spices';
-                        else if (cat?.includes('كوسمتيك')) productData.category = 'cosmetic';
-                        else if (cat?.includes('بروموسيو')) productData.category = 'promo';
-                    }
-                    if (line.includes('الكمية:')) productData.stock = parseInt(line.split('الكمية:')[1]?.replace(/[^0-9]/g, '') || 10);
-                    if (line.includes('المتجر:')) productData.storeName = line.split('المتجر:')[1]?.trim();
-                }
+	                for (const line of lines) {
+	                    const trimmedLine = line.trim();
+	                    if (trimmedLine.startsWith('المنتج:')) productData.name = trimmedLine.split('المنتج:')[1]?.trim();
+	                    else if (trimmedLine.startsWith('السعر:')) productData.price = parseInt(trimmedLine.split('السعر:')[1]?.replace(/[^0-9]/g, '') || 1000);
+	                    else if (trimmedLine.startsWith('القسم:')) {
+	                        const cat = trimmedLine.split('القسم:')[1]?.trim().toLowerCase();
+	                        if (cat?.includes('توابل')) productData.category = 'spices';
+	                        else if (cat?.includes('كوسمتيك')) productData.category = 'cosmetic';
+	                        else if (cat?.includes('بروموسيو')) productData.category = 'promo';
+	                    }
+	                    else if (trimmedLine.startsWith('الكمية:')) productData.stock = parseInt(trimmedLine.split('الكمية:')[1]?.replace(/[^0-9]/g, '') || 10);
+	                    else if (trimmedLine.startsWith('المتجر:')) productData.storeName = trimmedLine.split('المتجر:')[1]?.trim();
+	                }
                 if (post.photo && post.photo.length > 0) {
                     const fileId = post.photo[post.photo.length - 1].file_id;
                     const fRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                     const fData = await fRes.json();
                     if (fData.ok) productData.images = [`https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fData.result.file_path}`];
                 }
-                if (!productData.name) productData.name = `منتج ناردو #${post.message_id}`;
+	                if (!productData.name) {
+	                    // محاولة استخراج أول سطر غير فارغ كاسم للمنتج إذا لم يتم العثور على كلمة "المنتج:"
+	                    const firstLine = lines.find(l => l.trim().length > 0);
+	                    productData.name = firstLine ? firstLine.trim() : `منتج ناردو #${post.message_id}`;
+	                }
                 telegramProducts.push(productData);
             }
             const existing = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
