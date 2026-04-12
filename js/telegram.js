@@ -490,7 +490,7 @@ async function saveProduct() {
 
 // ===== [4.16] جلب المنتجات من تلغرام =====
 
-// ===== [4.16] جلب المنتجات من تلغرام =====
+// ===== [4.16] جلب المنتجات من تلغرام - معدل للتوافق =====
 async function fetchProductsFromTelegram() {
     try {
         isLoading = true;
@@ -511,10 +511,14 @@ async function fetchProductsFromTelegram() {
                 const post = update.channel_post || update.message;
                 if (!post || !post.photo) continue;
                 
-                const caption = post.caption || '';
+                let caption = post.caption || '';
+                
+                // إزالة رموز Markdown (النجوم والشرطات)
+                caption = caption.replace(/\*/g, '');
+                caption = caption.replace(/━━━━━━━━━━━━━━━━━/g, '');
+                
                 const lines = caption.split('\n');
                 
-                // ===== استخراج البيانات من الرسالة =====
                 let name = '';
                 let price = 1000;
                 let category = 'other';
@@ -524,121 +528,85 @@ async function fetchProductsFromTelegram() {
                 let productCompositeID = '';
                 let description = '';
                 
-                // استخراج اسم المنتج
+                // استخراج البيانات من كل سطر
                 for (let line of lines) {
+                    line = line.trim();
+                    
                     if (line.includes('المنتج:')) {
-                        let extractedName = line.split('المنتج:')[1];
-                        if (extractedName) {
-                            extractedName = extractedName.trim();
-                            extractedName = extractedName.split(' ')[0];
-                            extractedName = extractedName.replace(/[0-9]/g, '');
-                            name = extractedName;
-                            console.log(`✅ تم استخراج الاسم: ${name}`);
-                            break;
+                        let value = line.split('المنتج:')[1];
+                        if (value) {
+                            name = value.trim();
+                            name = name.split(' ')[0];
+                            name = name.replace(/[0-9]/g, '');
+                            console.log(`✅ الاسم: ${name}`);
                         }
                     }
-                }
-                
-                // استخراج السعر
-                for (let line of lines) {
-                    if (line.includes('السعر:')) {
+                    else if (line.includes('السعر:')) {
                         let match = line.match(/\d+/);
                         if (match) {
                             price = parseInt(match[0]);
                             console.log(`💰 السعر: ${price}`);
                         }
-                        break;
                     }
-                }
-                
-                // استخراج الكمية
-                for (let line of lines) {
-                    if (line.includes('الكمية:')) {
+                    else if (line.includes('القسم:')) {
+                        let value = line.split('القسم:')[1];
+                        if (value) {
+                            const catValue = value.trim().toLowerCase();
+                            if (catValue.includes('توابل')) category = 'spices';
+                            else if (catValue.includes('كوسمتيك')) category = 'cosmetic';
+                            else if (catValue.includes('بروموسيو')) category = 'promo';
+                            console.log(`📂 القسم: ${category}`);
+                        }
+                    }
+                    else if (line.includes('الكمية:')) {
                         let match = line.match(/\d+/);
                         if (match) {
                             stock = parseInt(match[0]);
                             console.log(`📦 الكمية: ${stock}`);
                         }
-                        break;
                     }
-                }
-                
-                // استخراج القسم
-                for (let line of lines) {
-                    if (line.includes('القسم:')) {
-                        const lineLower = line.toLowerCase();
-                        if (lineLower.includes('توابل')) {
-                            category = 'spices';
-                        } else if (lineLower.includes('كوسمتيك')) {
-                            category = 'cosmetic';
-                        } else if (lineLower.includes('بروموسيو')) {
-                            category = 'promo';
+                    else if (line.includes('معرف المنتج:')) {
+                        let value = line.split('معرف المنتج:')[1];
+                        if (value) {
+                            productCompositeID = value.trim();
+                            console.log(`🆔 معرف المنتج: ${productCompositeID}`);
                         }
-                        console.log(`📂 القسم: ${category}`);
-                        break;
                     }
-                }
-                
-                // استخراج اسم المتجر
-                for (let line of lines) {
-                    if (line.includes('المتجر:')) {
-                        let extractedStore = line.split('المتجر:')[1];
-                        if (extractedStore) {
-                            storeName = extractedStore.trim();
+                    else if (line.includes('المتجر:')) {
+                        let value = line.split('المتجر:')[1];
+                        if (value) {
+                            storeName = value.trim();
+                            console.log(`🏪 المتجر: ${storeName}`);
                         }
-                        break;
                     }
-                }
-                
-                // استخراج معرف المتجر
-                for (let line of lines) {
-                    if (line.includes('معرف المتجر:')) {
-                        let extractedID = line.split('معرف المتجر:')[1];
-                        if (extractedID) {
-                            storeID = extractedID.trim();
+                    else if (line.includes('معرف المتجر:')) {
+                        let value = line.split('معرف المتجر:')[1];
+                        if (value) {
+                            storeID = value.trim();
+                            console.log(`🏷️ معرف المتجر: ${storeID}`);
                         }
-                        break;
                     }
-                }
-                
-                // استخراج معرف المنتج
-                for (let line of lines) {
-                    if (line.includes('معرف المنتج:')) {
-                        let extractedComposite = line.split('معرف المنتج:')[1];
-                        if (extractedComposite) {
-                            productCompositeID = extractedComposite.trim();
+                    else if (line.includes('الوصف:')) {
+                        let value = line.split('الوصف:')[1];
+                        if (value) {
+                            description = value.trim();
+                            console.log(`📝 الوصف: ${description}`);
                         }
-                        break;
                     }
                 }
                 
-                // استخراج الوصف
-                for (let line of lines) {
-                    if (line.includes('الوصف:')) {
-                        let extractedDesc = line.split('الوصف:')[1];
-                        if (extractedDesc) {
-                            description = extractedDesc.trim();
-                        }
-                        break;
-                    }
-                }
-                
-                // إذا لم يتم العثور على اسم، استخدم الاسم الافتراضي
+                // إذا لم يتم العثور على اسم
                 if (!name || name === '') {
                     name = 'منتج ناردو';
-                    console.log(`⚠️ استخدام الاسم الافتراضي`);
                 }
                 
-                // إذا لم يتم العثور على اسم متجر
-                if (!storeName || storeName === '') {
-                    storeName = 'ناردو ماركت';
-                }
+                if (!storeName) storeName = 'ناردو ماركت';
+                if (!storeID) storeID = 'ناردو-ماركت';
                 
                 const telegramId = post.message_id;
                 let mediaUrl = null;
                 let images = [];
                 
-                // جلب الصورة
                 if (post.photo) {
                     const fileId = post.photo[post.photo.length - 1].file_id;
                     const fileResponse = await fetch(
@@ -666,8 +634,8 @@ async function fetchProductsFromTelegram() {
                         category: category,
                         stock: stock,
                         storeName: storeName,
-                        storeID: storeID || 'ناردو-ماركت',
-                        productCompositeID: productCompositeID || `${storeID || 'ناردو-ماركت'}-001`,
+                        storeID: storeID,
+                        productCompositeID: productCompositeID || `${storeID}-001`,
                         serialNumber: '001',
                         description: description,
                         rating: 4.5,
@@ -678,7 +646,7 @@ async function fetchProductsFromTelegram() {
                         dateStr: getTimeAgo(post.date)
                     });
                     
-                    console.log(`✅ تم إضافة المنتج: ${name} (السعر: ${price} دج, الكمية: ${stock})`);
+                    console.log(`✅ تم إضافة المنتج: ${name}`);
                 }
             }
         }
@@ -687,10 +655,9 @@ async function fetchProductsFromTelegram() {
         const mergedProducts = [...localProducts];
         
         for (const newProduct of telegramProducts) {
-            const exists = mergedProducts.some(p => p.id === newProduct.id || p.telegramId === newProduct.telegramId);
+            const exists = mergedProducts.some(p => p.id === newProduct.id);
             if (!exists) {
                 mergedProducts.push(newProduct);
-                console.log(`➕ منتج جديد: ${newProduct.name}`);
             }
         }
         
@@ -698,12 +665,11 @@ async function fetchProductsFromTelegram() {
         products = mergedProducts;
         displayProducts();
         
-        console.log(`📊 إجمالي المنتجات: ${products.length}`);
-        
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج`);
         return mergedProducts;
         
     } catch (error) {
-        console.error('❌ خطأ في جلب المنتجات:', error);
+        console.error('❌ خطأ:', error);
         const saved = localStorage.getItem('nardoo_products');
         if (saved) {
             products = JSON.parse(saved);
@@ -715,8 +681,9 @@ async function fetchProductsFromTelegram() {
         isLoading = false;
     }
 }
-
- 
+        
+                        
+                
 
 // ===== [4.18] تحميل المنتجات وعرضها =====
 async function loadProducts() {
