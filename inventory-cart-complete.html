@@ -1,6 +1,4 @@
 
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -478,36 +476,50 @@
                 const caption = post.caption || '';
                 let name = 'منتج', price = 1000, stock = 10, storeID = '', storeName = '', productID = '', desc = '';
                 const lines = caption.split('\n');
-		                for (const line of lines) {
-		                    // تنظيف السطر من علامات Markdown والرموز التعبيرية في البداية
-		                    const cleanLine = line.replace(/[\*`]/g, '').trim();
-		                    
-		                    // استخدام Regex للبحث عن الكلمات المفتاحية بمرونة أكبر
-		                    const nameMatch = cleanLine.match(/المنتج\s*:\s*(.+)/);
-		                    if (nameMatch) name = nameMatch[1].trim();
-		                    
-		                    const priceMatch = cleanLine.match(/السعر\s*:\s*([\d,]+)/);
-		                    if (priceMatch) price = parseInt(priceMatch[1].replace(/,/g, '')) || price;
-		                    
-		                    const stockMatch = cleanLine.match(/الكمية\s*:\s*(\d+)/);
-		                    if (stockMatch) stock = parseInt(stockMatch[1]) || stock;
-		                    
-		                    const storeNameMatch = cleanLine.match(/المتجر\s*:\s*(.+)/);
-		                    if (storeNameMatch && !cleanLine.includes('معرف')) storeName = storeNameMatch[1].trim();
-		                    
-		                    const storeIDMatch = cleanLine.match(/معرف المتجر\s*:\s*(.+)/);
-		                    if (storeIDMatch) storeID = storeIDMatch[1].trim();
-		                    
-		                    const productIDMatch = cleanLine.match(/معرف المنتج\s*:\s*(.+)/);
-		                    if (productIDMatch) productID = productIDMatch[1].trim();
-		                    
-		                    const descMatch = cleanLine.match(/الوصف\s*:\s*(.+)/);
-		                    if (descMatch) desc = descMatch[1].trim();
-		                }
-	                
-	                // منع استخدام المعرفات كبدائل للأسماء في الواجهة
-	                if (!name || name === productID) name = 'منتج ناردو';
-	                if (!storeName || storeName === storeID) storeName = 'متجر ناردو';
+			                for (const line of lines) {
+			                    // تنظيف السطر من علامات Markdown والرموز التعبيرية والمسافات الزائدة
+			                    const cleanLine = line.replace(/[\*`_~]/g, '').trim();
+			                    
+			                    // استخراج اسم المنتج (يدعم وجود رموز تعبيرية قبل كلمة المنتج)
+			                    if (cleanLine.includes('المنتج:')) {
+			                        name = cleanLine.split('المنتج:')[1].trim();
+			                    }
+			                    
+			                    // استخراج السعر
+			                    if (cleanLine.includes('السعر:')) {
+			                        const priceStr = cleanLine.split('السعر:')[1].replace(/[^\d]/g, '');
+			                        if (priceStr) price = parseInt(priceStr);
+			                    }
+			                    
+			                    // استخراج الكمية
+			                    if (cleanLine.includes('الكمية:')) {
+			                        const stockStr = cleanLine.split('الكمية:')[1].replace(/[^\d]/g, '');
+			                        if (stockStr) stock = parseInt(stockStr);
+			                    }
+			                    
+			                    // استخراج اسم المتجر (تجنب سطر معرف المتجر)
+			                    if (cleanLine.includes('المتجر:') && !cleanLine.includes('معرف')) {
+			                        storeName = cleanLine.split('المتجر:')[1].trim();
+			                    }
+			                    
+			                    // استخراج معرف المتجر
+			                    if (cleanLine.includes('معرف المتجر:')) {
+			                        storeID = cleanLine.split('معرف المتجر:')[1].trim();
+			                    }
+			                    
+			                    // استخراج معرف المنتج
+			                    if (cleanLine.includes('معرف المنتج:')) {
+			                        productID = cleanLine.split('معرف المنتج:')[1].trim();
+			                    }
+			                    
+			                    // استخراج الوصف
+			                    if (cleanLine.includes('الوصف:')) {
+			                        desc = cleanLine.split('الوصف:')[1].trim();
+			                    }
+			                }
+		                
+		                // التأكد من وجود اسم للمنتج
+		                if (!name || name === 'منتج') name = 'منتج ناردو';
                 const fileId = post.photo[post.photo.length - 1].file_id;
                 const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                 const fileData = await fileRes.json();
@@ -1088,15 +1100,15 @@
             const productCompositeID = p.productCompositeID || `${storeID}-${p.serialNumber || '001'}`;
             const timeAgo = getTimeAgo(p.createdAt);
 		            return `
-		                <div class="product-card" style="position: relative; min-height: 550px;">
-		                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-		                        <div style="padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; font-size: 11px;"><i class="far fa-clock"></i> ${timeAgo}</div>
-		                        <div style="padding: 4px 12px; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 11px; color: var(--gold); font-weight: bold;"><i class="fas fa-store"></i> ${p.storeName || 'متجر ناردو'}</div>
-		                    </div>
-		                    
-		                    ${publishedBadge}
-		                    ${imgHtml}
-		                    <div class="product-name" style="font-size: 24px; font-weight: 900; margin: 15px 0 8px 0; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent;">${(p.name === p.productCompositeID) ? 'منتج ناردو' : (p.name || 'منتج ناردو')}</div>
+			                <div class="product-card" style="position: relative; min-height: 550px;">
+			                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+			                        <div style="padding: 4px 12px; background: rgba(0,0,0,0.5); border-radius: 20px; font-size: 11px;"><i class="far fa-clock"></i> ${timeAgo}</div>
+			                        <div style="padding: 5px 15px; background: #2563eb; color: white; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.name || 'منتج ناردو'}</div>
+			                    </div>
+			                    
+			                    ${publishedBadge}
+			                    ${imgHtml}
+			                    <div style="padding: 4px 12px; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3); border-radius: 20px; font-size: 11px; color: var(--gold); font-weight: bold; display: inline-block; margin-bottom: 10px;"><i class="fas fa-store"></i> ${p.storeName || 'متجر ناردو'}</div>
                     <div class="product-price" style="font-size: 26px; font-weight: 900; color: var(--success); margin: 10px 0;">${p.price.toLocaleString()} دج</div>
                     <div style="margin: 10px 0;"><span class="stock-status ${stockClass}" style="font-size: 13px; padding: 5px 15px;"><i class="fas ${p.quantity > 0 ? 'fa-check-circle' : 'fa-times-circle'}"></i> ${stockText}</span></div>
                     ${p.description ? `<div style="color: var(--text-secondary); font-size: 12px; margin: 10px 0; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 12px;">📝 ${p.description.substring(0, 80)}${p.description.length > 80 ? '...' : ''}</div>` : ''}
@@ -1113,7 +1125,7 @@
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">لا توجد منتجات</td></tr>';
             return;
         }
-	        tbody.innerHTML = filtered.map(p => `<tr><td><strong>${(p.name === p.productCompositeID) ? 'منتج ناردو' : (p.name || 'منتج ناردو')}</strong></td><td><span style="font-family:monospace; background:rgba(255,215,0,0.15); padding:4px 8px; border-radius:12px; display:none;">${p.productCompositeID || '---'}</span><span style="color:#888; font-size:11px;">مخفي</span></td><td style="color:var(--success);">${p.price.toLocaleString()} دج</td><td style="font-weight:800;">${p.quantity}</td><td><span class="stock-status ${p.quantity>0?'high':'out'}">${p.quantity>0?'متاح':'نفد'}</span></td><td>${p.source === 'telegram' ? '<i class="fab fa-telegram"></i> تلغرام' : 'محلي'}</td><td>${!p.published ? `<button class="btn btn-telegram btn-sm" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : '<span style="color:var(--success);">✅ منشور</span>'}</td><td><button class="btn btn-gold btn-sm" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i></button></td></tr>`).join('');
+	        tbody.innerHTML = filtered.map(p => `<tr><td><strong>${p.name || 'منتج ناردو'}</strong></td><td><span style="font-family:monospace; background:rgba(255,215,0,0.15); padding:4px 8px; border-radius:12px; display:none;">${p.productCompositeID || '---'}</span><span style="color:#888; font-size:11px;">مخفي</span></td><td style="color:var(--success);">${p.price.toLocaleString()} دج</td><td style="font-weight:800;">${p.quantity}</td><td><span class="stock-status ${p.quantity>0?'high':'out'}">${p.quantity>0?'متاح':'نفد'}</span></td><td>${p.source === 'telegram' ? '<i class="fab fa-telegram"></i> تلغرام' : 'محلي'}</td><td>${!p.published ? `<button class="btn btn-telegram btn-sm" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : '<span style="color:var(--success);">✅ منشور</span>'}</td><td><button class="btn btn-gold btn-sm" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i></button></td></tr>`).join('');
     }
 
     function renderStockLog() {
