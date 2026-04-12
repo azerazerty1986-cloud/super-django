@@ -490,7 +490,7 @@ async function saveProduct() {
 
 // ===== [4.16] جلب المنتجات من تلغرام =====
 
-// ===== [4.16] جلب المنتجات من تلغرام - معدل للتوافق =====
+// ===== [4.16] جلب المنتجات من تلغرام - النسخة النهائية المعدلة =====
 async function fetchProductsFromTelegram() {
     try {
         isLoading = true;
@@ -532,15 +532,18 @@ async function fetchProductsFromTelegram() {
                 for (let line of lines) {
                     line = line.trim();
                     
+                    // ===== استخراج الاسم (معدل) =====
                     if (line.includes('المنتج:')) {
                         let value = line.split('المنتج:')[1];
                         if (value) {
                             name = value.trim();
                             name = name.split(' ')[0];
                             name = name.replace(/[0-9]/g, '');
-                            console.log(`✅ الاسم: ${name}`);
+                            name = name.replace(/[*_]/g, '');  // إزالة علامات Markdown
+                            console.log(`✅ الاسم المستخرج: "${name}"`);
                         }
                     }
+                    // ===== استخراج السعر =====
                     else if (line.includes('السعر:')) {
                         let match = line.match(/\d+/);
                         if (match) {
@@ -548,6 +551,7 @@ async function fetchProductsFromTelegram() {
                             console.log(`💰 السعر: ${price}`);
                         }
                     }
+                    // ===== استخراج القسم =====
                     else if (line.includes('القسم:')) {
                         let value = line.split('القسم:')[1];
                         if (value) {
@@ -558,6 +562,7 @@ async function fetchProductsFromTelegram() {
                             console.log(`📂 القسم: ${category}`);
                         }
                     }
+                    // ===== استخراج الكمية =====
                     else if (line.includes('الكمية:')) {
                         let match = line.match(/\d+/);
                         if (match) {
@@ -565,6 +570,7 @@ async function fetchProductsFromTelegram() {
                             console.log(`📦 الكمية: ${stock}`);
                         }
                     }
+                    // ===== استخراج معرف المنتج =====
                     else if (line.includes('معرف المنتج:')) {
                         let value = line.split('معرف المنتج:')[1];
                         if (value) {
@@ -572,6 +578,7 @@ async function fetchProductsFromTelegram() {
                             console.log(`🆔 معرف المنتج: ${productCompositeID}`);
                         }
                     }
+                    // ===== استخراج اسم المتجر =====
                     else if (line.includes('المتجر:')) {
                         let value = line.split('المتجر:')[1];
                         if (value) {
@@ -579,6 +586,7 @@ async function fetchProductsFromTelegram() {
                             console.log(`🏪 المتجر: ${storeName}`);
                         }
                     }
+                    // ===== استخراج معرف المتجر =====
                     else if (line.includes('معرف المتجر:')) {
                         let value = line.split('معرف المتجر:')[1];
                         if (value) {
@@ -586,6 +594,7 @@ async function fetchProductsFromTelegram() {
                             console.log(`🏷️ معرف المتجر: ${storeID}`);
                         }
                     }
+                    // ===== استخراج الوصف =====
                     else if (line.includes('الوصف:')) {
                         let value = line.split('الوصف:')[1];
                         if (value) {
@@ -595,9 +604,13 @@ async function fetchProductsFromTelegram() {
                     }
                 }
                 
-                // إذا لم يتم العثور على اسم
-                if (!name || name === '') {
+                // ===== التحقق من صحة الاسم =====
+                console.log(`🏷️ الاسم النهائي قبل الحفظ: "${name}"`);
+                
+                // إذا لم يتم العثور على اسم أو كان غير صالح
+                if (!name || name === '' || name === 'منتج' || name === '*') {
                     name = 'منتج ناردو';
+                    console.log(`⚠️ استخدام الاسم الافتراضي: ${name}`);
                 }
                 
                 if (!storeName) storeName = 'ناردو ماركت';
@@ -646,7 +659,7 @@ async function fetchProductsFromTelegram() {
                         dateStr: getTimeAgo(post.date)
                     });
                     
-                    console.log(`✅ تم إضافة المنتج: ${name}`);
+                    console.log(`✅ تم إضافة المنتج: ${name} (السعر: ${price} دج, الكمية: ${stock})`);
                 }
             }
         }
@@ -658,6 +671,7 @@ async function fetchProductsFromTelegram() {
             const exists = mergedProducts.some(p => p.id === newProduct.id);
             if (!exists) {
                 mergedProducts.push(newProduct);
+                console.log(`➕ منتج جديد مضاف: ${newProduct.name}`);
             }
         }
         
@@ -665,11 +679,13 @@ async function fetchProductsFromTelegram() {
         products = mergedProducts;
         displayProducts();
         
-        console.log(`✅ تم جلب ${telegramProducts.length} منتج`);
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج جديد`);
+        console.log(`📊 إجمالي المنتجات: ${products.length}`);
+        
         return mergedProducts;
         
     } catch (error) {
-        console.error('❌ خطأ:', error);
+        console.error('❌ خطأ في جلب المنتجات:', error);
         const saved = localStorage.getItem('nardoo_products');
         if (saved) {
             products = JSON.parse(saved);
@@ -681,7 +697,6 @@ async function fetchProductsFromTelegram() {
         isLoading = false;
     }
 }
-                        
                 
 
 // ===== [4.18] تحميل المنتجات وعرضها =====
