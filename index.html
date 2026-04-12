@@ -516,50 +516,6 @@
             .nav-icon-btn i { font-size: 18px; }
             .nav-icon-btn span { font-size: 10px; }
         }
-        /* تعديل موضع ولون اسم المنتج في الواجهة الرئيسية */
-        .product-card {
-            position: relative;
-            padding-top: 50px !important; /* مساحة للاسم والتوقيت في الأعلى */
-        }
-
-        /* إخفاء عنوان المنتج القديم إذا وجد */
-        .product-name, .product-title {
-            display: none !important;
-        }
-
-        /* تصميم شارة الاسم الجديدة */
-        .product-name-badge {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            background: #2563eb !important; /* اللون الأزرق المطلوب */
-            color: white !important;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            max-width: 180px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            direction: rtl;
-        }
-
-        /* تعديل موضع التوقيت ليكون مقابلاً للاسم */
-        .product-time-badge, [class*="time-badge"] {
-            position: absolute !important;
-            top: 15px !important;
-            right: 15px !important;
-            left: auto !important;
-            background: rgba(0,0,0,0.6) !important;
-            color: white !important;
-            padding: 5px 12px !important;
-            border-radius: 20px !important;
-            font-size: 11px !important;
-            z-index: 100 !important;
-        }
     </style>
 </head>
 <body>
@@ -1495,159 +1451,6 @@
         console.log('📌 مستخدم تجريبي: user@demo.com / 123456');
         console.log('📌 مدير: عبر تلغرام - إرسال رمز إلى القناة');
     <script>
-// ===== نظام جلب المنتجات من تلغرام =====
-let telegramProducts = [];
-let telegramProductsCache = [];
-
-async function loadProductsFromTelegramChannel() {
-    try {
-        console.log('🔄 [جلب المنتجات] جاري تحميل المنتجات من تلغرام...');
-        const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        telegramProducts = [];
-        
-        if (data.ok && data.result) {
-            const updates = [...data.result].reverse();
-            
-            for (const update of updates) {
-                const post = update.channel_post || update.message;
-                if (!post) continue;
-                
-                // استخراج معلومات المنتج من النص أو الوصف
-                const caption = post.caption || post.text || '';
-                
-                // استخراج معلومات المنتج
-                const nameMatch = caption.match(/📦\s*(.+?)(?:\n|💰|$)/);
-                const priceMatch = caption.match(/💰\s*(.+?)(?:\n|📊|$)/);
-                const stockMatch = caption.match(/📊\s*(.+?)(?:\n|🏷️|$)/);
-                const categoryMatch = caption.match(/🏷️\s*(.+?)(?:\n|$)/);
-                
-                const product = {
-                    id: post.message_id,
-                    name: nameMatch ? nameMatch[1].trim() : `منتج ناردو #${post.message_id}`,
-                    price: priceMatch ? parseInt(priceMatch[1].match(/\d+/)?.[0] || 0) : Math.floor(Math.random() * 5000) + 500,
-                    stock: stockMatch ? parseInt(stockMatch[1].match(/\d+/)?.[0] || 0) : Math.floor(Math.random() * 100) + 10,
-                    category: categoryMatch ? categoryMatch[1].trim().toLowerCase() : 'other',
-                    description: caption,
-                    image: null,
-                    hasVideo: !!post.video,
-                    hasPhoto: !!post.photo,
-                    date: new Date(post.date * 1000).toISOString()
-                };
-                
-                // محاولة الحصول على صورة الفيديو أو الصورة
-                if (post.video) {
-                    try {
-                        const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${post.video.file_id}`);
-                        const fileData = await fileRes.json();
-                        if (fileData.ok) {
-                            product.image = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                        }
-                    } catch (err) {
-                        console.log('خطأ في جلب صورة الفيديو:', err);
-                    }
-                } else if (post.photo && post.photo.length > 0) {
-                    try {
-                        const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${post.photo[post.photo.length - 1].file_id}`);
-                        const fileData = await fileRes.json();
-                        if (fileData.ok) {
-                            product.image = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                        }
-                    } catch (err) {
-                        console.log('خطأ في جلب الصورة:', err);
-                    }
-                }
-                
-                telegramProducts.push(product);
-            }
-        }
-        
-        // حفظ في localStorage
-        localStorage.setItem('telegram_products_cache', JSON.stringify(telegramProducts));
-        telegramProductsCache = telegramProducts;
-        
-        console.log(`✅ تم تحميل ${telegramProducts.length} منتج من تلغرام`);
-        return telegramProducts;
-        
-    } catch (error) {
-        console.error('❌ خطأ في جلب المنتجات من تلغرام:', error);
-        
-        // محاولة تحميل من localStorage
-        const cached = localStorage.getItem('telegram_products_cache');
-        if (cached) {
-            telegramProducts = JSON.parse(cached);
-            telegramProductsCache = telegramProducts;
-            console.log('📌 تم تحميل المنتجات من الذاكرة المؤقتة');
-            return telegramProducts;
-        }
-        
-        return [];
-    }
-}
-
-// دالة لعرض المنتجات المجلوبة من تلغرام
-function displayTelegramProducts() {
-    if (telegramProducts.length === 0) return;
-    
-    const container = document.getElementById('productsContainer');
-    if (!container) return;
-    
-    const productCards = telegramProducts.map(product => `
-        <div class="product-card" data-product-id="${product.id}">
-            <div class="product-image-wrapper">
-                ${product.image ? `<img src="${product.image}" alt="${product.name}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1a472a, #0a2a1a); display: flex; align-items: center; justify-content: center;"><i class="fas fa-box" style="font-size: 60px; color: gold; opacity: 0.5;"></i></div>'}
-                ${product.stock < 10 ? '<div class="product-badge" style="position: absolute; top: 10px; right: 10px; background: #ff6b6b; color: white; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;">مخزون منخفض</div>' : ''}
-            </div>
-            <div class="product-info">
-                <div class="product-name">${product.name}</div>
-                <div class="product-category">
-                    <i class="fas fa-tag"></i> ${getCategoryName(product.category)}
-                </div>
-                <div class="product-meta">
-                    <div class="product-price">${product.price} دج</div>
-                    <div class="product-stock">
-                        <i class="fas fa-warehouse"></i> ${product.stock}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    // إضافة المنتجات إلى الحاوية
-    if (container.innerHTML.includes('loading-reels') || container.innerHTML.includes('no-reels-message')) {
-        container.innerHTML = productCards;
-    }
-}
-
-// تحميل المنتجات عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        loadProductsFromTelegramChannel().then(() => {
-            displayTelegramProducts();
-        });
-    }, 1000);
-});
-
-// تحديث المنتجات كل 5 دقائق
-setInterval(() => {
-    loadProductsFromTelegramChannel().then(() => {
-        displayTelegramProducts();
-    });
-}, 300000);
-
-// دالة مساعدة للحصول على اسم الفئة
-function getCategoryName(category) {
-    const categories = {
-        'promo': 'برموسيو',
-        'spices': 'توابل',
-        'cosmetic': 'كوسمتيك',
-        'other': 'أخرى'
-    };
-    return categories[category] || category;
-}
-
 // ===== البصمة الثابتة للمنتجات فقط =====
 (function() {
     function getProductFingerprint() {
@@ -1710,43 +1513,15 @@ function getCategoryName(category) {
         }
     }, 500);
     
-    // وظيفة لإضافة شارة الاسم للمنتجات
-    function addProductNameBadges() {
-        const products = document.querySelectorAll('.product-card');
-        products.forEach(product => {
-            if (product.querySelector('.product-name-badge')) return;
-            
-            // محاولة العثور على الاسم من العناصر المخفية أو البيانات
-            let name = "";
-            const nameElem = product.querySelector('.product-name, .product-title, h3');
-            if (nameElem) {
-                name = nameElem.innerText.trim();
-                // تجنب الأسماء الافتراضية غير المرغوبة
-                if (name.includes('ناردومار-') || name === 'منتج ناردو') {
-                    // إذا كان الاسم هو المعرف، نحاول البحث في الوصف أو نتركه
-                }
-            }
-            
-            if (name) {
-                const badge = document.createElement('div');
-                badge.className = 'product-name-badge';
-                badge.innerText = name;
-                product.appendChild(badge);
-            }
-        });
-    }
-
     // مراقبة التغييرات في حاوية المنتجات
     setTimeout(() => {
         const container = document.getElementById('productsContainer');
         if (container) {
             const observer = new MutationObserver(function() {
                 addFingerprintToProducts();
-                addProductNameBadges();
             });
             observer.observe(container, { childList: true, subtree: true });
         }
-        addProductNameBadges();
     }, 500);
     
     // تأخير إضافي لضمان ظهور البصمة
@@ -1757,3 +1532,4 @@ function getCategoryName(category) {
 </script>
 </body>
 </html>
+
