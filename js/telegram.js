@@ -681,7 +681,6 @@ async function fetchProductsFromTelegram() {
         isLoading = false;
     }
 }
-        
                         
                 
 
