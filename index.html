@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -515,6 +514,50 @@
             .nav-icon-btn { padding: 6px 15px; min-width: 70px; }
             .nav-icon-btn i { font-size: 18px; }
             .nav-icon-btn span { font-size: 10px; }
+        }
+        /* تعديل موضع ولون اسم المنتج في الواجهة الرئيسية */
+        .product-card {
+            position: relative;
+            padding-top: 50px !important; /* مساحة للاسم والتوقيت في الأعلى */
+        }
+
+        /* إخفاء عنوان المنتج القديم إذا وجد */
+        .product-name, .product-title {
+            display: none !important;
+        }
+
+        /* تصميم شارة الاسم الجديدة */
+        .product-name-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #2563eb !important; /* اللون الأزرق المطلوب */
+            color: white !important;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            direction: rtl;
+        }
+
+        /* تعديل موضع التوقيت ليكون مقابلاً للاسم */
+        .product-time-badge, [class*="time-badge"] {
+            position: absolute !important;
+            top: 15px !important;
+            right: 15px !important;
+            left: auto !important;
+            background: rgba(0,0,0,0.6) !important;
+            color: white !important;
+            padding: 5px 12px !important;
+            border-radius: 20px !important;
+            font-size: 11px !important;
+            z-index: 100 !important;
         }
     </style>
 </head>
@@ -1513,15 +1556,43 @@
         }
     }, 500);
     
+    // وظيفة لإضافة شارة الاسم للمنتجات
+    function addProductNameBadges() {
+        const products = document.querySelectorAll('.product-card');
+        products.forEach(product => {
+            if (product.querySelector('.product-name-badge')) return;
+            
+            // محاولة العثور على الاسم من العناصر المخفية أو البيانات
+            let name = "";
+            const nameElem = product.querySelector('.product-name, .product-title, h3');
+            if (nameElem) {
+                name = nameElem.innerText.trim();
+                // تجنب الأسماء الافتراضية غير المرغوبة
+                if (name.includes('ناردومار-') || name === 'منتج ناردو') {
+                    // إذا كان الاسم هو المعرف، نحاول البحث في الوصف أو نتركه
+                }
+            }
+            
+            if (name) {
+                const badge = document.createElement('div');
+                badge.className = 'product-name-badge';
+                badge.innerText = name;
+                product.appendChild(badge);
+            }
+        });
+    }
+
     // مراقبة التغييرات في حاوية المنتجات
     setTimeout(() => {
         const container = document.getElementById('productsContainer');
         if (container) {
             const observer = new MutationObserver(function() {
                 addFingerprintToProducts();
+                addProductNameBadges();
             });
             observer.observe(container, { childList: true, subtree: true });
         }
+        addProductNameBadges();
     }, 500);
     
     // تأخير إضافي لضمان ظهور البصمة
@@ -1532,4 +1603,3 @@
 </script>
 </body>
 </html>
-
