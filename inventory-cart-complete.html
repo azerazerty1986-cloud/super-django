@@ -1,3 +1,4 @@
+المخزون 7 مريقل 
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -817,43 +818,74 @@
         }
     }
 
-    // ========== دالة عرض الطلبات المصححة ==========
+    // ========== دالة عرض الطلبات المحدثة ==========
+    /**
+     * دالة عرض الطلبات في الجدول
+     * تقوم بجلب الطلبات الخاصة بالمتجر الحالي وعرضها في واجهة المستخدم
+     * مع إضافة أزرار التحكم (PDF، تسليم، توصيل، اتصال، حذف)
+     */
     function renderOrders() {
+        // 1. الحصول على عنصر الجدول من الصفحة
         const tbody = document.getElementById('ordersTableBody');
         
-        // جلب الطلبات من localStorage
-        orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
-        
-        // فلترة الطلبات حسب المتجر الحالي
-        let filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
-        
+        // 2. التأكد من وجود الجدول في الصفحة
         if (!tbody) return;
         
+        // 3. جلب الطلبات من localStorage
+        orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
+        
+        // 4. تصفية الطلبات: عرض فقط طلبات المتجر الحالي
+        const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
+        
+        // 5. إذا لم توجد طلبات، عرض رسالة "لا توجد طلبات"
         if (filteredOrders.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px;">
-                <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
-                لا توجد طلبات لهذا المتجر
-            </td></tr>`;
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px;">
+                        <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
+                        لا توجد طلبات لهذا المتجر
+                    </td>
+                </tr>
+            `;
         } else {
+            // 6. إذا وجدت طلبات، إنشاء صفوف الجدول لكل طلب
             tbody.innerHTML = filteredOrders.map(order => `
                 <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
+                    <!-- عمود رقم الطلب -->
                     <td><strong>#${order.id}</strong></td>
-                    <td style="font-size:12px;">${order.date}</td>
+                    
+                    <!-- عمود التاريخ -->
+                    <td style="font-size:12px;">${order.date || new Date().toLocaleString('ar-EG')}</td>
+                    
+                    <!-- عمود معلومات العميل (الاسم، الهاتف، العنوان) -->
                     <td>
                         <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
                         <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                        <div style="font-size:11px; color:#aaa;"><i class="fas fa-map-marker-alt"></i> ${order.customerAddress || '---'}</div>
                     </td>
+                    
+                    <!-- عمود المنتجات (عرض كعلامات منفصلة) -->
                     <td>
                         <div style="font-size:12px; max-width:200px;">
-                            ${order.items.map(it => `<span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">${it.name} (${it.quantity})</span>`).join('')}
+                            ${order.items.map(it => `
+                                <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
+                                    ${it.name} (${it.quantity})
+                                </span>
+                            `).join('')}
                         </div>
                     </td>
+                    
+                    <!-- عمود الإجمالي -->
                     <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                    
+                    <!-- عمود حالة الطلب -->
                     <td>
                         <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
                             ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
                         </span>
                     </td>
+                    
+                    <!-- عمود الإجراءات (الأزرار) -->
                     <td>
                         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                             <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
@@ -877,7 +909,7 @@
             `).join('');
         }
         
-        // تحديث الإحصائيات
+        // 7. تحديث الإحصائيات (عدد الطلبات والمنتجات)
         updateStats();
     }
 
@@ -1039,7 +1071,7 @@
             orderId: order.id,
             customer: order.customerName,
             phone: order.customerPhone,
-            address: order.customerAddress || '', // قد لا يكون موجوداً في الطلب الأصلي
+            address: order.customerAddress || '',
             amount: order.total,
             items: order.items.map(it => `${it.name} (${it.quantity})`).join(', ')
         }));
