@@ -1,4 +1,5 @@
 
+/* ===== [04] الملف: 04-telegram.js - نظام تلغرام المتكامل ===== */
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
 /* ===== المعدل النهائي - مع ID ثابت للمتجر (اسم المتجر + رقم ثابت) ===== */
 /* ================================================================== */
@@ -525,68 +526,157 @@ async function saveProduct() {
         
         closeModal('productModal');
         displayProducts();
-        showNotification('✅ تم إضافة المنتج بنجاح', 'success');
+        showNotification(`✅ تم إضافة المنتج - المعرف: ${productCompositeID}`, 'success');
     }
 }
 
 // ===== [4.16] جلب المنتجات من تلغرام =====
-
-    // ========== جلب المنتجات من التلغرام ==========
-    async function fetchProductsFromTelegram() {
-        try {
-            showToast('جاري الجلب من القناة...', 'info');
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
-            const data = await response.json();
-            if (!data.ok) throw new Error('فشل الاتصال');
-            let newCount = 0;
-            for (const update of data.result || []) {
+async function fetchProductsFromTelegram() {
+    try {
+        isLoading = true;
+        console.log('🔄 جاري جلب المنتجات من تلغرام...');
+        
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+        const data = await response.json();
+        
+        if (!data.ok) {
+            throw new Error('فشل الاتصال بـ Telegram API');
+        }
+        
+        const localProducts = JSON.parse(localStorage.getItem('nardoo_products') || '[]');
+        const telegramProducts = [];
+        
+        if (data.result) {
+            for (const update of data.result) {
                 const post = update.channel_post || update.message;
                 if (!post || !post.photo) continue;
+                
                 const caption = post.caption || '';
-                let name = 'منتج', price = 1000, stock = 10, storeID = '', storeName = '', productID = '', desc = '';
                 const lines = caption.split('\n');
+                
+                let name = 'منتج';
+                let price = 1000;
+                let category = 'other';
+                let stock = 10;
+                let storeName = 'ناردو برو';
+                let storeID = '';
+                let productCompositeID = '';
+                let description = '';
+                
                 for (const line of lines) {
                     if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
-                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]) || price;
-                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]) || stock;
-                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
+                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
+                    if (line.includes('القسم:')) {
+                        const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
+                        if (catValue === 'توابل') category = 'spices';
+                        else if (catValue === 'كوسمتيك') category = 'cosmetic';
+                        else if (catValue === 'بروموسيو') category = 'promo';
+                        else category = catValue;
+                    }
+                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
                     if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim() || storeName;
-                    if (line.includes('معرف المنتج:')) productID = line.split(':')[1]?.trim() || productID;
-                    if (line.includes('الوصف:')) desc = line.split(':')[1]?.trim() || desc;
+                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
+                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim() || productCompositeID;
+                    if (line.includes('الوصف:')) description = line.split(':')[1]?.trim() || description;
                 }
-                const fileId = post.photo[post.photo.length - 1].file_id;
-                const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-                const fileData = await fileRes.json();
-                const imageUrl = fileData.ok ? `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}` : "https://via.placeholder.com/300/ffd700/000000?text=منتج";
-                if (!products.some(p => p.telegramId === post.message_id)) {
-                    products.push({
-                        id: Date.now() + Math.random(),
-                        telegramId: post.message_id,
+                
+                const telegramId = post.message_id;
+                let mediaUrl = null;
+                let images = [];
+                
+                if (post.photo) {
+                    const fileId = post.photo[post.photo.length - 1].file_id;
+                    const fileResponse = await fetch(
+                        `https://api.telegram.org/bot${TELEGRAM.botToken}/getFile?file_id=${fileId}`
+                    );
+                    const fileData = await fileResponse.json();
+                    
+                    if (fileData.ok) {
+                        mediaUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                        images = [mediaUrl];
+                    }
+                }
+                
+                if (images.length === 0) {
+                    images = ["https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال"];
+                    mediaUrl = images[0];
+                }
+                
+                if (mediaUrl) {
+                    // استخراج الرقم التسلسلي من المعرف المركب
+                    let serialNumber = '';
+                    let extractedStoreID = storeID;
+                    if (productCompositeID) {
+                        const parts = productCompositeID.split('-');
+                        if (parts.length >= 3) {
+                            extractedStoreID = `${parts[0]}-${parts[1]}`;
+                            serialNumber = parts[2];
+                        } else if (parts.length === 2) {
+                            extractedStoreID = productCompositeID;
+                            serialNumber = '001';
+                        }
+                    }
+                    
+                    telegramProducts.push({
+                        id: telegramId,
+                        telegramId: telegramId,
                         name: name,
-                        price: price,
-                        quantity: stock,
-                        storeID: storeID,
+                        price: price || 1000,
+                        category: category,
+                        stock: stock || 10,
                         storeName: storeName,
-                        productCompositeID: productID,
-                        description: desc,
-                        images: [imageUrl],
-                        source: 'telegram',
-                        published: true,
-                        publishedAt: new Date().toISOString(),
-                        category: 'منتج'
+                        storeID: extractedStoreID || storeID,
+                        productCompositeID: productCompositeID || `${extractedStoreID || storeID}-001`,
+                        serialNumber: serialNumber || '001',
+                        description: description,
+                        rating: 4.5,
+                        image: mediaUrl,
+                        images: images,
+                        telegramLink: `https://t.me/c/${TELEGRAM.channelId.replace('-100', '')}/${post.message_id}`,
+                        createdAt: new Date(post.date * 1000).toISOString(),
+                        dateStr: getTimeAgo(post.date)
                     });
-                    newCount++;
                 }
             }
-            safeLocalStorage.set('nardo_products', products);
-            renderAll();
-            showToast(`تم جلب ${newCount} منتج جديد`, 'success');
-        } catch(e) {
-            console.error(e);
-            showToast('فشل الاتصال بالقناة', 'error');
         }
+        
+        const mergedProducts = [...localProducts];
+        
+        for (const newProduct of telegramProducts) {
+            const exists = mergedProducts.some(p => p.id === newProduct.id || p.telegramId === newProduct.telegramId);
+            if (!exists) {
+                mergedProducts.push(newProduct);
+                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.productCompositeID})`);
+            }
+        }
+        
+        console.log(`✅ تم جلب ${telegramProducts.length} منتج من تلغرام، إجمالي: ${mergedProducts.length}`);
+        
+        localStorage.setItem('nardoo_products', JSON.stringify(mergedProducts));
+        
+        products = mergedProducts;
+        displayProducts();
+        
+        return mergedProducts;
+        
+    } catch (error) {
+        console.error('❌ خطأ في جلب المنتجات:', error);
+        showNotification('فشل الاتصال بتلغرام، عرض المنتجات المخزنة', 'warning');
+        
+        const saved = localStorage.getItem('nardoo_products');
+        if (saved) {
+            products = JSON.parse(saved);
+            displayProducts();
+            return products;
+        }
+        
+        return [];
+        
+    } finally {
+        isLoading = false;
     }
-                    
+}
+
 // ===== [4.18] تحميل المنتجات وعرضها =====
 async function loadProducts() {
     await fetchProductsFromTelegram();
@@ -656,30 +746,40 @@ function displayProducts() {
         const timeAgo = getTimeAgo(product.createdAt);
         const storeID = product.storeID || 'غير محدد';
         const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
-	        const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
+        const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
 
-	        return `
-		            <div class="product-card" onclick="viewProductDetails(${product.id})">
-	                <div class="product-time-badge">
-	                    <i class="far fa-clock"></i> ${timeAgo}
-	                </div>
-	                
-		                <div class="product-name-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-		                    ${product.name || 'منتج ناردو'}
-		                </div>
+        return `
+            <div class="product-card" onclick="viewProductDetails(${product.id})">
+                <div class="product-time-badge">
+                    <i class="far fa-clock"></i> ${timeAgo}
+                </div>
+                
+                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; font-family:monospace;">
+                    📦 ${productCompositeID}
+                </div>
+                
+                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.75); padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; direction:ltr; display: flex; align-items: center; gap: 4px;">
+                    <i class="fas fa-store" style="font-size: 10px; color: var(--gold);"></i>
+                    <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span>
+                    <span style="color: #888;">-</span>
+                    <span style="color: #aaa; font-family: monospace;">${storeIDParts[1] || '???'}</span>
+                </div>
+                
+                <div class="product-gallery">
+                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
+                </div>
 
-	                <div class="product-gallery">
-	                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
-	                </div>
-
-	                <div class="product-info">
-	                    <div class="product-category">
-	                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
-	                    </div>
-	                    
-		                    <div class="product-merchant-info">
-		                        <i class="fas fa-store"></i> ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'متجر ناردو')}
-		                    </div>
+                <div class="product-info">
+                    <div class="product-category">
+                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
+                    </div>
+                    
+                    <h3 class="product-title">${product.name}</h3>
+                    
+                    <div class="product-merchant-info">
+                        <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
+                    </div>
+                    
                     <div class="product-rating">
                         <div class="stars-container">
                             ${generateStars(product.rating || 4.5)}
@@ -919,14 +1019,27 @@ function viewProductDetails(productId) {
 
     content.innerHTML = `
         <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
-	            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}</h2>
+            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
                 <div>
                     <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
                 </div>
                 <div>
-
-	                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'ناردو برو')}</p>
+                    <div style="background: rgba(255,215,0,0.15); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: #888;">📦 معرف المنتج:</span>
+                            <span style="color: var(--gold); font-family: monospace; font-weight: bold;">${productCompositeID}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #888;">🆔 معرف المتجر:</span>
+                            <span style="direction: ltr; font-family: monospace;">
+                                <span style="color: var(--gold);">${storeIDParts[0]}</span>
+                                <span style="color: #888;">-</span>
+                                <span style="color: #aaa;">${storeIDParts[1]}</span>
+                            </span>
+                        </div>
+                    </div>
+                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${product.storeName || product.merchantName || 'ناردو برو'}</p>
                     <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
                     
                     <div class="product-rating" style="margin-bottom: 20px;">
@@ -1063,7 +1176,23 @@ function showStorePanel() {
                 </div>
             </div>
             
-
+            <div style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border-radius: 15px; padding: 20px; margin-bottom: 30px; text-align: center; border: 1px solid var(--gold);">
+                <i class="fas fa-store" style="font-size: 40px; color: var(--gold); margin-bottom: 10px;"></i>
+                <div style="font-size: 14px; color: var(--text-secondary);">معرف المتجر الثابت</div>
+                <div style="font-size: 28px; font-weight: bold; color: var(--gold); letter-spacing: 1px; margin: 10px 0; direction: ltr;">
+                    <span style="color: var(--gold);">${storeIDParts[0]}</span>
+                    <span style="color: #888;">-</span>
+                    <span style="color: #aaa;">${storeIDParts[1] || '???'}</span>
+                </div>
+                <div style="font-size: 12px; color: #888; margin-top: 5px;">
+                    المصدر: ${currentStore.storeIDSource === 'phone' ? 'رقم الهاتف' : 'رقم عشوائي'}
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn-outline-gold" onclick="copyStoreID()" style="padding: 5px 15px; font-size: 12px;">
+                        <i class="fas fa-copy"></i> نسخ المعرف
+                    </button>
+                </div>
+            </div>
             
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
                 <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
@@ -1821,9 +1950,17 @@ async function handleStoreRegister() {
     if (registerForm) registerForm.reset();
 }
 
-// ===== [4.47] إضافة زر البحث بالمعرف الثابت للمتجر (تم إخفاؤه) =====
+// ===== [4.47] إضافة زر البحث بالمعرف الثابت للمتجر =====
 function addStoreSearchButton() {
-    // تم إخفاء زر البحث بالمعرف من الواجهة بناءً على طلب المستخدم
+    const nav = document.getElementById('mainNav');
+    if (nav && !document.getElementById('searchByStoreBtn')) {
+        const searchBtn = document.createElement('a');
+        searchBtn.className = 'nav-link';
+        searchBtn.id = 'searchByStoreBtn';
+        searchBtn.setAttribute('onclick', 'findProductsByStoreID()');
+        searchBtn.innerHTML = '<i class="fas fa-store"></i><span>بحث بمتجر</span>';
+        nav.appendChild(searchBtn);
+    }
 }
 
 // ===== [4.48] التهيئة عند تحميل الصفحة =====
@@ -1874,19 +2011,28 @@ window.onload = async function() {
         new TypingAnimation(typingElement, ['نكهة وجمال', 'ناردو برو', 'تسوق آمن', 'جودة عالية'], 100, 2000).start();
     }
     
-        setTimeout(() => {
-	        const nav = document.getElementById('mainNav');
-	        
-	        // إضافة زر تصفية حسب المتجر الحالي
-	        if (nav && !document.getElementById('filterStoreBtn') && currentStore) {
-	            const filterBtn = document.createElement('a');
-	            filterBtn.className = 'nav-link';
-	            filterBtn.id = 'filterStoreBtn';
-	            filterBtn.setAttribute('onclick', "filterProducts('current_store')");
-	            filterBtn.innerHTML = '<i class="fas fa-store-alt"></i><span>متجري الحالي</span>';
-	            nav.appendChild(filterBtn);
-	        }
-	    }, 1000);
+    setTimeout(() => {
+        const nav = document.getElementById('mainNav');
+        if (nav && !document.getElementById('searchByIdBtn')) {
+            const searchBtn = document.createElement('a');
+            searchBtn.className = 'nav-link';
+            searchBtn.id = 'searchByIdBtn';
+            searchBtn.setAttribute('onclick', 'findProductById()');
+            searchBtn.innerHTML = '<i class="fas fa-search"></i><span>بحث بالمعرف</span>';
+            nav.appendChild(searchBtn);
+        }
+        addStoreSearchButton();
+        
+        // إضافة زر تصفية حسب المتجر الحالي
+        if (nav && !document.getElementById('filterStoreBtn') && currentStore) {
+            const filterBtn = document.createElement('a');
+            filterBtn.className = 'nav-link';
+            filterBtn.id = 'filterStoreBtn';
+            filterBtn.setAttribute('onclick', "filterProducts('current_store')");
+            filterBtn.innerHTML = '<i class="fas fa-store-alt"></i><span>متجري الحالي</span>';
+            nav.appendChild(filterBtn);
+        }
+    }, 1000);
     
     console.log('✅ النظام جاهز - معرف المتجر = [اسم_المتجر]-[رقم_ثابت]');
     console.log('✅ معرف المنتج = [معرف_المتجر]-[رقم_تسلسلي]');
@@ -1939,3 +2085,4 @@ window.handleStoreRegister = handleStoreRegister;
 console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل متجر (اسم المتجر + رقم ثابت)');
 console.log('✅ صيغة معرف المتجر: [اسم_المتجر]-[رقم_الهاتف أو رقم_عشوائي]');
 console.log('✅ صيغة معرف المنتج: [معرف_المتجر]-[رقم_تسلسلي]');
+
