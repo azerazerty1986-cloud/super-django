@@ -764,9 +764,7 @@ function displayProducts() {
 		                <div class="product-name-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
 		                    ${product.name || 'منتج ناردو'}
 		                </div>
-					<!-- ✅ التعديل: عرض اسم المنتج بدلاً من المعرف -->
-                           <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:bold; z-index:10; max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                           📦 ${product.name}
+					
                     </div>
 
 	                <div class="product-gallery">
