@@ -530,6 +530,8 @@ async function saveProduct() {
 }
 
 // ===== [4.16] جلب المنتجات من تلغرام =====
+
+// ===== [4.16] جلب المنتجات من تلغرام =====
 async function fetchProductsFromTelegram() {
     try {
         isLoading = true;
@@ -553,60 +555,34 @@ async function fetchProductsFromTelegram() {
                 const caption = post.caption || '';
                 const lines = caption.split('\n');
                 
-	                let name = '';
-	                let price = 1000;
-	                let category = 'other';
-	                let stock = 10;
-	                let storeName = '';
-	                let storeID = '';
-	                let productCompositeID = '';
-	                let description = '';
-	                
-		                for (const line of lines) {
-		                    // البحث المرن عن الكلمات المفتاحية (يدعم وجود رموز تعبيرية قبلها)
-		                    if (line.includes('المنتج:')) {
-		                        const parts = line.split('المنتج:');
-		                        if (parts.length > 1) name = parts[1].trim();
-		                    }
-		                    if (line.includes('السعر:')) {
-		                        const parts = line.split('السعر:');
-		                        if (parts.length > 1) price = parseInt(parts[1].replace(/[^0-9]/g, '')) || price;
-		                    }
-		                    if (line.includes('القسم:')) {
-		                        const parts = line.split('القسم:');
-		                        if (parts.length > 1) {
-		                            const catValue = parts[1].trim().toLowerCase();
-		                            if (catValue.includes('توابل')) category = 'spices';
-		                            else if (catValue.includes('كوسمتيك')) category = 'cosmetic';
-		                            else if (catValue.includes('بروموسيو')) category = 'promo';
-		                            else category = 'other';
-		                        }
-		                    }
-		                    if (line.includes('الكمية:')) {
-		                        const parts = line.split('الكمية:');
-		                        if (parts.length > 1) stock = parseInt(parts[1].replace(/[^0-9]/g, '')) || stock;
-		                    }
-		                    if (line.includes('المتجر:')) {
-		                        const parts = line.split('المتجر:');
-		                        if (parts.length > 1) storeName = parts[1].trim();
-		                    }
-		                    if (line.includes('معرف المتجر:')) {
-		                        const parts = line.split('معرف المتجر:');
-		                        if (parts.length > 1) storeID = parts[1].trim();
-		                    }
-		                    if (line.includes('معرف المنتج:')) {
-		                        const parts = line.split('معرف المنتج:');
-		                        if (parts.length > 1) productCompositeID = parts[1].trim();
-		                    }
-		                    if (line.includes('الوصف:')) {
-		                        const parts = line.split('الوصف:');
-		                        if (parts.length > 1) description = parts[1].trim();
-		                    }
-		                }
-	                
-	                // التأكد من عدم استخدام المعرفات كأسماء إذا كانت الحقول فارغة
-	                if (!name || name === productCompositeID) name = 'منتج ناردو';
-	                if (!storeName || storeName === storeID) storeName = 'متجر ناردو';
+                // السطر الثالث (index 2) هو اسم المنتج
+                // السطر الثامن (index 7) هو اسم المتجر
+                const rawName = lines[2] || lines[0] || '';
+                const rawStore = lines[7] || '';
+                
+                let name = rawName;
+                let storeName = rawStore;
+                let price = 1000;
+                let category = 'other';
+                let stock = 10;
+                let storeID = '';
+                let productCompositeID = '';
+                let description = '';
+                
+                for (const line of lines) {
+                    if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
+                    if (line.includes('القسم:')) {
+                        const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
+                        if (catValue === 'توابل') category = 'spices';
+                        else if (catValue === 'كوسمتيك') category = 'cosmetic';
+                        else if (catValue === 'بروموسيو') category = 'promo';
+                        else category = catValue;
+                    }
+                    if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
+                    if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
+                    if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim() || productCompositeID;
+                    if (line.includes('الوصف:')) description = line.split(':')[1]?.trim() || description;
+                }
                 
                 const telegramId = post.message_id;
                 let mediaUrl = null;
@@ -631,7 +607,6 @@ async function fetchProductsFromTelegram() {
                 }
                 
                 if (mediaUrl) {
-                    // استخراج الرقم التسلسلي من المعرف المركب
                     let serialNumber = '';
                     let extractedStoreID = storeID;
                     if (productCompositeID) {
@@ -674,7 +649,7 @@ async function fetchProductsFromTelegram() {
             const exists = mergedProducts.some(p => p.id === newProduct.id || p.telegramId === newProduct.telegramId);
             if (!exists) {
                 mergedProducts.push(newProduct);
-                console.log(`✅ منتج جديد: ${newProduct.name} (ID: ${newProduct.productCompositeID})`);
+                console.log(`✅ منتج جديد: ${newProduct.name} (المتجر: ${newProduct.storeName})`);
             }
         }
         
