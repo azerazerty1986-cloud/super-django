@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو برو | المتجر الذكي</title>
+    <title>ناردو برو | المتجر الذكي - طلبات تلجرام</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,6 +162,12 @@
         .toast.warning { border-color: var(--warning); color: var(--warning); }
         @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+        .fetch-orders-btn {
+            background: linear-gradient(135deg, #0088cc, #006699);
+            color: white;
+            margin-right: auto;
+        }
+
         @media (max-width: 768px) {
             .top-navbar { flex-direction: column; }
             .tabs-bar { overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; }
@@ -169,7 +176,7 @@
             .toolbar { flex-direction: column; }
             .search-box { max-width: 100%; }
             .table-container { overflow-x: scroll; }
-            .data-table { min-width: 600px; }
+            .data-table { min-width: 800px; }
         }
     </style>
 </head>
@@ -196,7 +203,7 @@
     </div>
     
     <div class="nav-right">
-        <button class="nav-btn nav-btn-telegram" onclick="fetchProductsFromTelegram()"><i class="fab fa-telegram"></i> جلب</button>
+        <button class="nav-btn nav-btn-telegram" onclick="fetchProductsFromTelegram()"><i class="fab fa-telegram"></i> جلب منتجات</button>
         <button class="nav-btn nav-btn-gold" onclick="openAddProductModal()"><i class="fas fa-plus"></i> إضافة</button>
     </div>
 </div>
@@ -207,6 +214,7 @@
     <button class="tab-btn" onclick="showTab('stockLog', this)"><i class="fas fa-history"></i> سجل المخزون</button>
     <button class="tab-btn" onclick="showTab('orders', this)"><i class="fas fa-receipt"></i> الطلبات</button>
     <button class="tab-btn" onclick="openDeliveryPage()"><i class="fas fa-truck"></i> التوصيل</button>
+    <button id="fetchOrdersBtn" class="nav-btn fetch-orders-btn" onclick="fetchOrdersFromTelegram()"><i class="fab fa-telegram"></i> جلب الطلبات</button>
 </div>
 
 <div class="container">
@@ -237,7 +245,8 @@
     <div id="inventoryTab" class="tab-content" style="display: none;">
         <div class="table-container">
             <table class="data-table">
-                <thead><tr><th>المنتج</th><th>المعرف</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th>المصدر</th><th>نشر</th><th>الإجراءات</th></tr></thead>
+                <thead><tr><th>المنتج</th><th>المعرف</th><th>السعر</th><th>المخزون</th><th>الحالة</th><th>المصدر</th><th>نشر</th><th>الإجراءات</th></tr>
+                </thead>
                 <tbody id="inventoryTable"></tbody>
             </table>
         </div>
@@ -316,9 +325,60 @@
         apiUrl: 'https://api.telegram.org/bot'
     };
 
-    let products = JSON.parse(localStorage.getItem('nardo_products') || '[]');
-    let orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
-    let stockLog = JSON.parse(localStorage.getItem('nardo_stock_log') || '[]');
+    // ========== إدارة التخزين الآمن ==========
+    const safeLocalStorage = {
+        set: function(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    console.warn('⚠️ مساحة التخزين ممتلئة، جاري تنظيف البيانات القديمة...');
+                    this.autoCleanup();
+                    try {
+                        localStorage.setItem(key, JSON.stringify(value));
+                        return true;
+                    } catch (retryError) {
+                        showToast('❌ فشل التخزين: المساحة ممتلئة جداً، يرجى مسح السجل يدوياً', 'error');
+                        return false;
+                    }
+                }
+                return false;
+            }
+        },
+        get: function(key, defaultValue = '[]') {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : JSON.parse(defaultValue);
+            } catch (e) {
+                return JSON.parse(defaultValue);
+            }
+        },
+        autoCleanup: function() {
+            // حذف أقدم الطلبات لتوفير مساحة (الاحتفاظ بآخر 100 طلب)
+            let allOrders = this.get('nardo_orders');
+            if (allOrders.length > 100) {
+                allOrders = allOrders.slice(0, 100);
+                localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
+            }
+            // حذف سجل الحركات القديم (الاحتفاظ بآخر 100 حركة)
+            let logs = this.get('nardo_stock_log');
+            if (logs.length > 100) {
+                logs = logs.slice(-100);
+                localStorage.setItem('nardo_stock_log', JSON.stringify(logs));
+            }
+            // تنظيف معرفات الرسائل المعالجة (الاحتفاظ بآخر 300)
+            let processedIds = this.get('nardo_processed_telegram_ids');
+            if (processedIds.length > 300) {
+                processedIds = processedIds.slice(-300);
+                localStorage.setItem('nardo_processed_telegram_ids', JSON.stringify(processedIds));
+            }
+        }
+    };
+
+    let products = safeLocalStorage.get('nardo_products');
+    let orders = safeLocalStorage.get('nardo_orders');
+    let stockLog = safeLocalStorage.get('nardo_stock_log');
     let currentStore = null;
     let editProductId = null;
     let currentImages = [];
@@ -348,7 +408,7 @@
             };
         }
         if (!currentStore.storeFixedID) currentStore.storeFixedID = generateStoreID(currentStore.storeName);
-        localStorage.setItem('current_store', JSON.stringify(currentStore));
+        safeLocalStorage.set('current_store', currentStore);
         
         document.getElementById('currentStoreName').innerHTML = currentStore.storeName;
         document.getElementById('currentStoreID').innerHTML = currentStore.storeFixedID;
@@ -456,12 +516,191 @@
                     newCount++;
                 }
             }
-            localStorage.setItem('nardo_products', JSON.stringify(products));
+            safeLocalStorage.set('nardo_products', products);
             renderAll();
             showToast(`تم جلب ${newCount} منتج جديد`, 'success');
         } catch(e) {
             console.error(e);
             showToast('فشل الاتصال بالقناة', 'error');
+        }
+    }
+
+    // ========== دوال التلغرام لجلب الطلبات ==========
+    async function fetchOrdersFromTelegram() {
+        try {
+            showToast('📡 جاري جلب الطلبات من التلغرام...', 'info');
+            
+            // زيادة الحد لضمان جلب المزيد من التحديثات
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100&offset=-100`);
+            const data = await response.json();
+            
+            if (!data.ok) throw new Error('فشل الاتصال بـ Telegram API');
+            
+            let newOrdersCount = 0;
+            let processedIds = JSON.parse(localStorage.getItem('nardo_processed_telegram_ids') || '[]');
+            
+            // التأكد من وجود المصفوفة orders
+            if (!Array.isArray(orders)) orders = [];
+
+            for (const update of data.result || []) {
+                const post = update.channel_post || update.message || update.edited_channel_post || update.edited_message;
+                if (!post || !post.text) continue;
+                
+                // استخدام id التحديث أو id الرسالة للتحقق من المعالجة
+                const uniqueId = post.message_id;
+                if (processedIds.includes(uniqueId)) continue;
+                
+                const text = post.text;
+                
+                // التحقق من أن الرسالة تخص المتجر الحالي (أو تحتوي على معرف منتج صالح)
+                if (!text.includes(currentStore.storeFixedID) && !text.match(/(\S+-\d{3}-\d+)/)) continue;
+                
+                const orderData = extractOrderDataFromText(text);
+                
+                if (!orderData || !orderData.productID) continue;
+                
+                // البحث عن المنتج في كل المنتجات وليس فقط المتجر الحالي للتأكد
+                const product = products.find(p => p.productCompositeID === orderData.productID);
+                
+                if (!product) {
+                    console.warn(`المنتج ${orderData.productID} غير موجود في المخزون`);
+                    continue;
+                }
+
+                // التأكد من أن الطلب يخص هذا المتجر
+                if (product.storeID !== currentStore.storeFixedID) continue;
+                
+                const existingOrder = orders.find(o => o.telegramOrderId === orderData.orderNumber);
+                if (existingOrder) {
+                    processedIds.push(uniqueId);
+                    continue;
+                }
+                
+                const quantity = orderData.quantity;
+                // تحديث المخزون فقط إذا كانت الكمية متوفرة
+                if (product.quantity < quantity) {
+                    console.warn(`⚠️ الكمية غير كافية للمنتج ${product.name}`);
+                }
+                
+                const newOrder = {
+                    id: Date.now() + Math.random(),
+                    telegramOrderId: orderData.orderNumber,
+                    telegramMessageId: uniqueId,
+                    date: orderData.date || new Date().toLocaleString('ar-EG'),
+                    customerName: orderData.customerName,
+                    customerPhone: orderData.customerPhone,
+                    customerAddress: orderData.customerAddress,
+                    customerNotes: orderData.notes || '',
+                    storeID: currentStore.storeFixedID,
+                    storeName: currentStore.storeName,
+                    items: [{
+                        id: product.id,
+                        productCompositeID: product.productCompositeID,
+                        name: product.name,
+                        price: product.price,
+                        quantity: quantity,
+                        // لا نخزن رابط الصورة الكامل في الطلب لتوفير المساحة، سنأخذه من المنتج عند العرض
+                        image: (product.images?.[0] || '').startsWith('data:') ? '' : (product.images?.[0] || '')
+                    }],
+                    total: orderData.total || (product.price * quantity),
+                    status: 'pending',
+                    source: 'telegram'
+                };
+                
+                orders.unshift(newOrder);
+                
+                // تحديث الكمية في المخزون
+                const oldQty = product.quantity;
+                product.quantity = Math.max(0, product.quantity - quantity);
+                
+                if (typeof addStockLog === 'function') {
+                    addStockLog(product.id, product.name, 'remove', quantity, oldQty, product.quantity, `طلب تلغرام #${orderData.orderNumber}`, product.storeID);
+                }
+                
+                processedIds.push(uniqueId);
+                newOrdersCount++;
+            }
+            
+            // حفظ البيانات بشكل آمن
+            safeLocalStorage.set('nardo_orders', orders);
+            safeLocalStorage.set('nardo_products', products);
+            safeLocalStorage.set('nardo_processed_telegram_ids', processedIds);
+            
+            // تحديث الواجهة
+            renderAll();
+            
+            if (newOrdersCount > 0) {
+                showToast(`✅ تم جلب ${newOrdersCount} طلب جديد`, 'success');
+            } else {
+                showToast('📭 لا توجد طلبات جديدة حالياً', 'info');
+            }
+            
+        } catch (error) {
+            console.error('خطأ في جلب الطلبات:', error);
+            showToast('❌ فشل جلب الطلبات: ' + error.message, 'error');
+        }
+    }
+
+    // ========== دالة استخراج البيانات من نص الرسالة ==========
+    function extractOrderDataFromText(text) {
+        try {
+            // أنماط متطورة لاستخراج البيانات من رسالة الفاتورة الجديدة
+            const patterns = {
+                storeID: /معرف المتجر:\s*([^\n]+)/,
+                customerName: /المشتري:\s*([^\n]+)/,
+                customerPhone: /الهاتف:\s*([^\n]+)/,
+                customerAddress: /العنوان:\s*([^\n]+)/,
+                // استخراج معرف المنتج (مثل ناردومار-189295-009)
+                productID: /([A-Z0-9\u0600-\u06FF]+-\d+-\d+)/i,
+                // استخراج الكمية (تأتي بعد "الكمية: " مباشرة)
+                quantity: /الكمية:\s*(\d+)/,
+                // إجمالي المتجر
+                total: /إجمالي المتجر:\s*([\d,]+)/,
+                notes: /ملاحظات:\s*([^\n]+)/,
+                orderNumber: /رقم الطلب:\s*(\d+)/,
+                date: /التاريخ:\s*([^\n]+)/
+            };
+            
+            const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
+            const customerName = (text.match(patterns.customerName)?.[1] || '').trim();
+            const customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
+            const customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
+            const productIDMatch = text.match(patterns.productID);
+            const productID = productIDMatch ? productIDMatch[0].trim() : '';
+            
+            let quantity = 1;
+            const qtyMatch = text.match(patterns.quantity);
+            if (qtyMatch) {
+                quantity = parseInt(qtyMatch[1]);
+            }
+            
+            const totalStr = (text.match(patterns.total)?.[1] || '0').replace(/,/g, '');
+            const total = parseInt(totalStr);
+            const notes = (text.match(patterns.notes)?.[1] || '').trim();
+            const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
+            const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
+            
+            if (!productID) {
+                console.warn("فشل استخراج معرف المنتج من النص:", text);
+                return null;
+            }
+            
+            return {
+                storeID,
+                customerName: customerName || 'عميل ناردو',
+                customerPhone,
+                customerAddress,
+                productID,
+                quantity,
+                total,
+                notes,
+                orderNumber,
+                date
+            };
+            
+        } catch (error) {
+            console.error('Error extracting order data:', error);
+            return null;
         }
     }
 
@@ -496,7 +735,7 @@
             telegramId: null
         };
         products.push(newProduct);
-        localStorage.setItem('nardo_products', JSON.stringify(products));
+        safeLocalStorage.set('nardo_products', products);
         addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, 'إنشاء منتج', newProduct.storeID);
         renderAll();
         closeAddProductModal();
@@ -546,7 +785,7 @@
             newProduct.publishedAt = new Date().toISOString();
         }
         products.push(newProduct);
-        localStorage.setItem('nardo_products', JSON.stringify(products));
+        safeLocalStorage.set('nardo_products', products);
         addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, result.success ? 'إنشاء ونشر' : 'إنشاء منتج', newProduct.storeID);
         renderAll();
         closeAddProductModal();
@@ -686,20 +925,20 @@
             customerNotes: '',
             storeID: p.storeID,
             storeName: p.storeName,
-            items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt }],
+            items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt, image: p.images?.[0] || '' }],
             total: total,
-            status: 'pending'
+            status: 'pending',
+            source: 'manual'
         };
         orders.unshift(newOrder);
         p.quantity -= qtyInt;
         localStorage.setItem('nardo_orders', JSON.stringify(orders));
         localStorage.setItem('nardo_products', JSON.stringify(products));
-        addStockLog(p.id, p.name, 'remove', qtyInt, p.quantity + qtyInt, p.quantity, 'طلب', p.storeID);
+        addStockLog(p.id, p.name, 'remove', qtyInt, p.quantity + qtyInt, p.quantity, 'طلب مباشر', p.storeID);
         renderAll();
         showToast(`✅ تم إنشاء الطلب #${newOrder.id}`, 'success');
     }
 
-    // ========== دوال الطلبات ==========
     function deleteOrder(orderId) {
         if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
             orders = orders.filter(o => o.id !== orderId);
@@ -728,12 +967,12 @@
         window.location.href = `tel:${phone}`;
     }
 
-    // ========== دالة تصدير PDF ==========
+    // ========== دالة تصدير PDF مع صورة المنتج ==========
     async function exportOrderToPDF(orderId) {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
 
-        showToast('جاري تحضير ملف PDF...', 'info');
+        showToast('📄 جاري تحضير فاتورة PDF مع الصورة...', 'info');
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({
@@ -741,6 +980,29 @@
             unit: 'mm',
             format: 'a4'
         });
+
+        let productImage = null;
+        const firstItem = order.items[0];
+        if (firstItem && firstItem.image) {
+            try {
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                productImage = await new Promise((resolve, reject) => {
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = reject;
+                    img.src = firstItem.image;
+                });
+            } catch (e) {
+                console.warn('لا يمكن تحميل الصورة:', e);
+            }
+        }
 
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
@@ -750,22 +1012,32 @@
         tempDiv.style.color = '#000000';
         tempDiv.style.padding = '40px';
         tempDiv.style.fontFamily = 'Cairo, sans-serif';
+        tempDiv.style.direction = 'rtl';
+        
+        const imageHtml = productImage 
+            ? `<div style="text-align:center; margin-bottom:20px;">
+                 <img src="${productImage}" style="max-width:150px; max-height:150px; border-radius:12px; border:2px solid #daa520;">
+               </div>`
+            : '';
         
         tempDiv.innerHTML = `
             <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #daa520; padding-bottom:10px;">
-                <h1 style="margin:0; color:#daa520;">فاتورة طلب #${order.id}</h1>
+                <h1 style="margin:0; color:#daa520;">🧾 فاتورة طلب #${order.telegramOrderId || order.id}</h1>
                 <p style="margin:5px 0;">🏪 متجر: ${order.storeName}</p>
             </div>
+            ${imageHtml}
             <div style="margin-bottom:20px;">
                 <p><strong>📅 التاريخ:</strong> ${order.date}</p>
                 <p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p>
                 <p><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</p>
                 <p><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</p>
+                ${order.customerNotes ? `<p><strong>📝 ملاحظات:</strong> ${order.customerNotes}</p>` : ''}
             </div>
             <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
                 <thead>
                     <tr style="background:#f0f0f0;">
                         <th style="border:1px solid #000; padding:10px; text-align:right;">المنتج</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">معرف المنتج</th>
                         <th style="border:1px solid #000; padding:10px; text-align:center;">الكمية</th>
                         <th style="border:1px solid #000; padding:10px; text-align:center;">السعر</th>
                         <th style="border:1px solid #000; padding:10px; text-align:center;">الإجمالي</th>
@@ -775,6 +1047,7 @@
                     ${order.items.map(it => `
                         <tr>
                             <td style="border:1px solid #000; padding:10px;">${it.name}</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.productCompositeID || '---'}</td>
                             <td style="border:1px solid #000; padding:10px; text-align:center;">${it.quantity}</td>
                             <td style="border:1px solid #000; padding:10px; text-align:center;">${it.price.toLocaleString()} دج</td>
                             <td style="border:1px solid #000; padding:10px; text-align:center;">${(it.price * it.quantity).toLocaleString()} دج</td>
@@ -783,12 +1056,14 @@
                 </tbody>
                 <tfoot>
                     <tr style="font-weight:bold; background:#f0f0f0;">
-                        <td colspan="3" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
+                        <td colspan="4" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
                         <td style="border:1px solid #000; padding:10px; text-align:center;">${order.total.toLocaleString()} دج</td>
                     </tr>
                 </tfoot>
             </table>
-            <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">شكرًا لتعاملكم مع ناردو برو</div>
+            <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">
+                شكرًا لتعاملكم مع ناردو برو 🌟
+            </div>
         `;
         
         document.body.appendChild(tempDiv);
@@ -807,8 +1082,8 @@
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             
             doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            doc.save(`Order_${order.id}.pdf`);
-            showToast('✅ تم تحميل ملف PDF بنجاح', 'success');
+            doc.save(`Order_${order.telegramOrderId || order.id}.pdf`);
+            showToast('✅ تم تحميل فاتورة PDF بنجاح', 'success');
         } catch (error) {
             console.error('PDF Error:', error);
             showToast('❌ فشل تصدير PDF', 'error');
@@ -817,26 +1092,14 @@
         }
     }
 
-    // ========== دالة عرض الطلبات المحدثة ==========
-    /**
-     * دالة عرض الطلبات في الجدول
-     * تقوم بجلب الطلبات الخاصة بالمتجر الحالي وعرضها في واجهة المستخدم
-     * مع إضافة أزرار التحكم (PDF، تسليم، توصيل، اتصال، حذف)
-     */
+    // ========== دالة عرض الطلبات المحدثة مع صورة المنتج ==========
     function renderOrders() {
-        // 1. الحصول على عنصر الجدول من الصفحة
         const tbody = document.getElementById('ordersTableBody');
-        
-        // 2. التأكد من وجود الجدول في الصفحة
         if (!tbody) return;
         
-        // 3. جلب الطلبات من localStorage
-        orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
-        
-        // 4. تصفية الطلبات: عرض فقط طلبات المتجر الحالي
+        orders = safeLocalStorage.get('nardo_orders');
         const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
         
-        // 5. إذا لم توجد طلبات، عرض رسالة "لا توجد طلبات"
         if (filteredOrders.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -847,74 +1110,76 @@
                 </tr>
             `;
         } else {
-            // 6. إذا وجدت طلبات، إنشاء صفوف الجدول لكل طلب
-            tbody.innerHTML = filteredOrders.map(order => `
-                <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
-                    <!-- عمود رقم الطلب -->
-                    <td><strong>#${order.id}</strong></td>
-                    
-                    <!-- عمود التاريخ -->
-                    <td style="font-size:12px;">${order.date || new Date().toLocaleString('ar-EG')}</td>
-                    
-                    <!-- عمود معلومات العميل (الاسم، الهاتف، العنوان) -->
-                    <td>
-                        <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
-                        <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
-                        <div style="font-size:11px; color:#aaa;"><i class="fas fa-map-marker-alt"></i> ${order.customerAddress || '---'}</div>
-                    </td>
-                    
-                    <!-- عمود المنتجات (عرض كعلامات منفصلة) -->
-                    <td>
-                        <div style="font-size:12px; max-width:200px;">
-                            ${order.items.map(it => `
-                                <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
-                                    ${it.name} (${it.quantity})
-                                </span>
-                            `).join('')}
-                        </div>
-                    </td>
-                    
-                    <!-- عمود الإجمالي -->
-                    <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
-                    
-                    <!-- عمود حالة الطلب -->
-                    <td>
-                        <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
-                            ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
-                        </span>
-                    </td>
-                    
-                    <!-- عمود الإجراءات (الأزرار) -->
-                    <td>
-                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                            <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
-                                <i class="fas fa-file-pdf"></i>
-                            </button>
-                            <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
-                                <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
-                            </button>
-                            <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
-                                <i class="fas fa-truck"></i>
-                            </button>
-                            <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
-                                <i class="fas fa-phone"></i>
-                            </button>
-                            <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = filteredOrders.map(order => {
+                const firstItem = order.items[0];
+                // محاولة جلب الصورة من المنتج إذا لم تكن موجودة في الطلب
+                let productImage = firstItem?.image;
+                if (!productImage) {
+                    const p = products.find(prod => prod.productCompositeID === firstItem?.productCompositeID);
+                    productImage = p?.images?.[0] || '';
+                }
+                const imageHtml = productImage 
+                    ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--gold);" onerror="this.src='https://via.placeholder.com/40/ffd700/000000?text=?'">`
+                    : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
+                
+                return `
+                    <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
+                        <td><strong>#${order.telegramOrderId || order.id}</strong></td>
+                        <td style="font-size:12px;">${order.date || ''}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${imageHtml}
+                                <div>
+                                    <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                                    <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                                    <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:12px; max-width:200px;">
+                                ${order.items.map(it => `
+                                    <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
+                                        ${it.name} (${it.quantity})
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </td>
+                        <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                        <td>
+                            <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
+                                ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
+                                    <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
+                                </button>
+                                <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
+                                    <i class="fas fa-truck"></i>
+                                </button>
+                                <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
+                                    <i class="fas fa-phone"></i>
+                                </button>
+                                <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
-        
-        // 7. تحديث الإحصائيات (عدد الطلبات والمنتجات)
         updateStats();
     }
 
     function clearOrders() {
         if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟ لا يمكن التراجع عن هذه الخطوة.')) {
-            localStorage.setItem('nardo_orders', '[]');
+            safeLocalStorage.set('nardo_orders', []);
             orders = [];
             renderOrders();
             updateStats();
@@ -1065,7 +1330,6 @@
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
         
-        // تخزين بيانات الطلب في localStorage ليتم التقاطها في صفحة التوصيل
         localStorage.setItem('nardo_pending_delivery', JSON.stringify({
             orderId: order.id,
             customer: order.customerName,
@@ -1090,12 +1354,12 @@
     // ========== الاستماع للتغييرات في localStorage ==========
     window.addEventListener('storage', (e) => {
         if (e.key === 'nardo_orders') {
-            orders = JSON.parse(e.newValue || '[]');
+            orders = safeLocalStorage.get('nardo_orders');
             renderOrders();
             updateStats();
         }
         if (e.key === 'nardo_products') {
-            products = JSON.parse(e.newValue || '[]');
+            products = safeLocalStorage.get('nardo_products');
             renderAll();
         }
     });
@@ -1105,6 +1369,12 @@
         loadCurrentStore();
         renderAll();
         document.getElementById('searchProducts')?.addEventListener('input', renderProducts);
+        
+        // جلب الطلبات تلقائياً عند فتح الصفحة
+        setTimeout(fetchOrdersFromTelegram, 2000);
+        
+        // جلب الطلبات دورياً كل 2 دقيقة
+        setInterval(fetchOrdersFromTelegram, 120000);
     });
 </script>
 </body>
