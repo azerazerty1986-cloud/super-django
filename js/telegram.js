@@ -1,4 +1,4 @@
-// ===== [4.1] إعدادات تلغرام الأساسية =====
+// == [4.1] إعدادات تلغرام الأساسية =====
 const TELEGRAM = {
     botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
     channelId: '-1003822964890',
@@ -122,42 +122,42 @@ async function loadProductsFromTelegramChannel() {
                 if (!post) continue;
                 const caption = post.caption || post.text || '';
                 const lines = caption.split('\n');
-		                // استخراج البيانات بناءً على ترتيب الأسطر الثابت
-		                // السطر الثاني (index 1) هو اسم المنتج
-		                // السطر السابع (index 6) هو اسم المتجر
-		                const rawName = lines[1] || lines[0] || '';
-		                const rawStore = lines[6] || '';
-		                
-		                const cleanName = rawName.replace(/[*#_~]/g, '').replace('المنتج:', '').trim();
-		                const cleanStore = rawStore.replace(/[*#_~]/g, '').replace('المتجر:', '').trim();
+			                // استخراج البيانات بناءً على ترتيب الأسطر الثابت
+			                // السطر الثاني (index 1) هو اسم المنتج
+			                // السطر الثامن (index 7) هو اسم المتجر
+			                const rawName = lines[1] || lines[0] || '';
+			                const rawStore = lines[7] || '';
+			                
+			                const cleanName = rawName.replace(/[*#_~]/g, '').replace('المنتج:', '').trim();
+			                const cleanStore = rawStore.replace(/[*#_~]/g, '').replace('المتجر:', '').trim();
 
-		                let productData = {
-		                    id: post.message_id, 
-		                    name: cleanName || `منتج #${post.message_id}`, 
-		                    price: 1000, 
-		                    category: 'other', 
-		                    stock: 10,
-		                    storeName: cleanStore || 'متجر ناردو', 
-		                    storeID: 'NARDO-000000', 
-		                    description: caption,
-		                    images: [], 
-		                    createdAt: new Date(post.date * 1000).toISOString(), 
-		                    rating: 4.5
-		                };
+			                let productData = {
+			                    id: post.message_id, 
+			                    name: cleanName || `منتج #${post.message_id}`, 
+			                    price: 1000, 
+			                    category: 'other', 
+			                    stock: 10,
+			                    storeName: cleanStore || 'متجر ناردو', 
+			                    storeID: 'NARDO-000000', 
+			                    description: caption,
+			                    images: [], 
+			                    createdAt: new Date(post.date * 1000).toISOString(), 
+			                    rating: 4.5
+			                };
 
-		                for (const line of lines) {
-		                    const trimmedLine = line.trim();
-		                    if (trimmedLine.includes('السعر:')) productData.price = parseInt(trimmedLine.split('السعر:')[1]?.replace(/[^0-9]/g, '') || 1000);
-		                    if (trimmedLine.includes('القسم:')) {
-		                        const cat = trimmedLine.split('القسم:')[1]?.trim().toLowerCase();
-		                        if (cat?.includes('توابل')) productData.category = 'spices';
-		                        else if (cat?.includes('كوسمتيك')) productData.category = 'cosmetic';
-		                        else if (cat?.includes('بروموسيو')) productData.category = 'promo';
-		                    }
-		                    if (trimmedLine.includes('الكمية:')) productData.stock = parseInt(trimmedLine.split('الكمية:')[1]?.replace(/[^0-9]/g, '') || 10);
-		                    // إذا لم نجد اسم المتجر في السطر السابع، نحاول البحث عنه بالكلمة المفتاحية
-		                    if (!cleanStore && trimmedLine.includes('المتجر:')) productData.storeName = trimmedLine.split('المتجر:')[1]?.trim();
-		                }
+			                for (const line of lines) {
+			                    const trimmedLine = line.trim();
+			                    if (trimmedLine.includes('السعر:')) productData.price = parseInt(trimmedLine.split('السعر:')[1]?.replace(/[^0-9]/g, '') || 1000);
+			                    if (trimmedLine.includes('القسم:')) {
+			                        const cat = trimmedLine.split('القسم:')[1]?.trim().toLowerCase();
+			                        if (cat?.includes('توابل')) productData.category = 'spices';
+			                        else if (cat?.includes('كوسمتيك')) productData.category = 'cosmetic';
+			                        else if (cat?.includes('بروموسيو')) productData.category = 'promo';
+			                    }
+			                    if (trimmedLine.includes('الكمية:')) productData.stock = parseInt(trimmedLine.split('الكمية:')[1]?.replace(/[^0-9]/g, '') || 10);
+			                    // إذا لم نجد اسم المتجر في السطر الثامن، نحاول البحث عنه بالكلمة المفتاحية
+			                    if (!cleanStore && trimmedLine.includes('المتجر:')) productData.storeName = trimmedLine.split('المتجر:')[1]?.trim();
+			                }
 
 	                if (post.photo && post.photo.length > 0) {
 	                    const fileId = post.photo[post.photo.length - 1].file_id;
