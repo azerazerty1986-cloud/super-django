@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي - متكامل</title>
@@ -536,7 +534,7 @@
                 const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                 const fileData = await fileRes.json();
                 const imageUrl = fileData.ok ? `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}` : "https://via.placeholder.com/300/ffd700/000000?text=منتج";
-                if (!products.some(p => p.telegramId === post.message_id)) {
+                if (storeID === currentStore.storeFixedID && !products.some(p => p.telegramId === post.message_id)) {
                     products.push({ id: Date.now() + Math.random(), telegramId: post.message_id, name: name, price: price, quantity: stock, storeID: storeID, storeName: storeName, productCompositeID: productID, description: desc, images: [imageUrl], source: 'telegram', published: true, publishedAt: new Date().toISOString(), category: 'منتج' });
                     newCount++;
                 }
@@ -572,7 +570,14 @@
                     date: orderData.date || new Date().toLocaleString('ar-EG'), customerName: orderData.customerName,
                     customerPhone: orderData.customerPhone, customerAddress: orderData.customerAddress, customerNotes: orderData.notes || '',
                     storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
-                    items: [{ id: product.id, productCompositeID: product.productCompositeID, name: product.name, price: product.price, quantity: orderData.quantity, image: product.images?.[0] || '' }],
+                    items: [{ 
+                        id: product.id, 
+                        productCompositeID: product.productCompositeID, 
+                        name: product.name, 
+                        price: product.price, 
+                        quantity: orderData.quantity, 
+                        image: product.images?.[0] || '' 
+                    }],
                     total: orderData.total || (product.price * orderData.quantity), status: 'pending', source: 'telegram'
                 };
                 orders.unshift(newOrder);
@@ -593,9 +598,13 @@
     function extractOrderDataFromText(text) {
         try {
             const patterns = { storeID: /معرف المتجر:\s*([^\n]+)/, customerName: /المشتري:\s*([^\n]+)/, customerPhone: /الهاتف:\s*([^\n]+)/, customerAddress: /العنوان:\s*([^\n]+)/, productID: /([A-Z0-9\u0600-\u06FF]+-\d+-\d+)/i, quantity: /الكمية:\s*(\d+)/, total: /إجمالي المتجر:\s*([\d,]+)/, orderNumber: /رقم الطلب:\s*(\d+)/, date: /التاريخ:\s*([^\n]+)/ };
+            const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
+            if (storeID !== currentStore.storeFixedID) return null;
+
             const productIDMatch = text.match(patterns.productID);
             const productID = productIDMatch ? productIDMatch[0].trim() : '';
             if (!productID) return null;
+            
             const customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim();
             const customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
             const customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
@@ -617,7 +626,14 @@
         const total = p.price * qtyInt;
         const newOrder = {
             id: Date.now(), date: new Date().toLocaleString('ar-EG'), customerName: 'طلب مباشر', customerPhone: '', customerAddress: '', customerNotes: '',
-            storeID: p.storeID, storeName: p.storeName, items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt, image: p.images?.[0] || '' }],
+            storeID: p.storeID, storeName: p.storeName, items: [{ 
+                id: p.id, 
+                productCompositeID: p.productCompositeID, 
+                name: p.name, 
+                price: p.price, 
+                quantity: qtyInt, 
+                image: p.images?.[0] || '' 
+            }],
             total: total, status: 'pending', source: 'manual'
         };
         orders.unshift(newOrder);
@@ -632,15 +648,30 @@
 
     function deliverOrder(orderId) {
         const order = orders.find(o => o.id === orderId);
-        if (order) { order.status = order.status === 'delivered' ? 'pending' : 'delivered'; safeLocalStorage.set('nardo_orders', orders); renderOrders(); showToast(order.status === 'delivered' ? '✅ تم التسليم' : '🔄 قيد المعالجة', 'success'); }
+        if (order) { 
+            order.status = order.status === 'delivered' ? 'pending' : 'delivered'; 
+            safeLocalStorage.set('nardo_orders', orders); 
+            renderOrders(); 
+            showToast(order.status === 'delivered' ? '✅ تم التسليم' : '🔄 قيد المعالجة', 'success'); 
+        }
     }
 
     function deleteOrder(orderId) {
-        if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) { orders = orders.filter(o => o.id !== orderId); safeLocalStorage.set('nardo_orders', orders); renderOrders(); showToast('تم حذف الطلب', 'success'); }
+        if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) { 
+            orders = orders.filter(o => o.id !== orderId); 
+            safeLocalStorage.set('nardo_orders', orders); 
+            renderOrders(); 
+            showToast('تم حذف الطلب', 'success'); 
+        }
     }
 
     function clearOrders() {
-        if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟')) { safeLocalStorage.set('nardo_orders', []); orders = []; renderOrders(); showToast('🗑️ تم مسح جميع الطلبات', 'success'); }
+        if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟')) { 
+            safeLocalStorage.set('nardo_orders', []); 
+            orders = []; 
+            renderOrders(); 
+            showToast('🗑️ تم مسح جميع الطلبات', 'success'); 
+        }
     }
 
     function callCustomer(phone) { if (!phone) { showToast('رقم الهاتف غير متوفر', 'warning'); return; } window.location.href = `tel:${phone}`; }
@@ -781,7 +812,10 @@
         if (filteredOrders.length === 0) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px;"><i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>لا توجد طلبات</td></tr>`; return; }
         tbody.innerHTML = filteredOrders.map(order => {
             const firstItem = order.items[0];
-            let productImage = firstItem?.image || '';
+            // محاولة جلب الصورة من قائمة المنتجات الحالية باستخدام معرف المنتج لضمان التحديث
+            const currentProduct = products.find(p => p.productCompositeID === firstItem?.productCompositeID);
+            let productImage = currentProduct?.images?.[0] || firstItem?.image || '';
+            
             const imageHtml = productImage ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px;">` : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
             return `
                 <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
@@ -795,6 +829,7 @@
                 </tr>
             `;
         }).join('');
+        updateStats();
     }
 
     function updateStats() {
