@@ -1,6 +1,6 @@
+
 /* ===== مع دعم الصور والفيديو والأزرار التفاعلية ===== */
 /* ===== المعدل النهائي - مع ID ثابت للمتجر (اسم المتجر + رقم ثابت) ===== */
-/* ===== 59 دالة متكاملة ===== */
 /* ================================================================== */
 
 // ===== [4.1] إعدادات تلغرام الأساسية =====
@@ -14,8 +14,8 @@ const TELEGRAM = {
 // ===== [4.2] المتغيرات العامة =====
 let products = [];
 let currentUser = null;
-let currentStore = null;
-let stores = [];
+let currentStore = null;      // المتجر الحالي المختار
+let stores = [];              // قائمة المتاجر
 let cart = [];
 let isDarkMode = true;
 let currentFilter = 'all';
@@ -45,6 +45,7 @@ function loadStores() {
         stores = JSON.parse(savedStores);
         console.log(`✅ تم تحميل ${stores.length} متجر`);
     } else {
+        // إنشاء متجر افتراضي إذا لم يكن موجوداً
         const defaultStore = {
             id: Date.now(),
             storeName: 'ناردو ماركت',
@@ -59,6 +60,7 @@ function loadStores() {
         localStorage.setItem('nardoo_stores', JSON.stringify(stores));
     }
     
+    // تحميل المتجر الحالي
     const savedCurrentStore = localStorage.getItem('current_store');
     if (savedCurrentStore) {
         currentStore = JSON.parse(savedCurrentStore);
@@ -223,41 +225,66 @@ function changeSort(value) {
     displayProducts();
 }
 
-// ===== [4.50] نظام ID الثابت للمتجر =====
+// ===== [4.50] نظام ID الثابت للمتجر (اسم المتجر + رقم ثابت) =====
+
+// دالة إنشاء ID فريد للمتجر (يعتمد على اسم المتجر + رقم ثابت)
 function generateStoreID(storeName, phoneNumber = null) {
+    // تنظيف الاسم من الرموز الخاصة وأخذ أول 6 أحرف
     let cleanName = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '');
+    
+    // إذا كان الاسم فارغاً، استخدم "متجر"
     if (cleanName.length === 0) cleanName = 'متجر';
+    
+    // أخذ أول 6 أحرف من الاسم (أو أقل)
     let namePart = cleanName.substring(0, 6).toUpperCase();
+    // التأكد من أن اسم المتجر يحتوي على 6 أحرف على الأقل
     while (namePart.length < 3 && cleanName.length > 0) {
         namePart = cleanName.substring(0, Math.min(6, cleanName.length)).toUpperCase();
     }
     if (namePart.length < 3) namePart = 'STR';
     
+    // استخدام رقم ثابت (رقم الهاتف إن وجد، وإلا استخدم رقم عشوائي)
     let fixedNumber;
     if (phoneNumber && phoneNumber.length >= 4) {
+        // أخذ آخر 6 أرقام من رقم الهاتف
         const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
         fixedNumber = digitsOnly.slice(-6);
         if (fixedNumber.length < 4) fixedNumber = Math.floor(Math.random() * 900000 + 100000).toString();
     } else {
+        // استخدام رقم عشوائي مكون من 6 أرقام
         fixedNumber = Math.floor(Math.random() * 900000 + 100000).toString();
     }
     
+    // المعرف النهائي: اسم_المتجر-الرقم_الثابت
     const storeID = `${namePart}-${fixedNumber}`;
-    console.log(`✅ تم إنشاء معرف المتجر: ${storeID}`);
+    
+    console.log(`✅ تم إنشاء معرف المتجر: ${storeID} (الاسم: ${namePart}, الرقم: ${fixedNumber})`);
+    
     return storeID;
 }
 
+// دالة الحصول على ID المتجر أو إنشاؤه (مع دعم الرقم الثابت)
 function getOrCreateStoreID(store) {
-    if (store.storeFixedID) return store.storeFixedID;
+    // إذا كان المعرف موجوداً مسبقاً، أعده مباشرة
+    if (store.storeFixedID) {
+        return store.storeFixedID;
+    }
     
+    // الحصول على اسم المتجر
     const storeName = store.storeName || store.name || 'متجر ناردو';
+    
+    // الحصول على رقم الهاتف الثابت (إن وجد)
     const phoneNumber = store.phone || '';
+    
+    // إنشاء معرف جديد
     const storeID = generateStoreID(storeName, phoneNumber);
     
+    // حفظ المعرف في كائن المتجر
     store.storeFixedID = storeID;
     store.storeIDCreatedAt = new Date().toISOString();
     store.storeIDSource = (phoneNumber && phoneNumber.length >= 4) ? 'phone' : 'random';
     
+    // حفظ في localStorage
     const allStores = JSON.parse(localStorage.getItem('nardoo_stores') || '[]');
     const storeIndex = allStores.findIndex(s => s.id === store.id);
     if (storeIndex !== -1) {
@@ -267,10 +294,13 @@ function getOrCreateStoreID(store) {
         localStorage.setItem('nardoo_stores', JSON.stringify(allStores));
     }
     
+    // إرسال إشعار للمدير
     sendStoreIDNotification(store, storeID);
+    
     return storeID;
 }
 
+// إرسال إشعار ID المتجر إلى تلغرام
 async function sendStoreIDNotification(store, storeID) {
     const sourceText = store.storeIDSource === 'phone' ? 'رقم الهاتف' : 'رقم عشوائي';
     const parts = storeID.split('-');
@@ -289,7 +319,10 @@ async function sendStoreIDNotification(store, storeID) {
 ▫️ *الاسم:* ${parts[0] || '???'}
 ▫️ *الرقم:* ${parts[1] || '???'}
 
-📅 *تاريخ الإنشاء:* ${new Date().toLocaleString('ar-EG')}`;
+📅 *تاريخ الإنشاء:* ${new Date().toLocaleString('ar-EG')}
+
+🔒 هذا المعرف خاص بالمتجر ويظهر على كل منتجاته
+📌 صيغة المعرف: [اسم_المتجر]-[رقم_ثابت]`;
 
     await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
         method: 'POST',
@@ -302,19 +335,24 @@ async function sendStoreIDNotification(store, storeID) {
     });
 }
 
+// عرض معرف المتجر بشكل منسق
 function formatStoreID(storeID) {
     if (!storeID) return 'غير متوفر';
     const parts = storeID.split('-');
-    if (parts.length === 2) return `${parts[0]}-${parts[1]}`;
+    if (parts.length === 2) {
+        return `${parts[0]}-${parts[1]}`;
+    }
     return storeID;
 }
 
+// الحصول على الرقم التسلسلي التالي للمنتج في المتجر
 function getNextProductSerial(storeID) {
     const storeProducts = products.filter(p => p.storeID === storeID);
     const nextNumber = storeProducts.length + 1;
     return nextNumber.toString().padStart(3, '0');
 }
 
+// توليد معرف المنتج المركب: [معرف_المتجر]-[رقم_تسلسلي]
 function generateProductCompositeID(storeID, serialNumber) {
     return `${storeID}-${serialNumber}`;
 }
@@ -378,6 +416,7 @@ async function saveProduct() {
         return;
     }
 
+    // التأكد من وجود متجر نشط
     if (!currentStore) {
         showNotification('الرجاء اختيار متجر أولاً', 'warning');
         return;
@@ -443,9 +482,12 @@ async function saveProduct() {
         return;
     }
 
+    // الحصول على معرف المتجر الثابت
     const storeFixedID = getOrCreateStoreID(currentStore);
+    
     showNotification('جاري رفع المنتج...', 'info');
 
+    // إنشاء رقم منتج تسلسلي للمتجر
     const storeProducts = products.filter(p => p.storeID === storeFixedID);
     const productNumber = String(storeProducts.length + 1).padStart(3, '0');
     const productCompositeID = generateProductCompositeID(storeFixedID, productNumber);
@@ -463,7 +505,7 @@ async function saveProduct() {
         rating: 4.5,
         createdAt: new Date().toISOString(),
         merchantName: currentUser.storeName || currentUser.name,
-        merchantID: currentUser.merchantFixedID || null
+        merchantID: currentUser.merchantFixedID || null  // للتوافق مع الإصدارات السابقة
     };
 
     const result = await addProductToTelegram(product, imageFile);
@@ -475,6 +517,7 @@ async function saveProduct() {
         products.push(product);
         localStorage.setItem('nardoo_products', JSON.stringify(products));
         
+        // إعادة تعيين النموذج
         const productForm = document.getElementById('productForm');
         if (productForm) productForm.reset();
         const imagePreview = document.getElementById('imagePreview');
@@ -485,6 +528,8 @@ async function saveProduct() {
         showNotification('✅ تم إضافة المنتج بنجاح', 'success');
     }
 }
+
+// ===== [4.16] جلب المنتجات من تلغرام =====
 
 // ===== [4.16] جلب المنتجات من تلغرام =====
 async function fetchProductsFromTelegram() {
@@ -510,8 +555,13 @@ async function fetchProductsFromTelegram() {
                 const caption = post.caption || '';
                 const lines = caption.split('\n');
                 
-                let name = 'منتج';
-                let storeName = 'ناردو برو';
+                // السطر الثالث (index 2) هو اسم المنتج
+                // السطر الثامن (index 7) هو اسم المتجر
+                const rawName = lines[2] || lines[0] || '';
+                const rawStore = lines[7] || '';
+                
+                let name = rawName;
+                let storeName = rawStore;
                 let price = 1000;
                 let category = 'other';
                 let stock = 10;
@@ -520,7 +570,6 @@ async function fetchProductsFromTelegram() {
                 let description = '';
                 
                 for (const line of lines) {
-                    if (line.includes('المنتج:')) name = line.split(':')[1]?.trim() || name;
                     if (line.includes('السعر:')) price = parseInt(line.split(':')[1]?.trim()) || price;
                     if (line.includes('القسم:')) {
                         const catValue = line.split(':')[1]?.trim().toLowerCase() || category;
@@ -530,7 +579,6 @@ async function fetchProductsFromTelegram() {
                         else category = catValue;
                     }
                     if (line.includes('الكمية:')) stock = parseInt(line.split(':')[1]?.trim()) || stock;
-                    if (line.includes('المتجر:')) storeName = line.split(':')[1]?.trim() || storeName;
                     if (line.includes('معرف المتجر:')) storeID = line.split(':')[1]?.trim() || storeID;
                     if (line.includes('معرف المنتج:')) productCompositeID = line.split(':')[1]?.trim() || productCompositeID;
                     if (line.includes('الوصف:')) description = line.split(':')[1]?.trim() || description;
@@ -644,6 +692,7 @@ function displayProducts() {
 
     let filtered = products.filter(p => p.stock > 0);
     
+    // تصفية حسب المتجر الحالي (إذا لم يكن المدير)
     if (currentFilter === 'current_store' && currentStore) {
         filtered = filtered.filter(p => p.storeID === currentStore.storeFixedID);
     }
@@ -700,40 +749,30 @@ function displayProducts() {
         const timeAgo = getTimeAgo(product.createdAt);
         const storeID = product.storeID || 'غير محدد';
         const storeIDParts = storeID !== 'غير محدد' ? storeID.split('-') : ['', ''];
-        const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
+	        const productCompositeID = product.productCompositeID || `${storeID}-${product.serialNumber || String(product.id).slice(-3)}`;
 
-        return `
-            <div class="product-card" onclick="viewProductDetails(${product.id})">
-                <div class="product-time-badge">
-                    <i class="far fa-clock"></i> ${timeAgo}
-                </div>
-                
-                <div style="position:absolute; top:15px; left:15px; background:var(--gold); color:black; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; font-family:monospace;">
-                    📦 ${productCompositeID}
-                </div>
-                
-                <div style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.75); padding:5px 10px; border-radius:20px; font-size:11px; font-weight:bold; z-index:10; direction:ltr; display: flex; align-items: center; gap: 4px;">
-                    <i class="fas fa-store" style="font-size: 10px; color: var(--gold);"></i>
-                    <span style="color: var(--gold);">${storeIDParts[0] || '???'}</span>
-                    <span style="color: #888;">-</span>
-                    <span style="color: #aaa; font-family: monospace;">${storeIDParts[1] || '???'}</span>
-                </div>
-                
-                <div class="product-gallery">
-                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
-                </div>
+	        return `
+		            <div class="product-card" onclick="viewProductDetails(${product.id})">
+	                <div class="product-time-badge">
+	                    <i class="far fa-clock"></i> ${timeAgo}
+	                </div>
+	                
+		                <div class="product-name-badge" style="position: absolute; top: 10px; left: 10px; background: rgba(37, 99, 235, 0.9); color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+		                    ${product.name || 'منتج ناردو'}
+		                </div>
 
-                <div class="product-info">
-                    <div class="product-category">
-                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
-                    </div>
-                    
-                    <h3 class="product-title">${product.name}</h3>
-                    
-                    <div class="product-merchant-info">
-                        <i class="fas fa-store"></i> ${product.storeName || product.merchantName || 'متجر ناردو'}
-                    </div>
-                    
+	                <div class="product-gallery">
+	                    <img src="${imageUrl}" style="width: 100%; height: 250px; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300/2c5e4f/ffffff?text=نكهة+وجمال';">
+	                </div>
+
+	                <div class="product-info">
+	                    <div class="product-category">
+	                        <i class="${categoryIcon}"></i> ${getCategoryName(product.category)}
+	                    </div>
+	                    
+		                    <div class="product-merchant-info">
+		                        <i class="fas fa-store"></i> ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'متجر ناردو')}
+		                    </div>
                     <div class="product-rating">
                         <div class="stars-container">
                             ${generateStars(product.rating || 4.5)}
@@ -911,6 +950,7 @@ async function checkoutCart() {
         timestamp: new Date().toISOString()
     };
     
+    // حفظ الطلب في localStorage
     const savedOrders = JSON.parse(localStorage.getItem('nardoo_orders') || '[]');
     savedOrders.unshift(order);
     localStorage.setItem('nardoo_orders', JSON.stringify(savedOrders));
@@ -937,6 +977,7 @@ ${order.items.map(i => `  • ${i.name} x${i.quantity} = ${(i.price * i.quantity
         })
     });
 
+    // تقليل المخزون
     for (const item of cart) {
         const product = products.find(p => p.id == item.productId);
         if (product) {
@@ -971,27 +1012,14 @@ function viewProductDetails(productId) {
 
     content.innerHTML = `
         <div style="background: var(--bg-secondary); border-radius: 20px; padding: 30px;">
-            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${product.name}</h2>
+	            <h2 style="text-align: center; margin-bottom: 20px; color: var(--gold);">${(product.name === product.productCompositeID) ? 'منتج ناردو' : (product.name || 'منتج ناردو')}</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
                 <div>
                     <img src="${imageUrl}" style="width: 100%; height: 300px; object-fit: cover; border-radius: 20px;">
                 </div>
                 <div>
-                    <div style="background: rgba(255,215,0,0.15); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <span style="color: #888;">📦 معرف المنتج:</span>
-                            <span style="color: var(--gold); font-family: monospace; font-weight: bold;">${productCompositeID}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #888;">🆔 معرف المتجر:</span>
-                            <span style="direction: ltr; font-family: monospace;">
-                                <span style="color: var(--gold);">${storeIDParts[0]}</span>
-                                <span style="color: #888;">-</span>
-                                <span style="color: #aaa;">${storeIDParts[1]}</span>
-                            </span>
-                        </div>
-                    </div>
-                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${product.storeName || product.merchantName || 'ناردو برو'}</p>
+
+	                    <p style="color: #888; margin-bottom: 10px;">🏪 المتجر: ${(product.storeName === product.storeID) ? 'متجر ناردو' : (product.storeName || product.merchantName || 'ناردو برو')}</p>
                     <p style="margin-bottom: 20px;">${product.description || 'منتج عالي الجودة'}</p>
                     
                     <div class="product-rating" style="margin-bottom: 20px;">
@@ -1128,23 +1156,7 @@ function showStorePanel() {
                 </div>
             </div>
             
-            <div style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.05)); border-radius: 15px; padding: 20px; margin-bottom: 30px; text-align: center; border: 1px solid var(--gold);">
-                <i class="fas fa-store" style="font-size: 40px; color: var(--gold); margin-bottom: 10px;"></i>
-                <div style="font-size: 14px; color: var(--text-secondary);">معرف المتجر الثابت</div>
-                <div style="font-size: 28px; font-weight: bold; color: var(--gold); letter-spacing: 1px; margin: 10px 0; direction: ltr;">
-                    <span style="color: var(--gold);">${storeIDParts[0]}</span>
-                    <span style="color: #888;">-</span>
-                    <span style="color: #aaa;">${storeIDParts[1] || '???'}</span>
-                </div>
-                <div style="font-size: 12px; color: #888; margin-top: 5px;">
-                    المصدر: ${currentStore.storeIDSource === 'phone' ? 'رقم الهاتف' : 'رقم عشوائي'}
-                </div>
-                <div style="margin-top: 15px;">
-                    <button class="btn-outline-gold" onclick="copyStoreID()" style="padding: 5px 15px; font-size: 12px;">
-                        <i class="fas fa-copy"></i> نسخ المعرف
-                    </button>
-                </div>
-            </div>
+
             
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
                 <div style="text-align: center; background: rgba(255,215,0,0.1); padding: 20px; border-radius: 15px;">
@@ -1281,6 +1293,7 @@ function findProductsByStoreID() {
     
     alert(`🛍️ منتجات المتجر (${storeID}):\n\n${productList}\n\n📊 إجمالي: ${storeProducts.length} منتج`);
     
+    // تصفية وعرض منتجات هذا المتجر فقط
     currentFilter = 'all';
     searchTerm = storeID;
     displayProducts();
@@ -1436,6 +1449,7 @@ function approveStore(id) {
         store.status = 'approved';
         store.approvedAt = new Date().toISOString();
         
+        // إنشاء معرف المتجر الثابت
         const storeID = getOrCreateStoreID(store);
         
         localStorage.setItem('nardoo_stores', JSON.stringify(stores));
@@ -1878,7 +1892,7 @@ async function handleStoreRegister() {
         password: password,
         phone: phone || '',
         role: 'store_owner',
-        storeID: null,
+        storeID: null,  // سيتم إنشاؤه عند الموافقة
         storeName: storeName || `متجر ${name}`,
         isVerified: true,
         createdAt: new Date().toISOString()
@@ -1895,11 +1909,12 @@ async function handleStoreRegister() {
     showNotification('✅ تم إرسال طلب إنشاء المتجر، سيتم التواصل معك قريباً', 'success');
     closeModal('loginModal');
     
+    // إعادة تعيين النموذج
     const registerForm = document.getElementById('registerForm');
     if (registerForm) registerForm.reset();
 }
 
-// ===== [4.47] إضافة زر البحث بالمعرف الثابت للمتجر =====
+// ===== [4.47] إضافة زر البحث بالمعرف الثابت للمتجر (تم إخفاؤه) =====
 function addStoreSearchButton() {
     // تم إخفاء زر البحث بالمعرف من الواجهة بناءً على طلب المستخدم
 }
@@ -1952,18 +1967,19 @@ window.onload = async function() {
         new TypingAnimation(typingElement, ['نكهة وجمال', 'ناردو برو', 'تسوق آمن', 'جودة عالية'], 100, 2000).start();
     }
     
-    setTimeout(() => {
-        const nav = document.getElementById('mainNav');
-        
-        if (nav && !document.getElementById('filterStoreBtn') && currentStore) {
-            const filterBtn = document.createElement('a');
-            filterBtn.className = 'nav-link';
-            filterBtn.id = 'filterStoreBtn';
-            filterBtn.setAttribute('onclick', "filterProducts('current_store')");
-            filterBtn.innerHTML = '<i class="fas fa-store-alt"></i><span>متجري الحالي</span>';
-            nav.appendChild(filterBtn);
-        }
-    }, 1000);
+        setTimeout(() => {
+	        const nav = document.getElementById('mainNav');
+	        
+	        // إضافة زر تصفية حسب المتجر الحالي
+	        if (nav && !document.getElementById('filterStoreBtn') && currentStore) {
+	            const filterBtn = document.createElement('a');
+	            filterBtn.className = 'nav-link';
+	            filterBtn.id = 'filterStoreBtn';
+	            filterBtn.setAttribute('onclick', "filterProducts('current_store')");
+	            filterBtn.innerHTML = '<i class="fas fa-store-alt"></i><span>متجري الحالي</span>';
+	            nav.appendChild(filterBtn);
+	        }
+	    }, 1000);
     
     console.log('✅ النظام جاهز - معرف المتجر = [اسم_المتجر]-[رقم_ثابت]');
     console.log('✅ معرف المنتج = [معرف_المتجر]-[رقم_تسلسلي]');
@@ -2016,3 +2032,4 @@ window.handleStoreRegister = handleStoreRegister;
 console.log('✅ نظام تلغرام المتكامل جاهز - مع ID ثابت لكل متجر (اسم المتجر + رقم ثابت)');
 console.log('✅ صيغة معرف المتجر: [اسم_المتجر]-[رقم_الهاتف أو رقم_عشوائي]');
 console.log('✅ صيغة معرف المنتج: [معرف_المتجر]-[رقم_تسلسلي]');
+
