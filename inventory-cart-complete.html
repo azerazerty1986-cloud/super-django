@@ -149,11 +149,6 @@
         .image-preview { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
         .image-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--gold); }
 
-        .order-card { background: linear-gradient(145deg, rgba(25,25,45,0.9), rgba(15,15,30,0.95)); border: 1px solid rgba(255,215,0,0.15); border-radius: 24px; padding: 20px; margin-bottom: 20px; }
-        .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,215,0,0.15); }
-        .order-customer-info { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 12px; font-size: 13px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 8px; }
-        .order-items { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
-
         .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 24px; font-weight: 600; z-index: 3000; background: rgba(0,0,0,0.9); border: 1px solid; animation: slideIn 0.3s ease; }
         .toast.success { border-color: var(--success); color: var(--success); }
         .toast.error { border-color: var(--error); color: var(--error); }
@@ -657,30 +652,56 @@
         }
     }
 
-    // ========== دالة استخراج البيانات من نص الرسالة ==========
+    // ========== دالة استخراج البيانات من نص الرسالة (متوافقة مع شكل الرسالة الحالي) ==========
     function extractOrderDataFromText(text) {
         try {
+            // أنماط البحث المتوافقة مع شكل الرسالة الجديد
             const patterns = {
-                storeID: /معرف المتجر:\s*`?([^\n`]+)`?/,
-                customerName: /المشتري:\s*([^\n]+)/,
-                customerPhone: /الهاتف:\s*([^\n]+)/,
-                customerAddress: /العنوان:\s*([^\n]+)/,
-                productID: /معرف المنتج:\s*`?([A-Z0-9\u0600-\u06FF]+-\d+-\d+)`?/i,
-                quantity: /الكمية:\s*(\d+)/,
-                total: /إجمالي المتجر:\s*([\d,]+)/,
-                notes: /ملاحظات:\s*([^\n]+)/,
-                orderNumber: /رقم الطلب:\s*(\d+)/,
-                date: /التاريخ:\s*([^\n]+)/
+                // المتجر: يبحث عن "معرف المتجر: `ID`" أو "🆔 *معرف المتجر:* `ID`"
+                storeID: /(?:معرف المتجر:|🆔\s*\*معرف المتجر\*:)\s*`?([^\n`]+)`?/,
+                
+                // المشتري: يبحث عن "المشتري:" أو "👤 *الزبون:*"
+                customerName: /(?:(?:المشتري|الزبون):|👤\s*\*الزبون\*:)\s*([^\n]+)/,
+                
+                // الهاتف: يبحث عن "الهاتف:" أو "📞 *رقم الجوال:*"
+                customerPhone: /(?:(?:الهاتف|رقم الجوال):|📞\s*\*رقم الجوال\*:)\s*([^\n]+)/,
+                
+                // العنوان: يبحث عن "العنوان:" أو "📍 *العنوان:*"
+                customerAddress: /(?:(?:العنوان):|📍\s*\*العنوان\*:)\s*([^\n]+)/,
+                
+                // معرف المنتج: يبحث عن "معرف المنتج: `ID`" أو "🆔 معرف المنتج: `ID`"
+                productID: /(?:معرف المنتج:|🆔\s*معرف المنتج:)\s*`?([A-Z0-9\u0600-\u06FF\s-]+-\d+-\d+)`?/i,
+                
+                // الكمية: يبحث عن "الكمية:" أو "📦 الكمية:"
+                quantity: /(?:الكمية:|📦\s*الكمية:)\s*(\d+)/,
+                
+                // الإجمالي: يبحث عن "إجمالي المتجر:" أو "💰 *إجمالي الطلب:*"
+                total: /(?:(?:إجمالي المتجر|إجمالي الطلب):|💰\s*\*إجمالي الطلب\*:)\s*([\d,]+)/,
+                
+                // الملاحظات
+                notes: /(?:ملاحظات:|📝\s*\*ملاحظات\*:)\s*([^\n]+)/,
+                
+                // رقم الطلب: يبحث عن "رقم الطلب:" أو "🆔 *رقم الطلب الموحد:*"
+                orderNumber: /(?:(?:رقم الطلب|رقم الطلب الموحد):|🆔\s*\*رقم الطلب الموحد\*:)\s*(\d+)/,
+                
+                // التاريخ: يبحث عن "التاريخ:" أو "📅 *التاريخ:*"
+                date: /(?:(?:التاريخ):|📅\s*\*التاريخ\*:)\s*([^\n]+)/
             };
             
+            // استخراج البيانات الأساسية
             const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
-            const customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim();
-            const customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
-            const customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
+            let customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim();
+            let customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
+            let customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
             const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
             const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
             const total = parseInt((text.match(patterns.total)?.[1] || '0').replace(/,/g, ''));
             const notes = (text.match(patterns.notes)?.[1] || '').trim();
+
+            // تنظيف الأسماء من الرموز
+            customerName = customerName.replace(/[*_]/g, '').trim();
+            customerPhone = customerPhone.replace(/[*_]/g, '').trim();
+            customerAddress = customerAddress.replace(/[*_]/g, '').trim();
 
             const items = [];
             const lines = text.split('\n');
@@ -688,21 +709,41 @@
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (/^\d+\s*•/.test(line)) {
-                    currentItem = { name: line.split('•')[1].trim() };
+                
+                // الكشف عن بداية منتج جديد (صيغة "1️⃣ اسم المنتج" أو "1. المنتج: اسم")
+                const productStartMatch = line.match(/^(\d+)[️⃣\.]\s*(?:المنتج:\s*)?(.*?)$/);
+                if (productStartMatch) {
+                    currentItem = { name: productStartMatch[2].trim() };
+                    // تنظيف الاسم من الرموز
+                    currentItem.name = currentItem.name.replace(/[*_]/g, '').trim();
+                    continue;
                 }
+                
+                // إذا كان هناك منتج قيد المعالجة
                 if (currentItem) {
-                    const idMatch = line.match(/معرف المنتج:\s*`?([^\n`]+)`?/);
-                    if (idMatch) currentItem.productID = idMatch[1].trim();
-                    const qtyMatch = line.match(/الكمية:\s*(\d+)/);
+                    // البحث عن معرف المنتج
+                    const idMatch = line.match(patterns.productID);
+                    if (idMatch) {
+                        currentItem.productID = idMatch[1].trim();
+                    }
+                    
+                    // البحث عن الكمية
+                    const qtyMatch = line.match(patterns.quantity);
                     if (qtyMatch) {
                         currentItem.quantity = parseInt(qtyMatch[1]);
-                        items.push({...currentItem});
+                        items.push({ ...currentItem });
                         currentItem = null;
+                    }
+                    
+                    // البحث عن السعر (اختياري)
+                    const priceMatch = line.match(/السعر:\s*([\d,]+)/);
+                    if (priceMatch && currentItem) {
+                        currentItem.price = parseInt(priceMatch[1].replace(/,/g, ''));
                     }
                 }
             }
 
+            // إذا لم يتم العثور على منتجات بالطريقة أعلاه، حاول البحث المباشر
             if (items.length === 0) {
                 const productID = (text.match(patterns.productID)?.[1] || '').trim();
                 const quantity = parseInt(text.match(patterns.quantity)?.[1] || '1');
@@ -1057,7 +1098,7 @@
                     <tr style="font-weight:bold; background:#f0f0f0;">
                         <td colspan="4" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
                         <td style="border:1px solid #000; padding:10px; text-align:center;">${order.total.toLocaleString()} دج</td>
-                    </tr>
+                    <tr>
                 </tfoot>
             </table>
             <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">
@@ -1360,7 +1401,6 @@
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
         
-        // تخزين بيانات الطلب للتوصيل
         const deliveryData = {
             orderId: order.id,
             telegramOrderId: order.telegramOrderId,
@@ -1403,10 +1443,7 @@
         renderAll();
         document.getElementById('searchProducts')?.addEventListener('input', renderProducts);
         
-        // جلب الطلبات تلقائياً عند فتح الصفحة
         setTimeout(fetchOrdersFromTelegram, 2000);
-        
-        // جلب الطلبات دورياً كل دقيقتين
         setInterval(fetchOrdersFromTelegram, 120000);
     });
 </script>
