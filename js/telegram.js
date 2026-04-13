@@ -357,49 +357,9 @@ function generateProductCompositeID(storeID, serialNumber) {
     return `${storeID}-${serialNumber}`;
 }
 
-// ===== [4.14] إضافة منتج إلى تلغرام =====
-async function addProductToTelegram(product, imageFile) {
-    try {
-        console.log('📤 جاري إرسال المنتج إلى تلغرام:', product);
-        
-        const formData = new FormData();
-        formData.append('chat_id', TELEGRAM.channelId);
-        formData.append('photo', imageFile);
-        formData.append('caption', `🟣 *منتج جديد في ${product.storeName}*
-━━━━━━━━━━━━━━━━━━━━━━
-📦 *المنتج:* ${product.name}
-💰 *السعر:* ${product.price.toLocaleString()} دج
-🏷️ *القسم:* ${getCategoryName(product.category)}
-📊 *الكمية:* ${product.stock}
-🏪 *المتجر:* ${product.storeName}
-🆔 *معرف المتجر:* \`${product.storeID}\`
-🔢 *معرف المنتج:* \`${product.productCompositeID}\`
-📝 *الوصف:* ${product.description || 'منتج ممتاز'}
-📅 ${new Date().toLocaleString('ar-EG')}
 
-✅ للطلب: تواصل مع المتجر مباشرة`);
 
-        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendPhoto`, {
-            method: 'POST',
-            body: formData
-        });
 
-        const data = await response.json();
-        console.log('📥 رد تلغرام:', data);
-        
-        if (data.ok) {
-            const messageId = data.result.message_id;
-            showNotification(`✅ تم الإرسال - المعرف: ${messageId}`, 'success');
-            return { success: true, messageId: messageId, telegramId: messageId };
-        }
-        showNotification('❌ فشل الإرسال: ' + data.description, 'error');
-        return { success: false, error: data.description };
-    } catch (error) {
-        console.error('❌ خطأ:', error);
-        showNotification('❌ خطأ في الاتصال', 'error');
-        return { success: false, error: error.message };
-    }
-}
 
 // ===== [4.15] دالة حفظ المنتج =====
 async function saveProduct() {
