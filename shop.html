@@ -24,7 +24,6 @@
             --info: #60a5fa;
         }
         
-        /* ألوان التجار */
         .merchant-color-0 { border-right: 5px solid #ff6b6b; }
         .merchant-color-1 { border-right: 5px solid #4ecdc4; }
         .merchant-color-2 { border-right: 5px solid #45b7d1; }
@@ -44,7 +43,6 @@
         }
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         
-        /* الهيدر */
         .header {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
@@ -73,7 +71,6 @@
         }
         .info-item:hover { background: rgba(255, 215, 0, 0.2); }
         
-        /* أزرار */
         .btn {
             padding: 12px 25px;
             border: none;
@@ -92,14 +89,12 @@
         .btn-danger { background: rgba(248, 113, 113, 0.2); border: 1px solid var(--error); color: var(--error); }
         .btn-danger:hover { background: var(--error); color: white; }
         
-        /* أقسام التجار */
         .merchant-section {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
             border-radius: 20px;
             margin-bottom: 25px;
             overflow: hidden;
-            transition: all 0.3s;
         }
         .merchant-header {
             background: rgba(255, 215, 0, 0.1);
@@ -130,7 +125,7 @@
         .merchant-toggle { font-size: 20px; transition: transform 0.3s; }
         .merchant-toggle.collapsed { transform: rotate(-90deg); }
         
-        .merchant-products { padding: 20px; transition: all 0.3s; }
+        .merchant-products { padding: 20px; }
         .merchant-products.collapsed { display: none; }
         
         .cart-item {
@@ -202,7 +197,6 @@
         .cart-actions { display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
         .cart-actions .btn { flex: 1; }
         
-        /* مودال */
         .modal {
             display: none;
             position: fixed;
@@ -328,86 +322,87 @@
         function clearCart() { if(cart.length===0) showNotification('السلة فارغة','warning'); else if(confirm('مسح السلة؟')){ cart=[]; saveCart(); updateCartDisplay(); showNotification('✓ تم مسح السلة'); } }
         function groupByStore(items) { const g={}; items.forEach(item=>{ const sid=item.storeID||'unknown-store'; const sname=item.storeName||'ناردو برو'; if(!g[sid]) g[sid]={storeID:sid,storeName:sname,items:[],total:0,count:0}; g[sid].items.push(item); g[sid].total+=item.price*item.quantity; g[sid].count+=item.quantity; }); return g; }
 
-        // توليد جدول HTML جميل للمنتجات (يظهر في تلغرام بشكل منسق)
-        function generateProductTable(items) {
-            let table = "┌───────────────┬──────────┬──────────┬────────────┐\n";
-            table += "│ المنتج        │ الكمية   │ السعر    │ المجموع    │\n";
-            table += "├───────────────┼──────────┼──────────┼────────────┤\n";
-            items.forEach(item => {
-                const name = item.name.length > 13 ? item.name.slice(0,10)+'..' : item.name;
-                const qty = item.quantity.toString().padStart(6);
-                const price = item.price.toLocaleString().padStart(8);
-                const total = (item.price*item.quantity).toLocaleString().padStart(10);
-                table += `│ ${name.padEnd(13)} │ ${qty} │ ${price} │ ${total} │\n`;
-            });
-            table += "└───────────────┴──────────┴──────────┴────────────┘";
-            return table;
+        // ========== إنشاء رسالة تلغرام بشكل عمودي (كل عنصر تحت الآخر) ==========
+        function formatProductVertical(item) {
+            let productMsg = "";
+            productMsg += `🛒 ${item.name}\n`;
+            productMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
+            productMsg += `   📦 الكمية: ${item.quantity}\n`;
+            productMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
+            productMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+            if(item.image) {
+                productMsg += `   🖼️ [صورة المنتج](${item.image})\n`;
+            }
+            return productMsg;
         }
 
-        // إنشاء رسالة القناة بجدول وصورة مصغرة (نصية مع رابط الصورة)
         async function sendOrderToTelegram(customerData, groupedStores, grandTotal) {
             const timestamp = new Date().toLocaleString('ar-EG');
             const orderId = Math.floor(Math.random() * 1000000);
             try {
-                // رسالة رئيسية للقناة تحتوي على جدول إجمالي
+                // ===== الرسالة الرئيسية للقناة =====
                 let channelMsg = `🟢 *طلب جديد #${orderId}* 🟢\n`;
                 channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                channelMsg += `👤 *المشتري:* ${customerData.name}\n📞 *الهاتف:* ${customerData.phone}\n📍 *العنوان:* ${customerData.address}\n`;
+                channelMsg += `👤 *المشتري:* ${customerData.name}\n`;
+                channelMsg += `📞 *الهاتف:* ${customerData.phone}\n`;
+                channelMsg += `📍 *العنوان:* ${customerData.address}\n`;
                 if(customerData.notes) channelMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
-                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
                 
                 for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                    channelMsg += `\n🏪 *${storeData.storeName}* | معرف: \`${storeID}\`\n`;
-                    // جدول المنتجات لهذا المتجر
-                    let tbl = "┌───────────────┬──────────┬──────────┬────────────┐\n";
-                    tbl += "│ المنتج        │ الكمية   │ السعر    │ المجموع    │\n";
-                    tbl += "├───────────────┼──────────┼──────────┼────────────┤\n";
-                    storeData.items.forEach(it => {
-                        const pname = it.name.length>13?it.name.slice(0,10)+'..':it.name;
-                        const qty = it.quantity.toString().padStart(6);
-                        const price = it.price.toLocaleString().padStart(8);
-                        const total = (it.price*it.quantity).toLocaleString().padStart(10);
-                        tbl += `│ ${pname.padEnd(13)} │ ${qty} │ ${price} │ ${total} │\n`;
-                    });
-                    tbl += "└───────────────┴──────────┴──────────┴────────────┘";
-                    channelMsg += `\`\`\`\n${tbl}\n\`\`\`\n`;
-                    channelMsg += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
-                    // إضافة صورة مصغرة لكل منتج (أول منتج كمثال) لعرض صغيرة
-                    if(storeData.items[0] && storeData.items[0].image){
-                        channelMsg += `🖼️ [صورة نموذجية](${storeData.items[0].image})\n`;
-                    }
+                    channelMsg += `🏪 *${storeData.storeName}*\n`;
+                    channelMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
                     channelMsg += `───────────────────────────────\n`;
+                    
+                    storeData.items.forEach(item => {
+                        channelMsg += formatProductVertical(item);
+                        channelMsg += `───────────────────────────────\n`;
+                    });
+                    
+                    channelMsg += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
+                    channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                 }
-                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                channelMsg += `💰 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n📅 *التاريخ:* ${timestamp}\n✅ تم استلام الطلب بنجاح`;
+                
+                channelMsg += `💎 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n`;
+                channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
+                channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
                 
                 await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({chat_id:TELEGRAM.channelId, text:channelMsg, parse_mode:'Markdown', disable_web_page_preview:false})
                 });
                 
-                // إرسال لكل متجر رسالة مفصلة بجدول وصور
+                // ===== إرسال رسالة منفصلة لكل متجر =====
                 for (const [storeID, storeData] of Object.entries(groupedStores)) {
                     let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
                     merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `👤 *الزبون:* ${customerData.name}\n📞 *رقم الجوال:* ${customerData.phone}\n📍 *العنوان:* ${customerData.address}\n🆔 *معرف المتجر:* \`${storeID}\`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
+                    merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
+                    merchantMsg += `📍 *العنوان:* ${customerData.address}\n`;
+                    merchantMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
+                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
+                    merchantMsg += `───────────────────────────────\n`;
                     
-                    let productTable = "┌───────────────┬──────────┬──────────┬────────────┐\n│ المنتج        │ الكمية   │ السعر    │ المجموع    │\n├───────────────┼──────────┼──────────┼────────────┤\n";
-                    storeData.items.forEach(it => {
-                        const nameTrim = it.name.length>13?it.name.slice(0,10)+'..':it.name;
-                        productTable += `│ ${nameTrim.padEnd(13)} │ ${it.quantity.toString().padStart(6)} │ ${it.price.toLocaleString().padStart(8)} │ ${(it.price*it.quantity).toLocaleString().padStart(10)} │\n`;
-                        // إضافة صورة لكل منتج بشكل منفصل (صورة صغيرة عبر رابط)
-                        if(it.image){
-                            merchantMsg += `🖼️ *${it.name}* : [📷 مشاهدة الصورة](${it.image})\n`;
+                    storeData.items.forEach((item, idx) => {
+                        merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
+                        merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
+                        merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
+                        merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
+                        merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                        if(item.image) {
+                            merchantMsg += `   🖼️ [صورة المنتج](${item.image})\n`;
                         }
+                        merchantMsg += `───────────────────────────────\n`;
                     });
-                    productTable += "└───────────────┴──────────┴──────────┴────────────┘";
-                    merchantMsg += `\`\`\`\n${productTable}\n\`\`\`\n`;
+                    
                     merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
-                    merchantMsg += `🆔 *رقم الطلب الموحد:* ${orderId}\n📅 *التاريخ:* ${timestamp}\n`;
+                    merchantMsg += `🆔 *رقم الطلب الموحد:* ${orderId}\n`;
+                    merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
                     if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ *حالة الطلب:* قيد المراجعة\n🔗 *ناردو برو*`;
+                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
+                    merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
                     
                     await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                         method:'POST', headers:{'Content-Type':'application/json'},
@@ -440,12 +435,13 @@
             let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
             const idx = orders.findIndex(o=>o.id===orderId);
             if(idx!==-1){ orders[idx].status=newStatus; localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); 
-                const msg = `🔄 تحديث حالة الطلب #${orders[idx].originalOrderId}\nالمتجر: ${orders[idx].storeName}\nالحالة: ${newStatus==='received'?'📦 وصل للتاجر':'✅ تم تعيين الموزع'}`;
+                let statusText = newStatus==='received'?'📦 وصل المنتج إلى التاجر':'✅ تم تعيين الموزع لتوصيل الطلب';
+                const msg = `🔄 *تحديث حالة الطلب*\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم الطلب: #${orders[idx].originalOrderId}\n🏪 المتجر: ${orders[idx].storeName}\n👤 المشتري: ${orders[idx].customerName}\n📌 الحالة الجديدة: ${statusText}\n📅 التاريخ: ${new Date().toLocaleString('ar-EG')}\n━━━━━━━━━━━━━━━━━━━━━━`;
                 await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({chat_id:TELEGRAM.channelId, text:msg, parse_mode:'Markdown'}) });
-                renderOrdersArchive(); showNotification('تم تحديث الحالة'); 
+                renderOrdersArchive(); showNotification('تم تحديث حالة الطلب'); 
             }
         }
-        function deleteOrderArchive(orderId) { let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]'); orders=orders.filter(o=>o.id!==orderId); localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); renderOrdersArchive(); showNotification('تم الحذف'); }
+        function deleteOrderArchive(orderId) { let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]'); orders=orders.filter(o=>o.id!==orderId); localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); renderOrdersArchive(); showNotification('تم حذف الطلب'); }
         
         let pendingGroupedStores=null, pendingGrandTotal=null;
         function openCustomerModal() { if(cart.length===0){ showNotification('السلة فارغة','warning'); return; } pendingGroupedStores=groupByStore(cart); pendingGrandTotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0); document.getElementById('customerModal').style.display='flex'; }
@@ -468,9 +464,9 @@
             for(const [sid, sd] of Object.entries(grouped)){ grandTotal+=sd.total; grandCount+=sd.count; const isCollapsed=storesState[sid]===true; const colorClass=getStoreColor(sid);
                 let itemsHtml='';
                 sd.items.forEach(it=>{ const thumbnailHtml=it.image?`<img src="${it.image}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">`:'<i class="fas fa-box"></i>';
-                    itemsHtml+=`<div class="cart-item"><div class="product-thumbnail">${thumbnailHtml}</div><div class="product-details"><div class="product-name">${it.name}</div><div class="product-price">${it.price.toLocaleString()} دج</div></div><div class="cart-item-quantity"><button onclick="updateCartQuantity(${it.id},-1)">−</button><span>${it.quantity}</span><button onclick="updateCartQuantity(${it.id},1)">+</button></div><div class="cart-item-total">${(it.price*it.quantity).toLocaleString()} دج</div><button class="cart-item-remove" onclick="removeFromCart(${it.id})"><i class="fas fa-trash-alt"></i> حذف</button></div>`;
+                    itemsHtml+=`<div class="cart-item"><div class="product-thumbnail">${thumbnailHtml}</div><div class="product-details"><div class="product-name">${it.name}</div><div class="product-price">${it.price.toLocaleString()} دج</div><div class="product-id" style="font-size:11px; color:var(--text-secondary);">🆔 ${it.productCompositeID || it.id || '---'}</div></div><div class="cart-item-quantity"><button onclick="updateCartQuantity(${it.id},-1)">−</button><span>${it.quantity}</span><button onclick="updateCartQuantity(${it.id},1)">+</button></div><div class="cart-item-total">${(it.price*it.quantity).toLocaleString()} دج</div><button class="cart-item-remove" onclick="removeFromCart(${it.id})"><i class="fas fa-trash-alt"></i> حذف</button></div>`;
                 });
-                storesHtml+=`<div class="merchant-section ${colorClass}"><div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g,"\\'")}')"><div class="merchant-info"><div class="merchant-avatar"><i class="fas fa-store"></i></div><div><div class="merchant-name">${sd.storeName}</div><div class="merchant-id">${sid}</div><div class="merchant-stats"><span>📦 ${sd.count}</span><span>💰 ${sd.total.toLocaleString()} دج</span></div></div></div><div class="merchant-toggle ${isCollapsed?'collapsed':''}"><i class="fas fa-chevron-down"></i></div></div><div class="merchant-products ${isCollapsed?'collapsed':''}">${itemsHtml}</div></div>`;
+                storesHtml+=`<div class="merchant-section ${colorClass}"><div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g,"\\'")}')"><div class="merchant-info"><div class="merchant-avatar"><i class="fas fa-store"></i></div><div><div class="merchant-name">${sd.storeName}</div><div class="merchant-id">🆔 ${sid}</div><div class="merchant-stats"><span>📦 ${sd.count}</span><span>💰 ${sd.total.toLocaleString()} دج</span></div></div></div><div class="merchant-toggle ${isCollapsed?'collapsed':''}"><i class="fas fa-chevron-down"></i></div></div><div class="merchant-products ${isCollapsed?'collapsed':''}">${itemsHtml}</div></div>`;
             }
             container.innerHTML=storesHtml+`<div class="cart-summary"><div class="summary-row"><span class="summary-label">عدد العناصر:</span><span class="summary-value">${grandCount}</span></div><div class="summary-row"><span class="summary-label">عدد المتاجر:</span><span class="summary-value">${Object.keys(grouped).length}</span></div><div class="summary-row"><span class="summary-label">الإجمالي النهائي:</span><span class="summary-value summary-total">${grandTotal.toLocaleString()} دج</span></div><div class="cart-actions"><button class="btn btn-success" onclick="openCustomerModal()">إتمام الطلب</button><button class="btn btn-outline" onclick="clearCart()">إفراغ السلة</button></div></div>`;
         }
