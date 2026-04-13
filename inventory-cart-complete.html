@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -167,6 +166,17 @@
             color: white;
             margin-right: auto;
         }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,215,0,0.3);
+            border-radius: 50%;
+            border-top-color: var(--gold);
+            animation: spin 0.8s ease infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 768px) {
             .top-navbar { flex-direction: column; }
@@ -355,19 +365,16 @@
             }
         },
         autoCleanup: function() {
-            // حذف أقدم الطلبات لتوفير مساحة (الاحتفاظ بآخر 100 طلب)
             let allOrders = this.get('nardo_orders');
             if (allOrders.length > 100) {
                 allOrders = allOrders.slice(0, 100);
                 localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
             }
-            // حذف سجل الحركات القديم (الاحتفاظ بآخر 100 حركة)
             let logs = this.get('nardo_stock_log');
             if (logs.length > 100) {
                 logs = logs.slice(-100);
                 localStorage.setItem('nardo_stock_log', JSON.stringify(logs));
             }
-            // تنظيف معرفات الرسائل المعالجة (الاحتفاظ بآخر 300)
             let processedIds = this.get('nardo_processed_telegram_ids');
             if (processedIds.length > 300) {
                 processedIds = processedIds.slice(-300);
@@ -471,6 +478,13 @@
 
     // ========== جلب المنتجات من التلغرام ==========
     async function fetchProductsFromTelegram() {
+        const btn = event?.target;
+        const originalText = btn?.innerHTML;
+        if (btn) {
+            btn.innerHTML = '<span class="loading-spinner"></span> جاري الجلب...';
+            btn.disabled = true;
+        }
+        
         try {
             showToast('جاري الجلب من القناة...', 'info');
             const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
@@ -522,28 +536,38 @@
         } catch(e) {
             console.error(e);
             showToast('فشل الاتصال بالقناة', 'error');
+        } finally {
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     }
 
     // ========== دوال التلغرام لجلب الطلبات ==========
     async function fetchOrdersFromTelegram() {
+        const btn = document.getElementById('fetchOrdersBtn');
+        const originalText = btn?.innerHTML;
+        if (btn) {
+            btn.innerHTML = '<span class="loading-spinner"></span> جاري الجلب...';
+            btn.disabled = true;
+        }
+        
         try {
             showToast('📡 جاري جلب الطلبات من التلغرام...', 'info');
             
-            // زيادة الحد لضمان جلب المزيد من التحديثات
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100&offset=-100`);
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
             const data = await response.json();
             
             if (!data.ok) throw new Error('فشل الاتصال بـ Telegram API');
             
             let newOrdersCount = 0;
-            let processedIds = JSON.parse(localStorage.getItem('nardo_processed_telegram_ids') || '[]');
+            let processedIds = safeLocalStorage.get('nardo_processed_telegram_ids');
             
-            // التأكد من وجود المصفوفة orders
             if (!Array.isArray(orders)) orders = [];
 
             for (const update of data.result || []) {
-                const post = update.channel_post || update.message || update.edited_channel_post || update.edited_message;
+                const post = update.channel_post || update.message;
                 if (!post || !post.text) continue;
                 
                 const uniqueId = post.message_id;
@@ -579,9 +603,7 @@
                         
                         const oldQty = product.quantity;
                         product.quantity = Math.max(0, product.quantity - item.quantity);
-                        if (typeof addStockLog === 'function') {
-                            addStockLog(product.id, product.name, 'remove', item.quantity, oldQty, product.quantity, `طلب تلغرام #${orderData.orderNumber}`, product.storeID);
-                        }
+                        addStockLog(product.id, product.name, 'remove', item.quantity, oldQty, product.quantity, `طلب تلغرام #${orderData.orderNumber}`, product.storeID);
                     }
                 }
 
@@ -612,12 +634,10 @@
                 newOrdersCount++;
             }
             
-            // حفظ البيانات بشكل آمن
             safeLocalStorage.set('nardo_orders', orders);
             safeLocalStorage.set('nardo_products', products);
             safeLocalStorage.set('nardo_processed_telegram_ids', processedIds);
             
-            // تحديث الواجهة
             renderAll();
             
             if (newOrdersCount > 0) {
@@ -629,6 +649,11 @@
         } catch (error) {
             console.error('خطأ في جلب الطلبات:', error);
             showToast('❌ فشل جلب الطلبات: ' + error.message, 'error');
+        } finally {
+            if (btn) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     }
 
@@ -689,7 +714,6 @@
             console.error("خطأ في تحليل نص الرسالة:", e);
             return null;
         }
-    }
     }
 
     function saveProductOnly() {
@@ -794,7 +818,7 @@
                 product.published = true;
                 product.telegramId = result.messageId;
                 product.publishedAt = new Date().toISOString();
-                localStorage.setItem('nardo_products', JSON.stringify(products));
+                safeLocalStorage.set('nardo_products', products);
                 renderAll();
                 showToast(`✅ تم نشر ${product.name} إلى القناة`, 'success');
             }
@@ -815,7 +839,7 @@
     function deleteProduct(id) {
         if (confirm('هل أنت متأكد من الحذف؟')) {
             products = products.filter(p => p.id !== id);
-            localStorage.setItem('nardo_products', JSON.stringify(products));
+            safeLocalStorage.set('nardo_products', products);
             renderAll();
             showToast('تم الحذف', 'success');
         }
@@ -836,7 +860,7 @@
             date: new Date().toLocaleString('ar-EG')
         });
         if (stockLog.length > 500) stockLog = stockLog.slice(0, 500);
-        localStorage.setItem('nardo_stock_log', JSON.stringify(stockLog));
+        safeLocalStorage.set('nardo_stock_log', stockLog);
     }
 
     function openEditStockModal(id) {
@@ -882,7 +906,7 @@
             showToast(`📝 تم التعيين`, 'success');
         }
         p.quantity = newQ;
-        localStorage.setItem('nardo_products', JSON.stringify(products));
+        safeLocalStorage.set('nardo_products', products);
         renderAll();
         closeEditStockModal();
     }
@@ -890,7 +914,7 @@
     function clearStockLog() {
         if (confirm('مسح سجل المخزون؟')) {
             stockLog = [];
-            localStorage.setItem('nardo_stock_log', '[]');
+            safeLocalStorage.set('nardo_stock_log', []);
             renderStockLog();
             showToast('تم المسح', 'success');
         }
@@ -920,8 +944,8 @@
         };
         orders.unshift(newOrder);
         p.quantity -= qtyInt;
-        localStorage.setItem('nardo_orders', JSON.stringify(orders));
-        localStorage.setItem('nardo_products', JSON.stringify(products));
+        safeLocalStorage.set('nardo_orders', orders);
+        safeLocalStorage.set('nardo_products', products);
         addStockLog(p.id, p.name, 'remove', qtyInt, p.quantity + qtyInt, p.quantity, 'طلب مباشر', p.storeID);
         renderAll();
         showToast(`✅ تم إنشاء الطلب #${newOrder.id}`, 'success');
@@ -930,7 +954,7 @@
     function deleteOrder(orderId) {
         if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
             orders = orders.filter(o => o.id !== orderId);
-            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            safeLocalStorage.set('nardo_orders', orders);
             renderOrders();
             updateStats();
             showToast('تم حذف الطلب', 'success');
@@ -941,7 +965,7 @@
         const order = orders.find(o => o.id === orderId);
         if (order) {
             order.status = order.status === 'delivered' ? 'pending' : 'delivered';
-            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            safeLocalStorage.set('nardo_orders', orders);
             renderOrders();
             showToast(order.status === 'delivered' ? '✅ تم تسليم الطلب' : '🔄 تم إعادة الطلب إلى قيد المعالجة', 'success');
         }
@@ -971,22 +995,9 @@
 
         let productImage = null;
         const firstItem = order.items[0];
-        if (firstItem && firstItem.image) {
+        if (firstItem && firstItem.image && !firstItem.image.startsWith('data:')) {
             try {
-                const img = new Image();
-                img.crossOrigin = "Anonymous";
-                productImage = await new Promise((resolve, reject) => {
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
-                    };
-                    img.onerror = reject;
-                    img.src = firstItem.image;
-                });
+                productImage = await loadImageAsDataURL(firstItem.image);
             } catch (e) {
                 console.warn('لا يمكن تحميل الصورة:', e);
             }
@@ -1080,6 +1091,23 @@
         }
     }
 
+    function loadImageAsDataURL(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
     // ========== دالة عرض الطلبات المحدثة مع صورة المنتج ==========
     function renderOrders() {
         const tbody = document.getElementById('ordersTableBody');
@@ -1100,13 +1128,12 @@
         } else {
             tbody.innerHTML = filteredOrders.map(order => {
                 const firstItem = order.items[0];
-                // محاولة جلب الصورة من المنتج إذا لم تكن موجودة في الطلب
                 let productImage = firstItem?.image;
                 if (!productImage) {
                     const p = products.find(prod => prod.productCompositeID === firstItem?.productCompositeID);
                     productImage = p?.images?.[0] || '';
                 }
-                const imageHtml = productImage 
+                const imageHtml = productImage && !productImage.startsWith('data:')
                     ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--gold);" onerror="this.src='https://via.placeholder.com/40/ffd700/000000?text=?'">`
                     : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
                 
@@ -1318,15 +1345,18 @@
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
         
-        localStorage.setItem('nardo_pending_delivery', JSON.stringify({
+        // تخزين بيانات الطلب للتوصيل
+        const deliveryData = {
             orderId: order.id,
+            telegramOrderId: order.telegramOrderId,
             customer: order.customerName,
             phone: order.customerPhone,
             address: order.customerAddress || '',
             amount: order.total,
             items: order.items.map(it => `${it.name} (${it.quantity})`).join(', ')
-        }));
+        };
         
+        localStorage.setItem('nardo_pending_delivery', JSON.stringify(deliveryData));
         openDeliveryPage();
     }
 
@@ -1361,10 +1391,9 @@
         // جلب الطلبات تلقائياً عند فتح الصفحة
         setTimeout(fetchOrdersFromTelegram, 2000);
         
-        // جلب الطلبات دورياً كل 2 دقيقة
+        // جلب الطلبات دورياً كل دقيقتين
         setInterval(fetchOrdersFromTelegram, 120000);
     });
 </script>
 </body>
 </html>
-
