@@ -1,7 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي - متكامل</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -562,29 +559,52 @@
                 const uniqueId = post.message_id;
                 if (processedIds.includes(uniqueId)) continue;
                 const orderData = extractOrderDataFromText(post.text);
-                if (!orderData || !orderData.productID) { processedIds.push(uniqueId); continue; }
-                const product = products.find(p => p.productCompositeID === orderData.productID);
-                if (!product || product.storeID !== currentStore.storeFixedID) { processedIds.push(uniqueId); continue; }
+                if (!orderData || !orderData.items || orderData.items.length === 0) { processedIds.push(uniqueId); continue; }
                 if (orders.find(o => o.telegramOrderId === orderData.orderNumber)) { processedIds.push(uniqueId); continue; }
+
+                const orderItems = [];
+                let orderTotal = 0;
+
+                for (const item of orderData.items) {
+                    const product = products.find(p => p.productCompositeID === item.productID);
+                    if (product && product.storeID === currentStore.storeFixedID) {
+                        orderItems.push({
+                            id: product.id,
+                            productCompositeID: product.productCompositeID,
+                            name: product.name,
+                            price: product.price,
+                            quantity: item.quantity,
+                            image: product.images?.[0] || ''
+                        });
+                        orderTotal += (product.price * item.quantity);
+                        
+                        // تحديث المخزون لكل منتج
+                        const oldQty = product.quantity;
+                        product.quantity = Math.max(0, product.quantity - item.quantity);
+                        addStockLog(product.id, product.name, 'remove', item.quantity, oldQty, product.quantity, `طلب تلغرام #${orderData.orderNumber}`, product.storeID);
+                    }
+                }
+
+                if (orderItems.length === 0) { processedIds.push(uniqueId); continue; }
+
                 const newOrder = {
-                    id: Date.now() + Math.random(), telegramOrderId: orderData.orderNumber, telegramMessageId: uniqueId,
-                    date: orderData.date || new Date().toLocaleString('ar-EG'), customerName: orderData.customerName,
-                    customerPhone: orderData.customerPhone, customerAddress: orderData.customerAddress, customerNotes: orderData.notes || '',
-                    storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
-                    items: [{ 
-                        id: product.id, 
-                        productCompositeID: product.productCompositeID, 
-                        name: product.name, 
-                        price: product.price, 
-                        quantity: orderData.quantity, 
-                        image: product.images?.[0] || '' 
-                    }],
-                    total: orderData.total || (product.price * orderData.quantity), status: 'pending', source: 'telegram'
+                    id: Date.now() + Math.random(), 
+                    telegramOrderId: orderData.orderNumber, 
+                    telegramMessageId: uniqueId,
+                    date: orderData.date || new Date().toLocaleString('ar-EG'), 
+                    customerName: orderData.customerName,
+                    customerPhone: orderData.customerPhone, 
+                    customerAddress: orderData.customerAddress, 
+                    customerNotes: orderData.notes || '',
+                    storeID: currentStore.storeFixedID, 
+                    storeName: currentStore.storeName,
+                    items: orderItems,
+                    total: orderData.total || orderTotal, 
+                    status: 'pending', 
+                    source: 'telegram'
                 };
+
                 orders.unshift(newOrder);
-                const oldQty = product.quantity;
-                product.quantity = Math.max(0, product.quantity - orderData.quantity);
-                addStockLog(product.id, product.name, 'remove', orderData.quantity, oldQty, product.quantity, `طلب تلغرام #${orderData.orderNumber}`, product.storeID);
                 processedIds.push(uniqueId);
                 newOrdersCount++;
             }
@@ -598,22 +618,66 @@
 
     function extractOrderDataFromText(text) {
         try {
-            const patterns = { storeID: /معرف المتجر:\s*([^\n]+)/, customerName: /المشتري:\s*([^\n]+)/, customerPhone: /الهاتف:\s*([^\n]+)/, customerAddress: /العنوان:\s*([^\n]+)/, productID: /([A-Z0-9\u0600-\u06FF]+-\d+-\d+)/i, quantity: /الكمية:\s*(\d+)/, total: /إجمالي المتجر:\s*([\d,]+)/, orderNumber: /رقم الطلب:\s*(\d+)/, date: /التاريخ:\s*([^\n]+)/ };
+            const patterns = { 
+                storeID: /معرف المتجر:\s*`?([^\n`]+)`?/, 
+                customerName: /المشتري:\s*([^\n]+)/, 
+                customerPhone: /الهاتف:\s*([^\n]+)/, 
+                customerAddress: /العنوان:\s*([^\n]+)/, 
+                productID: /معرف المنتج:\s*`?([A-Z0-9\u0600-\u06FF]+-\d+-\d+)`?/i, 
+                quantity: /الكمية:\s*(\d+)/, 
+                total: /إجمالي المتجر:\s*([\d,]+)/, 
+                orderNumber: /رقم الطلب:\s*(\d+)/, 
+                date: /التاريخ:\s*([^\n]+)/ 
+            };
+            
             const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
             if (storeID !== currentStore.storeFixedID) return null;
 
-            const productIDMatch = text.match(patterns.productID);
-            const productID = productIDMatch ? productIDMatch[0].trim() : '';
-            if (!productID) return null;
-            
             const customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim();
             const customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
             const customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim();
-            let quantity = parseInt(text.match(patterns.quantity)?.[1] || '1');
-            const total = parseInt((text.match(patterns.total)?.[1] || '0').replace(/,/g, ''));
             const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
             const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
-            return { productID, customerName, customerPhone, customerAddress, quantity, total, orderNumber, date };
+            const total = parseInt((text.match(patterns.total)?.[1] || '0').replace(/,/g, ''));
+
+            // البحث عن كافة المنتجات في الرسالة (دعم الطلبات المتعددة)
+            const items = [];
+            const lines = text.split('\n');
+            let currentItem = null;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // البحث عن سطر المنتج (مثلاً: 1 • اسم المنتج)
+                if (/^\d+\s*•/.test(line)) {
+                    currentItem = { name: line.split('•')[1].trim() };
+                }
+                
+                if (currentItem) {
+                    const idMatch = line.match(/معرف المنتج:\s*`?([^\n`]+)`?/);
+                    if (idMatch) currentItem.productID = idMatch[1].trim();
+                    
+                    const qtyMatch = line.match(/الكمية:\s*(\d+)/);
+                    if (qtyMatch) {
+                        currentItem.quantity = parseInt(qtyMatch[1]);
+                        items.push({...currentItem});
+                        currentItem = null; // إعادة التعيين للمنتج التالي
+                    }
+                }
+            }
+
+            // إذا لم يجد منتجات بالطريقة المتقدمة، نجرب الطريقة البسيطة (لمنتج واحد)
+            if (items.length === 0) {
+                const productID = (text.match(patterns.productID)?.[1] || '').trim();
+                const quantity = parseInt(text.match(patterns.quantity)?.[1] || '1');
+                if (productID) {
+                    items.push({ productID, quantity });
+                }
+            }
+
+            if (items.length === 0) return null;
+
+            return { items, customerName, customerPhone, customerAddress, total, orderNumber, date };
         } catch (e) { return null; }
     }
 
