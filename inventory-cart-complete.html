@@ -1110,133 +1110,112 @@
 
     // ========== دالة عرض الطلبات المحدثة مع صورة المنتج ==========
     function renderOrders() {
-        const tbody = document.getElementById('ordersTableBody');
-        if (!tbody) return;
-        
-        orders = safeLocalStorage.get('nardo_orders');
-        const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
-        
-        if (filteredOrders.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align:center; padding:40px;">
-                        <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
-                        لا توجد طلبات لهذا المتجر
+    const tbody = document.getElementById('ordersTableBody');
+    if (!tbody) return;
+    
+    orders = safeLocalStorage.get('nardo_orders');
+    const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
+    
+    if (filteredOrders.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center; padding:40px;">
+                    <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
+                    لا توجد طلبات لهذا المتجر
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = filteredOrders.map(order => {
+            // ========== الحصول على صورة المنتج ==========
+            let productImage = null;
+            const firstItem = order.items[0];
+            
+            // محاولة 1: جلب الصورة من الطلب مباشرة
+            if (firstItem?.image && !firstItem.image.startsWith('data:')) {
+                productImage = firstItem.image;
+            }
+            
+            // محاولة 2: إذا لم توجد صورة، ابحث عن المنتج في localStorage باستخدام المعرف
+            if (!productImage && firstItem?.productCompositeID) {
+                const foundProduct = products.find(p => p.productCompositeID === firstItem.productCompositeID);
+                if (foundProduct && foundProduct.images && foundProduct.images.length > 0) {
+                    productImage = foundProduct.images[0];
+                    console.log(`✅ تم جلب صورة المنتج من localStorage للمنتج: ${firstItem.productCompositeID}`);
+                }
+            }
+            
+            // محاولة 3: البحث باستخدام id المنتج
+            if (!productImage && firstItem?.id) {
+                const foundProduct = products.find(p => p.id === firstItem.id);
+                if (foundProduct && foundProduct.images && foundProduct.images.length > 0) {
+                    productImage = foundProduct.images[0];
+                    console.log(`✅ تم جلب صورة المنتج من localStorage باستخدام id: ${firstItem.id}`);
+                }
+            }
+            
+            // إنشاء HTML للصورة
+            const imageHtml = productImage && !productImage.startsWith('data:')
+                ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--gold);" 
+                         onerror="this.src='https://via.placeholder.com/40/ffd700/000000?text=?'">`
+                : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
+            
+            return `
+                <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
+                    <td>
+                        <strong>#${order.telegramOrderId || order.id}</strong>
+                    </td>
+                    <td style="font-size:12px;">${order.date || ''}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${imageHtml}
+                            <div>
+                                <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                                <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                                <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size:12px; max-width:200px;">
+                            ${order.items.map(it => `
+                                <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
+                                    ${it.name} (${it.quantity})
+                                </span>
+                            `).join('')}
+                        </div>
+                    </td>
+                    <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                    <td>
+                        <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
+                            ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
+                                <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
+                            </button>
+                            <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
+                                <i class="fas fa-truck"></i>
+                            </button>
+                            <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
-        } else {
-            tbody.innerHTML = filteredOrders.map(order => {
-                const firstItem = order.items[0];
-                let productImage = firstItem?.image;
-                if (!productImage) {
-                    const p = products.find(prod => prod.productCompositeID === firstItem?.productCompositeID);
-                    productImage = p?.images?.[0] || '';
-                }
-                const imageHtml = productImage && !productImage.startsWith('data:')
-                    ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--gold);" onerror="this.src='https://via.placeholder.com/40/ffd700/000000?text=?'">`
-                    : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
-                
-                return `
-                    <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
-                        <td><strong>#${order.telegramOrderId || order.id}</strong></td>
-                        <td style="font-size:12px;">${order.date || ''}</td>
-                        <td>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                ${imageHtml}
-                                <div>
-                                    <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
-                                    <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
-                                    <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div style="font-size:12px; max-width:200px;">
-                                ${order.items.map(it => `
-                                    <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
-                                        ${it.name} (${it.quantity})
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </td>
-                        <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
-                        <td>
-                            <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
-                                ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
-                            </span>
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                                <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
-                                    <i class="fas fa-file-pdf"></i>
-                                </button>
-                                <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
-                                    <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
-                                </button>
-                                <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
-                                    <i class="fas fa-truck"></i>
-                                </button>
-                                <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
-                                    <i class="fas fa-phone"></i>
-                                </button>
-                                <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-        updateStats();
-    }
-
-    function clearOrders() {
-        if(confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟ لا يمكن التراجع عن هذه الخطوة.')) {
-            safeLocalStorage.set('nardo_orders', []);
-            orders = [];
-            renderOrders();
-            updateStats();
-            showToast('🗑️ تم مسح جميع الطلبات', 'success');
-        }
-    }
-
-    function renderProducts() {
-        const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
-        let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || (p.productCompositeID && p.productCompositeID.toLowerCase().includes(search)));
-        
-        const container = document.getElementById('productsGrid');
-        if (!filtered.length) {
-            container.innerHTML = '<div style="text-align:center; padding:60px;"><i class="fas fa-box-open fa-3x"></i><p>لا توجد منتجات</p><button class="btn btn-telegram" onclick="fetchProductsFromTelegram()">جلب من تلغرام</button></div>';
-            return;
-        }
-        
-        container.innerHTML = filtered.map(p => {
-            const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
-            const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
-            const imgHtml = p.images?.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}" onclick="window.open('${img}','_blank')">`).join('')}</div>` : '';
-            const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
-            
-            return `
-                <div class="product-card">
-                    <div class="product-id-badge">${p.productCompositeID || '---'}</div>
-                    ${publishedBadge}
-                    ${imgHtml}
-                    <div class="product-name">${p.name}</div>
-                    <div class="product-price">${p.price.toLocaleString()} دج</div>
-                    <div><span class="stock-status ${stockClass}">${stockText}</span></div>
-                    <div class="product-actions">
-                        <button class="btn btn-gold" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب</button>
-                        <button class="btn btn-outline" onclick="openEditStockModal(${p.id})"><i class="fas fa-edit"></i> تعديل</button>
-                        ${!p.published ? `<button class="btn btn-telegram" onclick="publishExistingProduct(${p.id})"><i class="fab fa-telegram"></i> نشر</button>` : ''}
-                        <button class="btn btn-outline" style="border-color:var(--error);color:var(--error);" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i> حذف</button>
-                    </div>
-                </div>
-            `;
         }).join('');
     }
+    updateStats();
+}
 
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable');
