@@ -119,9 +119,7 @@
         .product-card:hover { transform: translateY(-5px); border-color: rgba(255,215,0,0.4); }
         .product-id-badge { position: absolute; top: 15px; left: 15px; background: linear-gradient(135deg, var(--gold), #ffb347); color: #111; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; }
         .product-published-badge { position: absolute; top: 15px; right: 15px; background: rgba(0,136,204,0.8); color: white; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px; }
-        .product-images { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; }
-        .product-images img { width: 75px; height: 75px; object-fit: cover; border-radius: 16px; border: 2px solid rgba(255,215,0,0.2); cursor: pointer; }
-        .product-name { font-size: 20px; font-weight: 900; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .product-name { font-size: 20px; font-weight: 900; background: linear-gradient(135deg, #ffd700, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 10px; }
         .product-price { font-size: 24px; font-weight: 900; color: var(--success); margin: 8px 0; }
         .stock-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .stock-status.high { background: rgba(74,222,128,0.15); color: var(--success); }
@@ -146,8 +144,6 @@
         .form-group label { display: block; margin-bottom: 6px; color: var(--gold); font-weight: 700; font-size: 13px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,215,0,0.15); border-radius: 12px; color: white; font-family: 'Cairo', sans-serif; font-size: 14px; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
-        .image-preview { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .image-preview img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--gold); }
 
         .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; border-radius: 24px; font-weight: 600; z-index: 3000; background: rgba(0,0,0,0.9); border: 1px solid; animation: slideIn 0.3s ease; }
         .toast.success { border-color: var(--success); color: var(--success); }
@@ -298,7 +294,6 @@
             <div class="form-group"><label>السعر (دج) *</label><input type="number" id="productPrice" required min="0"></div>
             <div class="form-group"><label>الكمية *</label><input type="number" id="productQty" required min="0"></div>
             <div class="form-group"><label>القسم</label><select id="productCategory"><option>توابل</option><option>عطور</option><option>منتجات طبيعية</option></select></div>
-            <div class="form-group"><label>الصور</label><input type="file" id="productImages" multiple accept="image/*" onchange="previewImages(this)"><div id="imagePreview" class="image-preview"></div></div>
             <div style="display: flex; gap: 12px;">
                 <button type="button" class="btn btn-outline" onclick="saveProductOnly()" style="flex:1"><i class="fas fa-save"></i> حفظ فقط</button>
                 <button type="button" class="btn btn-telegram" onclick="saveAndPublishProduct()" style="flex:1"><i class="fab fa-telegram"></i> حفظ ونشر</button>
@@ -383,7 +378,6 @@
     let stockLog = safeLocalStorage.get('nardo_stock_log');
     let currentStore = null;
     let editProductId = null;
-    let currentImages = [];
 
     // ========== تنظيف النص للتيليجرام ==========
     function cleanTelegramText(text) { 
@@ -504,7 +498,7 @@
                 const fileId = post.photo[post.photo.length - 1].file_id;
                 const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                 const fileData = await fileRes.json();
-                const imageUrl = fileData.ok ? `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}` : "https://via.placeholder.com/300/ffd700/000000?text=منتج";
+                const imageUrl = fileData.ok ? `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}` : "";
                 if (!products.some(p => p.telegramId === post.message_id)) {
                     products.push({
                         id: Date.now() + Math.random(),
@@ -516,7 +510,6 @@
                         storeName: storeName,
                         productCompositeID: productID,
                         description: desc,
-                        images: [imageUrl],
                         source: 'telegram',
                         published: true,
                         publishedAt: new Date().toISOString(),
@@ -591,8 +584,7 @@
                             productCompositeID: product.productCompositeID,
                             name: product.name,
                             price: product.price,
-                            quantity: item.quantity,
-                            image: (product.images?.[0] || '').startsWith('data:') ? '' : (product.images?.[0] || '')
+                            quantity: item.quantity
                         });
                         orderTotal += (product.price * item.quantity);
                         
@@ -652,43 +644,22 @@
         }
     }
 
-    // ========== دالة استخراج البيانات من نص الرسالة (متوافقة مع شكل الرسالة الحالي) ==========
+    // ========== دالة استخراج البيانات من نص الرسالة ==========
     function extractOrderDataFromText(text) {
         try {
-            // أنماط البحث المتوافقة مع شكل الرسالة الجديد
             const patterns = {
-                // المتجر: يبحث عن "معرف المتجر: `ID`" أو "🆔 *معرف المتجر:* `ID`"
                 storeID: /(?:معرف المتجر:|🆔\s*\*معرف المتجر\*:)\s*`?([^\n`]+)`?/,
-                
-                // المشتري: يبحث عن "المشتري:" أو "👤 *الزبون:*"
                 customerName: /(?:(?:المشتري|الزبون):|👤\s*\*الزبون\*:)\s*([^\n]+)/,
-                
-                // الهاتف: يبحث عن "الهاتف:" أو "📞 *رقم الجوال:*"
                 customerPhone: /(?:(?:الهاتف|رقم الجوال):|📞\s*\*رقم الجوال\*:)\s*([^\n]+)/,
-                
-                // العنوان: يبحث عن "العنوان:" أو "📍 *العنوان:*"
                 customerAddress: /(?:(?:العنوان):|📍\s*\*العنوان\*:)\s*([^\n]+)/,
-                
-                // معرف المنتج: يبحث عن "معرف المنتج: `ID`" أو "🆔 معرف المنتج: `ID`"
                 productID: /(?:معرف المنتج:|🆔\s*معرف المنتج:)\s*`?([A-Z0-9\u0600-\u06FF\s-]+-\d+-\d+)`?/i,
-                
-                // الكمية: يبحث عن "الكمية:" أو "📦 الكمية:"
                 quantity: /(?:الكمية:|📦\s*الكمية:)\s*(\d+)/,
-                
-                // الإجمالي: يبحث عن "إجمالي المتجر:" أو "💰 *إجمالي الطلب:*"
                 total: /(?:(?:إجمالي المتجر|إجمالي الطلب):|💰\s*\*إجمالي الطلب\*:)\s*([\d,]+)/,
-                
-                // الملاحظات
                 notes: /(?:ملاحظات:|📝\s*\*ملاحظات\*:)\s*([^\n]+)/,
-                
-                // رقم الطلب: يبحث عن "رقم الطلب:" أو "🆔 *رقم الطلب الموحد:*"
                 orderNumber: /(?:(?:رقم الطلب|رقم الطلب الموحد):|🆔\s*\*رقم الطلب الموحد\*:)\s*(\d+)/,
-                
-                // التاريخ: يبحث عن "التاريخ:" أو "📅 *التاريخ:*"
                 date: /(?:(?:التاريخ):|📅\s*\*التاريخ\*:)\s*([^\n]+)/
             };
             
-            // استخراج البيانات الأساسية
             const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
             let customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim();
             let customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim();
@@ -698,7 +669,6 @@
             const total = parseInt((text.match(patterns.total)?.[1] || '0').replace(/,/g, ''));
             const notes = (text.match(patterns.notes)?.[1] || '').trim();
 
-            // تنظيف الأسماء من الرموز
             customerName = customerName.replace(/[*_]/g, '').trim();
             customerPhone = customerPhone.replace(/[*_]/g, '').trim();
             customerAddress = customerAddress.replace(/[*_]/g, '').trim();
@@ -710,40 +680,28 @@
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 
-                // الكشف عن بداية منتج جديد (صيغة "1️⃣ اسم المنتج" أو "1. المنتج: اسم")
                 const productStartMatch = line.match(/^(\d+)[️⃣\.]\s*(?:المنتج:\s*)?(.*?)$/);
                 if (productStartMatch) {
                     currentItem = { name: productStartMatch[2].trim() };
-                    // تنظيف الاسم من الرموز
                     currentItem.name = currentItem.name.replace(/[*_]/g, '').trim();
                     continue;
                 }
                 
-                // إذا كان هناك منتج قيد المعالجة
                 if (currentItem) {
-                    // البحث عن معرف المنتج
                     const idMatch = line.match(patterns.productID);
                     if (idMatch) {
                         currentItem.productID = idMatch[1].trim();
                     }
                     
-                    // البحث عن الكمية
                     const qtyMatch = line.match(patterns.quantity);
                     if (qtyMatch) {
                         currentItem.quantity = parseInt(qtyMatch[1]);
                         items.push({ ...currentItem });
                         currentItem = null;
                     }
-                    
-                    // البحث عن السعر (اختياري)
-                    const priceMatch = line.match(/السعر:\s*([\d,]+)/);
-                    if (priceMatch && currentItem) {
-                        currentItem.price = parseInt(priceMatch[1].replace(/,/g, ''));
-                    }
                 }
             }
 
-            // إذا لم يتم العثور على منتجات بالطريقة أعلاه، حاول البحث المباشر
             if (items.length === 0) {
                 const productID = (text.match(patterns.productID)?.[1] || '').trim();
                 const quantity = parseInt(text.match(patterns.quantity)?.[1] || '1');
@@ -768,8 +726,6 @@
         const storeID = currentStore.storeFixedID;
         const serial = getNextProductSerial(storeID);
         const compositeID = `${storeID}-${serial}`;
-        let images = ["https://via.placeholder.com/300/ffd700/000000?text=منتج"];
-        if (currentImages.length > 0) images = [...currentImages];
         const newProduct = {
             id: Date.now(),
             storeID: storeID,
@@ -781,7 +737,6 @@
             quantity: quantity,
             description: document.getElementById('productDesc').value,
             category: document.getElementById('productCategory').value,
-            images: images,
             createdAt: new Date().toISOString(),
             source: 'local',
             published: false,
@@ -804,7 +759,7 @@
             return;
         }
         const imageInput = document.getElementById('productImages');
-        if (!imageInput.files || imageInput.files.length === 0) {
+        if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
             showToast('⚠️ النشر يتطلب صورة واحدة على الأقل', 'warning');
             return;
         }
@@ -812,8 +767,6 @@
         const storeID = currentStore.storeFixedID;
         const serial = getNextProductSerial(storeID);
         const compositeID = `${storeID}-${serial}`;
-        let images = ["https://via.placeholder.com/300/ffd700/000000?text=منتج"];
-        if (currentImages.length > 0) images = [...currentImages];
         const newProduct = {
             id: Date.now(),
             storeID: storeID,
@@ -825,7 +778,6 @@
             quantity: quantity,
             description: document.getElementById('productDesc').value,
             category: document.getElementById('productCategory').value,
-            images: images,
             createdAt: new Date().toISOString(),
             source: 'local',
             published: false,
@@ -849,24 +801,8 @@
         const product = products.find(p => p.id === productId);
         if (!product) { showToast('المنتج غير موجود', 'error'); return; }
         if (product.published) { showToast('المنتج منشور مسبقاً', 'warning'); return; }
-        if (!product.images || product.images.length === 0) { showToast('لا توجد صور للنشر', 'error'); return; }
-        try {
-            const response = await fetch(product.images[0]);
-            const blob = await response.blob();
-            const imageFile = new File([blob], 'product.jpg', { type: blob.type });
-            const result = await sendToTelegram(product, imageFile);
-            if (result.success) {
-                product.published = true;
-                product.telegramId = result.messageId;
-                product.publishedAt = new Date().toISOString();
-                safeLocalStorage.set('nardo_products', products);
-                renderAll();
-                showToast(`✅ تم نشر ${product.name} إلى القناة`, 'success');
-            }
-        } catch (error) {
-            console.error('خطأ في النشر:', error);
-            showToast('فشل النشر، تأكد من الاتصال', 'error');
-        }
+        
+        showToast('⚠️ لا يمكن إعادة النشر بدون صورة', 'warning');
     }
 
     function findProductById() {
@@ -961,6 +897,16 @@
         }
     }
 
+    function clearOrders() {
+        if (confirm('مسح جميع الطلبات؟')) {
+            orders = [];
+            safeLocalStorage.set('nardo_orders', []);
+            renderOrders();
+            updateStats();
+            showToast('تم مسح الطلبات', 'success');
+        }
+    }
+
     function quickOrder(productId) {
         const p = products.find(p => p.id === productId);
         if (!p || p.quantity <= 0) { showToast('المنتج غير متوفر', 'error'); return; }
@@ -978,7 +924,7 @@
             customerNotes: '',
             storeID: p.storeID,
             storeName: p.storeName,
-            items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt, image: p.images?.[0] || '' }],
+            items: [{ id: p.id, name: p.name, price: p.price, quantity: qtyInt }],
             total: total,
             status: 'pending',
             source: 'manual'
@@ -1020,12 +966,12 @@
         window.location.href = `tel:${phone}`;
     }
 
-    // ========== دالة تصدير PDF مع صورة المنتج ==========
+    // ========== دالة تصدير PDF بدون صور ==========
     async function exportOrderToPDF(orderId) {
         const order = orders.find(o => o.id === orderId);
         if (!order) return;
 
-        showToast('📄 جاري تحضير فاتورة PDF مع الصورة...', 'info');
+        showToast('📄 جاري تحضير فاتورة PDF...', 'info');
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({
@@ -1033,16 +979,6 @@
             unit: 'mm',
             format: 'a4'
         });
-
-        let productImage = null;
-        const firstItem = order.items[0];
-        if (firstItem && firstItem.image && !firstItem.image.startsWith('data:')) {
-            try {
-                productImage = await loadImageAsDataURL(firstItem.image);
-            } catch (e) {
-                console.warn('لا يمكن تحميل الصورة:', e);
-            }
-        }
 
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
@@ -1054,18 +990,11 @@
         tempDiv.style.fontFamily = 'Cairo, sans-serif';
         tempDiv.style.direction = 'rtl';
         
-        const imageHtml = productImage 
-            ? `<div style="text-align:center; margin-bottom:20px;">
-                 <img src="${productImage}" style="max-width:150px; max-height:150px; border-radius:12px; border:2px solid #daa520;">
-               </div>`
-            : '';
-        
         tempDiv.innerHTML = `
             <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #daa520; padding-bottom:10px;">
                 <h1 style="margin:0; color:#daa520;">🧾 فاتورة طلب #${order.telegramOrderId || order.id}</h1>
                 <p style="margin:5px 0;">🏪 متجر: ${order.storeName}</p>
             </div>
-            ${imageHtml}
             <div style="margin-bottom:20px;">
                 <p><strong>📅 التاريخ:</strong> ${order.date}</p>
                 <p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p>
@@ -1098,7 +1027,7 @@
                     <tr style="font-weight:bold; background:#f0f0f0;">
                         <td colspan="4" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
                         <td style="border:1px solid #000; padding:10px; text-align:center;">${order.total.toLocaleString()} دج</td>
-                    <tr>
+                    </tr>
                 </tfoot>
             </table>
             <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">
@@ -1112,7 +1041,6 @@
             const canvas = await html2canvas(tempDiv, {
                 scale: 2,
                 backgroundColor: '#ffffff',
-                useCORS: true,
                 logging: false
             });
             
@@ -1132,24 +1060,6 @@
         }
     }
 
-    function loadImageAsDataURL(url) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
-            };
-            img.onerror = reject;
-            img.src = url;
-        });
-    }
-
-    // ========== دالة عرض الطلبات المحدثة (مع جلب الصور من localStorage) ==========
     function renderOrders() {
         const tbody = document.getElementById('ordersTableBody');
         if (!tbody) return;
@@ -1168,53 +1078,15 @@
             `;
         } else {
             tbody.innerHTML = filteredOrders.map(order => {
-                // ========== الحصول على صورة المنتج من localStorage إذا لم تكن موجودة ==========
-                let productImage = null;
-                const firstItem = order.items[0];
-                
-                // محاولة 1: جلب الصورة من الطلب مباشرة
-                if (firstItem?.image && !firstItem.image.startsWith('data:')) {
-                    productImage = firstItem.image;
-                }
-                
-                // محاولة 2: إذا لم توجد صورة، ابحث عن المنتج في localStorage باستخدام المعرف
-                if (!productImage && firstItem?.productCompositeID) {
-                    const foundProduct = products.find(p => p.productCompositeID === firstItem.productCompositeID);
-                    if (foundProduct && foundProduct.images && foundProduct.images.length > 0) {
-                        productImage = foundProduct.images[0];
-                        console.log(`✅ تم جلب صورة المنتج من localStorage للمنتج: ${firstItem.productCompositeID}`);
-                    }
-                }
-                
-                // محاولة 3: البحث باستخدام id المنتج
-                if (!productImage && firstItem?.id) {
-                    const foundProduct = products.find(p => p.id === firstItem.id);
-                    if (foundProduct && foundProduct.images && foundProduct.images.length > 0) {
-                        productImage = foundProduct.images[0];
-                        console.log(`✅ تم جلب صورة المنتج من localStorage باستخدام id: ${firstItem.id}`);
-                    }
-                }
-                
-                // إنشاء HTML للصورة
-                const imageHtml = productImage && !productImage.startsWith('data:')
-                    ? `<img src="${productImage}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid var(--gold);" 
-                             onerror="this.src='https://via.placeholder.com/40/ffd700/000000?text=?'">`
-                    : `<i class="fas fa-image" style="font-size:24px; color:#666;"></i>`;
-                
                 return `
                     <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
-                        <td>
-                            <strong>#${order.telegramOrderId || order.id}</strong>
-                        </td>
+                        <td><strong>#${order.telegramOrderId || order.id}</strong></td>
                         <td style="font-size:12px;">${order.date || ''}</td>
                         <td>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                ${imageHtml}
-                                <div>
-                                    <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
-                                    <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
-                                    <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
-                                </div>
+                            <div>
+                                <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                                <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                                <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
                             </div>
                         </td>
                         <td>
@@ -1328,14 +1200,12 @@
         container.innerHTML = filtered.map(p => {
             const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
             const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
-            const imgHtml = p.images?.length ? `<div class="product-images">${p.images.slice(0,3).map(img => `<img src="${img}" onclick="window.open('${img}','_blank')">`).join('')}</div>` : '';
             const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
             
             return `
                 <div class="product-card">
                     <div class="product-id-badge">${p.productCompositeID || '---'}</div>
                     ${publishedBadge}
-                    ${imgHtml}
                     <div class="product-name">${p.name}</div>
                     <div class="product-price">${p.price.toLocaleString()} دج</div>
                     <div><span class="stock-status ${stockClass}">${stockText}</span></div>
@@ -1363,34 +1233,16 @@
 
     function openAddProductModal() {
         document.getElementById('addProductModal').classList.add('active');
-        currentImages = [];
-        document.getElementById('imagePreview').innerHTML = '';
-        document.getElementById('productImages').value = '';
         document.getElementById('productName').value = '';
         document.getElementById('productDesc').value = '';
         document.getElementById('productPrice').value = '';
         document.getElementById('productQty').value = '';
+        const imageInput = document.getElementById('productImages');
+        if(imageInput) imageInput.value = '';
     }
 
     function closeAddProductModal() {
         document.getElementById('addProductModal').classList.remove('active');
-    }
-
-    function previewImages(input) {
-        const preview = document.getElementById('imagePreview');
-        preview.innerHTML = '';
-        currentImages = [];
-        for (let i = 0; i < input.files.length; i++) {
-            const file = input.files[i];
-            const reader = new FileReader();
-            reader.onload = e => {
-                currentImages.push(e.target.result);
-                const div = document.createElement('div');
-                div.innerHTML = `<img src="${e.target.result}">`;
-                preview.appendChild(div);
-            };
-            reader.readAsDataURL(file);
-        }
     }
 
     function openDeliveryPage() {
@@ -1424,6 +1276,20 @@
         setTimeout(() => t.remove(), 3000);
     }
 
+    // ========== إضافة عنصر input file للصور في النموذج ==========
+    function addImageInputToForm() {
+        const formGroups = document.querySelector('#addProductModal .modal-content form');
+        if(formGroups && !document.getElementById('productImages')) {
+            const imageGroup = document.createElement('div');
+            imageGroup.className = 'form-group';
+            imageGroup.innerHTML = '<label>الصورة (للنشر)</label><input type="file" id="productImages" accept="image/*">';
+            const categoryGroup = document.querySelector('#productCategory')?.closest('.form-group');
+            if(categoryGroup) {
+                categoryGroup.insertAdjacentElement('afterend', imageGroup);
+            }
+        }
+    }
+
     // ========== الاستماع للتغييرات في localStorage ==========
     window.addEventListener('storage', (e) => {
         if (e.key === 'nardo_orders') {
@@ -1439,6 +1305,7 @@
 
     // ========== تشغيل التطبيق ==========
     document.addEventListener('DOMContentLoaded', () => {
+        addImageInputToForm();
         loadCurrentStore();
         renderAll();
         document.getElementById('searchProducts')?.addEventListener('input', renderProducts);
