@@ -1,7 +1,7 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>    <meta charset="UTF-8">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ناردو برو - سلتي | نظام طلبات متكامل</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -155,7 +155,7 @@
         .product-details { flex: 2; min-width: 150px; }
         .product-name { font-size: 16px; font-weight: bold; color: var(--gold); }
         .product-price { font-size: 13px; color: var(--success); }
-        .product-id { font-size: 11px; color: var(--text-secondary); }
+        .product-id { font-size: 11px; color: var(--text-secondary); margin-top: 5px; }
         .cart-item-quantity {
             display: flex;
             align-items: center;
@@ -172,7 +172,7 @@
             font-size: 18px;
             width: 30px;
             height: 30px;
-            border-radius: 8px;
+border-radius: 8px;
         }
         .cart-item-quantity button:hover { background: rgba(255, 215, 0, 0.2); }
         .cart-item-quantity span { font-size: 16px; font-weight: bold; min-width: 30px; text-align: center; }
@@ -257,7 +257,7 @@
         }
         
         .order-archive { margin-top: 40px; border-top: 2px dashed rgba(255, 215, 0, 0.2); padding-top: 30px; }
-        .section-title { font-size: 24px; color: var(--gold); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .order-archive h2 { margin-bottom: 20px; font-size: 24px; color: var(--gold); }
         .order-card {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
@@ -271,7 +271,7 @@
         .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
         .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); }
         .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
-        .order-details { font-size: 14px; line-height: 1.8; }
+        .order-details div { margin-bottom: 8px; font-size: 14px; }
         
         @media (max-width: 768px) {
             .cart-item { flex-direction: column; align-items: stretch; }
@@ -291,7 +291,7 @@
             </div>
         </div>
         <div class="cart-section"><div id="cartContainer"></div></div>
-        <div class="order-archive"><h2 class="section-title"><i class="fas fa-history"></i> أرشيف طلباتي</h2><div id="ordersArchiveContainer"></div></div>
+        <div class="order-archive"><h2><i class="fas fa-history"></i> أرشيف طلباتي</h2><div id="ordersArchiveContainer"></div></div>
     </div>
 
     <div id="customerModal" class="modal">
@@ -306,23 +306,13 @@
     </div>
 
     <script>
-        // ========== إعدادات تلغرام (متوافقة مع الكود الرئيسي) ==========
-        const TELEGRAM = { 
-            botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', 
-            channelId: '-1003822964890', 
-            apiUrl: 'https://api.telegram.org/bot' 
-        };
-        
-        // ========== مفاتيح التخزين (متوافقة مع الكود الرئيسي) ==========
+        const TELEGRAM = { botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', channelId: '-1003822964890', apiUrl: 'https://api.telegram.org/bot' };
         const CART_STORAGE_KEY = 'nardoo_cart';
         const ORDERS_STORAGE_KEY = 'nardo_orders';
-        
-        // ========== المتغيرات العامة ==========
         let cart = [];
         let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
         let storeColors = {};
 
-        // ========== دوال مساعدة ==========
         function getStoreColor(storeID) { 
             if (!storeColors[storeID]) { 
                 const colors = ['merchant-color-0','merchant-color-1','merchant-color-2','merchant-color-3','merchant-color-4','merchant-color-5','merchant-color-6','merchant-color-7','merchant-color-8','merchant-color-9']; 
@@ -333,21 +323,16 @@
         }
         
         function saveStoresState() { localStorage.setItem('stores_state', JSON.stringify(storesState)); }
-        
-        function toggleStore(storeID) { 
-            storesState[storeID] = !storesState[storeID]; 
-            saveStoresState(); 
-            updateCartDisplay(); 
-        }
-        
-        function saveCart() { 
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); 
-            updateCartCounters(); 
-        }
+        function toggleStore(storeID) { storesState[storeID] = !storesState[storeID]; saveStoresState(); updateCartDisplay(); }
+        function saveCart() { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); updateCartCounters(); }
         
         function loadCart() { 
             const saved = localStorage.getItem(CART_STORAGE_KEY); 
             cart = saved ? JSON.parse(saved) : []; 
+            console.log('تم تحميل السلة، عدد العناصر:', cart.length);
+            if(cart.length > 0) {
+                console.log('أول عنصر في السلة:', cart[0]);
+            }
             updateCartDisplay(); 
             updateCartCounters(); 
         }
@@ -403,17 +388,16 @@
         function groupByStore(items) { 
             const g={}; 
             items.forEach(item=>{ 
-                const sid=item.storeID||'unknown-store'; 
-                const sname=item.storeName||'ناردو برو'; 
-                if(!g[sid]) g[sid]={storeID:sid,storeName:sname,items:[],total:0,count:0}; 
+                const sid = item.storeID || 'unknown-store'; 
+                const sname = item.storeName || 'ناردو برو'; 
+                if(!g[sid]) g[sid]={storeID:sid, storeName:sname, items:[], total:0, count:0}; 
                 g[sid].items.push(item); 
-                g[sid].total+=item.price*item.quantity; 
-                g[sid].count+=item.quantity; 
+                g[sid].total += item.price * item.quantity; 
+                g[sid].count += item.quantity; 
             }); 
             return g; 
         }
 
-        // ========== إنشاء رسالة تلغرام (متوافقة مع نظام المعرفات) ==========
         function formatProductVertical(item) {
             let productMsg = "";
             productMsg += `🛒 ${item.name}\n`;
@@ -421,12 +405,17 @@
             productMsg += `   📦 الكمية: ${item.quantity}\n`;
             productMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
             productMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+            if(item.image) {
+                productMsg += `   🖼️ [صورة المنتج](${item.image})\n`;
+            }
             return productMsg;
         }
 
         async function sendOrderToTelegram(customerData, groupedStores, grandTotal) {
             const timestamp = new Date().toLocaleString('ar-EG');
             const orderId = Math.floor(Math.random() * 1000000);
+            let merchantErrors = [];
+            
             try {
                 // ===== الرسالة الرئيسية للقناة =====
                 let channelMsg = `🟢 *طلب جديد #${orderId}* 🟢\n`;
@@ -455,52 +444,83 @@
                 channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
                 channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
                 
-                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                // إرسال الرسالة الرئيسية
+                const mainResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                     method:'POST', 
                     headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({chat_id:TELEGRAM.channelId, text:channelMsg, parse_mode:'Markdown', disable_web_page_preview:true})
+                    body:JSON.stringify({
+                        chat_id: TELEGRAM.channelId, 
+                        text: channelMsg, 
+                        parse_mode: 'Markdown', 
+                        disable_web_page_preview: false
+                    })
                 });
+                
+                if (!mainResponse.ok) {
+                    console.error('فشلت الرسالة الرئيسية');
+                    return false;
+                }
                 
                 // ===== إرسال رسالة منفصلة لكل متجر =====
                 for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                    let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
-                    merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
-                    merchantMsg += `📍 *العنوان:* ${customerData.address}\n`;
-                    merchantMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
-                    merchantMsg += `───────────────────────────────\n`;
-                    
-                    storeData.items.forEach((item, idx) => {
-                        merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
-                        merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
-                        merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
-                        merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
-                        merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                    try {
+                        let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
+                        merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
+                        merchantMsg += `📍 *العنوان:* ${customerData.address}\n`;
+                        merchantMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
                         merchantMsg += `───────────────────────────────\n`;
-                    });
-                    
-                    merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
-                    merchantMsg += `🆔 *رقم الطلب الموحد:* ${orderId}\n`;
-                    merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
-                    if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
-                    merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
-                    
-                    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                        method:'POST', 
-                        headers:{'Content-Type':'application/json'},
-                        body:JSON.stringify({chat_id:TELEGRAM.channelId, text:merchantMsg, parse_mode:'Markdown', disable_web_page_preview:true})
-                    });
+                        
+                        storeData.items.forEach((item, idx) => {
+                            merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
+                            merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
+                            merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
+                            merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
+                            merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                            if(item.image) {
+                                merchantMsg += `   🖼️ [صورة المنتج](${item.image})\n`;
+                            }
+                            merchantMsg += `───────────────────────────────\n`;
+                        });
+                        
+                        merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
+                        merchantMsg += `🆔 *رقم الطلب الموحد:* ${orderId}\n`;
+                        merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
+                        if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
+                        merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
+                        
+                        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                            method:'POST', 
+                            headers:{'Content-Type':'application/json'},
+                            body:JSON.stringify({
+                                chat_id: TELEGRAM.channelId, 
+                                text: merchantMsg, 
+                                parse_mode: 'Markdown', 
+                                disable_web_page_preview: false
+                            })
+                        });
+                    } catch(e) {
+                        merchantErrors.push(storeData.storeName);
+                        console.error('فشل إرسال رسالة المتجر:', e);
+                    }
                 }
                 
+                // حفظ الطلب محلياً
                 saveOrderLocally(customerData, groupedStores, orderId, timestamp);
+                
+                if (merchantErrors.length > 0) {
+                    showNotification(`⚠️ تم إرسال الطلب ولكن فشل إشعار بعض المتاجر: ${merchantErrors.join(', ')}`, 'warning');
+                }
+                
                 return true;
+                
             } catch(e) { 
-                console.error(e); 
+                console.error('خطأ في إرسال الطلب:', e); 
                 return false; 
             }
         }
@@ -516,7 +536,7 @@
                     customerPhone: customerData.phone, 
                     customerAddress: customerData.address, 
                     customerNotes: customerData.notes, 
-                    storeID, 
+                    storeID: storeID, 
                     storeName: storeData.storeName, 
                     items: storeData.items, 
                     total: storeData.total, 
@@ -531,27 +551,27 @@
             const container = document.getElementById('ordersArchiveContainer');
             if(!container) return;
             const orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
-            if(orders.length===0){ 
-                container.innerHTML='<p style="text-align:center;">لا توجد طلبات سابقة</p>'; 
+            if(orders.length === 0){ 
+                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">لا توجد طلبات سابقة</p>'; 
                 return; 
             }
-            container.innerHTML = orders.map(o=>`
+            container.innerHTML = orders.map(o => `
                 <div class="order-card">
                     <div class="order-card-header">
-                        <span class="order-id">#${o.originalOrderId||o.id}</span>
-                        <span class="order-status ${o.status==='pending'?'status-pending':o.status==='received'?'status-received':'status-approved'}">
-                            ${o.status==='pending'?'⏳ قيد المعالجة':o.status==='received'?'📦 وصل للتاجر':'✅ تم تعيين الموزع'}
+                        <span class="order-id">#${o.originalOrderId || o.id}</span>
+                        <span class="order-status ${o.status === 'pending' ? 'status-pending' : (o.status === 'received' ? 'status-received' : 'status-approved')}">
+                            ${o.status === 'pending' ? '⏳ قيد المعالجة' : (o.status === 'received' ? '📦 وصل للتاجر' : '✅ تم تعيين الموزع')}
                         </span>
                     </div>
                     <div class="order-details">
                         <div>🏪 ${o.storeName}</div>
                         <div>📅 ${o.date}</div>
-                        <div>📦 ${o.items.map(i=>`${i.name} (${i.quantity})`).join(', ')}</div>
+                        <div>📦 ${o.items.map(i => `${i.name} (${i.quantity})`).join(', ')}</div>
                         <div>💰 ${o.total.toLocaleString()} دج</div>
                     </div>
                     <div class="cart-actions" style="margin-top:10px;">
-                        ${o.status==='pending'?`<button class="btn btn-outline" onclick="updateOrderStatus('${o.id}','received')">تأكيد الوصول</button>`:''}
-                        ${o.status==='received'?`<button class="btn btn-success" onclick="updateOrderStatus('${o.id}','approved')">الموافقة</button>`:''}
+                        ${o.status === 'pending' ? `<button class="btn btn-outline" onclick="updateOrderStatus('${o.id}','received')">تأكيد الوصول</button>` : ''}
+                        ${o.status === 'received' ? `<button class="btn btn-success" onclick="updateOrderStatus('${o.id}','approved')">الموافقة</button>` : ''}
                         <button class="btn btn-danger" onclick="deleteOrderArchive('${o.id}')">حذف</button>
                     </div>
                 </div>
@@ -560,20 +580,17 @@
         
         async function updateOrderStatus(orderId, newStatus) {
             let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
-            const idx = orders.findIndex(o=>o.id===orderId);
-            if(idx!==-1){ 
-                orders[idx].status=newStatus; 
+            const idx = orders.findIndex(o => o.id === orderId);
+            if(idx !== -1){ 
+                orders[idx].status = newStatus; 
                 localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); 
-                
-                let statusText = newStatus==='received'?'📦 وصل المنتج إلى التاجر':'✅ تم تعيين الموزع لتوصيل الطلب';
+                let statusText = newStatus === 'received' ? '📦 وصل المنتج إلى التاجر' : '✅ تم تعيين الموزع لتوصيل الطلب';
                 const msg = `🔄 *تحديث حالة الطلب*\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم الطلب: #${orders[idx].originalOrderId}\n🏪 المتجر: ${orders[idx].storeName}\n👤 المشتري: ${orders[idx].customerName}\n📌 الحالة الجديدة: ${statusText}\n📅 التاريخ: ${new Date().toLocaleString('ar-EG')}\n━━━━━━━━━━━━━━━━━━━━━━`;
-                
                 await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { 
                     method:'POST', 
                     headers:{'Content-Type':'application/json'}, 
-                    body:JSON.stringify({chat_id:TELEGRAM.channelId, text:msg, parse_mode:'Markdown'}) 
+                    body:JSON.stringify({chat_id: TELEGRAM.channelId, text: msg, parse_mode: 'Markdown'}) 
                 });
-                
                 renderOrdersArchive(); 
                 showNotification('تم تحديث حالة الطلب'); 
             }
@@ -581,69 +598,99 @@
         
         function deleteOrderArchive(orderId) { 
             let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]'); 
-            orders=orders.filter(o=>o.id!==orderId); 
+            orders = orders.filter(o => o.id !== orderId); 
             localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); 
             renderOrdersArchive(); 
             showNotification('تم حذف الطلب'); 
         }
         
-        // ========== دوال الطلب ==========
-        let pendingGroupedStores=null, pendingGrandTotal=null;
+        let pendingGroupedStores = null, pendingGrandTotal = null;
         
         function openCustomerModal() { 
-            if(cart.length===0){ 
+            if(cart.length === 0){ 
                 showNotification('السلة فارغة','warning'); 
                 return; 
             } 
-            pendingGroupedStores=groupByStore(cart); 
-            pendingGrandTotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0); 
-            document.getElementById('customerModal').style.display='flex'; 
+            pendingGroupedStores = groupByStore(cart); 
+            pendingGrandTotal = cart.reduce((s,i) => s + (i.price * i.quantity), 0); 
+            document.getElementById('customerModal').style.display = 'flex'; 
         }
         
         function closeModal() { 
-            document.getElementById('customerModal').style.display='none'; 
-            pendingGroupedStores=null; 
+            document.getElementById('customerModal').style.display = 'none'; 
         }
         
         async function submitOrder() {
-            const name=document.getElementById('customerName').value.trim(), 
-                  phone=document.getElementById('customerPhone').value.trim(), 
-                  address=document.getElementById('customerAddress').value.trim(), 
-                  notes=document.getElementById('customerNotes').value.trim();
-            if(!name||!phone||!address){ 
+            const name = document.getElementById('customerName').value.trim(); 
+            const phone = document.getElementById('customerPhone').value.trim(); 
+            const address = document.getElementById('customerAddress').value.trim(); 
+            const notes = document.getElementById('customerNotes').value.trim();
+            
+            if(!name || !phone || !address){ 
                 showNotification('الرجاء تعبئة جميع الحقول','error'); 
                 return; 
             }
-            showNotification('جاري إرسال الطلب...','info');
-            const success = await sendOrderToTelegram({name,phone,address,notes}, pendingGroupedStores, pendingGrandTotal);
-            if(success){ 
-                cart=[]; 
-                saveCart(); 
-                updateCartDisplay(); 
-                closeModal(); 
-                showNotification('✓ تم إرسال الطلب بنجاح!'); 
+            
+            const customerData = {name, phone, address, notes};
+            const currentGrouped = pendingGroupedStores;
+            const currentTotal = pendingGrandTotal;
+            
+            // التحقق من وجود منتجات
+            if(!currentGrouped || Object.keys(currentGrouped).length === 0) {
+                showNotification('لا توجد منتجات في السلة','error');
+                closeModal();
+                return;
             }
-            else showNotification('❌ فشل الإرسال','error');
+            
+            showNotification('جاري إرسال الطلب...','info');
+            
+            const success = await sendOrderToTelegram(customerData, currentGrouped, currentTotal);
+            
+            // إغلاق النافذة وتفريغ الحقول
+            closeModal();
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('customerNotes').value = '';
+            
+            if(success){
+                cart = [];
+                saveCart();
+                updateCartDisplay();
+                showNotification('✓ تم إرسال الطلب بنجاح! سيتم التواصل معك قريباً', 'success');
+                renderOrdersArchive();
+            } else {
+                showNotification('❌ فشل إرسال الطلب. يرجى التحقق من الاتصال والمحاولة مرة أخرى', 'error');
+            }
+            
+            pendingGroupedStores = null;
+            pendingGrandTotal = null;
         }
         
         function updateCartDisplay() {
-            const container=document.getElementById('cartContainer');
+            const container = document.getElementById('cartContainer');
             if(!container) return;
-            if(cart.length===0){ 
-                container.innerHTML=`<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="window.location.href='index.html'">تصفح المنتجات</button></div>`; 
+            
+            console.log('تحديث عرض السلة، عدد العناصر:', cart.length);
+            
+            if(cart.length === 0){ 
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="window.location.href='index.html'">تصفح المنتجات</button></div>`; 
                 return; 
             }
-            const grouped=groupByStore(cart);
-            let grandTotal=0,grandCount=0,storesHtml='';
+            
+            const grouped = groupByStore(cart);
+            let grandTotal = 0, grandCount = 0, storesHtml = '';
+            
             for(const [sid, sd] of Object.entries(grouped)){ 
-                grandTotal+=sd.total; 
-                grandCount+=sd.count; 
-                const isCollapsed=storesState[sid]===true; 
-                const colorClass=getStoreColor(sid);
-                let itemsHtml='';
-                sd.items.forEach(it=>{ 
-                    const thumbnailHtml=it.image?`<img src="${it.image}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">`:'<i class="fas fa-box"></i>';
-                    itemsHtml+=`
+                grandTotal += sd.total; 
+                grandCount += sd.count; 
+                const isCollapsed = storesState[sid] === true; 
+                const colorClass = getStoreColor(sid);
+                let itemsHtml = '';
+                
+                sd.items.forEach(it => { 
+                    const thumbnailHtml = it.image ? `<img src="${it.image}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box"></i>';
+                    itemsHtml += `
                         <div class="cart-item">
                             <div class="product-thumbnail">${thumbnailHtml}</div>
                             <div class="product-details">
@@ -656,14 +703,15 @@
                                 <span>${it.quantity}</span>
                                 <button onclick="updateCartQuantity(${it.id},1)">+</button>
                             </div>
-                            <div class="cart-item-total">${(it.price*it.quantity).toLocaleString()} دج</div>
+                            <div class="cart-item-total">${(it.price * it.quantity).toLocaleString()} دج</div>
                             <button class="cart-item-remove" onclick="removeFromCart(${it.id})"><i class="fas fa-trash-alt"></i> حذف</button>
                         </div>
                     `;
                 });
-                storesHtml+=`
+                
+                storesHtml += `
                     <div class="merchant-section ${colorClass}">
-                        <div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g,"\\'")}')">
+                        <div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g, "\\'")}')">
                             <div class="merchant-info">
                                 <div class="merchant-avatar"><i class="fas fa-store"></i></div>
                                 <div>
@@ -672,13 +720,14 @@
                                     <div class="merchant-stats"><span>📦 ${sd.count}</span><span>💰 ${sd.total.toLocaleString()} دج</span></div>
                                 </div>
                             </div>
-                            <div class="merchant-toggle ${isCollapsed?'collapsed':''}"><i class="fas fa-chevron-down"></i></div>
+                            <div class="merchant-toggle ${isCollapsed ? 'collapsed' : ''}"><i class="fas fa-chevron-down"></i></div>
                         </div>
-                        <div class="merchant-products ${isCollapsed?'collapsed':''}">${itemsHtml}</div>
+                        <div class="merchant-products ${isCollapsed ? 'collapsed' : ''}">${itemsHtml}</div>
                     </div>
                 `;
             }
-            container.innerHTML=storesHtml+`
+            
+            container.innerHTML = storesHtml + `
                 <div class="cart-summary">
                     <div class="summary-row"><span class="summary-label">عدد العناصر:</span><span class="summary-value">${grandCount}</span></div>
                     <div class="summary-row"><span class="summary-label">عدد المتاجر:</span><span class="summary-value">${Object.keys(grouped).length}</span></div>
@@ -691,29 +740,27 @@
             `;
         }
         
-        // ========== الاستماع للتغييرات ==========
-        window.addEventListener('storage', e=>{ 
-            if(e.key===CART_STORAGE_KEY){ 
-                cart=e.newValue?JSON.parse(e.newValue):[]; 
+        window.addEventListener('storage', e => { 
+            if(e.key === CART_STORAGE_KEY){ 
+                cart = e.newValue ? JSON.parse(e.newValue) : []; 
                 updateCartDisplay(); 
                 updateCartCounters(); 
             } 
         });
         
-        // ========== تهيئة الصفحة ==========
         loadCart(); 
         renderOrdersArchive();
         
-        // ========== تصدير الدوال للنطاق العام ==========
-        window.updateCartQuantity = updateCartQuantity;
-        window.removeFromCart = removeFromCart;
-        window.clearCart = clearCart;
-        window.toggleStore = toggleStore;
-        window.openCustomerModal = openCustomerModal;
-        window.closeModal = closeModal;
-        window.submitOrder = submitOrder;
-        window.updateOrderStatus = updateOrderStatus;
+        window.updateCartQuantity = updateCartQuantity; 
+        window.removeFromCart = removeFromCart; 
+        window.clearCart = clearCart; 
+        window.toggleStore = toggleStore; 
+        window.openCustomerModal = openCustomerModal; 
+        window.closeModal = closeModal; 
+        window.submitOrder = submitOrder; 
+        window.updateOrderStatus = updateOrderStatus; 
         window.deleteOrderArchive = deleteOrderArchive;
     </script>
 </body>
 </html>
+
