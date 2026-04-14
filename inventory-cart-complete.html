@@ -580,31 +580,44 @@ function regenerateStoreID() {
 }
     
     /* [30] دالة إرسال المنتج إلى التلغرام */
-    async function sendToTelegram(product, imageFile) {
-        try {
-            const caption = `🆔 *معرف المنتج*: \`${product.productCompositeID}\`\n` +
-                            `📦 *المنتج*: ${product.name}\n` +
-                            `💰 *السعر*: ${product.price.toLocaleString()} دج\n` +
-                            `📝 *الوصف*: ${product.description || 'لا يوجد'}\n\n` +
-                            `🆔 *معرف المتجر*: \`${product.storeID}\`\n` +
-                            `🏪 *المتجر*: ${product.storeName}`;
-
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM.channelId);
-            formData.append('photo', imageFile);
-            formData.append('caption', caption);
-            formData.append('parse_mode', 'Markdown');
-
-            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            return { success: data.ok, messageId: data.result?.message_id };
-        } catch (e) {
-            return { success: false };
+    // ========== إرسال إلى تيليجرام ==========
+async function sendToTelegram(product, imageFile) {
+    try {
+        showToast('📤 جاري النشر إلى قناة التلغرام...', 'info');
+        const caption = `🟣 *منتج جديد في ناردو برو*
+━━━━━━━━━━━━━━━━━━
+📦 *المنتج:* ${cleanTelegramText(product.name)}
+💰 *السعر:* ${product.price.toLocaleString()} دج
+🏷️ *القسم:* ${product.category || 'عام'}
+📊 *الكمية:* ${product.quantity}
+🆔 *معرف المنتج:* \`${product.productCompositeID}\`
+🏪 *المتجر:* ${product.storeName}
+🆔 *معرف المتجر:* \`${product.storeID}\`
+📝 *الوصف:* ${cleanTelegramText(product.description || 'لا يوجد وصف')}`;
+        
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM.channelId);
+        formData.append('photo', imageFile);
+        formData.append('caption', caption);
+        formData.append('parse_mode', 'Markdown');
+        
+        const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendPhoto`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.ok) {
+            showToast('✅ تم النشر بنجاح إلى القناة!', 'success');
+            return { success: true, messageId: data.result.message_id };
+        } else {
+            throw new Error(data.description || 'خطأ غير معروف');
         }
+    } catch (error) {
+        console.error('خطأ في النشر:', error);
+        showToast('❌ فشل النشر: ' + error.message, 'error');
+        return { success: false, error: error.message };
     }
+}
 
     /* [31] دالة جلب المنتجات من التلغرام */
     async function fetchProductsFromTelegram() {
