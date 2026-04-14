@@ -440,60 +440,145 @@
     };
 
     /* [25] تهيئة البيانات والمتغيرات العامة */
-    let products = [];
-    let orders = [];
-    let stockLog = [];
-    let currentStore = {
-        storeName: 'ناردو برو',
-        storeFixedID: 'NARDO-001',
-        channelUsername: '@NardoChannel'
-    };
-    let editProductId = null;
+    /* [25] تهيئة البيانات والمتغيرات العامة */
+let products = [];
+let orders = [];
+let stockLog = [];
+let currentStore = {
+    storeName: 'ناردو برو',
+    storeFixedID: '',
+    channelUsername: '@NardoChannel',
+    phone: '',
+    address: ''
+};
+let editProductId = null;
 
-    /* [26] دوال التخزين الآمن (Safe LocalStorage) */
-    const safeLocalStorage = {
-        get: (key) => {
-            try {
-                const data = localStorage.getItem(key);
-                return data ? JSON.parse(data) : [];
-            } catch (e) { return []; }
-        },
-        set: (key, val) => {
-            try {
-                localStorage.setItem(key, JSON.stringify(val));
-            } catch (e) { console.error('Storage Error', e); }
-        }
-    };
+/* [26] دوال التخزين الآمن (Safe LocalStorage) */
+const safeLocalStorage = {
+    get: (key) => {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : [];
+        } catch (e) { return []; }
+    },
+    set: (key, val) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(val));
+        } catch (e) { console.error('Storage Error', e); }
+    }
+};
 
-    /* [27] دالة تحميل بيانات المتجر الحالي */
-    function loadCurrentStore() {
-        const savedStore = localStorage.getItem('nardo_current_store');
-        if (savedStore) {
-            currentStore = JSON.parse(savedStore);
+/* [27] دالة توليد معرف المتجر (اسم المتجر + 6 أرقام عشوائية) */
+function generateStoreID(storeName) {
+    // تنظيف اسم المتجر (إزالة الرموز الخاصة)
+    let clean = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '').substring(0, 10).toUpperCase();
+    if (!clean) clean = 'NARDO';
+    
+    // توليد 6 أرقام عشوائية
+    const randomNumbers = Math.floor(Math.random() * 900000 + 100000);
+    
+    // المعرف النهائي: الاسم + 6 أرقام
+    return `${clean}-${randomNumbers}`;
+}
+
+/* [28] دالة تحميل بيانات المتجر الحالي */
+function loadCurrentStore() {
+    const savedStore = localStorage.getItem('nardo_current_store');
+    
+    if (savedStore) {
+        currentStore = JSON.parse(savedStore);
+        // التأكد من أن المعرف بالتنسيق الصحيح (يحتوي على 6 أرقام)
+        if (!currentStore.storeFixedID || !currentStore.storeFixedID.match(/-\d{6}$/)) {
+            currentStore.storeFixedID = generateStoreID(currentStore.storeName);
+            localStorage.setItem('nardo_current_store', JSON.stringify(currentStore));
         }
+    } else {
+        // إنشاء متجر جديد مع معرف = اسم المتجر + 6 أرقام
+        const newStoreID = generateStoreID(currentStore.storeName);
+        currentStore = {
+            storeName: 'ناردو برو',
+            storeFixedID: newStoreID,
+            channelUsername: '@NardoChannel',
+            phone: '',
+            address: ''
+        };
+        localStorage.setItem('nardo_current_store', JSON.stringify(currentStore));
+    }
+    
+    // تحديث واجهة المستخدم
+    if (document.getElementById('currentStoreNameDisplay')) {
         document.getElementById('currentStoreNameDisplay').innerText = currentStore.storeName;
+    }
+    if (document.getElementById('storeIDDisplay')) {
         document.getElementById('storeIDDisplay').innerText = currentStore.storeFixedID;
+    }
+    if (document.getElementById('storeChannelDisplay')) {
         document.getElementById('storeChannelDisplay').innerText = currentStore.channelUsername;
-        
-        products = safeLocalStorage.get('nardo_products');
-        orders = safeLocalStorage.get('nardo_orders');
-        stockLog = safeLocalStorage.get('nardo_stock_log');
     }
+    
+    // تحميل البيانات من localStorage
+    products = safeLocalStorage.get('nardo_products');
+    orders = safeLocalStorage.get('nardo_orders');
+    stockLog = safeLocalStorage.get('nardo_stock_log');
+    
+    // تحديث عدد المنتجات
+    updateStoreProductCount();
+}
 
-    /* [28] دالة تحديث عدد منتجات المتجر */
-    function updateStoreProductCount() {
-        const count = products.filter(p => p.storeID === currentStore.storeFixedID).length;
-        localStorage.setItem(`count_${currentStore.storeFixedID}`, count);
+/* [29] دالة تحديث عدد منتجات المتجر */
+function updateStoreProductCount() {
+    const count = products.filter(p => p.storeID === currentStore.storeFixedID).length;
+    localStorage.setItem(`count_${currentStore.storeFixedID}`, count);
+    
+    // تحديث في الواجهة إذا وجد العنصر
+    if (document.getElementById('storeProductCount')) {
+        document.getElementById('storeProductCount').innerText = count;
     }
+}
 
-    /* [29] دالة الحصول على الرقم التسلسلي التالي للمنتج */
-    function getNextProductSerial(storeID) {
-        const storeProducts = products.filter(p => p.storeID === storeID);
-        if (storeProducts.length === 0) return 101;
-        const maxSerial = Math.max(...storeProducts.map(p => p.serialNumber || 100));
-        return maxSerial + 1;
+/* [30] دالة الحصول على الرقم التسلسلي التالي للمنتج (يبدأ من 1) */
+function getNextProductSerial(storeID) {
+    const storeProducts = products.filter(p => p.storeID === storeID);
+    if (storeProducts.length === 0) return 1;  // ✅ يبدأ من 1
+    
+    const maxSerial = Math.max(...storeProducts.map(p => p.serialNumber || 0));
+    return maxSerial + 1;
+}
+
+/* [31] دالة توليد معرف المنتج الكامل */
+function generateProductCompositeID(storeID, serialNumber) {
+    // معرف المنتج = معرف المتجر + الرقم التسلسلي (3 أرقام)
+    return `${storeID}-${serialNumber.toString().padStart(3, '0')}`;
+}
+
+/* [32] دالة عرض معلومات المتجر */
+function showStoreInfo() {
+    alert(`🏪 ${currentStore.storeName}\n🆔 معرف المتجر: ${currentStore.storeFixedID}\n📞 ${currentStore.phone || 'غير مسجل'}\n📍 ${currentStore.address || 'غير مسجل'}\n📢 ${currentStore.channelUsername || 'غير محدد'}`);
+}
+
+/* [33] دالة نسخ معرف المتجر */
+function copyStoreID() {
+    if (currentStore.storeFixedID) {
+        navigator.clipboard.writeText(currentStore.storeFixedID);
+        showToast('✅ تم نسخ معرف المتجر: ' + currentStore.storeFixedID, 'success');
     }
+}
 
+/* [34] دالة إعادة توليد معرف جديد (نفس الاسم ولكن أرقام جديدة) */
+function regenerateStoreID() {
+    const newID = generateStoreID(currentStore.storeName);
+    currentStore.storeFixedID = newID;
+    localStorage.setItem('nardo_current_store', JSON.stringify(currentStore));
+    
+    // تحديث الواجهة
+    if (document.getElementById('storeIDDisplay')) {
+        document.getElementById('storeIDDisplay').innerText = currentStore.storeFixedID;
+    }
+    
+    showToast('🔄 تم توليد معرف جديد: ' + newID, 'success');
+    return newID;
+}
+    
     /* [30] دالة إرسال المنتج إلى التلغرام */
     async function sendToTelegram(product, imageFile) {
         try {
