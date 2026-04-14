@@ -1,8 +1,4 @@
-
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي - طلبات تلجرام</title>
@@ -15,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
+        /* === الأنماط الأصلية بالكامل === */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
@@ -312,6 +309,7 @@
     <button class="tab-btn" onclick="showTab('inventory', this)"><i class="fas fa-warehouse"></i> المخزون</button>
     <button class="tab-btn" onclick="showTab('stockLog', this)"><i class="fas fa-history"></i> سجل المخزون</button>
     <button class="tab-btn" onclick="showTab('orders', this)"><i class="fas fa-receipt"></i> الطلبات</button>
+    <button class="tab-btn" onclick="openDeliveryPage()"><i class="fas fa-truck"></i> التوصيل</button>
     <button id="fetchOrdersBtn" class="nav-btn nav-btn-telegram" style="margin-right: auto;" onclick="fetchOrdersFromTelegram()"><i class="fab fa-telegram"></i> جلب الطلبات</button>
 </div>
 
@@ -360,15 +358,25 @@
         <div id="stockLogContainer"></div>
     </div>
 
-    <!-- تبويب الطلبات -->
+    <!-- تبويب الطلبات (تمت استعادته بالكامل) -->
     <div id="ordersTab" class="tab-content" style="display: none;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <h3><i class="fas fa-receipt"></i> سجل الطلبات</h3>
             <button class="btn btn-outline" style="padding:6px 16px;" onclick="clearOrders()"><i class="fas fa-trash"></i> مسح</button>
         </div>
         <div class="table-container">
             <table class="data-table">
-                <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>التاريخ</th>
+                        <th>العميل</th>
+                        <th>المنتجات</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
                 <tbody id="ordersTableBody"></tbody>
             </table>
         </div>
@@ -474,7 +482,7 @@
 </div>
 
 <script>
-    /* === المنطق البرمجي الكامل بدون نقصان === */
+    /* === المنطق البرمجي الأصلي بالكامل === */
     const TELEGRAM = {
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
         channelId: '-1003822964890',
@@ -591,16 +599,29 @@
             for (const update of data.result || []) {
                 if (processedIds.includes(update.update_id)) continue;
                 
-                const msg = update.message;
-                if (!msg || !msg.text) continue;
+                const post = update.channel_post || update.message;
+                if (!post) continue;
                 
-                if (msg.text.includes('طلب جديد') || msg.text.includes('سلة المشتريات')) {
+                const caption = post.caption || post.text || '';
+                if (caption.includes('طلب جديد') || caption.includes('سلة المشتريات')) {
+                    // محاولة استخراج الصورة إذا وجدت
+                    let orderImg = null;
+                    if(post.photo) {
+                        const fileId = post.photo[post.photo.length - 1].file_id;
+                        const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                        const fileData = await fileRes.json();
+                        if(fileData.ok) {
+                            orderImg = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                        }
+                    }
+
                     const order = {
-                        id: 'ORD-' + Date.now(),
-                        date: new Date(msg.date * 1000).toLocaleString(),
-                        customer: msg.from.first_name || 'عميل',
-                        text: msg.text,
-                        total: 'غير محدد',
+                        id: 'ORD-' + Date.now() + Math.floor(Math.random()*100),
+                        date: new Date(post.date * 1000).toLocaleString(),
+                        customer: (post.from ? post.from.first_name : 'قناة التلغرام'),
+                        text: caption,
+                        image: orderImg,
+                        total: 'قيد الحساب',
                         status: 'جديد'
                     };
                     orders.push(order);
@@ -646,30 +667,27 @@
 
         if (!name || isNaN(price) || isNaN(qty)) return showToast('❌ يرجى ملء الحقول المطلوبة', 'error');
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const newProduct = {
-                id: Date.now(),
-                productCompositeID: `${currentStore.storeFixedID}-P${(products.length+1).toString().padStart(3,'0')}`,
-                name: name, description: document.getElementById('productDesc').value,
-                price: price, quantity: qty, category: document.getElementById('productCategory').value,
-                storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
-                image: e.target.result, published: false
-            };
-            products.push(newProduct);
-            safeLocalStorage.set('nardo_products', products);
-            showToast('✅ تم الحفظ بنجاح'); renderAll(); closeAddProductModal();
+        const serial = (products.length + 1).toString().padStart(3, '0');
+        const productData = {
+            id: Date.now(),
+            productCompositeID: `${currentStore.storeFixedID}-P${serial}`,
+            name: name, description: document.getElementById('productDesc').value,
+            price: price, quantity: qty, category: document.getElementById('productCategory').value,
+            storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
+            published: false
         };
-        if(imageFile) reader.readAsDataURL(imageFile);
-        else {
-            const newProduct = {
-                id: Date.now(), productCompositeID: `${currentStore.storeFixedID}-P${(products.length+1).toString().padStart(3,'0')}`,
-                name: name, description: document.getElementById('productDesc').value,
-                price: price, quantity: qty, category: document.getElementById('productCategory').value,
-                storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
-                image: null, published: false
+
+        if(imageFile) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                productData.image = e.target.result;
+                products.push(productData);
+                safeLocalStorage.set('nardo_products', products);
+                showToast('✅ تم الحفظ بنجاح'); renderAll(); closeAddProductModal();
             };
-            products.push(newProduct);
+            reader.readAsDataURL(imageFile);
+        } else {
+            products.push(productData);
             safeLocalStorage.set('nardo_products', products);
             showToast('✅ تم الحفظ بنجاح'); renderAll(); closeAddProductModal();
         }
@@ -683,25 +701,26 @@
 
         if (!name || isNaN(price) || isNaN(qty)) return showToast('❌ يرجى ملء الحقول المطلوبة', 'error');
 
-        const newProduct = {
-            id: Date.now(), productCompositeID: `${currentStore.storeFixedID}-P${(products.length+1).toString().padStart(3,'0')}`,
+        const serial = (products.length + 1).toString().padStart(3, '0');
+        const productData = {
+            id: Date.now(), productCompositeID: `${currentStore.storeFixedID}-P${serial}`,
             name: name, description: document.getElementById('productDesc').value,
             price: price, quantity: qty, category: document.getElementById('productCategory').value,
             storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
             published: true
         };
 
-        const result = await sendToTelegram(newProduct, imageFile);
+        const result = await sendToTelegram(productData, imageFile);
         if (result.success) {
             if(imageFile) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    newProduct.image = e.target.result;
-                    products.push(newProduct); safeLocalStorage.set('nardo_products', products); renderAll(); closeAddProductModal();
+                    productData.image = e.target.result;
+                    products.push(productData); safeLocalStorage.set('nardo_products', products); renderAll(); closeAddProductModal();
                 };
                 reader.readAsDataURL(imageFile);
             } else {
-                products.push(newProduct); safeLocalStorage.set('nardo_products', products); renderAll(); closeAddProductModal();
+                products.push(productData); safeLocalStorage.set('nardo_products', products); renderAll(); closeAddProductModal();
             }
         }
     }
@@ -763,22 +782,49 @@
         });
     }
 
+    /* استعادة جدول الطلبات الجميل بالصور */
     function renderOrders() {
         const tbody = document.getElementById('ordersTableBody'); tbody.innerHTML = '';
         orders.slice().reverse().forEach(o => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><code>${o.id}</code></td>
+                <td><code>${o.id.substring(0,10)}</code></td>
                 <td>${o.date}</td>
                 <td>${o.customer}</td>
-                <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${o.text}</td>
-                <td>${o.total}</td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        ${o.image ? `<img src="${o.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '<div style="width:40px; height:40px; background:#333; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-image" style="font-size:12px; color:#666;"></i></div>'}
+                        <div style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;">${o.text.substring(0,30)}...</div>
+                    </div>
+                </td>
+                <td><strong style="color:var(--success)">${o.total}</strong></td>
                 <td><span class="stock-status high">${o.status}</span></td>
-                <td><button class="btn btn-outline btn-sm" onclick="alert('${o.text}')">عرض</button></td>
+                <td>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn btn-gold btn-sm" onclick="viewOrderDetails('${o.id}')"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-error btn-sm" onclick="deleteOrder('${o.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
             `;
             tbody.appendChild(row);
         });
     }
+
+    function viewOrderDetails(id) {
+        const o = orders.find(ord => ord.id === id);
+        if(o) alert(`📄 تفاصيل الطلب:\n\nالعميل: ${o.customer}\nالتاريخ: ${o.date}\n\nالمحتوى:\n${o.text}`);
+    }
+
+    function deleteOrder(id) {
+        if(confirm('حذف هذا الطلب؟')) {
+            orders = orders.filter(o => o.id !== id);
+            safeLocalStorage.set('nardo_orders', orders);
+            renderOrders();
+            updateStoreProductCount();
+        }
+    }
+
+    function openDeliveryPage() { showToast('🚚 جاري الانتقال لصفحة التوصيل...', 'info'); }
 
     /* === دوال التحكم المتبقية === */
     function openEditStock(id) {
@@ -828,6 +874,15 @@
     window.onload = () => { loadCurrentStore(); renderAll(); document.getElementById('searchProducts').addEventListener('input', renderProducts); };
 
     function showStoreInfo() { alert(`🏪 ${currentStore.storeName}\n🆔 المعرف: ${currentStore.storeFixedID}`); }
+    
+    function findProductById() {
+        const id = prompt('أدخل معرف المنتج:');
+        if(id) {
+            const p = products.find(prod => prod.productCompositeID === id);
+            if(p) alert(`📦 منتج: ${p.name}\n💰 السعر: ${p.price} دج\n📊 المخزون: ${p.quantity}`);
+            else showToast('❌ المنتج غير موجود', 'error');
+        }
+    }
 </script>
 
 </body>
