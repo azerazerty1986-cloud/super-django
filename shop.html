@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -314,7 +313,7 @@
             apiUrl: 'https://api.telegram.org/bot' 
         };
         
-        // ========== مفاتيح التخزين (متوافقة مع الكود الرئيسي) ==========
+        // ========== مفاتيح التخزين ==========
         const CART_STORAGE_KEY = 'nardoo_cart';
         const ORDERS_STORAGE_KEY = 'nardo_orders';
         
@@ -350,7 +349,8 @@
             const saved = localStorage.getItem(CART_STORAGE_KEY); 
             cart = saved ? JSON.parse(saved) : []; 
             updateCartDisplay(); 
-            updateCartCounters(); 
+            updateCartCounters();
+            console.log('📦 تم تحميل السلة:', cart.length, 'عناصر');
         }
         
         function updateCartCounters() { 
@@ -369,12 +369,13 @@
         }
         
         function updateCartQuantity(productId, change) { 
-            const idx = cart.findIndex(i=>i.id===productId); 
-            if(idx===-1) return; 
-            const newQ = cart[idx].quantity+change; 
-            if(newQ<=0) removeFromCart(productId); 
+            // استخدام مقارنة صارمة مع تحويل إلى سلسلة لتجنب مشاكل الأنواع
+            const idx = cart.findIndex(i => String(i.id) === String(productId)); 
+            if(idx === -1) return; 
+            const newQ = cart[idx].quantity + change; 
+            if(newQ <= 0) removeFromCart(productId); 
             else { 
-                cart[idx].quantity=newQ; 
+                cart[idx].quantity = newQ; 
                 saveCart(); 
                 updateCartDisplay(); 
                 showNotification(`✓ تم تحديث كمية ${cart[idx].name}`); 
@@ -382,9 +383,10 @@
         }
         
         function removeFromCart(productId) { 
-            const item = cart.find(i=>i.id===productId); 
-            if(item){ 
-                cart = cart.filter(i=>i.id!==productId); 
+            const idx = cart.findIndex(i => String(i.id) === String(productId));
+            if(idx !== -1){ 
+                const item = cart[idx];
+                cart = cart.filter(i => String(i.id) !== String(productId)); 
                 saveCart(); 
                 updateCartDisplay(); 
                 showNotification(`✓ تم إزالة ${item.name}`); 
@@ -404,17 +406,17 @@
         function groupByStore(items) { 
             const g={}; 
             items.forEach(item=>{ 
-                const sid=item.storeID||'unknown-store'; 
-                const sname=item.storeName||'ناردو برو'; 
-                if(!g[sid]) g[sid]={storeID:sid,storeName:sname,items:[],total:0,count:0}; 
+                const sid = item.storeID || 'unknown-store'; 
+                const sname = item.storeName || 'ناردو برو'; 
+                if(!g[sid]) g[sid]={storeID:sid, storeName:sname, items:[], total:0, count:0}; 
                 g[sid].items.push(item); 
-                g[sid].total+=item.price*item.quantity; 
-                g[sid].count+=item.quantity; 
+                g[sid].total += item.price * item.quantity; 
+                g[sid].count += item.quantity; 
             }); 
             return g; 
         }
 
-        // ========== إنشاء رسالة تلغرام (متوافقة مع نظام المعرفات) ==========
+        // ========== إنشاء رسالة تلغرام ==========
         function formatProductVertical(item) {
             let productMsg = "";
             productMsg += `🛒 ${item.name}\n`;
@@ -653,12 +655,12 @@
                                 <div class="product-id">🆔 ${it.productCompositeID || it.id || '---'}</div>
                             </div>
                             <div class="cart-item-quantity">
-                                <button onclick="updateCartQuantity(${it.id},-1)">−</button>
+                                <button onclick="updateCartQuantity('${it.id}',-1)">−</button>
                                 <span>${it.quantity}</span>
-                                <button onclick="updateCartQuantity(${it.id},1)">+</button>
+                                <button onclick="updateCartQuantity('${it.id}',1)">+</button>
                             </div>
                             <div class="cart-item-total">${(it.price*it.quantity).toLocaleString()} دج</div>
-                            <button class="cart-item-remove" onclick="removeFromCart(${it.id})"><i class="fas fa-trash-alt"></i> حذف</button>
+                            <button class="cart-item-remove" onclick="removeFromCart('${it.id}')"><i class="fas fa-trash-alt"></i> حذف</button>
                         </div>
                     `;
                 });
@@ -718,4 +720,3 @@
     </script>
 </body>
 </html>
-
