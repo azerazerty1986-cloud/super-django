@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -498,7 +496,10 @@
                 return true;
             } catch (e) {
                 this.autoCleanup();
-                try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch(re) { return false; }
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    return true;
+                } catch (e2) { return false; }
             }
         },
         get: function(key, defaultValue = '[]') {
@@ -547,7 +548,7 @@
     function updateStoreProductCount() {
         const count = products.filter(p => p.storeID === currentStore.storeFixedID).length;
         document.getElementById('storeProductCount').innerHTML = count;
-        document.getElementById('statTotal').innerHTML = products.length;
+        document.getElementById('statTotal').innerHTML = products.filter(p => p.storeID === currentStore.storeFixedID).length;
         document.getElementById('statOrders').innerHTML = orders.filter(o => o.storeID === currentStore.storeFixedID).length;
         updateOrderStats();
     }
@@ -640,6 +641,9 @@
                             <button class="btn btn-error btn-sm" onclick="deleteOrder('${order.id}')" title="حذف">
                                 <i class="fas fa-trash"></i>
                             </button>
+                            <button class="btn btn-telegram btn-sm" onclick="openDeliveryFullPage('${order.id}')" title="التوصيل">
+                                <i class="fas fa-truck"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -687,83 +691,74 @@
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
         tempDiv.style.left = '-9999px';
-        tempDiv.style.width = '800px';
-        tempDiv.style.background = '#ffffff';
-        tempDiv.style.color = '#000000';
-        tempDiv.style.padding = '40px';
-        tempDiv.style.fontFamily = 'Cairo, sans-serif';
-        tempDiv.style.direction = 'rtl';
-        
+        tempDiv.style.width = '210mm';
+        tempDiv.style.height = '297mm';
+        tempDiv.style.background = 'white';
+        tempDiv.style.padding = '20px';
+        tempDiv.style.fontFamily = 'Arial, sans-serif';
+        tempDiv.style.color = '#000';
+        tempDiv.style.fontSize = '12px';
+        tempDiv.style.lineHeight = '1.6';
         tempDiv.innerHTML = `
-            <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #daa520; padding-bottom:10px;">
-                <h1 style="margin:0; color:#daa520;">🧾 فاتورة طلب #${order.telegramOrderId || order.id.toString().slice(-6)}</h1>
-                <p style="margin:5px 0;">🏪 متجر: ${order.storeName || currentStore?.storeName || 'ناردو برو'}</p>
+            <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
+                <h1 style="margin: 0; font-size: 24px;">🏪 ${order.storeName || 'ناردو برو'}</h1>
+                <p style="margin: 5px 0; font-size: 11px;">فاتورة طلب</p>
             </div>
-            <div style="margin-bottom:20px;">
-                <p><strong>📅 التاريخ:</strong> ${order.date}</p>
-                <p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p>
-                <p><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</p>
-                <p><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</p>
-                ${order.customerNotes ? `<p><strong>📝 ملاحظات:</strong> ${order.customerNotes}</p>` : ''}
+            <div style="margin-bottom: 15px;">
+                <p><strong>رقم الطلب:</strong> #${order.telegramOrderId || order.id.toString().slice(-6)}</p>
+                <p><strong>التاريخ:</strong> ${order.date || new Date().toLocaleString('ar-EG')}</p>
             </div>
-            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
-                <thead>
-                    <tr style="background:#f0f0f0;">
-                        <th style="border:1px solid #000; padding:10px; text-align:right;">المنتج</th>
-                        <th style="border:1px solid #000; padding:10px; text-align:center;">معرف المنتج</th>
-                        <th style="border:1px solid #000; padding:10px; text-align:center;">الكمية</th>
-                        <th style="border:1px solid #000; padding:10px; text-align:center;">السعر</th>
-                        <th style="border:1px solid #000; padding:10px; text-align:center;">الإجمالي</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${order.items && order.items.length ? order.items.map(it => `
-                        <tr>
-                            <td style="border:1px solid #000; padding:10px;">${it.name}</td>
-                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.productCompositeID || '---'}</td>
-                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.quantity}</td>
-                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.price.toLocaleString()} دج</td>
-                            <td style="border:1px solid #000; padding:10px; text-align:center;">${(it.price * it.quantity).toLocaleString()} دج</td>
+            <div style="margin-bottom: 15px; border: 1px solid #ccc; padding: 10px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 14px;">بيانات العميل</h3>
+                <p><strong>الاسم:</strong> ${order.customerName || 'غير معروف'}</p>
+                <p><strong>الهاتف:</strong> ${order.customerPhone || '---'}</p>
+                <p><strong>العنوان:</strong> ${order.customerAddress || '---'}</p>
+                ${order.customerNotes ? `<p><strong>ملاحظات:</strong> ${order.customerNotes}</p>` : ''}
+            </div>
+            <div style="margin-bottom: 15px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 14px;">المنتجات</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f0f0f0; border-bottom: 1px solid #000;">
+                            <th style="text-align: right; padding: 5px; border: 1px solid #ccc;">المنتج</th>
+                            <th style="text-align: center; padding: 5px; border: 1px solid #ccc;">الكمية</th>
+                            <th style="text-align: center; padding: 5px; border: 1px solid #ccc;">السعر</th>
+                            <th style="text-align: center; padding: 5px; border: 1px solid #ccc;">الإجمالي</th>
                         </tr>
-                    `).join('') : '<tr><td colspan="5" style="text-align:center;">لا توجد منتجات</td></tr>'}
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight:bold; background:#f0f0f0;">
-                        <td colspan="4" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
-                        <td style="border:1px solid #000; padding:10px; text-align:center;">${(order.total || 0).toLocaleString()} دج</td>
-                    </tr>
-                </tfoot>
-            </table>
-            <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">
-                شكرًا لتعاملكم مع ناردو برو 🌟
+                    </thead>
+                    <tbody>
+                        ${order.items && order.items.length ? order.items.map(item => `
+                            <tr style="border-bottom: 1px solid #ccc;">
+                                <td style="text-align: right; padding: 5px; border: 1px solid #ccc;">${item.name}</td>
+                                <td style="text-align: center; padding: 5px; border: 1px solid #ccc;">${item.quantity}</td>
+                                <td style="text-align: center; padding: 5px; border: 1px solid #ccc;">${item.price.toLocaleString()} دج</td>
+                                <td style="text-align: center; padding: 5px; border: 1px solid #ccc;">${(item.price * item.quantity).toLocaleString()} دج</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="4" style="text-align: center; padding: 10px;">لا توجد منتجات</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+            <div style="text-align: left; margin-top: 20px; padding-top: 10px; border-top: 2px solid #000;">
+                <p style="font-size: 14px; font-weight: bold;">الإجمالي: <span style="color: #00aa00;">${(order.total || 0).toLocaleString()} دج</span></p>
+            </div>
+            <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
+                <p>شكراً لك على تعاملك معنا</p>
+                <p>تم إنشاء الفاتورة بواسطة ناردو برو</p>
             </div>
         `;
-        
         document.body.appendChild(tempDiv);
-        
+
         try {
-            const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff', logging: false });
+            const canvas = await html2canvas(tempDiv, { scale: 2, useCORS: true, allowTaint: true });
             const imgData = canvas.toDataURL('image/png');
-            const imgProps = doc.getImageProperties(imgData);
-            const pdfWidth = doc.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            doc.save(`Order_${order.telegramOrderId || order.id}.pdf`);
-            showToast('✅ تم تحميل فاتورة PDF بنجاح', 'success');
+            doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+            doc.save(`فاتورة_${order.telegramOrderId || order.id.toString().slice(-6)}.pdf`);
+            showToast('✅ تم تحميل الفاتورة بنجاح', 'success');
         } catch (error) {
-            console.error('PDF Error:', error);
-            showToast('❌ فشل تصدير PDF', 'error');
+            console.error('خطأ في إنشاء PDF:', error);
+            showToast('❌ فشل إنشاء الفاتورة', 'error');
         } finally {
             document.body.removeChild(tempDiv);
-        }
-    }
-
-    function clearOrders() {
-        if (confirm('⚠️ هل أنت متأكد من مسح جميع الطلبات؟ هذا الإجراء لا يمكن التراجع عنه.')) {
-            orders = orders.filter(o => o.storeID !== currentStore?.storeFixedID);
-            safeLocalStorage.set('nardo_orders', orders);
-            renderOrders();
-            showToast('تم مسح جميع الطلبات', 'success');
         }
     }
 
@@ -771,33 +766,28 @@
         const btn = document.getElementById('fetchOrdersBtn');
         const originalText = btn?.innerHTML;
         if (btn) {
-            btn.innerHTML = '<span class="loading-spinner"></span> جاري الجلب...';
             btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> جاري الجلب...';
         }
-        
+
         try {
-            showToast('📡 جاري جلب الطلبات من التلغرام...', 'info');
-            
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates`);
             const data = await response.json();
-            
-            if (!data.ok) throw new Error('فشل الاتصال بـ Telegram API');
-            
-            let allOrders = safeLocalStorage.get('nardo_orders');
-            let productsList = safeLocalStorage.get('nardo_products');
-            let processedIds = safeLocalStorage.get('nardo_processed_telegram_ids');
-            
+            if (!data.ok) throw new Error('فشل الاتصال بـ Telegram');
+
+            const allOrders = safeLocalStorage.get('nardo_orders');
+            const processedIds = safeLocalStorage.get('nardo_processed_telegram_ids');
+            const productsList = products;
             let newOrdersCount = 0;
 
-            for (const update of data.result || []) {
-                const post = update.channel_post || update.message;
-                if (!post || !post.text) continue;
-                
-                const uniqueId = post.message_id;
+            for (const update of (data.result || [])) {
+                const uniqueId = update.update_id;
                 if (processedIds.includes(uniqueId)) continue;
-                
-                const text = post.text;
-                if (!text.includes(currentStore?.storeFixedID)) continue;
+
+                const message = update.message || update.channel_post;
+                if (!message || !message.text) continue;
+
+                const text = message.text;
                 
                 const orderData = extractOrderDataFromText(text);
                 if (!orderData || !orderData.items || orderData.items.length === 0) continue;
@@ -1010,7 +1000,7 @@
 
         if (!name || isNaN(price) || isNaN(qty)) return showToast('❌ يرجى ملء الحقول المطلوبة', 'error');
 
-        const serial = (products.length + 1).toString().padStart(3, '0');
+        const serial = (products.filter(p => p.storeID === currentStore.storeFixedID).length + 1).toString().padStart(3, '0');
         const productData = {
             id: Date.now(),
             productCompositeID: `${currentStore.storeFixedID}-P${serial}`,
@@ -1044,9 +1034,10 @@
 
         if (!name || isNaN(price) || isNaN(qty)) return showToast('❌ يرجى ملء الحقول المطلوبة', 'error');
 
-        const serial = (products.length + 1).toString().padStart(3, '0');
+        const serial = (products.filter(p => p.storeID === currentStore.storeFixedID).length + 1).toString().padStart(3, '0');
         const productData = {
-            id: Date.now(), productCompositeID: `${currentStore.storeFixedID}-P${serial}`,
+            id: Date.now(),
+            productCompositeID: `${currentStore.storeFixedID}-P${serial}`,
             name: name, description: document.getElementById('productDesc').value,
             price: price, quantity: qty, category: document.getElementById('productCategory').value,
             storeID: currentStore.storeFixedID, storeName: currentStore.storeName,
@@ -1073,7 +1064,7 @@
         grid.innerHTML = '';
         const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
         
-        products.filter(p => p.name.toLowerCase().includes(search) || p.productCompositeID.toLowerCase().includes(search))
+        products.filter(p => p.storeID === currentStore.storeFixedID && (p.name.toLowerCase().includes(search) || p.productCompositeID.toLowerCase().includes(search)))
         .forEach(p => {
             const card = document.createElement('div'); card.className = 'product-card';
             const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
@@ -1098,7 +1089,7 @@
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable'); if(!tbody) return;
         tbody.innerHTML = '';
-        products.forEach(p => {
+        products.filter(p => p.storeID === currentStore.storeFixedID).forEach(p => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><img src="${p.image || ''}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;" onerror="this.src='https://via.placeholder.com/40'"></td>
@@ -1156,6 +1147,7 @@
 
     function deleteProduct(id) { if(confirm('حذف المنتج؟')) { products = products.filter(p => p.id != id); safeLocalStorage.set('nardo_products', products); renderAll(); } }
     function clearStockLog() { if(confirm('مسح السجل؟')) { stockLog = []; safeLocalStorage.set('nardo_stock_log', stockLog); renderStockLog(); } }
+    function clearOrders() { if(confirm('مسح جميع الطلبات؟')) { orders = []; safeLocalStorage.set('nardo_orders', orders); renderOrders(); } }
 
     function showTab(tabId, btn) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1172,13 +1164,26 @@
     function findProductById() {
         const id = prompt('أدخل معرف المنتج:');
         if(id) {
-            const p = products.find(prod => prod.productCompositeID === id);
+            const p = products.find(prod => prod.productCompositeID === id && prod.storeID === currentStore.storeFixedID);
             if(p) alert(`📦 منتج: ${p.name}\n💰 السعر: ${p.price} دج\n📊 المخزون: ${p.quantity}`);
             else showToast('❌ المنتج غير موجود', 'error');
         }
     }
 
-    function openDeliveryPage() { showToast('🚚 جاري الانتقال لصفحة التوصيل...', 'info'); }
+    function openDeliveryPage() { 
+        showToast('🚚 جاري الانتقال لصفحة التوصيل...', 'info'); 
+        window.location.href = 'delivery-full.html';
+    }
+
+    function openDeliveryFullPage(orderId) {
+        const order = orders.find(o => o.id == orderId);
+        if (!order) {
+            showToast('❌ الطلب غير موجود', 'error');
+            return;
+        }
+        localStorage.setItem('selectedOrder', JSON.stringify(order));
+        window.location.href = 'delivery-full.html';
+    }
     
     function fetchProductsFromTelegram() { showToast('📦 سيتم جلب المنتجات قريباً', 'info'); }
 
