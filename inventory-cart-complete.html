@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -784,45 +782,195 @@
         });
     }
 
-    /* استعادة جدول الطلبات الجميل بالصور */
+    /* ========== دوال الطلبات المحسّنة ========== */
+    
     function renderOrders() {
-        const tbody = document.getElementById('ordersTableBody'); tbody.innerHTML = '';
-        orders.slice().reverse().forEach(o => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><code>${o.id.substring(0,10)}</code></td>
-                <td>${o.date}</td>
-                <td>${o.customer}</td>
-                <td>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        ${o.image ? `<img src="${o.image}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '<div style="width:40px; height:40px; background:#333; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-image" style="font-size:12px; color:#666;"></i></div>'}
-                        <div style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px;">${o.text.substring(0,30)}...</div>
-                    </div>
-                </td>
-                <td><strong style="color:var(--success)">${o.total}</strong></td>
-                <td><span class="stock-status high">${o.status}</span></td>
-                <td>
-                    <div style="display:flex; gap:5px;">
-                        <button class="btn btn-gold btn-sm" onclick="viewOrderDetails('${o.id}')"><i class="fas fa-eye"></i></button>
-                        <button class="btn btn-error btn-sm" onclick="deleteOrder('${o.id}')"><i class="fas fa-trash"></i></button>
-                    </div>
-                </td>
+        const tbody = document.getElementById('ordersTableBody');
+        if (!tbody) return;
+        
+        let orders = safeLocalStorage.get('nardo_orders');
+        const currentStore = JSON.parse(localStorage.getItem('current_store') || '{}');
+        const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
+        
+        if (filteredOrders.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px;">
+                        <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
+                        لا توجد طلبات لهذا المتجر
+                    </td>
+                </tr>
             `;
-            tbody.appendChild(row);
-        });
+        } else {
+            tbody.innerHTML = filteredOrders.map(order => {
+                return `
+                    <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
+                        <td><strong>#${order.telegramOrderId || order.id}</strong></td>
+                        <td style="font-size:12px;">${order.date || ''}</td>
+                        <td>
+                            <div>
+                                <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                                <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                                <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:12px; max-width:200px;">
+                                ${order.items.map(it => `
+                                    <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
+                                        ${it.name} (${it.quantity})
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </td>
+                        <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                        <td>
+                            <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
+                                ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
+                                    <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
+                                </button>
+                                <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
+                                    <i class="fas fa-phone"></i>
+                                </button>
+                                <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
     }
 
-    function viewOrderDetails(id) {
-        const o = orders.find(ord => ord.id === id);
-        if(o) alert(`📄 تفاصيل الطلب:\n\nالعميل: ${o.customer}\nالتاريخ: ${o.date}\n\nالمحتوى:\n${o.text}`);
-    }
-
-    function deleteOrder(id) {
-        if(confirm('حذف هذا الطلب؟')) {
-            orders = orders.filter(o => o.id !== id);
+    function deleteOrder(orderId) {
+        if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+            let orders = safeLocalStorage.get('nardo_orders');
+            orders = orders.filter(o => o.id !== orderId);
             safeLocalStorage.set('nardo_orders', orders);
             renderOrders();
-            updateStoreProductCount();
+            showToast('تم حذف الطلب', 'success');
+        }
+    }
+
+    function deliverOrder(orderId) {
+        let orders = safeLocalStorage.get('nardo_orders');
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+            order.status = order.status === 'delivered' ? 'pending' : 'delivered';
+            safeLocalStorage.set('nardo_orders', orders);
+            renderOrders();
+            showToast(order.status === 'delivered' ? '✅ تم تسليم الطلب' : '🔄 تم إعادة الطلب إلى قيد المعالجة', 'success');
+        }
+    }
+
+    function callCustomer(phone) {
+        if (!phone) {
+            showToast('رقم الهاتف غير متوفر', 'warning');
+            return;
+        }
+        window.location.href = `tel:${phone}`;
+    }
+
+    async function exportOrderToPDF(orderId) {
+        let orders = safeLocalStorage.get('nardo_orders');
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        showToast('📄 جاري تحضير فاتورة PDF...', 'info');
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.width = '800px';
+        tempDiv.style.background = '#ffffff';
+        tempDiv.style.color = '#000000';
+        tempDiv.style.padding = '40px';
+        tempDiv.style.fontFamily = 'Cairo, sans-serif';
+        tempDiv.style.direction = 'rtl';
+        
+        tempDiv.innerHTML = `
+            <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #daa520; padding-bottom:10px;">
+                <h1 style="margin:0; color:#daa520;">🧾 فاتورة طلب #${order.telegramOrderId || order.id}</h1>
+                <p style="margin:5px 0;">🏪 متجر: ${order.storeName}</p>
+            </div>
+            <div style="margin-bottom:20px;">
+                <p><strong>📅 التاريخ:</strong> ${order.date}</p>
+                <p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p>
+                <p><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</p>
+                <p><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</p>
+                ${order.customerNotes ? `<p><strong>📝 ملاحظات:</strong> ${order.customerNotes}</p>` : ''}
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                <thead>
+                    <tr style="background:#f0f0f0;">
+                        <th style="border:1px solid #000; padding:10px; text-align:right;">المنتج</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">معرف المنتج</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">الكمية</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">السعر</th>
+                        <th style="border:1px solid #000; padding:10px; text-align:center;">الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${order.items.map(it => `
+                        <tr>
+                            <td style="border:1px solid #000; padding:10px;">${it.name}</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.productCompositeID || '---'}</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.quantity}</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${it.price.toLocaleString()} دج</td>
+                            <td style="border:1px solid #000; padding:10px; text-align:center;">${(it.price * it.quantity).toLocaleString()} دج</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight:bold; background:#f0f0f0;">
+                        <td colspan="4" style="border:1px solid #000; padding:10px; text-align:left;">الإجمالي الكلي</td>
+                        <td style="border:1px solid #000; padding:10px; text-align:center;">${order.total.toLocaleString()} دج</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <div style="text-align:center; margin-top:40px; font-size:12px; color:#888;">
+                شكرًا لتعاملكم مع ناردو برو 🌟
+            </div>
+        `;
+        
+        document.body.appendChild(tempDiv);
+        
+        try {
+            const canvas = await html2canvas(tempDiv, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            const imgProps = doc.getImageProperties(imgData);
+            const pdfWidth = doc.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            doc.save(`Order_${order.telegramOrderId || order.id}.pdf`);
+            showToast('✅ تم تحميل فاتورة PDF بنجاح', 'success');
+        } catch (error) {
+            console.error('PDF Error:', error);
+            showToast('❌ فشل تصدير PDF', 'error');
+        } finally {
+            document.body.removeChild(tempDiv);
         }
     }
 
