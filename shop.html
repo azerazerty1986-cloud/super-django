@@ -339,6 +339,9 @@
         async function sendOrderToTelegram(customerData, groupedStores, grandTotal) {
             const timestamp = new Date().toLocaleString('ar-EG');
             const orderId = Math.floor(Math.random() * 1000000);
+            let mainMessageSuccess = false;
+            let merchantErrors = [];
+            
             try {
                 // ===== الرسالة الرئيسية للقناة =====
                 let channelMsg = `🟢 *طلب جديد #${orderId}* 🟢\n`;
@@ -367,51 +370,75 @@
                 channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
                 channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
                 
-                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                // إرسال الرسالة الرئيسية - هذه هي الأهم
+                const mainResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                     method:'POST', headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({chat_id:TELEGRAM.channelId, text:channelMsg, parse_mode:'Markdown', disable_web_page_preview:false})
                 });
                 
-                // ===== إرسال رسالة منفصلة لكل متجر =====
-                for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                    let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
-                    merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
-                    merchantMsg += `📍 *العنوان:* ${customerData.address}\n`;
-                    merchantMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
-                    merchantMsg += `───────────────────────────────\n`;
-                    
-                    storeData.items.forEach((item, idx) => {
-                        merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
-                        merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
-                        merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
-                        merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
-                        merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
-                        if(item.image) {
-                            merchantMsg += `   🖼️ [صورة المنتج](${item.image})\n`;
-                        }
-                        merchantMsg += `───────────────────────────────\n`;
-                    });
-                    
-                    merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
-                    merchantMsg += `🆔 *رقم الطلب الموحد:* ${orderId}\n`;
-                    merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
-                    if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
-                    merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
-                    
-                    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                        method:'POST', headers:{'Content-Type':'application/json'},
-                        body:JSON.stringify({chat_id:TELEGRAM.channelId, text:merchantMsg, parse_mode:'Markdown', disable_web_page_preview:false})
-                    });
+                if (mainResponse.ok) {
+                    mainMessageSuccess = true;
+                } else {
+                    return false; // فشلت الرسالة الرئيسية - الطلب فاشل حقيقياً
                 }
+                
+                // ===== إرسال رسالة منفصلة لكل متجر (لا تؤثر على نجاح الطلب) =====
+                for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                    try {
+                        let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
+                        merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
+                        merchantMsg += `📍 *العنوان:* ${customerData.address}\n`;
+                        merchantMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
+                        merchantMsg += `───────────────────────────────\n`;
+                        
+                        storeData.items.forEach((item, idx) => {
+                            merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
+                            merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
+                            merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
+                            merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
+                            merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                            if(item.image) {
+                                merchantMsg += `   🖼️ [صورة المنتج](${item.image})\n`;
+                            }
+                            merchantMsg += `───────────────────────────────\n`;
+                        });
+                        
+                        merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
+                        merchantMsg += `🆔 *رقم الطلب الموحد:* ${orderId}\n`;
+                        merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
+                        if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
+                        merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
+                        
+                        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                            method:'POST', headers:{'Content-Type':'application/json'},
+                            body:JSON.stringify({chat_id:TELEGRAM.channelId, text:merchantMsg, parse_mode:'Markdown', disable_web_page_preview:false})
+                        });
+                    } catch(e) {
+                        merchantErrors.push(storeData.storeName);
+                        console.error('فشل إرسال رسالة المتجر:', e);
+                    }
+                }
+                
+                // حفظ الطلب محلياً
                 saveOrderLocally(customerData, groupedStores, orderId, timestamp);
+                
+                // إظهار تحذير إذا فشلت بعض رسائل المتاجر
+                if (merchantErrors.length > 0) {
+                    showNotification(`⚠️ تم إرسال الطلب ولكن فشل إشعار بعض المتاجر: ${merchantErrors.join(', ')}`, 'warning');
+                }
+                
                 return true;
-            } catch(e) { console.error(e); return false; }
+                
+            } catch(e) { 
+                console.error(e); 
+                return false; 
+            }
         }
 
         function saveOrderLocally(customerData, groupedStores, orderId, timestamp) {
@@ -445,30 +472,52 @@
         
         let pendingGroupedStores=null, pendingGrandTotal=null;
         function openCustomerModal() { if(cart.length===0){ showNotification('السلة فارغة','warning'); return; } pendingGroupedStores=groupByStore(cart); pendingGrandTotal=cart.reduce((s,i)=>s+(i.price*i.quantity),0); document.getElementById('customerModal').style.display='flex'; }
-        function closeModal() { document.getElementById('customerModal').style.display='none'; pendingGroupedStores=null; }
-        async function submitOrder() {
-            const name=document.getElementById('customerName').value.trim(), phone=document.getElementById('customerPhone').value.trim(), address=document.getElementById('customerAddress').value.trim(), notes=document.getElementById('customerNotes').value.trim();
-            if(!name||!phone||!address){ showNotification('الرجاء تعبئة جميع الحقول','error'); return; }
-            showNotification('جاري إرسال الطلب...','info');
-            const success = await sendOrderToTelegram({name,phone,address,notes}, pendingGroupedStores, pendingGrandTotal);
-            if(success){ cart=[]; saveCart(); updateCartDisplay(); closeModal(); showNotification('✓ تم إرسال الطلب بنجاح!'); }
-            else showNotification('❌ فشل الإرسال','error');
-        }
+        function closeModal() { document.getElementById('customerModal').style.display='none'; }
         
-        function updateCartDisplay() {
-            const container=document.getElementById('cartContainer');
-            if(!container) return;
-            if(cart.length===0){ container.innerHTML=`<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="window.location.href='index.html'">تصفح المنتجات</button></div>`; return; }
-            const grouped=groupByStore(cart);
-            let grandTotal=0,grandCount=0,storesHtml='';
-            for(const [sid, sd] of Object.entries(grouped)){ grandTotal+=sd.total; grandCount+=sd.count; const isCollapsed=storesState[sid]===true; const colorClass=getStoreColor(sid);
-                let itemsHtml='';
-                sd.items.forEach(it=>{ const thumbnailHtml=it.image?`<img src="${it.image}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">`:'<i class="fas fa-box"></i>';
-                    itemsHtml+=`<div class="cart-item"><div class="product-thumbnail">${thumbnailHtml}</div><div class="product-details"><div class="product-name">${it.name}</div><div class="product-price">${it.price.toLocaleString()} دج</div><div class="product-id" style="font-size:11px; color:var(--text-secondary);">🆔 ${it.productCompositeID || it.id || '---'}</div></div><div class="cart-item-quantity"><button onclick="updateCartQuantity(${it.id},-1)">−</button><span>${it.quantity}</span><button onclick="updateCartQuantity(${it.id},1)">+</button></div><div class="cart-item-total">${(it.price*it.quantity).toLocaleString()} دج</div><button class="cart-item-remove" onclick="removeFromCart(${it.id})"><i class="fas fa-trash-alt"></i> حذف</button></div>`;
-                });
-                storesHtml+=`<div class="merchant-section ${colorClass}"><div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g,"\\'")}')"><div class="merchant-info"><div class="merchant-avatar"><i class="fas fa-store"></i></div><div><div class="merchant-name">${sd.storeName}</div><div class="merchant-id">🆔 ${sid}</div><div class="merchant-stats"><span>📦 ${sd.count}</span><span>💰 ${sd.total.toLocaleString()} دج</span></div></div></div><div class="merchant-toggle ${isCollapsed?'collapsed':''}"><i class="fas fa-chevron-down"></i></div></div><div class="merchant-products ${isCollapsed?'collapsed':''}">${itemsHtml}</div></div>`;
+        async function submitOrder() {
+            const name=document.getElementById('customerName').value.trim(), 
+                  phone=document.getElementById('customerPhone').value.trim(), 
+                  address=document.getElementById('customerAddress').value.trim(), 
+                  notes=document.getElementById('customerNotes').value.trim();
+            
+            if(!name||!phone||!address){ 
+                showNotification('الرجاء تعبئة جميع الحقول','error'); 
+                return; 
             }
-            container.innerHTML=storesHtml+`<div class="cart-summary"><div class="summary-row"><span class="summary-label">عدد العناصر:</span><span class="summary-value">${grandCount}</span></div><div class="summary-row"><span class="summary-label">عدد المتاجر:</span><span class="summary-value">${Object.keys(grouped).length}</span></div><div class="summary-row"><span class="summary-label">الإجمالي النهائي:</span><span class="summary-value summary-total">${grandTotal.toLocaleString()} دج</span></div><div class="cart-actions"><button class="btn btn-success" onclick="openCustomerModal()">إتمام الطلب</button><button class="btn btn-outline" onclick="clearCart()">إفراغ السلة</button></div></div>`;
+            
+            // حفظ البيانات مؤقتاً قبل الإرسال
+            const customerData = {name, phone, address, notes};
+            const currentGrouped = pendingGroupedStores;
+            const currentTotal = pendingGrandTotal;
+            
+            showNotification('جاري إرسال الطلب...','info');
+            
+            // محاولة إرسال الطلب
+            const success = await sendOrderToTelegram(customerData, currentGrouped, currentTotal);
+            
+            // **هام: أغلق النافذة دائماً مهما كانت النتيجة**
+            closeModal();
+            
+            // امسح حقول الإدخال
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('customerNotes').value = '';
+            
+            if(success){
+                // تفريغ السلة فقط عند النجاح الحقيقي
+                cart = [];
+                saveCart();
+                updateCartDisplay();
+                showNotification('✓ تم إرسال الطلب بنجاح! سيتم التواصل معك قريباً', 'success');
+                renderOrdersArchive(); // تحديث الأرشيف
+            } else {
+                showNotification('❌ فشل إرسال الطلب. يرجى التحقق من الاتصال والمحاولة مرة أخرى', 'error');
+            }
+            
+            // تصفير المتغيرات المؤقتة
+            pendingGroupedStores = null;
+            pendingGrandTotal = null;
         }
         
         window.addEventListener('storage', e=>{ if(e.key===CART_STORAGE_KEY){ cart=e.newValue?JSON.parse(e.newValue):[]; updateCartDisplay(); updateCartCounters(); } });
@@ -477,4 +526,3 @@
     </script>
 </body>
 </html>
-
