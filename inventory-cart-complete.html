@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ناردو برو | المتجر الذكي - طلبات تلجرام</title>
@@ -605,7 +603,7 @@
                 if (!post) continue;
                 
                 const caption = post.caption || post.text || '';
-                if (caption.includes('طلب جديد') || caption.includes('سلة المشتريات')) {
+                if (caption.includes('فاتورة طلب جديد') || caption.includes('طلب جديد') || caption.includes('سلة المشتريات')) {
                     // محاولة استخراج الصورة إذا وجدت
                     let orderImg = null;
                     if(post.photo) {
@@ -617,14 +615,23 @@
                         }
                     }
 
+                    // استخراج بيانات الطلب من الرسالة
+                    const parsedOrder = parseOrderFromMessage(caption);
+                    
                     const order = {
-                        id: 'ORD-' + Date.now() + Math.floor(Math.random()*100),
-                        date: new Date(post.date * 1000).toLocaleString(),
-                        customer: (post.from ? post.from.first_name : 'قناة التلغرام'),
-                        text: caption,
-                        image: orderImg,
-                        total: 'قيد الحساب',
-                        status: 'جديد'
+                        id: parsedOrder.orderId || ('ORD-' + Date.now() + Math.floor(Math.random()*100)),
+                        telegramOrderId: parsedOrder.orderId,
+                        date: parsedOrder.date || new Date(post.date * 1000).toLocaleString('ar-EG'),
+                        customerName: parsedOrder.customerName || 'غير معروف',
+                        customerPhone: parsedOrder.customerPhone || '---',
+                        customerAddress: parsedOrder.customerAddress || '---',
+                        customerNotes: parsedOrder.customerNotes || '',
+                        storeID: parsedOrder.storeID || currentStore.storeFixedID,
+                        storeName: parsedOrder.storeName || currentStore.storeName,
+                        items: parsedOrder.items || [],
+                        total: parsedOrder.total || 0,
+                        status: 'pending',
+                        image: orderImg
                     };
                     orders.push(order);
                     processedIds.push(update.update_id);
@@ -639,6 +646,88 @@
             
         } catch (error) { showToast('❌ خطأ في الجلب', 'error'); }
         finally { btn.innerHTML = '<i class="fab fa-telegram"></i> جلب الطلبات'; btn.disabled = false; }
+    }
+
+    /* === دالة استخراج بيانات الطلب من رسالة التلغرام === */
+    function parseOrderFromMessage(messageText) {
+        const order = {
+            orderId: null,
+            customerName: null,
+            customerPhone: null,
+            customerAddress: null,
+            customerNotes: null,
+            storeName: null,
+            storeID: null,
+            items: [],
+            total: 0,
+            date: null
+        };
+
+        // استخراج اسم الزبون
+        const customerMatch = messageText.match(/👤\s*الزبون:\s*([^\n]+)/);
+        if (customerMatch) order.customerName = customerMatch[1].trim();
+
+        // استخراج رقم الجوال
+        const phoneMatch = messageText.match(/📞\s*رقم الجوال:\s*([^\n]+)/);
+        if (phoneMatch) order.customerPhone = phoneMatch[1].trim();
+
+        // استخراج العنوان
+        const addressMatch = messageText.match(/📍\s*العنوان:\s*([^\n]+)/);
+        if (addressMatch) order.customerAddress = addressMatch[1].trim();
+
+        // استخراج معرف المتجر
+        const storeIdMatch = messageText.match(/🆔\s*معرف المتجر:\s*([^\n]+)/);
+        if (storeIdMatch) order.storeID = storeIdMatch[1].trim();
+
+        // استخراج اسم المتجر
+        const storeNameMatch = messageText.match(/🏪\s*المتجر:\s*([^\n]+)/);
+        if (storeNameMatch) order.storeName = storeNameMatch[1].trim();
+
+        // استخراج رقم الطلب الموحد
+        const orderIdMatch = messageText.match(/🆔\s*رقم الطلب الموحد:\s*([^\n]+)/);
+        if (orderIdMatch) order.orderId = orderIdMatch[1].trim();
+
+        // استخراج التاريخ
+        const dateMatch = messageText.match(/📅\s*التاريخ:\s*([^\n]+)/);
+        if (dateMatch) order.date = dateMatch[1].trim();
+
+        // استخراج المنتجات
+        const itemsSection = messageText.match(/📦\s*المنتجات المطلوبة:([\s\S]*?)💰\s*إجمالي الطلب/);
+        if (itemsSection) {
+            const itemLines = itemsSection[1].split(/\d+️⃣/);
+            itemLines.forEach((line, index) => {
+                if (index === 0 || !line.trim()) return;
+                
+                const productMatch = line.match(/📦\s*المنتج:\s*([^\n]+)/);
+                const productIdMatch = line.match(/🆔\s*معرف المنتج:\s*([^\n]+)/);
+                const quantityMatch = line.match(/📦\s*الكمية:\s*([^\n]+)/);
+                const priceMatch = line.match(/💰\s*السعر:\s*([^\n]+)/);
+                const totalMatch = line.match(/💵\s*المجموع:\s*([^\n]+)/);
+
+                if (productMatch && productIdMatch && quantityMatch && priceMatch) {
+                    const productId = productIdMatch[1].trim();
+                    const product = products.find(p => p.productCompositeID === productId);
+                    
+                    const item = {
+                        name: productMatch[1].trim(),
+                        productCompositeID: productId,
+                        quantity: parseInt(quantityMatch[1].trim()) || 1,
+                        price: parseInt(priceMatch[1].match(/\d+/)[0]) || 0,
+                        image: product ? product.image : null
+                    };
+                    order.items.push(item);
+                }
+            });
+        }
+
+        // استخراج الإجمالي
+        const totalMatch = messageText.match(/💰\s*إجمالي الطلب:\s*([^\n]+)/);
+        if (totalMatch) {
+            const totalStr = totalMatch[1].trim();
+            order.total = parseInt(totalStr.match(/\d+/)[0]) || 0;
+        }
+
+        return order;
     }
 
     /* === دوال النافذة الاحترافية === */
@@ -732,7 +821,8 @@
         const grid = document.getElementById('productsGrid'); grid.innerHTML = '';
         const search = document.getElementById('searchProducts').value.toLowerCase();
         
-        products.filter(p => p.name.toLowerCase().includes(search) || p.productCompositeID.toLowerCase().includes(search))
+        // تصفية المنتجات حسب المتجر الحالي والبحث
+        products.filter(p => p.storeID === currentStore.storeFixedID && (p.name.toLowerCase().includes(search) || p.productCompositeID.toLowerCase().includes(search)))
         .forEach(p => {
             const card = document.createElement('div'); card.className = 'product-card';
             const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
@@ -756,13 +846,14 @@
 
     function renderInventory() {
         const tbody = document.getElementById('inventoryTable'); tbody.innerHTML = '';
-        products.forEach(p => {
+        // تصفية المخزون حسب المتجر الحالي فقط
+        products.filter(p => p.storeID === currentStore.storeFixedID).forEach(p => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><img src="${p.image || ''}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;"></td>
                 <td>${p.name}</td>
                 <td><code>${p.productCompositeID}</code></td>
-                <td>${p.price} دج</td>
+                <td>${p.price.toLocaleString()} دج</td>
                 <td>${p.quantity}</td>
                 <td><span class="stock-status ${p.quantity > 0 ? 'high' : 'out'}">${p.quantity > 0 ? 'نشط' : 'نفذ'}</span></td>
                 <td><button class="btn btn-outline btn-sm" onclick="openEditStock('${p.id}')">تحديث</button></td>
@@ -805,6 +896,22 @@
             `;
         } else {
             tbody.innerHTML = filteredOrders.map(order => {
+                // بناء عرض المنتجات مع الصور
+                const itemsHtml = order.items.map(it => {
+                    const product = products.find(p => p.productCompositeID === it.productCompositeID);
+                    const productImage = product ? product.image : it.image;
+                    const imageDisplay = productImage ? `<img src="${productImage}" style="width:35px; height:35px; border-radius:6px; object-fit:cover; margin-left:8px;">` : '<div style="width:35px; height:35px; background:#333; border-radius:6px; display:flex; align-items:center; justify-content:center; margin-left:8px;"><i class="fas fa-image" style="font-size:10px; color:#666;"></i></div>';
+                    return `
+                        <div style="display:flex; align-items:center; margin-bottom:6px; background:rgba(255,215,0,0.05); padding:6px; border-radius:8px;">
+                            ${imageDisplay}
+                            <div style="flex:1;">
+                                <div style="font-weight:600; font-size:12px;">${it.name}</div>
+                                <div style="font-size:10px; color:#aaa;">الكمية: ${it.quantity} | السعر: ${it.price.toLocaleString()} دج</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
                 return `
                     <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
                         <td><strong>#${order.telegramOrderId || order.id}</strong></td>
@@ -813,16 +920,12 @@
                             <div>
                                 <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
                                 <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
-                                <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
+                                <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,40)}</div>
                             </div>
                         </td>
                         <td>
-                            <div style="font-size:12px; max-width:200px;">
-                                ${order.items.map(it => `
-                                    <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
-                                        ${it.name} (${it.quantity})
-                                    </span>
-                                `).join('')}
+                            <div style="font-size:12px; max-width:300px;">
+                                ${itemsHtml}
                             </div>
                         </td>
                         <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
@@ -1039,3 +1142,81 @@
 
 </body>
 </html>
+    /* === جلب المنتجات من تلغرام مع شرط معرف المتجر === */
+    async function fetchProductsFromTelegram() {
+        showToast('🔄 جاري جلب المنتجات من التلغرام...', 'info');
+        try {
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+            const data = await response.json();
+            if (!data.ok) throw new Error('فشل الاتصال بتلغرام');
+            
+            let newCount = 0;
+            const processedIds = safeLocalStorage.get('nardo_processed_product_telegram_ids');
+            
+            for (const update of data.result || []) {
+                if (processedIds.includes(update.update_id)) continue;
+                
+                const post = update.channel_post || update.message;
+                if (!post) continue;
+                
+                const caption = post.caption || post.text || '';
+                if (caption.includes('منتج جديد في ناردو برو')) {
+                    // استخراج معرف المتجر من الرسالة
+                    const storeIdMatch = caption.match(/🆔 \*معرف المتجر:\* `([^`]+)`/);
+                    const storeID = storeIdMatch ? storeIdMatch[1].trim() : null;
+
+                    // جلب المنتجات الخاصة بهذا المتجر فقط
+                    if (storeID === currentStore.storeFixedID) {
+                        const nameMatch = caption.match(/📦 \*المنتج:\* ([^\n]+)/);
+                        const priceMatch = caption.match(/💰 \*السعر:\* ([^\n]+)/);
+                        const idMatch = caption.match(/🆔 \*معرف المنتج:\* `([^`]+)`/);
+                        const qtyMatch = caption.match(/📊 \*الكمية:\* ([^\n]+)/);
+                        const catMatch = caption.match(/🏷️ \*القسم:\* ([^\n]+)/);
+                        const descMatch = caption.match(/📝 \*الوصف:\* ([\s\S]+)/);
+
+                        let productImg = null;
+                        if(post.photo) {
+                            const fileId = post.photo[post.photo.length - 1].file_id;
+                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+                            const fileData = await fileRes.json();
+                            if(fileData.ok) {
+                                productImg = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                            }
+                        }
+
+                        const product = {
+                            id: Date.now() + Math.random(),
+                            productCompositeID: idMatch ? idMatch[1] : `P-${Date.now()}`,
+                            name: nameMatch ? nameMatch[1].trim() : 'منتج غير معروف',
+                            price: priceMatch ? parseInt(priceMatch[1].replace(/\D/g, '')) : 0,
+                            quantity: qtyMatch ? parseInt(qtyMatch[1].replace(/\D/g, '')) : 0,
+                            category: catMatch ? catMatch[1].trim() : 'عام',
+                            description: descMatch ? descMatch[1].trim() : '',
+                            storeID: storeID,
+                            storeName: currentStore.storeName,
+                            image: productImg,
+                            published: true
+                        };
+
+                        // التأكد من عدم تكرار المنتج
+                        if (!products.find(p => p.productCompositeID === product.productCompositeID)) {
+                            products.push(product);
+                            newCount++;
+                        }
+                    }
+                    processedIds.push(update.update_id);
+                }
+            }
+            
+            if (newCount > 0) {
+                safeLocalStorage.set('nardo_products', products);
+                safeLocalStorage.set('nardo_processed_product_telegram_ids', processedIds);
+                showToast(`✅ تم جلب ${newCount} منتج جديد لمتجرك`, 'success');
+                renderAll();
+            } else {
+                showToast('ℹ️ لا توجد منتجات جديدة لمتجرك حالياً', 'info');
+            }
+        } catch (error) {
+            showToast('❌ خطأ في جلب المنتجات: ' + error.message, 'error');
+        }
+    }
