@@ -907,93 +907,127 @@
         }
 
         // ============================================================
-        // [37] دالة حفظ المنتج محلياً فقط
         // ============================================================
-        function saveProductOnly() {
-            const name = document.getElementById('productName').value.trim();
-            const price = parseInt(document.getElementById('productPrice').value);
-            const quantity = parseInt(document.getElementById('productQty').value);
-            if (!name || isNaN(price) || isNaN(quantity) || price <= 0) {
-                showToast('املأ الحقول المطلوبة بشكل صحيح', 'error');
-                return;
-            }
-            const storeID = currentStore.storeFixedID;
-            const serial = getNextProductSerial(storeID);
-            const compositeID = generateProductCompositeID(storeID, serial);
-            const newProduct = {
-                id: Date.now(),
-                storeID: storeID,
-                storeName: currentStore.storeName,
-                productCompositeID: compositeID,
-                serialNumber: serial,
-                name: name,
-                price: price,
-                quantity: quantity,
-                description: document.getElementById('productDesc').value,
-                category: document.getElementById('productCategory').value,
-                createdAt: new Date().toISOString(),
-                source: 'local',
-                published: false,
-                telegramId: null
-            };
-            products.push(newProduct);
-            safeLocalStorage.set('nardo_products', products);
-            addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, 'إنشاء منتج', newProduct.storeID);
-            renderAll();
-            closeAddProductModal();
-            showToast(`✅ تم حفظ ${name}`, 'success');
-        }
+// [37] دالة حفظ المنتج محلياً فقط (مع الصورة)
+// ============================================================
+function saveProductOnly() {
+    const name = document.getElementById('productName').value.trim();
+    const price = parseInt(document.getElementById('productPrice').value);
+    const quantity = parseInt(document.getElementById('productQty').value);
+    if (!name || isNaN(price) || isNaN(quantity) || price <= 0) {
+        showToast('املأ الحقول المطلوبة بشكل صحيح', 'error');
+        return;
+    }
+    
+    const storeID = currentStore.storeFixedID;
+    const serial = getNextProductSerial(storeID);
+    const compositeID = generateProductCompositeID(storeID, serial);
+    
+    // الحصول على الصورة إذا وجدت
+    const imageInput = document.getElementById('productImages');
+    
+    const saveProduct = (imageData) => {
+        const newProduct = {
+            id: Date.now(),
+            storeID: storeID,
+            storeName: currentStore.storeName,
+            productCompositeID: compositeID,
+            serialNumber: serial,
+            name: name,
+            price: price,
+            quantity: quantity,
+            description: document.getElementById('productDesc').value,
+            category: document.getElementById('productCategory').value,
+            createdAt: new Date().toISOString(),
+            source: 'local',
+            published: false,
+            telegramId: null,
+            imageData: imageData || null
+        };
+        products.push(newProduct);
+        safeLocalStorage.set('nardo_products', products);
+        addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, 'إنشاء منتج', newProduct.storeID);
+        renderAll();
+        closeAddProductModal();
+        showToast(`✅ تم حفظ ${name}`, 'success');
+    };
+    
+    // التحقق من وجود صورة
+    if (imageInput && imageInput.files && imageInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            saveProduct(e.target.result);
+        };
+        reader.readAsDataURL(imageInput.files[0]);
+    } else {
+        saveProduct(null);
+    }
+}
 
-        // ============================================================
-        // [38] دالة حفظ ونشر المنتج إلى التلغرام
-        // ============================================================
-        async function saveAndPublishProduct() {
-            const name = document.getElementById('productName').value.trim();
-            const price = parseInt(document.getElementById('productPrice').value);
-            const quantity = parseInt(document.getElementById('productQty').value);
-            if (!name || isNaN(price) || price <= 0 || isNaN(quantity)) {
-                showToast('بيانات غير مكتملة', 'error');
-                return;
-            }
-            const imageInput = document.getElementById('productImages');
-            if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
-                showToast('⚠️ النشر يتطلب صورة واحدة على الأقل', 'warning');
-                return;
-            }
-            const imageFile = imageInput.files[0];
-            const storeID = currentStore.storeFixedID;
-            const serial = getNextProductSerial(storeID);
-            const compositeID = generateProductCompositeID(storeID, serial);
-            const newProduct = {
-                id: Date.now(),
-                storeID: storeID,
-                storeName: currentStore.storeName,
-                productCompositeID: compositeID,
-                serialNumber: serial,
-                name: name,
-                price: price,
-                quantity: quantity,
-                description: document.getElementById('productDesc').value,
-                category: document.getElementById('productCategory').value,
-                createdAt: new Date().toISOString(),
-                source: 'local',
-                published: false,
-                telegramId: null
-            };
-            const result = await sendToTelegram(newProduct, imageFile);
-            if (result.success) {
-                newProduct.published = true;
-                newProduct.telegramId = result.messageId;
-                newProduct.publishedAt = new Date().toISOString();
-            }
-            products.push(newProduct);
-            safeLocalStorage.set('nardo_products', products);
-            addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, result.success ? 'إنشاء ونشر' : 'إنشاء منتج', newProduct.storeID);
-            renderAll();
-            closeAddProductModal();
-            showToast(result.success ? `✅ تم حفظ ونشر ${name}` : `⚠️ تم حفظ ${name} ولكن فشل النشر`, result.success ? 'success' : 'warning');
+// ============================================================
+// [38] دالة حفظ ونشر المنتج إلى التلغرام (مع الصورة)
+// ============================================================
+async function saveAndPublishProduct() {
+    const name = document.getElementById('productName').value.trim();
+    const price = parseInt(document.getElementById('productPrice').value);
+    const quantity = parseInt(document.getElementById('productQty').value);
+    if (!name || isNaN(price) || price <= 0 || isNaN(quantity)) {
+        showToast('بيانات غير مكتملة', 'error');
+        return;
+    }
+    
+    const imageInput = document.getElementById('productImages');
+    if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+        showToast('⚠️ النشر يتطلب صورة واحدة على الأقل', 'warning');
+        return;
+    }
+    
+    const imageFile = imageInput.files[0];
+    const storeID = currentStore.storeFixedID;
+    const serial = getNextProductSerial(storeID);
+    const compositeID = generateProductCompositeID(storeID, serial);
+    
+    // قراءة الصورة كـ DataURL للتخزين المحلي أولاً
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const imageData = e.target.result;
+        
+        const newProduct = {
+            id: Date.now(),
+            storeID: storeID,
+            storeName: currentStore.storeName,
+            productCompositeID: compositeID,
+            serialNumber: serial,
+            name: name,
+            price: price,
+            quantity: quantity,
+            description: document.getElementById('productDesc').value,
+            category: document.getElementById('productCategory').value,
+            createdAt: new Date().toISOString(),
+            source: 'local',
+            published: false,
+            telegramId: null,
+            imageData: imageData
+        };
+        
+        // إرسال إلى تلغرام
+        const result = await sendToTelegram(newProduct, imageFile);
+        if (result.success) {
+            newProduct.published = true;
+            newProduct.telegramId = result.messageId;
+            newProduct.publishedAt = new Date().toISOString();
         }
-
+        
+        products.push(newProduct);
+        safeLocalStorage.set('nardo_products', products);
+        addStockLog(newProduct.id, newProduct.name, 'add', quantity, 0, quantity, result.success ? 'إنشاء ونشر' : 'إنشاء منتج', newProduct.storeID);
+        renderAll();
+        closeAddProductModal();
+        showToast(result.success ? `✅ تم حفظ ونشر ${name}` : `⚠️ تم حفظ ${name} ولكن فشل النشر`, result.success ? 'success' : 'warning');
+    };
+    reader.readAsDataURL(imageFile);
+}
+         
         // ============================================================
         // [39] دالة نشر منتج موجود مسبقاً
         // ============================================================
@@ -1444,7 +1478,8 @@
         // ============================================================
         
         // ============================================================
-// [58] دالة عرض المنتجات في الشبكة مع صورة مصغرة
+        // ============================================================
+// [58] دالة عرض المنتجات في الشبكة مع صورة متوسطة
 // ============================================================
 function renderProducts() {
     const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
@@ -1462,39 +1497,37 @@ function renderProducts() {
         const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
         const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
         
-        // الحصول على الصورة المصغرة
+        // الحصول على الصورة
         const productImage = p.imageData || p.imageUrl || null;
         
         return `
-            <div class="product-card" style="position: relative;">
+            <div class="product-card" style="overflow: hidden;">
                 <div class="product-id-badge">${p.productCompositeID || '---'}</div>
                 ${publishedBadge}
                 
-                <!-- رأس البطاقة: صورة مصغرة + الاسم -->
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                    <!-- صورة مصغرة دائرية -->
-                    <div style="width: 55px; height: 55px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #0f0f1a, #1a1a2e); border: 2px solid rgba(255,215,0,0.3); flex-shrink: 0;">
-                        <img src="${productImage || 'https://placehold.co/200x200/1a1a2e/ffd700?text=📦'}" 
-                             alt="${p.name}" 
-                             style="width: 100%; height: 100%; object-fit: cover;"
-                             onerror="this.src='https://placehold.co/200x200/1a1a2e/ffd700?text=📦'">
-                    </div>
-                    <div class="product-name" style="margin-bottom: 0; font-size: 18px; flex: 1;">${p.name}</div>
+                <!-- صورة متوسطة الحجم -->
+                <div style="width: 100%; height: 160px; margin-bottom: 15px; border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, #0f0f1a, #1a1a2e);">
+                    <img src="${productImage || 'https://placehold.co/400x300/1a1a2e/ffd700?text=📦+No+Image'}" 
+                         alt="${p.name}" 
+                         style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;"
+                         onerror="this.src='https://placehold.co/400x300/1a1a2e/ffd700?text=📦'">
                 </div>
+                
+                <div class="product-name" style="font-size: 18px; margin-bottom: 5px;">${p.name}</div>
                 
                 <!-- السعر -->
-                <div class="product-price" style="font-size: 20px; margin: 8px 0;">${p.price.toLocaleString()} دج</div>
+                <div class="product-price" style="font-size: 22px; margin: 8px 0;">${p.price.toLocaleString()} دج</div>
                 
                 <!-- الكمية بشكل بارز -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 12px;">
-                    <span style="font-size: 12px; color: #aaa;"><i class="fas fa-box"></i> الكمية:</span>
-                    <span style="font-weight: 800; font-size: 16px; color: var(--gold);">${p.quantity}</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 16px;">
+                    <span style="font-size: 13px; color: #aaa;"><i class="fas fa-box"></i> الكمية المتاحة:</span>
+                    <span style="font-weight: 800; font-size: 18px; color: var(--gold);">${p.quantity}</span>
                 </div>
                 
-                <div><span class="stock-status ${stockClass}" style="font-size: 11px; padding: 3px 10px;">${stockText}</span></div>
+                <div><span class="stock-status ${stockClass}" style="padding: 5px 12px;">${stockText}</span></div>
                 
-                <div class="product-actions" style="margin-top: 12px;">
-                    <button class="btn btn-gold btn-sm" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب</button>
+                <div class="product-actions" style="margin-top: 15px;">
+                    <button class="btn btn-gold" style="flex:1;" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب</button>
                     <button class="btn btn-outline btn-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
