@@ -1,14 +1,13 @@
-head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو برو - قارئ الباركود المحسّن</title>
+    <title>ناردو برو - فلترة وإدارة الطلبات (النسخة النهائية)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,6 +34,7 @@ head>
         
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
+        /* رأس الصفحة */
         .header {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
@@ -68,6 +68,154 @@ head>
         .btn-success { background: var(--success); color: #000; }
         .btn-danger { background: rgba(248, 113, 113, 0.2); border: 1px solid var(--error); color: var(--error); }
         
+        /* شريط الفلترة */
+        .filter-bar {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .filter-title {
+            font-size: 18px;
+            color: var(--gold);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        /* إحصائيات سريعة */
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 15px;
+            padding: 15px 25px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* جدول الطلبات */
+        .orders-table-container {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            overflow-x: auto;
+        }
+        
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .orders-table th {
+            text-align: right;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .orders-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+            font-size: 13px;
+        }
+        
+        .orders-table tr:hover td {
+            background: rgba(255, 215, 0, 0.05);
+        }
+        
+        .order-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+        .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); }
+        .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .status-delivered { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--gold);
+            cursor: pointer;
+            padding: 5px 8px;
+            border-radius: 8px;
+        }
+        
+        .action-btn:hover { background: rgba(255, 215, 0, 0.2); }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i { font-size: 60px; color: var(--gold); margin-bottom: 15px; }
+        
+        /* أنماط النوافذ المنبثقة */
         .modal {
             display: none;
             position: fixed;
@@ -86,7 +234,7 @@ head>
             border: 2px solid var(--gold);
             border-radius: 20px;
             padding: 25px;
-            max-width: 600px;
+            max-width: 550px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
@@ -108,6 +256,7 @@ head>
             cursor: pointer;
         }
         
+        /* تنسيق قارئ الباركود */
         #qr-reader {
             width: 100%;
             max-width: 500px;
@@ -117,12 +266,30 @@ head>
             overflow: hidden;
         }
         
-        .upload-section {
-            text-align: center;
-            border: 2px dashed rgba(255,215,0,0.3);
-            border-radius: 15px;
-            padding: 30px;
+        /* عناصر تحسين الصورة */
+        .adjustment-controls {
+            background: rgba(255,215,0,0.05);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
             margin-bottom: 15px;
+            text-align: right;
+        }
+        .adjustment-controls label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            margin-top: 10px;
+        }
+        .adjustment-controls input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        .adjustment-controls .value-display {
+            font-size: 11px;
+            color: var(--gold);
+            margin-top: 3px;
         }
         
         .preview-container {
@@ -132,74 +299,20 @@ head>
             flex-wrap: wrap;
             justify-content: center;
         }
-        
-        .preview-item {
-            text-align: center;
-        }
-        
+        .preview-item { text-align: center; }
         .preview-item img {
             max-width: 150px;
             max-height: 150px;
             border-radius: 10px;
             border: 2px solid var(--gold);
         }
-        
         .preview-item label {
             display: block;
             font-size: 11px;
             color: var(--text-secondary);
             margin-top: 5px;
         }
-        
-        .result-box {
-            margin-top: 15px;
-            padding: 12px;
-            background: rgba(255,215,0,0.1);
-            border-radius: 10px;
-            text-align: center;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .result-box.success {
-            background: rgba(74,222,128,0.2);
-            color: var(--success);
-        }
-        
-        .result-box.error {
-            background: rgba(248,113,113,0.2);
-            color: var(--error);
-        }
-        
-        .adjustment-controls {
-            background: rgba(255,215,0,0.05);
-            border: 1px solid rgba(255,215,0,0.2);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .adjustment-controls label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-            margin-top: 10px;
-        }
-        
-        .adjustment-controls input[type="range"] {
-            width: 100%;
-            cursor: pointer;
-        }
-        
-        .adjustment-controls .value-display {
-            font-size: 11px;
-            color: var(--gold);
-            margin-top: 3px;
-        }
-        
+
         .footer {
             text-align: center;
             padding: 30px;
@@ -209,30 +322,120 @@ head>
         }
         
         @media (max-width: 768px) {
-            .modal-content { max-width: 95vw; }
+            .filter-grid { grid-template-columns: 1fr; }
+            .stats-row { flex-direction: column; }
+            .orders-table th, .orders-table td { padding: 8px; font-size: 11px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- رأس الصفحة -->
         <div class="header">
             <div class="header-title">
-                <i class="fas fa-qrcode"></i>
-                <h1>قارئ الباركود المحسّن</h1>
+                <i class="fas fa-boxes"></i>
+                <h1>ناردو برو - إدارة الطلبات</h1>
             </div>
-            <button class="btn btn-gold" onclick="openScannerModal()">
-                <i class="fas fa-camera"></i> فتح الماسح
-            </button>
+            <div class="header-actions">
+                <button class="btn btn-gold" onclick="openBarcodeScanner()">
+                    <i class="fas fa-qrcode"></i> ماسح الباركود
+                </button>
+            </div>
+        </div>
+
+        <!-- إحصائيات سريعة -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="number" id="totalOrders">0</div>
+                <div class="label">إجمالي الطلبات</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="pendingOrders">0</div>
+                <div class="label">قيد المعالجة</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="completedOrders">0</div>
+                <div class="label">تم التوصيل</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="totalAmount">0</div>
+                <div class="label">الإجمالي (دج)</div>
+            </div>
+        </div>
+
+        <!-- شريط الفلترة -->
+        <div class="filter-bar">
+            <div class="filter-title">
+                <i class="fas fa-filter"></i> فلترة الطلبات
+            </div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>رقم الطلب</label>
+                    <input type="text" id="filterOrderId" placeholder="بحث برقم الطلب...">
+                </div>
+                <div class="filter-group">
+                    <label>اسم العميل</label>
+                    <input type="text" id="filterCustomer" placeholder="بحث باسم العميل...">
+                </div>
+                <div class="filter-group">
+                    <label>الولاية</label>
+                    <select id="filterState">
+                        <option value="">كل الولايات</option>
+                        <option value="الجزائر">الجزائر</option>
+                        <option value="وهران">وهران</option>
+                        <option value="قسنطينة">قسنطينة</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>الحالة</label>
+                    <select id="filterStatus">
+                        <option value="">كل الحالات</option>
+                        <option value="pending">قيد المعالجة</option>
+                        <option value="received">وصل للتاجر</option>
+                        <option value="approved">تم تعيين موزع</option>
+                        <option value="delivered">تم التوصيل</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-outline" onclick="resetFilters()">
+                    <i class="fas fa-undo"></i> إعادة تعيين
+                </button>
+                <button class="btn btn-gold" onclick="applyFilters()">
+                    <i class="fas fa-search"></i> تطبيق الفلترة
+                </button>
+            </div>
+        </div>
+
+        <!-- جدول الطلبات -->
+        <div class="orders-table-container">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>التاريخ</th>
+                        <th>العميل</th>
+                        <th>الولاية</th>
+                        <th>الهاتف</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <!-- سيتم ملؤه برمجياً -->
+                </tbody>
+            </table>
         </div>
 
         <div class="footer">
-            <p>&copy; 2024 ناردو برو - قارئ باركود محسّن مع معالجة الصور</p>
+            <p>&copy; 2024 ناردو برو - جميع الحقوق محفوظة</p>
         </div>
     </div>
 
-    <!-- نافذة قارئ الباركود -->
+    <!-- نافذة قارئ الباركود (كاميرا + رفع صورة) -->
     <div id="scannerModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 550px;">
             <div class="modal-header">
                 <h2><i class="fas fa-camera"></i> قارئ الباركود</h2>
                 <button class="close-btn" onclick="closeScannerModal()">&times;</button>
@@ -240,10 +443,10 @@ head>
             
             <!-- تبويبات القارئ -->
             <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,215,0,0.2);">
-                <button id="tabCameraBtn" class="btn btn-outline" style="flex: 1; padding: 8px;" onclick="switchTab('camera')">
+                <button id="tabCameraBtn" class="btn btn-outline" style="flex: 1; padding: 8px;" onclick="switchScannerTab('camera')">
                     <i class="fas fa-camera"></i> كاميرا مباشرة
                 </button>
-                <button id="tabUploadBtn" class="btn btn-outline" style="flex: 1; padding: 8px;" onclick="switchTab('upload')">
+                <button id="tabUploadBtn" class="btn btn-outline" style="flex: 1; padding: 8px;" onclick="switchScannerTab('upload')">
                     <i class="fas fa-upload"></i> رفع صورة
                 </button>
             </div>
@@ -257,33 +460,32 @@ head>
             </div>
             
             <!-- قسم رفع الصورة -->
-            <div id="uploadSection" style="display: none;">
-                <div class="upload-section">
+            <div id="uploadSection" style="text-align: center; display: none;">
+                <div style="border: 2px dashed rgba(255,215,0,0.3); border-radius: 15px; padding: 30px; margin-bottom: 15px;">
                     <i class="fas fa-qrcode" style="font-size: 48px; color: var(--gold); margin-bottom: 15px; display: block;"></i>
                     <input type="file" id="qrImageInput" accept="image/*" style="display: none;">
                     <button class="btn btn-gold" onclick="document.getElementById('qrImageInput').click()">
                         <i class="fas fa-folder-open"></i> اختر صورة باركود
                     </button>
-                    <p style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">PNG, JPG, JPEG - حتى 10 ميجابايت</p>
+                    <p style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">PNG, JPG, JPEG - حتى 5 ميجابايت</p>
                 </div>
 
-                <!-- عناصر المعاينة -->
+                <!-- معاينة الصور -->
                 <div id="previewContainer" class="preview-container" style="display: none;"></div>
 
-                <!-- عناصر التحكم بالمعالجة -->
+                <!-- أدوات التحكم بالتحسين -->
                 <div id="adjustmentControls" class="adjustment-controls" style="display: none;">
-                    <h3 style="color: var(--gold); margin-bottom: 10px; font-size: 14px;">تحسين الصورة</h3>
-                    
+                    <h3 style="color: var(--gold); margin-bottom: 10px; font-size: 14px;">تحسين الصورة (للقراءة الصعبة)</h3>
                     <label>السطوع (Brightness)</label>
-                    <input type="range" id="brightnessSlider" min="-100" max="100" value="0" step="5">
+                    <input type="range" id="brightnessSlider" min="-100" max="100" value="0">
                     <div class="value-display">القيمة: <span id="brightnessValue">0</span></div>
                     
                     <label>التباين (Contrast)</label>
-                    <input type="range" id="contrastSlider" min="-100" max="100" value="0" step="5">
+                    <input type="range" id="contrastSlider" min="-100" max="100" value="0">
                     <div class="value-display">القيمة: <span id="contrastValue">0</span></div>
                     
                     <label>الحدة (Sharpness)</label>
-                    <input type="range" id="sharpnessSlider" min="0" max="100" value="0" step="5">
+                    <input type="range" id="sharpnessSlider" min="0" max="100" value="0">
                     <div class="value-display">القيمة: <span id="sharpnessValue">0</span></div>
 
                     <button class="btn btn-outline" style="width: 100%; margin-top: 10px;" onclick="resetAdjustments()">
@@ -291,8 +493,7 @@ head>
                     </button>
                 </div>
 
-                <!-- صندوق النتيجة -->
-                <div id="uploadResult" class="result-box">
+                <div id="uploadResult" style="margin-top: 15px; padding: 12px; background: rgba(255,215,0,0.1); border-radius: 10px; text-align: center;">
                     <i class="fas fa-info-circle"></i> انتظر ظهور النتيجة بعد رفع الصورة
                 </div>
             </div>
@@ -312,223 +513,132 @@ head>
         // ============================================
         // المتغيرات العامة
         // ============================================
+        let allOrders = [];
+        let filteredOrders = [];
         let html5QrCode = null;
         let currentCameraId = 'environment';
         let scannerInitialized = false;
-        let currentTab = 'camera';
+        let currentScannerTab = 'camera';
         let originalImageData = null;
         let processedImageCanvas = null;
         
         // ============================================
-        // دوال معالجة الصور (Image Pre-processing)
+        // تحميل الطلبات
+        // ============================================
+        function loadOrders() {
+            const saved = localStorage.getItem('nardo_orders');
+            if (saved) {
+                allOrders = JSON.parse(saved);
+            } else {
+                allOrders = [
+                    { id: 'ORD-123', originalOrderId: 'N-1001', date: '2024-04-15', customerName: 'أحمد محمد', customerState: 'الجزائر', customerPhone: '0555123456', total: 5500, status: 'pending' },
+                    { id: 'ORD-124', originalOrderId: 'N-1002', date: '2024-04-14', customerName: 'سارة علي', customerState: 'وهران', customerPhone: '0666987654', total: 3200, status: 'delivered' }
+                ];
+            }
+            applyFilters();
+            updateStatistics();
+        }
+        
+        function updateStatistics() {
+            const total = allOrders.length;
+            const pending = allOrders.filter(o => o.status === 'pending').length;
+            const completed = allOrders.filter(o => o.status === 'delivered').length;
+            const totalAmount = allOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+            
+            document.getElementById('totalOrders').innerText = total;
+            document.getElementById('pendingOrders').innerText = pending;
+            document.getElementById('completedOrders').innerText = completed;
+            document.getElementById('totalAmount').innerText = totalAmount.toLocaleString();
+        }
+        
+        function applyFilters() {
+            const orderId = document.getElementById('filterOrderId').value.trim().toLowerCase();
+            const customer = document.getElementById('filterCustomer').value.trim().toLowerCase();
+            const state = document.getElementById('filterState').value;
+            const status = document.getElementById('filterStatus').value;
+            
+            filteredOrders = allOrders.filter(order => {
+                if (orderId && !(order.originalOrderId || order.id || '').toLowerCase().includes(orderId)) return false;
+                if (customer && !(order.customerName || '').toLowerCase().includes(customer)) return false;
+                if (state && order.customerState !== state) return false;
+                if (status && order.status !== status) return false;
+                return true;
+            });
+            
+            renderOrdersTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterOrderId').value = '';
+            document.getElementById('filterCustomer').value = '';
+            document.getElementById('filterState').value = '';
+            document.getElementById('filterStatus').value = '';
+            applyFilters();
+        }
+        
+        function renderOrdersTable() {
+            const tbody = document.getElementById('ordersTableBody');
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><br>لا توجد طلبات تطابق معايير البحث</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredOrders.map(order => `
+                <tr>
+                    <td><strong>${order.originalOrderId || order.id}</strong></td>
+                    <td>${order.date}</td>
+                    <td>${order.customerName}</td>
+                    <td>${order.customerState}</td>
+                    <td>${order.customerPhone}</td>
+                    <td><span style="color: var(--success); font-weight: bold;">${(order.total || 0).toLocaleString()} دج</span></td>
+                    <td><span class="order-status status-${order.status}">${order.status}</span></td>
+                    <td>
+                        <button class="action-btn" title="عرض التفاصيل"><i class="fas fa-eye"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ============================================
+        // دوال معالجة الصور (السر في النجاح)
         // ============================================
         
-        /**
-         * تحويل الصورة إلى رمادي (Grayscale) لتحسين قراءة الباركود
-         */
-        function toGrayscale(imageData) {
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-                data[i] = gray;
-                data[i + 1] = gray;
-                data[i + 2] = gray;
-            }
-            return imageData;
-        }
-        
-        /**
-         * تطبيق معادلة الهستوجرام (Histogram Equalization) لتحسين التباين
-         */
-        function histogramEqualization(imageData) {
-            const data = imageData.data;
-            const histogram = new Array(256).fill(0);
-            
-            // حساب الهستوجرام
-            for (let i = 0; i < data.length; i += 4) {
-                histogram[data[i]]++;
-            }
-            
-            // حساب التوزيع التراكمي
-            const cdf = new Array(256);
-            cdf[0] = histogram[0];
-            for (let i = 1; i < 256; i++) {
-                cdf[i] = cdf[i - 1] + histogram[i];
-            }
-            
-            // تطبيع التوزيع التراكمي
-            const cdfMin = cdf.find(v => v > 0);
-            const pixelCount = imageData.width * imageData.height;
-            
-            for (let i = 0; i < data.length; i += 4) {
-                const pixelValue = data[i];
-                const newValue = Math.round(((cdf[pixelValue] - cdfMin) / (pixelCount - cdfMin)) * 255);
-                data[i] = newValue;
-                data[i + 1] = newValue;
-                data[i + 2] = newValue;
-            }
-            
-            return imageData;
-        }
-        
-        /**
-         * تطبيق تصفية Gaussian Blur للتقليل من الضوضاء
-         */
-        function gaussianBlur(imageData, radius = 2) {
-            const data = imageData.data;
-            const width = imageData.width;
-            const height = imageData.height;
-            const kernel = [];
-            
-            // إنشاء kernel Gaussian
-            const sigma = radius / 2;
-            let sum = 0;
-            for (let x = -radius; x <= radius; x++) {
-                for (let y = -radius; y <= radius; y++) {
-                    const value = Math.exp(-(x * x + y * y) / (2 * sigma * sigma));
-                    kernel.push(value);
-                    sum += value;
-                }
-            }
-            
-            // تطبيع الـ kernel
-            for (let i = 0; i < kernel.length; i++) {
-                kernel[i] /= sum;
-            }
-            
-            const tempData = new Uint8ClampedArray(data);
-            const kernelSize = 2 * radius + 1;
-            
-            for (let y = radius; y < height - radius; y++) {
-                for (let x = radius; x < width - radius; x++) {
-                    let r = 0, g = 0, b = 0;
-                    let kernelIndex = 0;
-                    
-                    for (let ky = -radius; ky <= radius; ky++) {
-                        for (let kx = -radius; kx <= radius; kx++) {
-                            const pixelIndex = ((y + ky) * width + (x + kx)) * 4;
-                            r += tempData[pixelIndex] * kernel[kernelIndex];
-                            g += tempData[pixelIndex + 1] * kernel[kernelIndex];
-                            b += tempData[pixelIndex + 2] * kernel[kernelIndex];
-                            kernelIndex++;
-                        }
-                    }
-                    
-                    const index = (y * width + x) * 4;
-                    data[index] = Math.round(r);
-                    data[index + 1] = Math.round(g);
-                    data[index + 2] = Math.round(b);
-                }
-            }
-            
-            return imageData;
-        }
-        
-        /**
-         * تطبيق عتبة ثنائية (Binary Threshold) لتحويل الصورة إلى أبيض وأسود
-         */
-        function binaryThreshold(imageData, threshold = 128) {
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = data[i];
-                const value = gray > threshold ? 255 : 0;
-                data[i] = value;
-                data[i + 1] = value;
-                data[i + 2] = value;
-            }
-            return imageData;
-        }
-        
-        /**
-         * تطبيق تحسينات السطوع والتباين
-         */
-        function adjustBrightnessContrast(imageData, brightness = 0, contrast = 0) {
-            const data = imageData.data;
-            const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-            
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i] + brightness;
-                let g = data[i + 1] + brightness;
-                let b = data[i + 2] + brightness;
-                
-                r = Math.max(0, Math.min(255, factor * (r - 128) + 128));
-                g = Math.max(0, Math.min(255, factor * (g - 128) + 128));
-                b = Math.max(0, Math.min(255, factor * (b - 128) + 128));
-                
-                data[i] = r;
-                data[i + 1] = g;
-                data[i + 2] = b;
-            }
-            
-            return imageData;
-        }
-        
-        /**
-         * تطبيق تصفية الحدة (Sharpening)
-         */
-        function sharpenImage(imageData, amount = 0.5) {
-            const data = imageData.data;
-            const width = imageData.width;
-            const height = imageData.height;
-            const tempData = new Uint8ClampedArray(data);
-            
-            // مصفوفة Laplacian للحدة
-            const kernel = [-1, -1, -1, -1, 9, -1, -1, -1, -1];
-            
-            for (let y = 1; y < height - 1; y++) {
-                for (let x = 1; x < width - 1; x++) {
-                    let r = 0, g = 0, b = 0;
-                    let kernelIndex = 0;
-                    
-                    for (let ky = -1; ky <= 1; ky++) {
-                        for (let kx = -1; kx <= 1; kx++) {
-                            const pixelIndex = ((y + ky) * width + (x + kx)) * 4;
-                            r += tempData[pixelIndex] * kernel[kernelIndex];
-                            g += tempData[pixelIndex + 1] * kernel[kernelIndex];
-                            b += tempData[pixelIndex + 2] * kernel[kernelIndex];
-                            kernelIndex++;
-                        }
-                    }
-                    
-                    const index = (y * width + x) * 4;
-                    data[index] = Math.max(0, Math.min(255, tempData[index] + r * amount));
-                    data[index + 1] = Math.max(0, Math.min(255, tempData[index + 1] + g * amount));
-                    data[index + 2] = Math.max(0, Math.min(255, tempData[index + 2] + b * amount));
-                }
-            }
-            
-            return imageData;
-        }
-        
-        /**
-         * معالجة الصورة بشكل كامل
-         */
         function processImage(canvas, brightness = 0, contrast = 0, sharpness = 0) {
             const ctx = canvas.getContext('2d');
             let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
             
-            // تطبيق التحسينات بالترتيب
-            imageData = adjustBrightnessContrast(imageData, brightness, contrast);
-            imageData = toGrayscale(imageData);
-            imageData = gaussianBlur(imageData, 1);
-            imageData = histogramEqualization(imageData);
-            
-            if (sharpness > 0) {
-                imageData = sharpenImage(imageData, sharpness / 100);
+            // 1. السطوع والتباين
+            const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+            for (let i = 0; i < data.length; i += 4) {
+                for (let j = 0; j < 3; j++) {
+                    let val = data[i + j] + brightness;
+                    data[i + j] = Math.max(0, Math.min(255, factor * (val - 128) + 128));
+                }
             }
             
-            imageData = binaryThreshold(imageData, 128);
+            // 2. تحويل لرمادي (Grayscale)
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                data[i] = data[i + 1] = data[i + 2] = gray;
+            }
+            
+            // 3. عتبة ثنائية (Binary Threshold) لزيادة الوضوح
+            for (let i = 0; i < data.length; i += 4) {
+                const val = data[i] > 128 ? 255 : 0;
+                data[i] = data[i + 1] = data[i + 2] = val;
+            }
             
             ctx.putImageData(imageData, 0, 0);
             return canvas;
         }
-        
+
         // ============================================
-        // دوال التحكم بالواجهة
+        // دوال قارئ الباركود
         // ============================================
         
-        function switchTab(tab) {
-            currentTab = tab;
+        function switchScannerTab(tab) {
+            currentScannerTab = tab;
             const cameraSection = document.getElementById('cameraSection');
             const uploadSection = document.getElementById('uploadSection');
             const tabCameraBtn = document.getElementById('tabCameraBtn');
@@ -564,7 +674,6 @@ head>
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        // إنشاء canvas للصورة الأصلية
                         const canvas = document.createElement('canvas');
                         canvas.width = img.width;
                         canvas.height = img.height;
@@ -573,16 +682,10 @@ head>
                         
                         originalImageData = canvas;
                         processedImageCanvas = canvas.cloneNode();
-                        const processedCtx = processedImageCanvas.getContext('2d');
-                        processedCtx.drawImage(canvas, 0, 0);
+                        processedImageCanvas.getContext('2d').drawImage(canvas, 0, 0);
                         
-                        // عرض المعاينات
                         showPreviews();
-                        
-                        // إظهار عناصر التحكم
                         document.getElementById('adjustmentControls').style.display = 'block';
-                        
-                        // محاولة قراءة الباركود
                         attemptBarcodeRead(file);
                     };
                     img.src = event.target.result;
@@ -590,50 +693,18 @@ head>
                 reader.readAsDataURL(file);
             });
         }
-        
+
         function showPreviews() {
             const container = document.getElementById('previewContainer');
-            container.innerHTML = '';
-            
-            // المعاينة الأصلية
-            const originalDiv = document.createElement('div');
-            originalDiv.className = 'preview-item';
-            const originalImg = document.createElement('img');
-            originalImg.src = originalImageData.toDataURL();
-            originalDiv.appendChild(originalImg);
-            const originalLabel = document.createElement('label');
-            originalLabel.innerText = 'الصورة الأصلية';
-            originalDiv.appendChild(originalLabel);
-            container.appendChild(originalDiv);
-            
-            // المعاينة المعالجة
-            const processedDiv = document.createElement('div');
-            processedDiv.className = 'preview-item';
-            const processedImg = document.createElement('img');
-            processedImg.id = 'processedPreview';
-            processedImg.src = processedImageCanvas.toDataURL();
-            processedDiv.appendChild(processedImg);
-            const processedLabel = document.createElement('label');
-            processedLabel.innerText = 'الصورة المعالجة';
-            processedDiv.appendChild(processedLabel);
-            container.appendChild(processedDiv);
-            
+            container.innerHTML = `
+                <div class="preview-item"><img src="${originalImageData.toDataURL()}"><label>الأصلية</label></div>
+                <div class="preview-item"><img id="processedPreview" src="${processedImageCanvas.toDataURL()}"><label>المعالجة</label></div>
+            `;
             container.style.display = 'flex';
         }
-        
-        function resetAdjustments() {
-            document.getElementById('brightnessSlider').value = 0;
-            document.getElementById('contrastSlider').value = 0;
-            document.getElementById('sharpnessSlider').value = 0;
-            document.getElementById('brightnessValue').innerText = '0';
-            document.getElementById('contrastValue').innerText = '0';
-            document.getElementById('sharpnessValue').innerText = '0';
-            updateProcessedImage();
-        }
-        
+
         function updateProcessedImage() {
             if (!originalImageData) return;
-            
             const brightness = parseInt(document.getElementById('brightnessSlider').value);
             const contrast = parseInt(document.getElementById('contrastSlider').value);
             const sharpness = parseInt(document.getElementById('sharpnessSlider').value);
@@ -642,72 +713,63 @@ head>
             document.getElementById('contrastValue').innerText = contrast;
             document.getElementById('sharpnessValue').innerText = sharpness;
             
-            // نسخ الصورة الأصلية
             const canvas = originalImageData.cloneNode();
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(originalImageData, 0, 0);
-            
-            // تطبيق المعالجة
+            canvas.getContext('2d').drawImage(originalImageData, 0, 0);
             processImage(canvas, brightness, contrast, sharpness);
             
-            // تحديث المعاينة
-            const preview = document.getElementById('processedPreview');
-            if (preview) {
-                preview.src = canvas.toDataURL();
-            }
-            
+            document.getElementById('processedPreview').src = canvas.toDataURL();
             processedImageCanvas = canvas;
+            
+            // محاولة القراءة التلقائية عند التعديل
+            attemptBarcodeReadFromCanvas();
         }
-        
+
+        function resetAdjustments() {
+            document.getElementById('brightnessSlider').value = 0;
+            document.getElementById('contrastSlider').value = 0;
+            document.getElementById('sharpnessSlider').value = 0;
+            updateProcessedImage();
+        }
+
         async function attemptBarcodeRead(file) {
             const resultDiv = document.getElementById('uploadResult');
-            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري قراءة الباركود...';
-            resultDiv.className = 'result-box';
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري القراءة...';
             
             const qrScanner = new Html5Qrcode("qr-reader");
-            
             try {
-                // محاولة القراءة من الصورة الأصلية أولاً
                 const decodedText = await qrScanner.scanFile(file, true);
-                if (decodedText) {
-                    showSuccessResult(decodedText);
-                    return;
-                }
+                if (decodedText) { showSuccessResult(decodedText); return; }
             } catch (err) {
-                console.log('فشل القراءة من الصورة الأصلية، جاري محاولة الصورة المعالجة...');
-            } finally {
-                qrScanner.clear();
-            }
+                console.log('فشل القراءة من الأصلية، جاري محاولة المعالجة...');
+            } finally { qrScanner.clear(); }
             
-            // محاولة القراءة من الصورة المعالجة
-            try {
-                const processedDataUrl = processedImageCanvas.toDataURL();
-                const blob = await (await fetch(processedDataUrl)).blob();
-                const qrScanner2 = new Html5Qrcode("qr-reader");
-                const decodedText = await qrScanner2.scanFile(blob, true);
-                if (decodedText) {
-                    showSuccessResult(decodedText);
-                    return;
-                }
-                qrScanner2.clear();
-            } catch (err) {
-                console.log('فشل القراءة من الصورة المعالجة');
-            }
-            
-            resultDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> لم يتم العثور على باركود. جرب تحسين الصورة باستخدام المنزلقات أعلاه.';
-            resultDiv.className = 'result-box error';
+            attemptBarcodeReadFromCanvas();
         }
-        
+
+        async function attemptBarcodeReadFromCanvas() {
+            const resultDiv = document.getElementById('uploadResult');
+            try {
+                const dataUrl = processedImageCanvas.toDataURL();
+                const blob = await (await fetch(dataUrl)).blob();
+                const qrScanner = new Html5Qrcode("qr-reader");
+                const decodedText = await qrScanner.scanFile(blob, true);
+                if (decodedText) { showSuccessResult(decodedText); }
+                qrScanner.clear();
+            } catch (err) {
+                resultDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> لم يتم العثور على باركود. جرب تعديل المنزلقات.';
+            }
+        }
+
         function showSuccessResult(decodedText) {
             const resultDiv = document.getElementById('uploadResult');
-            resultDiv.innerHTML = `<i class="fas fa-check-circle"></i> <strong>تم قراءة الباركود بنجاح!</strong><br><span style="font-size: 11px;">${decodedText.substring(0, 200)}</span>`;
-            resultDiv.className = 'result-box success';
-            showNotification('✓ تم قراءة الباركود بنجاح!', 'success');
+            resultDiv.innerHTML = `<div style="background: rgba(74,222,128,0.2); padding: 10px; border-radius: 10px;"><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>تمت القراءة بنجاح!</strong><br><span style="font-size: 11px;">${decodedText.substring(0, 100)}</span></div>`;
+            searchOrderByBarcode(decodedText);
+            showNotification('✓ تم قراءة الباركود بنجاح', 'success');
         }
-        
-        async function openScannerModal() {
+
+        async function openBarcodeScanner() {
             document.getElementById('scannerModal').classList.add('active');
-            switchTab('camera');
+            switchScannerTab('camera');
         }
         
         function closeScannerModal() {
@@ -720,17 +782,17 @@ head>
         
         async function initScanner() {
             if (scannerInitialized) return;
-            const readerElement = document.getElementById('qr-reader');
-            if (!readerElement) return;
-            
             html5QrCode = new Html5Qrcode("qr-reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
             try {
-                await html5QrCode.start({ facingMode: currentCameraId }, config, onScanSuccess, onScanFailure);
+                await html5QrCode.start({ facingMode: currentCameraId }, config, (text) => {
+                    showNotification('✓ تم المسح: ' + text.substring(0, 20), 'success');
+                    searchOrderByBarcode(text);
+                    closeScannerModal();
+                }, () => {});
                 scannerInitialized = true;
             } catch (err) {
-                console.error(err);
+                document.getElementById('qr-reader-results').innerHTML = '<i class="fas fa-exclamation-triangle"></i> تعذر تشغيل الكاميرا.';
             }
         }
         
@@ -743,12 +805,11 @@ head>
             }
         }
         
-        function onScanSuccess(decodedText) {
-            showNotification('✓ تم مسح الباركود: ' + decodedText.substring(0, 30), 'success');
-            closeScannerModal();
+        function searchOrderByBarcode(barcodeText) {
+            let orderId = barcodeText.match(/[A-Z0-9\-]{5,}/i)?.[0] || barcodeText.trim();
+            document.getElementById('filterOrderId').value = orderId;
+            applyFilters();
         }
-        
-        function onScanFailure(error) { }
         
         function showNotification(message, type) {
             const notification = document.createElement('div');
@@ -758,17 +819,12 @@ head>
             setTimeout(() => notification.remove(), 3000);
         }
         
-        // تحديث الصورة المعالجة عند تغيير المنزلقات
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', () => { 
+            loadOrders(); 
             initImageUploader();
-            
             document.getElementById('brightnessSlider').addEventListener('input', updateProcessedImage);
             document.getElementById('contrastSlider').addEventListener('input', updateProcessedImage);
             document.getElementById('sharpnessSlider').addEventListener('input', updateProcessedImage);
-            
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeScannerModal();
-            });
         });
     </script>
 </body>
