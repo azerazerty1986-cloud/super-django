@@ -1,1 +1,716 @@
-
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ناردو برو - فلترة وإدارة الطلبات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --gold: #ffd700;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --glass: rgba(255, 255, 255, 0.05);
+            --success: #4ade80;
+            --error: #f87171;
+            --warning: #fbbf24;
+            --info: #60a5fa;
+        }
+        
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: var(--text-primary);
+            direction: rtl;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* رأس الصفحة */
+        .header {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .header-title { display: flex; align-items: center; gap: 15px; }
+        .header-title i { font-size: 40px; color: var(--gold); }
+        .header-title h1 { font-size: 28px; color: var(--gold); margin: 0; }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s;
+        }
+        .btn-gold { background: var(--gold); color: #000; }
+        .btn-gold:hover { background: #ffed4e; transform: translateY(-2px); }
+        .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+        .btn-outline:hover { background: rgba(255, 215, 0, 0.1); }
+        .btn-success { background: var(--success); color: #000; }
+        .btn-danger { background: rgba(248, 113, 113, 0.2); border: 1px solid var(--error); color: var(--error); }
+        
+        /* شريط الفلترة */
+        .filter-bar {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .filter-title {
+            font-size: 18px;
+            color: var(--gold);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+        
+        /* إحصائيات سريعة */
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 15px;
+            padding: 15px 25px;
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* جدول الطلبات */
+        .orders-table-container {
+            background: var(--glass);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            overflow-x: auto;
+        }
+        
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .orders-table th {
+            text-align: right;
+            padding: 15px;
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--gold);
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .orders-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+            font-size: 13px;
+        }
+        
+        .orders-table tr:hover td {
+            background: rgba(255, 215, 0, 0.05);
+        }
+        
+        .order-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
+        .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); }
+        .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .status-delivered { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            color: var(--gold);
+            cursor: pointer;
+            padding: 5px 8px;
+            border-radius: 8px;
+        }
+        
+        .action-btn:hover { background: rgba(255, 215, 0, 0.2); }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i { font-size: 60px; color: var(--gold); margin-bottom: 15px; }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-grid { grid-template-columns: 1fr; }
+            .stats-row { flex-direction: column; }
+            .orders-table th, .orders-table td { padding: 8px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- رأس الصفحة -->
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-filter"></i>
+                <h1>فلترة وإدارة الطلبات</h1>
+            </div>
+            <div>
+                <button class="btn btn-outline" onclick="window.close()">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+                <button class="btn btn-gold" onclick="printReport()">
+                    <i class="fas fa-print"></i> طباعة التقرير
+                </button>
+            </div>
+        </div>
+        
+        <!-- إحصائيات سريعة -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="number" id="totalOrders">0</div>
+                <div class="label">إجمالي الطلبات</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="pendingOrders">0</div>
+                <div class="label">قيد المعالجة</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="completedOrders">0</div>
+                <div class="label">مكتملة</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="totalAmount">0</div>
+                <div class="label">إجمالي المبيعات (دج)</div>
+            </div>
+        </div>
+        
+        <!-- شريط الفلترة -->
+        <div class="filter-bar">
+            <div class="filter-title">
+                <i class="fas fa-sliders-h"></i>
+                <span>خيارات الفلترة</span>
+            </div>
+            
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>🔍 رقم الطلب</label>
+                    <input type="text" id="filterOrderId" placeholder="أدخل رقم الطلب...">
+                </div>
+                
+                <div class="filter-group">
+                    <label>👤 اسم العميل</label>
+                    <input type="text" id="filterCustomer" placeholder="اسم العميل...">
+                </div>
+                
+                <div class="filter-group">
+                    <label>📍 الولاية</label>
+                    <select id="filterState">
+                        <option value="">الكل</option>
+                        <option value="الجزائر">الجزائر</option>
+                        <option value="وهران">وهران</option>
+                        <option value="قسنطينة">قسنطينة</option>
+                        <option value="عنابة">عنابة</option>
+                        <option value="سطيف">سطيف</option>
+                        <option value="تلمسان">تلمسان</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>📦 الحالة</label>
+                    <select id="filterStatus">
+                        <option value="">الكل</option>
+                        <option value="pending">⏳ قيد المعالجة</option>
+                        <option value="received">📦 وصل للتاجر</option>
+                        <option value="approved">✅ تم تعيين موزع</option>
+                        <option value="delivered">🚚 تم التوصيل</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>📅 من تاريخ</label>
+                    <input type="date" id="filterDateFrom">
+                </div>
+                
+                <div class="filter-group">
+                    <label>📅 إلى تاريخ</label>
+                    <input type="date" id="filterDateTo">
+                </div>
+                
+                <div class="filter-group">
+                    <label>💰 السعر من</label>
+                    <input type="number" id="filterPriceFrom" placeholder="0">
+                </div>
+                
+                <div class="filter-group">
+                    <label>💰 السعر إلى</label>
+                    <input type="number" id="filterPriceTo" placeholder="100000">
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button class="btn btn-gold" onclick="applyFilters()">
+                    <i class="fas fa-search"></i> بحث
+                </button>
+                <button class="btn btn-outline" onclick="resetFilters()">
+                    <i class="fas fa-undo"></i> إعادة تعيين
+                </button>
+                <button class="btn btn-outline" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> تصدير Excel
+                </button>
+            </div>
+        </div>
+        
+        <!-- جدول الطلبات -->
+        <div class="orders-table-container">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>التاريخ</th>
+                        <th>العميل</th>
+                        <th>الولاية</th>
+                        <th>الهاتف</th>
+                        <th>المنتجات</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr><td colspan="9" class="empty-state"><i class="fas fa-inbox"></i><br>لا توجد طلبات</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 ناردو برو - نظام فلترة وإدارة الطلبات | جميع الحقوق محفوظة</p>
+        </div>
+    </div>
+    
+    <script>
+        // ============================================
+        // المتغيرات العامة
+        // ============================================
+        let allOrders = [];
+        let filteredOrders = [];
+        
+        // ============================================
+        // تحميل الطلبات
+        // ============================================
+        function loadOrders() {
+            const saved = localStorage.getItem('nardo_orders');
+            if (saved) {
+                allOrders = JSON.parse(saved);
+            } else {
+                allOrders = [];
+            }
+            applyFilters();
+            updateStatistics();
+        }
+        
+        // ============================================
+        // تحديث الإحصائيات
+        // ============================================
+        function updateStatistics() {
+            const total = allOrders.length;
+            const pending = allOrders.filter(o => o.status === 'pending').length;
+            const completed = allOrders.filter(o => o.status === 'delivered' || o.status === 'approved').length;
+            const totalAmount = allOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+            
+            document.getElementById('totalOrders').innerHTML = total;
+            document.getElementById('pendingOrders').innerHTML = pending;
+            document.getElementById('completedOrders').innerHTML = completed;
+            document.getElementById('totalAmount').innerHTML = totalAmount.toLocaleString();
+        }
+        
+        // ============================================
+        // تطبيق الفلترة
+        // ============================================
+        function applyFilters() {
+            const orderId = document.getElementById('filterOrderId').value.trim().toLowerCase();
+            const customer = document.getElementById('filterCustomer').value.trim().toLowerCase();
+            const state = document.getElementById('filterState').value;
+            const status = document.getElementById('filterStatus').value;
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const priceFrom = parseFloat(document.getElementById('filterPriceFrom').value) || 0;
+            const priceTo = parseFloat(document.getElementById('filterPriceTo').value) || Infinity;
+            
+            filteredOrders = allOrders.filter(order => {
+                // فلترة رقم الطلب
+                if (orderId && !(order.originalOrderId || order.id || '').toLowerCase().includes(orderId)) {
+                    return false;
+                }
+                
+                // فلترة اسم العميل
+                if (customer && !(order.customerName || '').toLowerCase().includes(customer)) {
+                    return false;
+                }
+                
+                // فلترة الولاية
+                if (state && order.customerState !== state) {
+                    return false;
+                }
+                
+                // فلترة الحالة
+                if (status && order.status !== status) {
+                    return false;
+                }
+                
+                // فلترة التاريخ
+                if (dateFrom || dateTo) {
+                    const orderDate = order.date ? new Date(order.date.split(' ')[0]) : null;
+                    if (dateFrom && orderDate && orderDate < new Date(dateFrom)) return false;
+                    if (dateTo && orderDate && orderDate > new Date(dateTo)) return false;
+                }
+                
+                // فلترة السعر
+                const orderTotal = order.total || 0;
+                if (orderTotal < priceFrom || orderTotal > priceTo) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            renderOrdersTable();
+        }
+        
+        // ============================================
+        // عرض جدول الطلبات
+        // ============================================
+        function renderOrdersTable() {
+            const tbody = document.getElementById('ordersTableBody');
+            
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-inbox"></i><br>لا توجد طلبات تطابق معايير البحث</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = filteredOrders.map(order => {
+                const statusClass = order.status === 'pending' ? 'status-pending' : 
+                                  (order.status === 'received' ? 'status-received' : 'status-approved');
+                const statusText = order.status === 'pending' ? '⏳ قيد المعالجة' : 
+                                  (order.status === 'received' ? '📦 وصل للتاجر' : 
+                                  (order.status === 'approved' ? '✅ تم تعيين موزع' : '🚚 تم التوصيل'));
+                
+                // عرض المنتجات بشكل مختصر
+                const productsText = order.items ? order.items.map(i => `${i.name} (${i.quantity})`).join(', ') : '---';
+                
+                return `
+                    <tr>
+                        <td><strong>${order.originalOrderId || order.id || '---'}</strong></td>
+                        <td>${order.date || '---'}</td>
+                        <td>${order.customerName || '---'}</td>
+                        <td>${order.customerState || '---'}</td>
+                        <td>${order.customerPhone || '---'}</td>
+                        <td style="max-width: 200px; font-size: 11px;">${productsText.substring(0, 50)}${productsText.length > 50 ? '...' : ''}</td>
+                        <td><span style="color: var(--success); font-weight: bold;">${(order.total || 0).toLocaleString()} دج</span></td>
+                        <td><span class="order-status ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button class="action-btn" onclick="viewOrderDetails('${order.id}')" title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="action-btn" onclick="updateOrderStatus('${order.id}', '${order.status}')" title="تحديث الحالة">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn" onclick="deleteOrder('${order.id}')" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // ============================================
+        // عرض تفاصيل الطلب
+        // ============================================
+        function viewOrderDetails(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            let productsHtml = '';
+            if (order.items && order.items.length > 0) {
+                productsHtml = '<ul style="margin-right: 20px;">' + order.items.map(item => `
+                    <li>${item.name} - الكمية: ${item.quantity} - السعر: ${(item.price * item.quantity).toLocaleString()} دج</li>
+                `).join('') + '</ul>';
+            }
+            
+            alert(`📦 تفاصيل الطلب\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم الطلب: ${order.originalOrderId || order.id}\n👤 العميل: ${order.customerName}\n📞 الهاتف: ${order.customerPhone}\n📍 العنوان: ${order.customerAddress}\n💰 الإجمالي: ${(order.total || 0).toLocaleString()} دج\n📦 المنتجات:\n${productsHtml.replace(/<[^>]*>/g, '')}\n━━━━━━━━━━━━━━━━━━━━━━`);
+        }
+        
+        // ============================================
+        // تحديث حالة الطلب
+        // ============================================
+        function updateOrderStatus(orderId, currentStatus) {
+            const statuses = [
+                { value: 'pending', label: '⏳ قيد المعالجة' },
+                { value: 'received', label: '📦 وصل للتاجر' },
+                { value: 'approved', label: '✅ تم تعيين موزع' },
+                { value: 'delivered', label: '🚚 تم التوصيل' }
+            ];
+            
+            let statusOptions = '';
+            statuses.forEach(s => {
+                const selected = (s.value === currentStatus) ? 'selected' : '';
+                statusOptions += `<option value="${s.value}" ${selected}>${s.label}</option>`;
+            });
+            
+            const newStatus = prompt('اختر الحالة الجديدة:\n0: قيد المعالجة\n1: وصل للتاجر\n2: تم تعيين موزع\n3: تم التوصيل', 
+                currentStatus === 'pending' ? '0' : currentStatus === 'received' ? '1' : currentStatus === 'approved' ? '2' : '3');
+            
+            if (newStatus !== null) {
+                const statusMap = { '0': 'pending', '1': 'received', '2': 'approved', '3': 'delivered' };
+                const selectedStatus = statusMap[newStatus];
+                if (selectedStatus) {
+                    const orderIndex = allOrders.findIndex(o => o.id === orderId);
+                    if (orderIndex !== -1) {
+                        allOrders[orderIndex].status = selectedStatus;
+                        localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
+                        loadOrders();
+                        showNotification('✓ تم تحديث حالة الطلب', 'success');
+                    }
+                }
+            }
+        }
+        
+        // ============================================
+        // حذف طلب
+        // ============================================
+        function deleteOrder(orderId) {
+            if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+                allOrders = allOrders.filter(o => o.id !== orderId);
+                localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
+                loadOrders();
+                showNotification('✓ تم حذف الطلب', 'success');
+            }
+        }
+        
+        // ============================================
+        // إعادة تعيين الفلتر
+        // ============================================
+        function resetFilters() {
+            document.getElementById('filterOrderId').value = '';
+            document.getElementById('filterCustomer').value = '';
+            document.getElementById('filterState').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            document.getElementById('filterPriceFrom').value = '';
+            document.getElementById('filterPriceTo').value = '';
+            applyFilters();
+        }
+        
+        // ============================================
+        // تصدير إلى Excel
+        // ============================================
+        function exportToExcel() {
+            if (filteredOrders.length === 0) {
+                showNotification('لا توجد بيانات للتصدير', 'warning');
+                return;
+            }
+            
+            let csvContent = '\uFEFFرقم الطلب,التاريخ,العميل,الولاية,الهاتف,الإجمالي,الحالة\n';
+            
+            filteredOrders.forEach(order => {
+                const row = [
+                    order.originalOrderId || order.id,
+                    order.date || '',
+                    order.customerName || '',
+                    order.customerState || '',
+                    order.customerPhone || '',
+                    (order.total || 0),
+                    order.status === 'pending' ? 'قيد المعالجة' : (order.status === 'received' ? 'وصل للتاجر' : 'مكتمل')
+                ];
+                csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', `orders_${new Date().toISOString().slice(0,19)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showNotification('✓ تم تصدير البيانات بنجاح', 'success');
+        }
+        
+        // ============================================
+        // طباعة التقرير
+        // ============================================
+        function printReport() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html dir="rtl">
+                <head>
+                    <title>تقرير الطلبات - ناردو برو</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+                        th { background: #f5f5f5; }
+                        .header { text-align: center; margin-bottom: 20px; }
+                        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>ناردو برو - تقرير الطلبات</h2>
+                        <p>تاريخ التقرير: ${new Date().toLocaleString('ar-EG')}</p>
+                        <p>عدد الطلبات: ${filteredOrders.length}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الولاية</th><th>الهاتف</th><th>الإجمالي</th><th>الحالة</th></tr>
+                        </thead>
+                        <tbody>
+                            ${filteredOrders.map(order => `
+                                <tr>
+                                    <td>${order.originalOrderId || order.id}</td>
+                                    <td>${order.date || ''}</td>
+                                    <td>${order.customerName || ''}</td>
+                                    <td>${order.customerState || ''}</td>
+                                    <td>${order.customerPhone || ''}</td>
+                                    <td>${(order.total || 0).toLocaleString()} دج</td>
+                                    <td>${order.status === 'pending' ? 'قيد المعالجة' : (order.status === 'received' ? 'وصل للتاجر' : 'مكتمل')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        <p>© 2026 ناردو برو - جميع الحقوق محفوظة</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        
+        // ============================================
+        // إشعارات
+        // ============================================
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 24px;
+                background: ${type === 'success' ? '#4ade80' : '#f87171'};
+                color: ${type === 'success' ? '#000' : '#fff'};
+                border-radius: 10px;
+                font-weight: bold;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+        
+        // ============================================
+        // التهيئة
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOrders();
+        });
+        
+        // إضافة حدث enter في حقول البحث
+        document.getElementById('filterOrderId')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') applyFilters();
+        });
+        document.getElementById('filterCustomer')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') applyFilters();
+        });
+    </script>
+</body>
+</html>
