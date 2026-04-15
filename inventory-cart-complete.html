@@ -1442,37 +1442,65 @@
         // ============================================================
         // [58] دالة عرض المنتجات في الشبكة
         // ============================================================
-        function renderProducts() {
-            const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
-            let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
-            filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || (p.productCompositeID && p.productCompositeID.toLowerCase().includes(search)));
-            
-            const container = document.getElementById('productsGrid');
-            if (!filtered.length) {
-                container.innerHTML = '<div style="text-align:center; padding:60px;"><i class="fas fa-box-open fa-3x"></i><p>لا توجد منتجات</p><button class="btn btn-telegram" onclick="fetchProductsFromTelegram()">جلب من تلغرام</button></div>';
-                return;
-            }
-            
-            container.innerHTML = filtered.map(p => {
-                const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
-                const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
-                const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
+        
+        // ============================================================
+// [58] دالة عرض المنتجات في الشبكة مع صورة مصغرة
+// ============================================================
+function renderProducts() {
+    const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
+    let filtered = products.filter(p => p.storeID === currentStore.storeFixedID);
+    filtered = filtered.filter(p => p.name.toLowerCase().includes(search) || (p.productCompositeID && p.productCompositeID.toLowerCase().includes(search)));
+    
+    const container = document.getElementById('productsGrid');
+    if (!filtered.length) {
+        container.innerHTML = '<div style="text-align:center; padding:60px;"><i class="fas fa-box-open fa-3x"></i><p>لا توجد منتجات</p><button class="btn btn-telegram" onclick="fetchProductsFromTelegram()">جلب من تلغرام</button></div>';
+        return;
+    }
+    
+    container.innerHTML = filtered.map(p => {
+        const stockClass = p.quantity > 10 ? 'high' : (p.quantity > 0 ? 'low' : 'out');
+        const stockText = p.quantity > 10 ? 'متوفر' : (p.quantity > 0 ? `متبقي ${p.quantity}` : 'غير متوفر');
+        const publishedBadge = p.published ? '<div class="product-published-badge"><i class="fab fa-telegram"></i> منشور</div>' : '';
+        
+        // الحصول على الصورة المصغرة
+        const productImage = p.imageData || p.imageUrl || null;
+        
+        return `
+            <div class="product-card" style="position: relative;">
+                <div class="product-id-badge">${p.productCompositeID || '---'}</div>
+                ${publishedBadge}
                 
-                return `
-                    <div class="product-card">
-                        <div class="product-id-badge">${p.productCompositeID || '---'}</div>
-                        ${publishedBadge}
-                        <div class="product-name">${p.name}</div>
-                        <div class="product-price">${p.price.toLocaleString()} دج</div>
-                        <div><span class="stock-status ${stockClass}">${stockText}</span></div>
-                        <div class="product-actions">
-                            <button class="btn btn-gold" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب</button>
-                            <button class="btn btn-outline btn-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
-                        </div>
+                <!-- رأس البطاقة: صورة مصغرة + الاسم -->
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <!-- صورة مصغرة دائرية -->
+                    <div style="width: 55px; height: 55px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #0f0f1a, #1a1a2e); border: 2px solid rgba(255,215,0,0.3); flex-shrink: 0;">
+                        <img src="${productImage || 'https://placehold.co/200x200/1a1a2e/ffd700?text=📦'}" 
+                             alt="${p.name}" 
+                             style="width: 100%; height: 100%; object-fit: cover;"
+                             onerror="this.src='https://placehold.co/200x200/1a1a2e/ffd700?text=📦'">
                     </div>
-                `;
-            }).join('');
-        }
+                    <div class="product-name" style="margin-bottom: 0; font-size: 18px; flex: 1;">${p.name}</div>
+                </div>
+                
+                <!-- السعر -->
+                <div class="product-price" style="font-size: 20px; margin: 8px 0;">${p.price.toLocaleString()} دج</div>
+                
+                <!-- الكمية بشكل بارز -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0; padding: 6px 10px; background: rgba(0,0,0,0.3); border-radius: 12px;">
+                    <span style="font-size: 12px; color: #aaa;"><i class="fas fa-box"></i> الكمية:</span>
+                    <span style="font-weight: 800; font-size: 16px; color: var(--gold);">${p.quantity}</span>
+                </div>
+                
+                <div><span class="stock-status ${stockClass}" style="font-size: 11px; padding: 3px 10px;">${stockText}</span></div>
+                
+                <div class="product-actions" style="margin-top: 12px;">
+                    <button class="btn btn-gold btn-sm" onclick="quickOrder(${p.id})"><i class="fas fa-shopping-bag"></i> طلب</button>
+                    <button class="btn btn-outline btn-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
         // ============================================================
         // [59] دالة التبديل بين التبويبات
