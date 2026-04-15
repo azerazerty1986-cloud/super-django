@@ -3,219 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو برو - النظام المتكامل للباركود والطلبات</title>
+    <title>ناردو برو - فلترة وإدارة الطلبات المتقدمة</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
-        /* ============================================================ */
-        /* [القسم 1] - المتغيرات العامة وإعدادات التصميم الأساسية */
-        /* ============================================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #1a1a2e;
-            --secondary: #16213e;
+            --primary: #0a0a1a;
+            --secondary: #1a1a2e;
             --gold: #ffd700;
-            --gold-light: #fef08a;
+            --gold-dark: #daa520;
             --text-primary: #ffffff;
-            --text-secondary: #cbd5e1;
+            --text-secondary: #b0b0b0;
             --glass: rgba(255, 255, 255, 0.05);
             --glass-dark: rgba(0, 0, 0, 0.3);
             --success: #4ade80;
             --error: #f87171;
             --warning: #fbbf24;
             --info: #60a5fa;
+            --telegram: #0088cc;
         }
         
         body {
             font-family: 'Cairo', sans-serif;
-            background: linear-gradient(135deg, #0f3460, #16213e);
+            background: linear-gradient(135deg, #0b0b14 0%, #15152a 100%);
             color: var(--text-primary);
-            direction: rtl;
+            min-height: 100vh;
         }
         
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
         
-        /* ============================================================ */
-        /* [القسم 2] - رأس الصفحة والأزرار */
-        /* ============================================================ */
+        /* رأس الصفحة */
         .header {
-            background: var(--glass);
-            border: 1px solid rgba(255, 215, 0, 0.2);
+            background: linear-gradient(135deg, rgba(10,10,26,0.95), rgba(26,26,46,0.95));
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,215,0,0.2);
             border-radius: 24px;
-            padding: 25px;
-            margin-bottom: 30px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 20px;
-            backdrop-filter: blur(10px);
+            gap: 15px;
         }
         
-        .header-title { display: flex; align-items: center; gap: 15px; }
-        .header-title i { font-size: 42px; color: var(--gold); }
-        .header-title h1 { font-size: 28px; background: linear-gradient(135deg, var(--gold), var(--gold-light)); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 0; }
+        .header-title { display: flex; align-items: center; gap: 12px; }
+        .header-title i { font-size: 38px; color: var(--gold); }
+        .header-title h1 { font-size: 24px; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); -webkit-background-clip: text; background-clip: text; color: transparent; }
         
         .btn {
-            padding: 12px 25px;
+            padding: 10px 22px;
             border: none;
-            border-radius: 14px;
+            border-radius: 40px;
             font-weight: bold;
             cursor: pointer;
             font-family: 'Cairo', sans-serif;
             transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        .btn-gold { background: linear-gradient(135deg, var(--gold), #ca8a04); color: #000; }
+        .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #111; }
         .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255,215,0,0.3); }
         .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
-        .btn-outline:hover { background: rgba(255, 215, 0, 0.1); transform: translateY(-2px); }
+        .btn-outline:hover { background: rgba(255,215,0,0.1); }
+        .btn-success { background: linear-gradient(135deg, #4ade80, #22c55e); color: white; }
+        .btn-error { background: linear-gradient(135deg, #f87171, #ef4444); color: white; }
+        .btn-info { background: linear-gradient(135deg, #60a5fa, #3b82f6); color: white; }
+        .btn-telegram { background: linear-gradient(135deg, #0088cc, #006699); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
         
-        /* ============================================================ */
-        /* [القسم 3] - شريط الفلترة */
-        /* ============================================================ */
-        .filter-bar {
-            background: var(--glass);
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            border-radius: 24px;
-            padding: 24px;
-            margin-bottom: 25px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .filter-title {
-            font-size: 18px;
-            color: var(--gold);
-            margin-bottom: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 18px;
-            margin-bottom: 20px;
-        }
-        
-        .filter-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-        
-        .filter-group input, .filter-group select {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 14px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            background: var(--glass-dark);
-            color: white;
-            font-family: 'Cairo', sans-serif;
-        }
-        
-        .filter-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-        }
-        
-        /* ============================================================ */
-        /* [القسم 4] - بطاقات الإحصائيات */
-        /* ============================================================ */
+        /* بطاقات الإحصائيات */
         .stats-row {
             display: flex;
-            gap: 18px;
+            gap: 15px;
             flex-wrap: wrap;
-            margin-bottom: 28px;
+            margin-bottom: 25px;
         }
-        
         .stat-card {
             background: var(--glass);
-            border: 1px solid rgba(255, 215, 0, 0.15);
+            border: 1px solid rgba(255,215,0,0.15);
             border-radius: 20px;
-            padding: 18px 25px;
+            padding: 15px 20px;
             flex: 1;
             min-width: 130px;
             text-align: center;
             backdrop-filter: blur(10px);
-            transition: all 0.3s;
         }
-        .stat-card:hover { border-color: var(--gold); transform: translateY(-3px); }
-        .stat-card .number { font-size: 32px; font-weight: bold; color: var(--gold); }
-        .stat-card .label { font-size: 12px; color: var(--text-secondary); margin-top: 5px; }
+        .stat-card .number { font-size: 28px; font-weight: bold; color: var(--gold); }
+        .stat-card .label { font-size: 11px; color: var(--text-secondary); }
         
-        /* ============================================================ */
-        /* [القسم 5] - جدول الطلبات */
-        /* ============================================================ */
-        .orders-table-container {
+        /* شريط الفلترة */
+        .filter-bar {
             background: var(--glass);
-            border: 1px solid rgba(255, 215, 0, 0.2);
+            border: 1px solid rgba(255,215,0,0.2);
             border-radius: 24px;
-            overflow-x: auto;
+            padding: 20px;
+            margin-bottom: 25px;
             backdrop-filter: blur(10px);
         }
+        .filter-title {
+            font-size: 16px;
+            color: var(--gold);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .filter-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,215,0,0.3);
+            background: var(--glass-dark);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
         
-        .orders-table {
+        /* جدول الطلبات */
+        .table-container {
+            background: rgba(0,0,0,0.25);
+            border-radius: 24px;
+            border: 1px solid rgba(255,215,0,0.12);
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        .data-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1000px;
+            min-width: 1200px;
         }
-        
-        .orders-table th {
+        .data-table th {
             text-align: right;
-            padding: 16px 15px;
-            background: rgba(255, 215, 0, 0.1);
-            color: var(--gold-light);
+            padding: 14px 12px;
+            background: rgba(255,215,0,0.1);
+            color: var(--gold);
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12px;
         }
-        
-        .orders-table td {
-            padding: 14px 15px;
-            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
-            font-size: 13px;
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,215,0,0.06);
+            font-size: 12px;
+            vertical-align: top;
         }
-        
-        .orders-table tr:hover td { background: rgba(255, 215, 0, 0.05); }
+        .data-table tr:hover td { background: rgba(255,215,0,0.05); }
         
         .order-status {
-            padding: 5px 12px;
-            border-radius: 30px;
+            padding: 4px 10px;
+            border-radius: 20px;
             font-size: 11px;
             font-weight: bold;
             display: inline-block;
         }
-        .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); border: 1px solid var(--warning); }
-        .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); border: 1px solid var(--info); }
-        .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); border: 1px solid var(--success); }
-        .status-delivered { background: rgba(74, 222, 128, 0.3); color: #4ade80; border: 1px solid #4ade80; }
+        .status-pending { background: rgba(251,191,36,0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .status-delivered { background: rgba(74,222,128,0.2); color: var(--success); border: 1px solid var(--success); }
         
         .action-btn {
             background: none;
             border: none;
             color: var(--gold);
             cursor: pointer;
-            padding: 6px 10px;
-            border-radius: 10px;
+            padding: 6px;
+            border-radius: 8px;
             transition: 0.2s;
         }
-        .action-btn:hover { background: rgba(255, 215, 0, 0.2); transform: scale(1.05); }
+        .action-btn:hover { background: rgba(255,215,0,0.2); }
         
-        .empty-state { text-align: center; padding: 70px; color: var(--text-secondary); }
-        .empty-state i { font-size: 70px; color: var(--gold); margin-bottom: 18px; }
-        
-        /* ============================================================ */
-        /* [القسم 6] - النوافذ المنبثقة */
-        /* ============================================================ */
+        /* نوافذ الباركود */
         .modal {
             display: none;
             position: fixed;
@@ -223,7 +205,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.92);
+            background: rgba(0,0,0,0.95);
             z-index: 2000;
             align-items: center;
             justify-content: center;
@@ -232,9 +214,9 @@
         .modal-content {
             background: linear-gradient(145deg, #0f172a, #020617);
             border: 2px solid var(--gold);
-            border-radius: 32px;
-            padding: 28px;
-            max-width: 650px;
+            border-radius: 28px;
+            padding: 25px;
+            max-width: 600px;
             width: 90%;
             max-height: 85vh;
             overflow-y: auto;
@@ -244,76 +226,70 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
         }
-        .modal-header h2 { color: var(--gold); margin: 0; font-size: 22px; }
+        .modal-header h2 { color: var(--gold); margin: 0; font-size: 20px; }
         .close-btn {
             background: none;
             border: none;
             color: var(--gold);
-            font-size: 32px;
+            font-size: 28px;
             cursor: pointer;
         }
         
-        /* ============================================================ */
-        /* [القسم 7] - أنماط الباركود */
-        /* ============================================================ */
-        .barcode-item {
-            text-align: center;
-            padding: 15px;
-            background: white;
-            border-radius: 20px;
-            border: 1px solid var(--gold);
-        }
-        .barcode-item canvas { background: white; border-radius: 10px; }
-        
-        /* ============================================================ */
-        /* [القسم 8] - قارئ الصور والكاميرا */
-        /* ============================================================ */
+        /* قارئ الباركود */
         #qr-reader { width: 100%; max-width: 500px; margin: 0 auto; background: #000; border-radius: 20px; overflow: hidden; }
-        .upload-section { text-align: center; border: 2px dashed rgba(255,215,0,0.4); border-radius: 24px; padding: 35px; margin-bottom: 20px; }
-        .preview-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
-        .preview-item img { max-width: 150px; max-height: 150px; border-radius: 16px; border: 2px solid var(--gold); }
-        .result-box { margin-top: 15px; padding: 14px; background: rgba(255,215,0,0.1); border-radius: 14px; text-align: center; }
-        .result-box.success { background: rgba(74,222,128,0.2); color: var(--success); border: 1px solid var(--success); }
-        .result-box.error { background: rgba(248,113,113,0.2); color: var(--error); border: 1px solid var(--error); }
-        .tab-buttons { display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,215,0,0.2); }
-        .tab-btn { flex: 1; padding: 12px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-radius: 12px 12px 0 0; transition: 0.3s; }
+        .upload-section { text-align: center; border: 2px dashed rgba(255,215,0,0.4); border-radius: 20px; padding: 30px; margin-bottom: 15px; }
+        .preview-container { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; justify-content: center; }
+        .preview-item img { max-width: 150px; max-height: 150px; border-radius: 12px; border: 2px solid var(--gold); }
+        .result-box { margin-top: 15px; padding: 12px; background: rgba(255,215,0,0.1); border-radius: 12px; text-align: center; }
+        .result-box.success { background: rgba(74,222,128,0.2); color: var(--success); }
+        .result-box.error { background: rgba(248,113,113,0.2); color: var(--error); }
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,215,0,0.2); }
+        .tab-btn { flex: 1; padding: 10px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; border-radius: 10px 10px 0 0; }
         .tab-btn.active { background: rgba(255,215,0,0.2); color: var(--gold); }
         
-        /* ============================================================ */
-        /* [القسم 9] - جدول شرح الدوال */
-        /* ============================================================ */
-        .functions-table-container {
-            background: var(--glass);
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            border-radius: 24px;
-            margin-top: 30px;
-            margin-bottom: 30px;
-            overflow-x: auto;
+        /* المنتجات المصغرة */
+        .product-mini {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            background: rgba(255,215,0,0.05);
+            padding: 5px 8px;
+            border-radius: 12px;
         }
-        .functions-table { width: 100%; border-collapse: collapse; }
-        .functions-table th {
-            background: rgba(255, 215, 0, 0.15);
-            padding: 14px;
-            color: var(--gold);
-            font-weight: bold;
-        }
-        .functions-table td {
-            padding: 12px;
-            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
-        }
-        .func-code {
-            background: #1e293b;
-            padding: 4px 8px;
+        .product-mini-img {
+            width: 35px;
+            height: 35px;
             border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            color: #a5f3fc;
+            object-fit: cover;
+            background: #1a1a2e;
         }
         
-        .footer { text-align: center; padding: 30px; color: var(--text-secondary); border-top: 1px solid rgba(255, 215, 0, 0.2); margin-top: 30px; }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { bottom: -50px; opacity: 0; }
+            to { bottom: 30px; opacity: 1; }
+        }
+        .toast.success { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
         
         @media (max-width: 768px) {
             .filter-grid { grid-template-columns: 1fr; }
@@ -328,112 +304,95 @@
         <!-- ============================================================ -->
         <div class="header">
             <div class="header-title">
-                <i class="fas fa-qrcode"></i>
-                <h1>ناردو برو - نظام الباركود المتكامل</h1>
+                <i class="fas fa-filter"></i>
+                <h1>فلترة وإدارة الطلبات</h1>
             </div>
-            <div>
-                <button class="btn btn-outline" onclick="fnPrintReport()">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" onclick="window.close()">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+                <button class="btn btn-gold" onclick="printReport()">
                     <i class="fas fa-print"></i> طباعة التقرير
                 </button>
             </div>
         </div>
         
         <!-- ============================================================ -->
-        <!-- [القسم B] - بطاقات الإحصائيات مع عدد المنتجات -->
+        <!-- [القسم B] - بطاقات الإحصائيات -->
         <!-- ============================================================ -->
         <div class="stats-row">
-            <div class="stat-card"><div class="number" id="totalOrders">0</div><div class="label">📋 إجمالي الطلبات</div></div>
-            <div class="stat-card"><div class="number" id="pendingOrders">0</div><div class="label">⏳ قيد المعالجة</div></div>
-            <div class="stat-card"><div class="number" id="completedOrders">0</div><div class="label">✅ مكتملة</div></div>
-            <div class="stat-card"><div class="number" id="totalAmount">0</div><div class="label">💰 إجمالي المبيعات (دج)</div></div>
-            <div class="stat-card"><div class="number" id="totalProductsCount">0</div><div class="label">📦 مجموع المنتجات</div></div>
+            <div class="stat-card"><div class="number" id="totalOrders">0</div><div class="label">إجمالي الطلبات</div></div>
+            <div class="stat-card"><div class="number" id="pendingOrders">0</div><div class="label">قيد المعالجة</div></div>
+            <div class="stat-card"><div class="number" id="deliveredOrders">0</div><div class="label">مكتملة</div></div>
+            <div class="stat-card"><div class="number" id="totalAmount">0</div><div class="label">إجمالي المبيعات (دج)</div></div>
+            <div class="stat-card"><div class="number" id="totalProductsQty">0</div><div class="label">مجموع المنتجات</div></div>
         </div>
         
         <!-- ============================================================ -->
         <!-- [القسم C] - شريط الفلترة -->
         <!-- ============================================================ -->
         <div class="filter-bar">
-            <div class="filter-title"><i class="fas fa-sliders-h"></i><span>خيارات الفلترة والبحث</span></div>
+            <div class="filter-title"><i class="fas fa-sliders-h"></i> خيارات الفلترة والبحث</div>
             <div class="filter-grid">
                 <div class="filter-group"><label>🔍 رقم الطلب</label><input type="text" id="filterOrderId" placeholder="أدخل رقم الطلب..."></div>
                 <div class="filter-group"><label>👤 اسم العميل</label><input type="text" id="filterCustomer" placeholder="اسم العميل..."></div>
-                <div class="filter-group"><label>📍 الولاية</label><select id="filterState"><option value="">الكل</option><option value="الجزائر">الجزائر</option><option value="وهران">وهران</option><option value="قسنطينة">قسنطينة</option><option value="عنابة">عنابة</option></select></div>
-                <div class="filter-group"><label>📦 الحالة</label><select id="filterStatus"><option value="">الكل</option><option value="pending">⏳ قيد المعالجة</option><option value="received">📦 وصل للتاجر</option><option value="approved">✅ تم تعيين موزع</option><option value="delivered">🚚 تم التوصيل</option></select></div>
+                <div class="filter-group"><label>📍 الولاية</label><select id="filterState"><option value="">الكل</option><option value="الجزائر">الجزائر</option><option value="وهران">وهران</option><option value="قسنطينة">قسنطينة</option><option value="بشار">بشار</option></select></div>
+                <div class="filter-group"><label>📦 الحالة</label><select id="filterStatus"><option value="">الكل</option><option value="pending">⏳ قيد المعالجة</option><option value="delivered">✅ تم التوصيل</option></select></div>
+                <div class="filter-group"><label>💰 السعر من</label><input type="number" id="filterPriceFrom" placeholder="0"></div>
+                <div class="filter-group"><label>💰 السعر إلى</label><input type="number" id="filterPriceTo" placeholder="1000000"></div>
                 <div class="filter-group"><label>📅 من تاريخ</label><input type="date" id="filterDateFrom"></div>
                 <div class="filter-group"><label>📅 إلى تاريخ</label><input type="date" id="filterDateTo"></div>
             </div>
             <div class="filter-actions">
-                <button class="btn btn-gold" onclick="fnApplyFilters()"><i class="fas fa-search"></i> بحث</button>
-                <button class="btn btn-outline" onclick="fnResetFilters()"><i class="fas fa-undo"></i> إعادة تعيين</button>
-                <button class="btn btn-outline" onclick="fnOpenScannerModal()"><i class="fas fa-camera"></i> 📷 قارئ الباركود</button>
-                <button class="btn btn-outline" onclick="fnExportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+                <button class="btn btn-gold" onclick="applyFilters()"><i class="fas fa-search"></i> بحث</button>
+                <button class="btn btn-outline" onclick="resetFilters()"><i class="fas fa-undo"></i> إعادة تعيين</button>
+                <button class="btn btn-info" onclick="openScannerModal()"><i class="fas fa-camera"></i> قارئ الباركود</button>
+                <button class="btn btn-success" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             </div>
         </div>
         
         <!-- ============================================================ -->
         <!-- [القسم D] - جدول الطلبات -->
         <!-- ============================================================ -->
-        <div class="orders-table-container">
-            <table class="orders-table">
+        <div class="table-container">
+            <table class="data-table">
                 <thead>
-                    <tr><th>#</th><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الولاية</th><th>المنتجات/الكمية</th><th>الإجمالي</th><th>الحالة</th><th>إجراءات</th></tr>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم الطلب</th>
+                        <th>التاريخ</th>
+                        <th>العميل</th>
+                        <th>المنتجات</th>
+                        <th>عدد القطع</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
                 </thead>
                 <tbody id="ordersTableBody">
-                    <tr><td colspan="9" class="empty-state"><i class="fas fa-inbox"></i><br>لا توجد طلبات</td></tr>
+                    <tr><td colspan="9" style="text-align:center; padding:60px;"><i class="fas fa-inbox fa-2x"></i><br>لا توجد طلبات</td></tr>
                 </tbody>
             </table>
         </div>
         
-        <!-- ============================================================ -->
-        <!-- [القسم E] - جدول شرح دوال الباركود -->
-        <!-- ============================================================ -->
-        <div class="functions-table-container">
-            <table class="functions-table">
-                <thead>
-                    <tr><th>#</th><th>اسم الدالة</th><th>الوظيفة</th><th>شرح العمل</th><th>الأهمية</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>1</td><td class="func-code">fnToGrayscale()</td><td>تحويل الصورة إلى تدرج رمادي</td><td>تزيل الألوان وتحول الصورة إلى درجات الرمادي لتسهيل معالجة الباركود</td><td>⭐⭐⭐</td></tr>
-                    <tr><td>2</td><td class="func-code">fnHistogramEqualization()</td><td>معادلة الرسم البياني</td><td><strong>أهم دالة!</strong> تعيد توزيع الإضاءة بشكل متساوٍ لحل مشاكل الظلال والإضاءة القوية</td><td>⭐⭐⭐⭐⭐</td></tr>
-                    <tr><td>3</td><td class="func-code">fnAdjustBrightnessContrast()</td><td>ضبط السطوع والتباين</td><td>تزيد السطوع والتباين لجعل الخطوط سوداء والخلفية بيضاء</td><td>⭐⭐⭐⭐</td></tr>
-                    <tr><td>4</td><td class="func-code">fnBinaryThreshold()</td><td>التحويل إلى أبيض وأسود</td><td>تحويل الصورة إلى لونين فقط (أسود/أبيض) وهو الشكل المثالي للباركود</td><td>⭐⭐⭐⭐</td></tr>
-                    <tr><td>5</td><td class="func-code">fnProcessImage()</td><td>معالجة الصورة الرئيسية</td><td>المايسترو - تجمع كل الدالات السابقة وتطبقها بالترتيب الصحيح</td><td>⭐⭐⭐⭐⭐</td></tr>
-                    <tr><td>6</td><td class="func-code">fnAttemptBarcodeRead()</td><td>محاولة قراءة الباركود</td><td>استراتيجية ذكية: تحاول على الصورة الأصلية، ثم على الصورة المعالجة</td><td>⭐⭐⭐⭐⭐</td></tr>
-                    <tr><td>7</td><td class="func-code">fnSearchOrderByBarcode()</td><td>البحث بالباركود</td><td>تستخرج رقم الطلب من النص المقروء وتفلتر الجدول لعرضه</td><td>⭐⭐⭐⭐⭐</td></tr>
-                    <tr><td>8</td><td class="func-code">fnInitImageUploader()</td><td>تهيئة رفع الصور</td><td>تستمع لحدث رفع الصورة وتشغل معالجتها</td><td>⭐⭐⭐⭐</td></tr>
-                    <tr><td>9</td><td class="func-code">fnInitScanner()</td><td>تهيئة الكاميرا</td><td>تشغل كاميرا الجهاز لقراءة الباركود مباشرة</td><td>⭐⭐⭐⭐</td></tr>
-                    <tr><td>10</td><td class="func-code">fnUpdateStatistics()</td><td>تحديث الإحصائيات</td><td>تحسب إجمالي الطلبات والمبيعات ومجموع المنتجات</td><td>⭐⭐⭐</td></tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="footer">
-            <p>© 2026 ناردو برو - نظام متكامل لإدارة الطلبات وقراءة الباركود | جميع الحقوق محفوظة</p>
+        <div class="footer" style="text-align:center; padding:20px; color:#666;">
+            <p>© 2026 ناردو برو - نظام فلترة وإدارة الطلبات</p>
         </div>
     </div>
     
     <!-- ============================================================ -->
-    <!-- [القسم F] - نافذة الباركود -->
-    <!-- ============================================================ -->
-    <div id="barcodeModal" class="modal">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <div class="modal-header"><h2><i class="fas fa-qrcode"></i> باركود الطلب</h2><button class="close-btn" onclick="fnCloseBarcodeModal()">&times;</button></div>
-            <canvas id="barcodeCanvas"></canvas>
-            <div id="barcodeData" style="margin-top: 15px;"></div>
-            <button class="btn btn-gold" style="margin-top: 15px;" onclick="fnDownloadBarcode()"><i class="fas fa-download"></i> تحميل الباركود</button>
-        </div>
-    </div>
-    
-    <!-- ============================================================ -->
-    <!-- [القسم G] - نافذة قارئ الباركود -->
+    <!-- [القسم E] - نافذة قارئ الباركود -->
     <!-- ============================================================ -->
     <div id="scannerModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h2><i class="fas fa-camera"></i> قارئ الباركود المتقدم</h2><button class="close-btn" onclick="fnCloseScannerModal()">&times;</button></div>
+            <div class="modal-header">
+                <h2><i class="fas fa-camera"></i> قارئ الباركود المتقدم</h2>
+                <button class="close-btn" onclick="closeScannerModal()">&times;</button>
+            </div>
             
             <div class="tab-buttons">
-                <button class="tab-btn active" onclick="fnSwitchTab('camera')"><i class="fas fa-camera"></i> كاميرا مباشرة</button>
-                <button class="tab-btn" onclick="fnSwitchTab('upload')"><i class="fas fa-upload"></i> رفع صورة</button>
+                <button class="tab-btn active" onclick="switchTab('camera')"><i class="fas fa-camera"></i> كاميرا مباشرة</button>
+                <button class="tab-btn" onclick="switchTab('upload')"><i class="fas fa-upload"></i> رفع صورة</button>
             </div>
             
             <div id="cameraSection"><div id="qr-reader"></div></div>
@@ -449,7 +408,7 @@
             </div>
             
             <div style="margin-top: 15px; text-align: center;">
-                <button class="btn btn-outline" onclick="fnSwitchCamera()" id="switchCameraBtn"><i class="fas fa-sync-alt"></i> تبديل الكاميرا</button>
+                <button class="btn btn-outline" onclick="switchCamera()" id="switchCameraBtn"><i class="fas fa-sync-alt"></i> تبديل الكاميرا</button>
             </div>
         </div>
     </div>
@@ -460,107 +419,168 @@
         // ============================================================
         // [القسم 1] - المتغيرات العامة
         // ============================================================
-        let g_allOrders = [];           // جميع الطلبات
-        let g_filteredOrders = [];      // الطلبات بعد الفلترة
-        let g_currentBarcodeOrder = null;
-        let g_currentBarcodeCanvas = null;
-        let g_html5QrCode = null;
-        let g_currentCameraId = 'environment';
+        let allOrders = [];
+        let allProducts = [];
+        let filteredOrders = [];
+        let currentStore = { storeFixedID: '' };
+        let html5QrCode = null;
+        let currentCameraId = 'environment';
         
         // ============================================================
-        // [الدالة 1] - تحميل الطلبات من localStorage
+        // [الدالة 1] - تحميل البيانات من localStorage
         // ============================================================
-        function fnLoadOrders() {
-            const saved = localStorage.getItem('nardo_orders');
-            if (saved) {
-                g_allOrders = JSON.parse(saved);
+        function loadData() {
+            // تحميل المتجر الحالي
+            const savedStore = localStorage.getItem('nardo_current_store');
+            if (savedStore) {
+                currentStore = JSON.parse(savedStore);
             } else {
-                g_allOrders = [
-                    { id: "ORD-001", originalOrderId: "ORD-001", date: "2026-04-15", customerName: "أحمد محمد", customerState: "الجزائر", customerPhone: "0555123456", customerAddress: "الجزائر العاصمة", total: 12500, status: "pending", items: [{ name: "هاتف ذكي", quantity: 2, price: 5000 }, { name: "سماعة", quantity: 1, price: 2500 }] },
-                    { id: "ORD-002", originalOrderId: "ORD-002", date: "2026-04-14", customerName: "سارة علي", customerState: "وهران", customerPhone: "0666123456", customerAddress: "وهران", total: 8900, status: "delivered", items: [{ name: "حقيبة جلد", quantity: 1, price: 8900 }] },
-                    { id: "ORD-003", originalOrderId: "ORD-003", date: "2026-04-13", customerName: "كريم بن سالم", customerState: "قسنطينة", customerPhone: "0777123456", customerAddress: "قسنطينة", total: 45000, status: "received", items: [{ name: "لابتوب", quantity: 1, price: 42000 }, { name: "ماوس", quantity: 2, price: 1500 }] }
-                ];
-                localStorage.setItem('nardo_orders', JSON.stringify(g_allOrders));
+                currentStore = { storeFixedID: 'NARDO-206408', storeName: 'ناردو برو' };
             }
-            fnApplyFilters();
-            fnUpdateStatistics();
+            
+            // تحميل الطلبات
+            const savedOrders = localStorage.getItem('nardo_orders');
+            allOrders = savedOrders ? JSON.parse(savedOrders) : [];
+            
+            // تحميل المنتجات (للصور)
+            const savedProducts = localStorage.getItem('nardo_products');
+            allProducts = savedProducts ? JSON.parse(savedProducts) : [];
+            
+            // تصفية حسب المتجر الحالي
+            allOrders = allOrders.filter(order => order.storeID === currentStore.storeFixedID);
+            
+            applyFilters();
         }
         
         // ============================================================
-        // [الدالة 2] - تحديث الإحصائيات مع مجموع المنتجات
+        // [الدالة 2] - تحديث الإحصائيات (مع مجموع المنتجات)
         // ============================================================
-        function fnUpdateStatistics() {
-            const total = g_allOrders.length;
-            const pending = g_allOrders.filter(o => o.status === 'pending').length;
-            const completed = g_allOrders.filter(o => o.status === 'delivered' || o.status === 'approved').length;
-            const totalAmount = g_allOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        function updateStatistics() {
+            const total = filteredOrders.length;
+            const pending = filteredOrders.filter(o => o.status === 'pending').length;
+            const delivered = filteredOrders.filter(o => o.status === 'delivered').length;
+            const totalAmount = filteredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
             
-            let totalProductsQuantity = 0;
-            g_allOrders.forEach(order => {
+            // حساب مجموع المنتجات (الكميات)
+            let totalProductsQty = 0;
+            filteredOrders.forEach(order => {
                 if (order.items && Array.isArray(order.items)) {
-                    order.items.forEach(item => { totalProductsQuantity += (item.quantity || 0); });
+                    order.items.forEach(item => {
+                        totalProductsQty += (item.quantity || 0);
+                    });
                 }
             });
             
             document.getElementById('totalOrders').innerHTML = total;
             document.getElementById('pendingOrders').innerHTML = pending;
-            document.getElementById('completedOrders').innerHTML = completed;
+            document.getElementById('deliveredOrders').innerHTML = delivered;
             document.getElementById('totalAmount').innerHTML = totalAmount.toLocaleString();
-            document.getElementById('totalProductsCount').innerHTML = totalProductsQuantity;
+            document.getElementById('totalProductsQty').innerHTML = totalProductsQty;
         }
         
         // ============================================================
         // [الدالة 3] - تطبيق الفلترة
         // ============================================================
-        function fnApplyFilters() {
+        function applyFilters() {
             const orderId = document.getElementById('filterOrderId').value.trim().toLowerCase();
             const customer = document.getElementById('filterCustomer').value.trim().toLowerCase();
             const state = document.getElementById('filterState').value;
             const status = document.getElementById('filterStatus').value;
+            const priceFrom = parseFloat(document.getElementById('filterPriceFrom').value) || 0;
+            const priceTo = parseFloat(document.getElementById('filterPriceTo').value) || Infinity;
             const dateFrom = document.getElementById('filterDateFrom').value;
             const dateTo = document.getElementById('filterDateTo').value;
             
-            g_filteredOrders = g_allOrders.filter(order => {
-                if (orderId && !(order.originalOrderId || '').toLowerCase().includes(orderId)) return false;
+            filteredOrders = allOrders.filter(order => {
+                if (orderId && !(order.telegramOrderId || order.id || '').toString().toLowerCase().includes(orderId)) return false;
                 if (customer && !(order.customerName || '').toLowerCase().includes(customer)) return false;
                 if (state && order.customerState !== state) return false;
                 if (status && order.status !== status) return false;
-                if (dateFrom && order.date < dateFrom) return false;
-                if (dateTo && order.date > dateTo) return false;
+                
+                const orderTotal = order.total || 0;
+                if (orderTotal < priceFrom || orderTotal > priceTo) return false;
+                
+                if (dateFrom || dateTo) {
+                    const orderDate = order.date ? new Date(order.date.split(' ')[0]) : null;
+                    if (dateFrom && orderDate && orderDate < new Date(dateFrom)) return false;
+                    if (dateTo && orderDate && orderDate > new Date(dateTo)) return false;
+                }
                 return true;
             });
-            fnRenderOrdersTable();
+            
+            renderOrdersTable();
+            updateStatistics();
         }
         
         // ============================================================
-        // [الدالة 4] - عرض جدول الطلبات
+        // [الدالة 4] - عرض جدول الطلبات (مع الصور وعدد المنتجات)
         // ============================================================
-        function fnRenderOrdersTable() {
+        function renderOrdersTable() {
             const tbody = document.getElementById('ordersTableBody');
-            if (g_filteredOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty-state"><i class="fas fa-inbox"></i><br>لا توجد طلبات تطابق معايير البحث</td></tr>';
+            if (filteredOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:60px;"><i class="fas fa-inbox fa-2x"></i><br>لا توجد طلبات تطابق معايير البحث</td></tr>';
                 return;
             }
             
-            tbody.innerHTML = g_filteredOrders.map((order, index) => {
-                const statusText = order.status === 'pending' ? '⏳ قيد المعالجة' : (order.status === 'received' ? '📦 وصل للتاجر' : (order.status === 'approved' ? '✅ تم تعيين موزع' : '🚚 تم التوصيل'));
-                const statusClass = order.status === 'pending' ? 'status-pending' : (order.status === 'received' ? 'status-received' : 'status-approved');
-                const productsInfo = order.items ? order.items.map(i => `${i.name}(${i.quantity})`).join(', ') : '---';
-                const productsCount = order.items ? order.items.reduce((s, i) => s + i.quantity, 0) : 0;
+            tbody.innerHTML = filteredOrders.map((order, index) => {
+                const statusClass = order.status === 'pending' ? 'status-pending' : 'status-delivered';
+                const statusText = order.status === 'pending' ? '⏳ قيد المعالجة' : '✅ تم التوصيل';
+                
+                // بناء المنتجات مع الصور وعدد القطع
+                let productsHtml = '';
+                let orderProductsCount = 0;
+                
+                if (order.items && order.items.length > 0) {
+                    productsHtml = order.items.map(item => {
+                        orderProductsCount += (item.quantity || 0);
+                        // البحث عن صورة المنتج
+                        const product = allProducts.find(p => 
+                            p.id === item.id || 
+                            p.productCompositeID === item.productCompositeID ||
+                            p.productCompositeID === item.id
+                        );
+                        const productImage = product?.imageData || null;
+                        
+                        return `
+                            <div class="product-mini">
+                                ${productImage ? 
+                                    `<img src="${productImage}" class="product-mini-img" onerror="this.src='https://placehold.co/35x35/1a1a2e/ffd700?text=📦'">` :
+                                    `<div style="width:35px;height:35px;border-radius:8px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;"><i class="fas fa-box" style="color:var(--gold);font-size:16px;"></i></div>`
+                                }
+                                <div style="flex:1;">
+                                    <div style="font-weight:bold;font-size:12px;">${item.name}</div>
+                                    <div style="font-size:10px;color:#aaa;">${item.productCompositeID || '---'} | ×${item.quantity}</div>
+                                </div>
+                                <div style="font-size:12px;color:var(--success);">${(item.price * item.quantity).toLocaleString()} دج</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    productsHtml = '<div style="color:#888;">لا توجد منتجات</div>';
+                }
                 
                 return `
-                    <tr>
+                    <tr style="${order.status === 'delivered' ? 'opacity:0.7;' : ''}">
                         <td>${index + 1}</td>
-                        <td><strong>${order.originalOrderId}</strong></td>
-                        <td>${order.date}</td>
-                        <td>${order.customerName}</td>
-                        <td>${order.customerState}</td>
-                        <td style="font-size: 11px;">${productsInfo} <span style="color:var(--gold);">(${productsCount} قطعة)</span></td>
-                        <td><span style="color: var(--success);">${(order.total || 0).toLocaleString()} دج</span></td>
+                        <td><strong>#${order.telegramOrderId || order.id}</strong></td>
+                        <td style="font-size:11px;">${order.date || '---'}</td>
+                        <td>
+                            <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                            <div style="font-size:11px;color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                            <div style="font-size:10px;color:#888;"><i class="fas fa-map-marker-alt"></i> ${order.customerAddress || '---'}</div>
+                        </td>
+                        <td style="min-width:250px;">${productsHtml}</td>
+                        <td style="text-align:center; font-weight:bold; color:var(--gold);">${orderProductsCount}</td>
+                        <td style="color:var(--success); font-weight:bold;">${(order.total || 0).toLocaleString()} دج</td>
                         <td><span class="order-status ${statusClass}">${statusText}</span></td>
                         <td>
-                            <button class="action-btn" onclick="fnViewOrderDetails('${order.id}')" title="عرض التفاصيل"><i class="fas fa-eye"></i></button>
-                            <button class="action-btn" onclick="fnShowOrderBarcode('${order.id}')" title="عرض الباركود"><i class="fas fa-barcode"></i></button>
+                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                                <button class="action-btn" onclick="viewOrderDetails('${order.id}')" title="تفاصيل"><i class="fas fa-eye"></i></button>
+                                <button class="action-btn" onclick="toggleOrderStatus('${order.id}')" title="تغيير الحالة"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn" onclick="generateOrderBarcode('${order.id}')" title="باركود"><i class="fas fa-qrcode"></i></button>
+                                <button class="action-btn" onclick="exportOrderPDF('${order.id}')" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                                <button class="action-btn" onclick="deleteOrder('${order.id}')" title="حذف" style="color:var(--error);"><i class="fas fa-trash"></i></button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -570,94 +590,238 @@
         // ============================================================
         // [الدالة 5] - عرض تفاصيل الطلب
         // ============================================================
-        function fnViewOrderDetails(orderId) {
-            const order = g_allOrders.find(o => o.id === orderId);
+        function viewOrderDetails(orderId) {
+            const order = allOrders.find(o => o.id == orderId);
             if (!order) return;
-            let productsHtml = '';
-            let totalItemsCount = 0;
+            
+            let productsDetails = '';
+            let totalQty = 0;
             if (order.items) {
-                productsHtml = order.items.map(item => {
-                    totalItemsCount += item.quantity;
-                    return `\n• ${item.name} - الكمية: ${item.quantity} - ${(item.price * item.quantity).toLocaleString()} دج`;
-                }).join('');
+                productsDetails = order.items.map(item => {
+                    totalQty += item.quantity;
+                    return `• ${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} دج`;
+                }).join('\n');
             }
-            alert(`📦 تفاصيل الطلب\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم الطلب: ${order.originalOrderId}\n👤 العميل: ${order.customerName}\n📞 الهاتف: ${order.customerPhone}\n📍 العنوان: ${order.customerAddress}\n💰 الإجمالي: ${(order.total || 0).toLocaleString()} دج\n📦 مجموع القطع: ${totalItemsCount} قطعة\n📦 المنتجات:${productsHtml}`);
+            
+            alert(`📦 تفاصيل الطلب\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم الطلب: ${order.telegramOrderId || order.id}\n👤 العميل: ${order.customerName}\n📞 الهاتف: ${order.customerPhone}\n📍 العنوان: ${order.customerAddress}\n📦 عدد القطع: ${totalQty}\n💰 الإجمالي: ${(order.total || 0).toLocaleString()} دج\n\n📋 المنتجات:\n${productsDetails}`);
         }
         
         // ============================================================
-        // [الدالة 6] - عرض باركود الطلب
+        // [الدالة 6] - تبديل حالة الطلب
         // ============================================================
-        function fnShowOrderBarcode(orderId) {
-            const order = g_allOrders.find(o => o.id === orderId);
-            if (!order) return;
-            g_currentBarcodeOrder = order;
-            const text = `${order.originalOrderId}\n${order.customerName}\n${order.total} دج`;
-            const canvas = document.getElementById('barcodeCanvas');
-            g_currentBarcodeCanvas = canvas;
-            QRCode.toCanvas(canvas, text, { width: 250, margin: 2, color: { dark: "#000000", light: "#FFFFFF" } });
-            document.getElementById('barcodeData').innerHTML = `<strong>${order.originalOrderId}</strong><br>${order.customerName}<br>${order.total.toLocaleString()} دج`;
-            document.getElementById('barcodeModal').classList.add('active');
+        function toggleOrderStatus(orderId) {
+            const order = allOrders.find(o => o.id == orderId);
+            if (order) {
+                order.status = order.status === 'pending' ? 'delivered' : 'pending';
+                localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
+                loadData();
+                showToast(order.status === 'delivered' ? '✅ تم تسليم الطلب' : '🔄 تم إعادة الطلب للمعالجة', 'success');
+            }
         }
         
-        function fnCloseBarcodeModal() { document.getElementById('barcodeModal').classList.remove('active'); }
-        function fnDownloadBarcode() { if (g_currentBarcodeCanvas) { const link = document.createElement('a'); link.download = `barcode_${g_currentBarcodeOrder?.originalOrderId}.png`; link.href = g_currentBarcodeCanvas.toDataURL(); link.click(); fnShowNotification('✓ تم التحميل', 'success'); } }
+        // ============================================================
+        // [الدالة 7] - حذف طلب
+        // ============================================================
+        function deleteOrder(orderId) {
+            if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+                allOrders = allOrders.filter(o => o.id != orderId);
+                localStorage.setItem('nardo_orders', JSON.stringify(allOrders));
+                loadData();
+                showToast('🗑️ تم حذف الطلب', 'success');
+            }
+        }
         
         // ============================================================
-        // [الدالة 7] - إعادة تعيين الفلاتر
+        // [الدالة 8] - إعادة تعيين الفلاتر
         // ============================================================
-        function fnResetFilters() {
+        function resetFilters() {
             document.getElementById('filterOrderId').value = '';
             document.getElementById('filterCustomer').value = '';
             document.getElementById('filterState').value = '';
             document.getElementById('filterStatus').value = '';
+            document.getElementById('filterPriceFrom').value = '';
+            document.getElementById('filterPriceTo').value = '';
             document.getElementById('filterDateFrom').value = '';
             document.getElementById('filterDateTo').value = '';
-            fnApplyFilters();
+            applyFilters();
         }
         
         // ============================================================
-        // [الدالة 8] - تصدير إلى Excel
+        // [الدالة 9] - تصدير إلى Excel
         // ============================================================
-        function fnExportToExcel() {
-            if (g_filteredOrders.length === 0) { fnShowNotification('لا توجد بيانات', 'warning'); return; }
-            let csv = '\uFEFFرقم الطلب,التاريخ,العميل,الولاية,الهاتف,الإجمالي,الحالة,عدد القطع\n';
-            g_filteredOrders.forEach(o => {
-                const productsCount = o.items ? o.items.reduce((s, i) => s + i.quantity, 0) : 0;
-                csv += `"${o.originalOrderId}","${o.date}","${o.customerName}","${o.customerState}","${o.customerPhone}","${o.total}","${o.status}","${productsCount}"\n`;
+        function exportToExcel() {
+            if (filteredOrders.length === 0) {
+                showToast('لا توجد بيانات للتصدير', 'error');
+                return;
+            }
+            
+            let csv = '\uFEFFرقم الطلب,التاريخ,العميل,الهاتف,العنوان,عدد القطع,الإجمالي,الحالة\n';
+            filteredOrders.forEach(order => {
+                let totalQty = 0;
+                if (order.items) {
+                    order.items.forEach(item => totalQty += item.quantity);
+                }
+                csv += `"${order.telegramOrderId || order.id}","${order.date || ''}","${order.customerName || ''}","${order.customerPhone || ''}","${order.customerAddress || ''}","${totalQty}","${order.total || 0}","${order.status === 'pending' ? 'قيد المعالجة' : 'تم التوصيل'}"\n`;
             });
+            
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `orders_${new Date().toISOString().slice(0,10)}.csv`;
+            link.download = `orders_${new Date().toISOString().slice(0,19)}.csv`;
             link.click();
             URL.revokeObjectURL(link.href);
-            fnShowNotification('✓ تم التصدير', 'success');
+            showToast('✅ تم تصدير البيانات', 'success');
         }
         
         // ============================================================
-        // [الدالة 9] - طباعة التقرير
+        // [الدالة 10] - طباعة التقرير
         // ============================================================
-        function fnPrintReport() {
-            const w = window.open('', '_blank');
-            w.document.write(`
+        function printReport() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
                 <html dir="rtl"><head><title>تقرير الطلبات</title>
-                <style>body{font-family:Arial;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:right;}</style>
-                </head><body><h2>ناردو برو - تقرير الطلبات</h2>
-                <p>عدد الطلبات: ${g_filteredOrders.length} | التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
-                <table><thead><tr><th>#</th><th>رقم الطلب</th><th>العميل</th><th>الإجمالي</th><th>الحالة</th></tr></thead>
-                <tbody>${g_filteredOrders.map((o, i) => `<tr><td>${i+1}</td><td>${o.originalOrderId}</td><td>${o.customerName}</td><td>${o.total} دج</td><td>${o.status}</td></tr>`).join('')}</tbody></table>
+                <style>
+                    body{font-family:Arial;padding:20px;}
+                    table{width:100%;border-collapse:collapse;}
+                    th,td{border:1px solid #ddd;padding:8px;text-align:right;}
+                    th{background:#f5f5f5;}
+                </style>
+                </head><body>
+                <h2>📊 تقرير الطلبات</h2>
+                <p>عدد الطلبات: ${filteredOrders.length} | التاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
+                <table><thead><tr><th>#</th><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>عدد القطع</th><th>الإجمالي</th><th>الحالة</th></tr></thead>
+                <tbody>${filteredOrders.map((o, i) => {
+                    let qty = 0;
+                    if (o.items) o.items.forEach(it => qty += it.quantity);
+                    return `<tr><td>${i+1}</td><td>${o.telegramOrderId || o.id}</td><td>${o.date}</td><td>${o.customerName}</td><td>${qty}</td><td>${o.total} دج</td><td>${o.status === 'pending' ? 'قيد المعالجة' : 'تم التوصيل'}</td></tr>`;
+                }).join('')}</tbody>
+                </table>
                 </body></html>
             `);
-            w.document.close();
-            w.print();
+            printWindow.document.close();
+            printWindow.print();
         }
         
         // ============================================================
-        // [القسم H] - دوال معالجة الصور المتقدمة
+        // [الدالة 11] - إنشاء باركود للطلب
+        // ============================================================
+        function generateOrderBarcode(orderId) {
+            const order = allOrders.find(o => o.id == orderId);
+            if (!order) return;
+            
+            const barcodeText = `رقم الطلب: ${order.telegramOrderId || order.id}\nالعميل: ${order.customerName}\nالهاتف: ${order.customerPhone}\nالإجمالي: ${(order.total || 0).toLocaleString()} دج`;
+            
+            // إنشاء نافذة منبثقة للباركود
+            const barcodeWindow = window.open('', '_blank', 'width=400,height=500');
+            barcodeWindow.document.write(`
+                <html dir="rtl"><head><title>باركود الطلب</title>
+                <style>body{font-family:Arial;text-align:center;padding:20px;background:#fff;}</style>
+                </head><body>
+                <div id="barcode"></div>
+                <p><strong>${order.telegramOrderId || order.id}</strong></p>
+                <p>${order.customerName}</p>
+                <p>${(order.total || 0).toLocaleString()} دج</p>
+                <button onclick="window.print()">🖨️ طباعة</button>
+                <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"><\/script>
+                <script>
+                    QRCode.toCanvas(document.getElementById("barcode"), "${barcodeText}", { width: 250, color: { dark: "#000000", light: "#FFFFFF" } });
+                <\/script>
+                </body></html>
+            `);
+        }
+        
+        // ============================================================
+        // [الدالة 12] - تصدير PDF لطلب واحد
+        // ============================================================
+        async function exportOrderPDF(orderId) {
+            const order = allOrders.find(o => o.id == orderId);
+            if (!order) return;
+            
+            showToast('📄 جاري تحضير PDF...', 'info');
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            
+            let productsList = '';
+            let totalQty = 0;
+            if (order.items) {
+                productsList = order.items.map(it => {
+                    totalQty += it.quantity;
+                    return `• ${it.name} × ${it.quantity} = ${(it.price * it.quantity).toLocaleString()} دج`;
+                }).join('\n');
+            }
+            
+            doc.setFont('helvetica');
+            doc.text(`فاتورة طلب #${order.telegramOrderId || order.id}`, 105, 20, { align: 'center' });
+            doc.text(`التاريخ: ${order.date}`, 20, 40);
+            doc.text(`العميل: ${order.customerName}`, 20, 50);
+            doc.text(`الهاتف: ${order.customerPhone || '---'}`, 20, 60);
+            doc.text(`العنوان: ${order.customerAddress || '---'}`, 20, 70);
+            doc.text(`عدد القطع: ${totalQty}`, 20, 80);
+            doc.text(`الإجمالي: ${(order.total || 0).toLocaleString()} دج`, 20, 90);
+            doc.text(`المنتجات:`, 20, 105);
+            doc.text(productsList, 20, 115);
+            
+            doc.save(`Order_${order.telegramOrderId || order.id}.pdf`);
+            showToast('✅ تم تحميل PDF', 'success');
+        }
+        
+        // ============================================================
+        // [القسم F] - دوال قارئ الباركود (كاميرا + رفع صورة)
         // ============================================================
         
-        // [الدالة 10] - تحويل إلى تدرج رمادي
-        function fnToGrayscale(imageData) {
+        async function openScannerModal() {
+            document.getElementById('scannerModal').classList.add('active');
+            switchTab('camera');
+        }
+        
+        function closeScannerModal() {
+            document.getElementById('scannerModal').classList.remove('active');
+            if (html5QrCode?.isScanning) html5QrCode.stop();
+        }
+        
+        async function initScanner() {
+            if (html5QrCode) await html5QrCode.stop();
+            html5QrCode = new Html5Qrcode("qr-reader");
+            try {
+                await html5QrCode.start(
+                    { facingMode: currentCameraId },
+                    { fps: 10, qrbox: 250 },
+                    (decoded) => { searchOrderByBarcode(decoded); closeScannerModal(); },
+                    () => {}
+                );
+            } catch(e) { console.error(e); }
+        }
+        
+        async function switchCamera() {
+            if (html5QrCode?.isScanning) await html5QrCode.stop();
+            currentCameraId = currentCameraId === 'environment' ? 'user' : 'environment';
+            initScanner();
+        }
+        
+        function switchTab(tab) {
+            const cameraSec = document.getElementById('cameraSection');
+            const uploadSec = document.getElementById('uploadSection');
+            const switchBtn = document.getElementById('switchCameraBtn');
+            
+            if (tab === 'camera') {
+                cameraSec.style.display = 'block';
+                uploadSec.style.display = 'none';
+                switchBtn.style.display = 'inline-block';
+                initScanner();
+            } else {
+                cameraSec.style.display = 'none';
+                uploadSec.style.display = 'block';
+                switchBtn.style.display = 'none';
+                if (html5QrCode?.isScanning) html5QrCode.stop();
+            }
+        }
+        
+        // ============================================================
+        // [القسم G] - دوال معالجة الصور المتقدمة
+        // ============================================================
+        
+        function toGrayscale(imageData) {
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
@@ -666,26 +830,22 @@
             return imageData;
         }
         
-        // [الدالة 11] - معادلة الرسم البياني (الأهم)
-        function fnHistogramEqualization(imageData) {
+        function histogramEqualization(imageData) {
             const data = imageData.data;
-            const histogram = new Array(256).fill(0);
-            for (let i = 0; i < data.length; i += 4) histogram[data[i]]++;
-            
+            const hist = new Array(256).fill(0);
+            for (let i = 0; i < data.length; i += 4) hist[data[i]]++;
             let cdf = 0;
+            const minCdf = hist.find(v => v > 0);
             const total = imageData.width * imageData.height;
-            const minCdf = histogram.find(v => v > 0);
-            
             for (let i = 0; i < data.length; i += 4) {
-                cdf += histogram[data[i]];
+                cdf += hist[data[i]];
                 const newVal = Math.floor(((cdf - minCdf) / (total - minCdf)) * 255);
                 data[i] = data[i+1] = data[i+2] = newVal;
             }
             return imageData;
         }
         
-        // [الدالة 12] - ضبط السطوع والتباين
-        function fnAdjustBrightnessContrast(imageData, brightness = 20, contrast = 30) {
+        function adjustBrightnessContrast(imageData, brightness = 20, contrast = 30) {
             const data = imageData.data;
             const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
             for (let i = 0; i < data.length; i += 4) {
@@ -696,8 +856,7 @@
             return imageData;
         }
         
-        // [الدالة 13] - التحويل إلى أبيض وأسود
-        function fnBinaryThreshold(imageData, threshold = 120) {
+        function binaryThreshold(imageData, threshold = 120) {
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 4) {
                 const val = data[i] > threshold ? 255 : 0;
@@ -706,20 +865,18 @@
             return imageData;
         }
         
-        // [الدالة 14] - معالجة الصورة الرئيسية
-        function fnProcessImage(canvas) {
+        function processImage(canvas) {
             const ctx = canvas.getContext('2d');
             let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            imageData = fnAdjustBrightnessContrast(imageData, 25, 35);
-            imageData = fnToGrayscale(imageData);
-            imageData = fnHistogramEqualization(imageData);
-            imageData = fnBinaryThreshold(imageData, 120);
+            imageData = adjustBrightnessContrast(imageData, 25, 35);
+            imageData = toGrayscale(imageData);
+            imageData = histogramEqualization(imageData);
+            imageData = binaryThreshold(imageData, 120);
             ctx.putImageData(imageData, 0, 0);
             return canvas;
         }
         
-        // [الدالة 15] - محاولة قراءة الباركود (المحاولة المزدوجة)
-        async function fnAttemptBarcodeRead(file, processedCanvas) {
+        async function attemptBarcodeRead(file, processedCanvas) {
             const resultDiv = document.getElementById('uploadResult');
             const tempReader = new Html5Qrcode("qr-reader-temp");
             
@@ -733,12 +890,12 @@
                     tempReader.clear();
                     return decoded;
                 }
-            } catch(e) { console.log('فشل القراءة من الأصل'); }
+            } catch(e) {}
             
-            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> المحاولة 2/2: معالجة الصورة وتحسينها...';
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> المحاولة 2/2: معالجة الصورة...';
             
             try {
-                fnProcessImage(processedCanvas);
+                processImage(processedCanvas);
                 const blob = await new Promise(r => processedCanvas.toBlob(r));
                 let decoded = await tempReader.scanFile(blob, true);
                 if (decoded) {
@@ -747,7 +904,7 @@
                     tempReader.clear();
                     return decoded;
                 }
-            } catch(e) { console.log('فشل القراءة بعد المعالجة'); }
+            } catch(e) {}
             
             resultDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ❌ لم يتم العثور على باركود';
             resultDiv.className = 'result-box error';
@@ -755,55 +912,7 @@
             return null;
         }
         
-        // [الدالة 16] - البحث عن الطلب من الباركود
-        function fnSearchOrderByBarcode(barcodeText) {
-            console.log('📖 النص المقروء:', barcodeText);
-            
-            let foundOrderId = null;
-            
-            const patterns = [
-                { regex: /(?:رقم الطلب|order|ORD)[:\s-]*([A-Z]{3}-\d{3,6})/i, name: 'ORD-XXX' },
-                { regex: /#([A-Z0-9]{3,10})/i, name: '#XXXX' },
-                { regex: /(ORD\d{3,6})/i, name: 'ORDXXX' },
-                { regex: /\b(\d{5,10})\b/, name: 'أرقام فقط' },
-                { regex: /(ORD-\d{3}-\d{3})/i, name: 'ORD-XXX-XXX' }
-            ];
-            
-            for (const pattern of patterns) {
-                const match = barcodeText.match(pattern.regex);
-                if (match) {
-                    foundOrderId = match[1] || match[0];
-                    console.log(`✅ تم التعرف بنمط ${pattern.name}: ${foundOrderId}`);
-                    break;
-                }
-            }
-            
-            if (!foundOrderId) {
-                for (const order of g_allOrders) {
-                    if (barcodeText.includes(order.originalOrderId)) {
-                        foundOrderId = order.originalOrderId;
-                        break;
-                    }
-                }
-            }
-            
-            if (foundOrderId) {
-                document.getElementById('filterOrderId').value = foundOrderId;
-                fnApplyFilters();
-                fnShowNotification(`✅ تم العثور على الطلب: ${foundOrderId}`, 'success');
-                setTimeout(() => fnCloseScannerModal(), 1500);
-                document.querySelector('.orders-table-container').scrollIntoView({ behavior: 'smooth' });
-            } else {
-                fnShowNotification(`❌ لم يتم التعرف على رقم الطلب\nالنص: ${barcodeText.substring(0, 40)}...`, 'error');
-                document.getElementById('filterOrderId').value = barcodeText.substring(0, 30);
-                const input = document.getElementById('filterOrderId');
-                input.style.borderColor = '#f87171';
-                setTimeout(() => input.style.borderColor = 'rgba(255,215,0,0.3)', 3000);
-            }
-        }
-        
-        // [الدالة 17] - تهيئة رفع الصور
-        function fnInitImageUploader() {
+        function initImageUploader() {
             document.getElementById('qrImageInput').addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -829,93 +938,71 @@
                     originalDiv.innerHTML = `<img src="${URL.createObjectURL(file)}"><label>الصورة الأصلية</label>`;
                     preview.appendChild(originalDiv);
                     
-                    const result = await fnAttemptBarcodeRead(file, processedCanvas);
+                    const result = await attemptBarcodeRead(file, processedCanvas);
                     
                     const processedDiv = document.createElement('div');
                     processedDiv.className = 'preview-item';
                     processedDiv.innerHTML = `<img src="${processedCanvas.toDataURL()}"><label>بعد المعالجة</label>`;
                     preview.appendChild(processedDiv);
                     
-                    if (result) fnSearchOrderByBarcode(result);
+                    if (result) searchOrderByBarcode(result);
                 };
                 img.src = URL.createObjectURL(file);
             });
         }
         
         // ============================================================
-        // [القسم I] - دوال الكاميرا
+        // [الدالة 13] - البحث عن الطلب بالباركود (محسّن)
         // ============================================================
-        
-        async function fnOpenScannerModal() {
-            document.getElementById('scannerModal').classList.add('active');
-            fnSwitchTab('camera');
-        }
-        
-        function fnCloseScannerModal() {
-            document.getElementById('scannerModal').classList.remove('active');
-            if (g_html5QrCode?.isScanning) g_html5QrCode.stop();
-        }
-        
-        async function fnInitScanner() {
-            if (g_html5QrCode) await g_html5QrCode.stop();
-            g_html5QrCode = new Html5Qrcode("qr-reader");
-            try {
-                await g_html5QrCode.start(
-                    { facingMode: g_currentCameraId }, 
-                    { fps: 10, qrbox: 250 }, 
-                    (decoded) => { fnSearchOrderByBarcode(decoded); fnCloseScannerModal(); }, 
-                    () => {}
-                );
-            } catch(e) { console.error(e); }
-        }
-        
-        async function fnSwitchCamera() {
-            if (g_html5QrCode?.isScanning) await g_html5QrCode.stop();
-            g_currentCameraId = g_currentCameraId === 'environment' ? 'user' : 'environment';
-            fnInitScanner();
-        }
-        
-        function fnSwitchTab(tab) {
-            const cameraSec = document.getElementById('cameraSection');
-            const uploadSec = document.getElementById('uploadSection');
-            const switchBtn = document.getElementById('switchCameraBtn');
-            const cameraBtn = document.querySelector('.tab-btn:first-child');
-            const uploadBtn = document.querySelector('.tab-btn:last-child');
+        function searchOrderByBarcode(barcodeText) {
+            console.log('📖 النص المقروء:', barcodeText);
             
-            if (tab === 'camera') {
-                cameraSec.style.display = 'block';
-                uploadSec.style.display = 'none';
-                switchBtn.style.display = 'inline-block';
-                cameraBtn.classList.add('active');
-                uploadBtn.classList.remove('active');
-                fnInitScanner();
+            let foundOrderId = null;
+            
+            // أنماط البحث المتعددة
+            const patterns = [
+                { regex: /(?:رقم الطلب|order|#)[:\s-]*([A-Z0-9-]+)/i, name: 'رقم الطلب' },
+                { regex: /(\d{5,10})/, name: 'أرقام' },
+                { regex: /(ORD-\d+)/i, name: 'ORD-XXX' }
+            ];
+            
+            for (const pattern of patterns) {
+                const match = barcodeText.match(pattern.regex);
+                if (match) {
+                    foundOrderId = match[1];
+                    break;
+                }
+            }
+            
+            if (foundOrderId) {
+                document.getElementById('filterOrderId').value = foundOrderId;
+                applyFilters();
+                showToast(`✅ تم العثور على طلبات تحتوي على: ${foundOrderId}`, 'success');
+                closeScannerModal();
             } else {
-                cameraSec.style.display = 'none';
-                uploadSec.style.display = 'block';
-                switchBtn.style.display = 'none';
-                cameraBtn.classList.remove('active');
-                uploadBtn.classList.add('active');
-                if (g_html5QrCode?.isScanning) g_html5QrCode.stop();
+                showToast(`❌ لم يتم التعرف على رقم طلب`, 'error');
             }
         }
         
-        // [الدالة 18] - إشعارات
-        function fnShowNotification(msg, type) {
-            const div = document.createElement('div');
-            div.style.cssText = `position:fixed;bottom:20px;right:20px;padding:12px 24px;background:${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : '#fbbf24'};color:#000;border-radius:12px;font-weight:bold;z-index:3000;box-shadow:0 4px 15px rgba(0,0,0,0.3);`;
-            div.innerHTML = msg;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 4000);
+        // ============================================================
+        // [الدالة 14] - إشعارات منبثقة
+        // ============================================================
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
         
         // ============================================================
         // [تهيئة النظام]
         // ============================================================
         document.addEventListener('DOMContentLoaded', () => {
-            fnLoadOrders();
-            fnInitImageUploader();
-            document.getElementById('filterOrderId')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') fnApplyFilters(); });
-            document.getElementById('filterCustomer')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') fnApplyFilters(); });
+            loadData();
+            initImageUploader();
+            document.getElementById('filterOrderId')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyFilters(); });
+            document.getElementById('filterCustomer')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') applyFilters(); });
         });
     </script>
 </body>
