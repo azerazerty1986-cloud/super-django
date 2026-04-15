@@ -1333,77 +1333,107 @@ async function saveAndPublishProduct() {
         }
 
         // ============================================================
-        // [53] دالة عرض الطلبات في الجدول
+        
         // ============================================================
-        function renderOrders() {
-            const tbody = document.getElementById('ordersTableBody');
-            if (!tbody) return;
-            
-            orders = safeLocalStorage.get('nardo_orders');
-            const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
-            
-            if (filteredOrders.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align:center; padding:40px;">
-                            <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
-                            لا توجد طلبات لهذا المتجر
-                        </td>
-                    </tr>
+// [53] دالة عرض الطلبات في الجدول مع صور المنتجات
+// ============================================================
+function renderOrders() {
+    const tbody = document.getElementById('ordersTableBody');
+    if (!tbody) return;
+    
+    orders = safeLocalStorage.get('nardo_orders');
+    const filteredOrders = orders.filter(order => order.storeID === currentStore.storeFixedID);
+    
+    if (filteredOrders.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center; padding:40px;">
+                    <i class="fas fa-inbox fa-2x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>
+                    لا توجد طلبات لهذا المتجر
+                </td>
+            </tr>
+        `;
+    } else {
+        tbody.innerHTML = filteredOrders.map(order => {
+            // بناء عناصر المنتجات مع الصور
+            const productsHtml = order.items.map(it => {
+                // البحث عن المنتج في localStorage باستخدام المعرف
+                const product = products.find(p => 
+                    p.id === it.id || 
+                    p.productCompositeID === it.productCompositeID ||
+                    p.productCompositeID === it.id
+                );
+                
+                // الحصول على الصورة إذا وجدت
+                const productImage = product?.imageData || null;
+                
+                return `
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; background: rgba(255,215,0,0.05); padding: 5px 10px; border-radius: 12px;">
+                        ${productImage ? `
+                            <div style="width: 35px; height: 35px; border-radius: 8px; overflow: hidden; flex-shrink: 0;">
+                                <img src="${productImage}" alt="${it.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+                        ` : `
+                            <div style="width: 35px; height: 35px; border-radius: 8px; background: linear-gradient(135deg, #0f0f1a, #1a1a2e); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <i class="fas fa-box" style="color: var(--gold); font-size: 16px;"></i>
+                            </div>
+                        `}
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 12px;">${it.name}</div>
+                            <div style="font-size: 10px; color: #aaa;">${it.productCompositeID || '---'} | الكمية: ${it.quantity}</div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--success); font-weight: bold;">${(it.price * it.quantity).toLocaleString()} دج</div>
+                    </div>
                 `;
-            } else {
-                tbody.innerHTML = filteredOrders.map(order => {
-                    return `
-                        <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
-                            <td><strong>#${order.telegramOrderId || order.id}</strong></td>
-                            <td style="font-size:12px;">${order.date || ''}</td>
-                            <td>
-                                <div>
-                                    <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
-                                    <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
-                                    <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-size:12px; max-width:200px;">
-                                    ${order.items.map(it => `
-                                        <span style="display:inline-block; background:rgba(255,215,0,0.1); padding:2px 8px; margin:2px; border-radius:12px;">
-                                            ${it.name} (${it.quantity})
-                                        </span>
-                                    `).join('')}
-                                </div>
-                            </td>
-                            <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
-                            <td>
-                                <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
-                                    ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
-                                </span>
-                            </td>
-                            <td>
-                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                                    <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </button>
-                                    <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
-                                        <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
-                                    </button>
-                                    <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
-                                        <i class="fas fa-truck"></i>
-                                    </button>
-                                    <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
-                                        <i class="fas fa-phone"></i>
-                                    </button>
-                                    <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-            updateStats();
-        }
+            }).join('');
+            
+            return `
+                <tr style="${order.status === 'delivered' ? 'opacity:0.7; background:rgba(74,222,128,0.05);' : ''}">
+                    <td><strong>#${order.telegramOrderId || order.id}</strong></td>
+                    <td style="font-size:12px;">${order.date || ''}</td>
+                    <td>
+                        <div>
+                            <div><i class="fas fa-user"></i> ${order.customerName || 'غير معروف'}</div>
+                            <div style="font-size:11px; color:#aaa;"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</div>
+                            <div style="font-size:10px; color:#888;"><i class="fas fa-map-marker-alt"></i> ${(order.customerAddress || '---').substring(0,30)}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="max-width: 280px;">
+                            ${productsHtml}
+                        </div>
+                    </td>
+                    <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                    <td>
+                        <span class="stock-status ${order.status === 'delivered' ? 'high' : 'low'}" style="font-size:11px; padding:3px 10px;">
+                            ${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button class="btn btn-info btn-sm" onclick="exportOrderToPDF(${order.id})" title="تصدير PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})" title="${order.status === 'delivered' ? 'إلغاء التسليم' : 'تسليم'}">
+                                <i class="fas ${order.status === 'delivered' ? 'fa-undo' : 'fa-check'}"></i>
+                            </button>
+                            <button class="btn btn-telegram btn-sm" onclick="sendToDelivery(${order.id})" title="إرسال للتوصيل">
+                                <i class="fas fa-truck"></i>
+                            </button>
+                            <button class="btn btn-gold btn-sm" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                     </td>
+                 </tr>
+            `;
+        }).join('');
+    }
+    updateStats();
+}
 
         // ============================================================
         // [54] دالة عرض المخزون في الجدول
