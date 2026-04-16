@@ -159,6 +159,47 @@
 
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
+        /* ===== تنسيق select الولايات ===== */
+        select[multiple] {
+            padding: 12px;
+            min-height: 200px;
+        }
+
+        select[multiple] option {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+            cursor: pointer;
+        }
+
+        select[multiple] option:checked {
+            background: var(--gold) linear-gradient(0deg, var(--gold), var(--gold));
+            color: #000;
+        }
+
+        .selected-states {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .selected-state-tag {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid var(--gold);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .selected-state-tag i {
+            cursor: pointer;
+            font-size: 10px;
+            color: var(--error);
+        }
+
         /* ===== الإحصائيات ===== */
         .stats-grid {
             display: grid;
@@ -441,8 +482,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>🌍 مناطق التغطية</label>
-                    <textarea id="coverageArea" required placeholder="الولايات والمدن المخدومة" rows="2"></textarea>
+                    <label>🌍 مناطق التغطية (اختر ولاية أو أكثر)</label>
+                    <select id="coverageArea" multiple size="8">
+                        <!-- سيتم تعبئته بواسطة JavaScript -->
+                    </select>
+                    <div id="selectedStatesContainer" class="selected-states"></div>
+                    <small style="color: var(--text-secondary); font-size: 11px;">💡 يمكنك اختيار عدة ولايات بالضغط مع زر Ctrl (أو الضغط المطول في الهواتف)</small>
                 </div>
                 <div class="form-group">
                     <label>📝 وصف الخدمة</label>
@@ -460,14 +505,14 @@
     </div>
 
     <script>
-        // ===== إعدادات تلغرام (متوافقة مع الملف الرئيسي) =====
+        // ===== إعدادات تلغرام =====
         const TELEGRAM = {
             botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
             channelId: '-1003822964890',
             apiUrl: 'https://api.telegram.org/bot'
         };
 
-        // ===== مفاتيح التخزين (متوافقة مع الكود الرئيسي) =====
+        // ===== مفاتيح التخزين =====
         const STORAGE_KEYS = {
             DELIVERIES: 'nardoo_deliveries',
             DISTRIBUTORS: 'nardoo_distributors',
@@ -481,6 +526,83 @@
         let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
         let currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.CURRENT_USER) || 'null');
 
+        // ===== قائمة الولايات الجزائرية (58 ولاية) =====
+        const algerianStates = [
+            { code: "ALG", name: "الجزائر" }, { code: "ADE", name: "أدرار" }, { code: "ASH", name: "الشلف" },
+            { code: "LGH", name: "الأغواط" }, { code: "OEB", name: "أم البواقي" }, { code: "BAT", name: "باتنة" },
+            { code: "BJA", name: "بجاية" }, { code: "BSK", name: "بسكرة" }, { code: "BSH", name: "بشار" },
+            { code: "BLA", name: "البليدة" }, { code: "BUI", name: "بويرة" }, { code: "TAM", name: "تمنراست" },
+            { code: "TEB", name: "تبسة" }, { code: "TLE", name: "تلمسان" }, { code: "TIA", name: "تيارت" },
+            { code: "TIZ", name: "تيزي وزو" }, { code: "DJF", name: "الجلفة" }, { code: "JIJ", name: "جيجل" },
+            { code: "SET", name: "سطيف" }, { code: "SAI", name: "سعيدة" }, { code: "SKI", name: "سكيكدة" },
+            { code: "SBI", name: "سيدي بلعباس" }, { code: "ANA", name: "عنابة" }, { code: "GUE", name: "قالمة" },
+            { code: "CON", name: "قسنطينة" }, { code: "MED", name: "المدية" }, { code: "MIL", name: "ميلة" },
+            { code: "MOS", name: "معسكر" }, { code: "MSC", name: "المسيلة" }, { code: "MGH", name: "مستغانم" },
+            { code: "NAA", name: "النعامة" }, { code: "ORA", name: "وهران" }, { code: "OUA", name: "الوادي" },
+            { code: "BBA", name: "برج بوعريريج" }, { code: "BMD", name: "بومرداس" }, { code: "TAR", name: "الطارف" },
+            { code: "TIN", name: "تندوف" }, { code: "TSS", name: "تيسمسيلت" }, { code: "KHE", name: "خنشلة" },
+            { code: "SOU", name: "سوق أهراس" }, { code: "TIP", name: "تيبازة" }, { code: "AYD", name: "عين الدفلى" },
+            { code: "AIN", name: "عين تموشنت" }, { code: "GHA", name: "غرداية" }, { code: "REL", name: "غليزان" }
+        ];
+
+        // تعبئة قائمة الولايات
+        function loadStatesSelect() {
+            const select = document.getElementById('coverageArea');
+            if (!select) return;
+            
+            select.innerHTML = '';
+            algerianStates.forEach(state => {
+                const option = document.createElement('option');
+                option.value = `${state.code} - ${state.name}`;
+                option.textContent = `${state.code} | ${state.name}`;
+                select.appendChild(option);
+            });
+            
+            select.addEventListener('change', updateSelectedStatesDisplay);
+        }
+
+        // عرض الولايات المختارة
+        function updateSelectedStatesDisplay() {
+            const select = document.getElementById('coverageArea');
+            const container = document.getElementById('selectedStatesContainer');
+            if (!select || !container) return;
+            
+            const selectedValues = Array.from(select.selectedOptions).map(opt => opt.value);
+            
+            if (selectedValues.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = selectedValues.map(value => `
+                <span class="selected-state-tag">
+                    ${value}
+                    <i class="fas fa-times-circle" onclick="removeState('${value.replace(/'/g, "\\'")}')"></i>
+                </span>
+            `).join('');
+        }
+
+        // إزالة ولاية
+        function removeState(value) {
+            const select = document.getElementById('coverageArea');
+            if (!select) return;
+            
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === value) {
+                    select.options[i].selected = false;
+                    break;
+                }
+            }
+            updateSelectedStatesDisplay();
+        }
+
+        // الحصول على نص المناطق
+        function getCoverageAreaText() {
+            const select = document.getElementById('coverageArea');
+            const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+            return selected.join(', ') || 'غير محدد';
+        }
+
         // ===== دوال التبويبات =====
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -493,7 +615,7 @@
             else if (tabName === 'pending') loadPendingRequests();
         }
 
-        // ===== دوال النوافذ المنبثقة =====
+        // ===== دوال النوافذ =====
         function openDeliveryModal() {
             if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'delivery_company' && currentUser.role !== 'store_owner')) {
                 showNotification('غير مصرح بإنشاء طلبات توصيل', 'error');
@@ -509,6 +631,7 @@
 
         function openDistributorModal() {
             document.getElementById('distributorModal').classList.add('active');
+            loadStatesSelect();
         }
 
         function closeDistributorModal() {
@@ -672,7 +795,7 @@
                 email: document.getElementById('distributorEmail').value,
                 phone: document.getElementById('distributorPhone').value,
                 serviceType: document.getElementById('serviceType').value,
-                coverageArea: document.getElementById('coverageArea').value,
+                coverageArea: getCoverageAreaText(),
                 serviceDescription: document.getElementById('serviceDescription').value,
                 status: 'pending',
                 createdAt: new Date().toISOString()
@@ -790,54 +913,23 @@
         // ===== دوال تلغرام =====
         async function sendDeliveryToTelegram(delivery) {
             const distributor = distributors.find(d => d.id == delivery.distributorId);
-            const message = `🚚 *طلب توصيل جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-📦 *رقم الطلب:* ${delivery.orderId}
-👤 *الزبون:* ${delivery.customer}
-📍 *العنوان:* ${delivery.address}
-📞 *الهاتف:* ${delivery.phone}
-💰 *المبلغ:* ${delivery.amount} دج
-🏪 *الموزع:* ${distributor?.companyName || 'غير محدد'}
-📝 *الملاحظات:* ${delivery.notes || 'بدون ملاحظات'}
-🕐 ${new Date().toLocaleString('ar-EG')}`;
+            const message = `🚚 *طلب توصيل جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *العنوان:* ${delivery.address}\n📞 *الهاتف:* ${delivery.phone}\n💰 *المبلغ:* ${delivery.amount} دج\n🏪 *الموزع:* ${distributor?.companyName || 'غير محدد'}\n📝 *الملاحظات:* ${delivery.notes || 'بدون ملاحظات'}\n🕐 ${new Date().toLocaleString('ar-EG')}`;
             try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); }
         }
 
         async function sendDistributorRequestToTelegram(distributor) {
-            const message = `🏢 *طلب تسجيل موزع جديد*
-━━━━━━━━━━━━━━━━━━━━━━
-🏢 *الشركة:* ${distributor.companyName}
-👤 *المسؤول:* ${distributor.managerName}
-📧 *البريد:* ${distributor.email}
-📞 *الهاتف:* ${distributor.phone}
-🌍 *المناطق:* ${distributor.coverageArea}
-📝 *الخدمة:* ${distributor.serviceType === 'delivery' ? 'توصيل' : distributor.serviceType === 'distributor' ? 'توزيع' : 'كليهما'}
-📝 *الوصف:* ${distributor.serviceDescription}
-🕐 ${new Date().toLocaleString('ar-EG')}
-⚠️ *بانتظار موافقة المدير*`;
+            const message = `🏢 *طلب تسجيل موزع جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n👤 *المسؤول:* ${distributor.managerName}\n📧 *البريد:* ${distributor.email}\n📞 *الهاتف:* ${distributor.phone}\n🌍 *المناطق:* ${distributor.coverageArea}\n📝 *الخدمة:* ${distributor.serviceType === 'delivery' ? 'توصيل' : distributor.serviceType === 'distributor' ? 'توزيع' : 'كليهما'}\n📝 *الوصف:* ${distributor.serviceDescription}\n🕐 ${new Date().toLocaleString('ar-EG')}\n⚠️ *بانتظار موافقة المدير*`;
             try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); }
         }
 
         async function sendApprovalNotification(distributor, action) {
-            const message = `${action === 'approved' ? '✅ *تمت الموافقة على موزع*' : '❌ *تم رفض طلب موزع*'}
-━━━━━━━━━━━━━━━━━━━━━━
-🏢 *الشركة:* ${distributor.companyName}
-👤 *المسؤول:* ${distributor.managerName}
-📧 *البريد:* ${distributor.email}
-📞 *الهاتف:* ${distributor.phone}
-👨‍💼 ${action === 'approved' ? `*وافق عليه:* ${distributor.approvedBy}` : `*رفضه:* ${distributor.rejectedBy}`}
-🕐 ${new Date().toLocaleString('ar-EG')}`;
+            const message = `${action === 'approved' ? '✅ *تمت الموافقة على موزع*' : '❌ *تم رفض طلب موزع*'}\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n👤 *المسؤول:* ${distributor.managerName}\n📧 *البريد:* ${distributor.email}\n📞 *الهاتف:* ${distributor.phone}\n👨‍💼 ${action === 'approved' ? `*وافق عليه:* ${distributor.approvedBy}` : `*رفضه:* ${distributor.rejectedBy}`}\n🕐 ${new Date().toLocaleString('ar-EG')}`;
             try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); }
         }
 
         async function sendDeliveryStatusUpdate(delivery) {
             const statusText = delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : '✅ مكتمل';
-            const message = `📦 *تحديث حالة الطلب*
-━━━━━━━━━━━━━━━━━━━━━━
-📦 *رقم الطلب:* ${delivery.orderId}
-👤 *الزبون:* ${delivery.customer}
-📍 *الحالة:* ${statusText}
-🕐 ${new Date().toLocaleString('ar-EG')}`;
+            const message = `📦 *تحديث حالة الطلب*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *الحالة:* ${statusText}\n🕐 ${new Date().toLocaleString('ar-EG')}`;
             try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); }
         }
 
@@ -887,4 +979,3 @@
     </script>
 </body>
 </html>
-
