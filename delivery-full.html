@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* ========== القسم 1: المتغيرات العامة و reset ========== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --primary: #1a1a2e;
@@ -32,7 +32,6 @@
         }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        /* ========== القسم 2: مكونات الواجهة ========== */
         .delivery-header {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
@@ -65,6 +64,8 @@
         .btn-outline:hover { background: rgba(255, 215, 0, 0.1); }
         .btn-telegram { background: #0088cc; color: white; border: none; }
         .btn-telegram:hover { background: #006699; transform: translateY(-2px); }
+        .btn-pdf { background: #dc3545; color: white; border: none; }
+        .btn-pdf:hover { background: #bb2d3b; transform: translateY(-2px); }
         .tabs-container {
             display: flex;
             gap: 10px;
@@ -185,49 +186,40 @@
 </head>
 <body>
 <div class="container">
-    <!-- HEADER -->
     <div class="delivery-header">
         <div class="header-title"><i class="fas fa-truck"></i><h1>إدارة التوصيل والموزعين</h1></div>
         <div class="header-actions">
             <button class="btn btn-gold" onclick="window.openDeliveryModal()"><i class="fas fa-plus"></i> طلب توصيل</button>
             <button class="btn btn-outline" onclick="window.openDistributorModal()"><i class="fas fa-warehouse"></i> تسجيل موزع</button>
-            <button class="btn btn-telegram" onclick="window.sendDistributorsTableToTelegram()"><i class="fab fa-telegram"></i> إرسال جدول الموزعين</button>
+            <button class="btn btn-telegram" onclick="window.sendDistributorsPDFToTelegram()"><i class="fab fa-telegram"></i> إرسال PDF مع البصمة</button>
             <button class="btn btn-outline" onclick="window.goBack()"><i class="fas fa-arrow-left"></i> رجوع</button>
         </div>
     </div>
-    <!-- STATS -->
     <div class="stats-grid" id="statsGrid"></div>
-    <!-- TABS -->
     <div class="tabs-container">
         <button class="tab-btn active" onclick="window.switchTab('overview')"><i class="fas fa-chart-line"></i> نظرة عامة</button>
         <button class="tab-btn" onclick="window.switchTab('deliveries')"><i class="fas fa-boxes"></i> الطلبات</button>
         <button class="tab-btn" onclick="window.switchTab('distributors')"><i class="fas fa-warehouse"></i> الموزعون</button>
-        <button class="tab-btn" onclick="window.switchTab('distributorsTable')"><i class="fas fa-table-list"></i> جدول الموزعين والولايات</button>
+        <button class="tab-btn" onclick="window.switchTab('distributorsTable')"><i class="fas fa-table-list"></i> جدول الموزعين</button>
         <button class="tab-btn" onclick="window.switchTab('pending')"><i class="fas fa-hourglass"></i> قيد الانتظار</button>
         <button class="tab-btn" onclick="window.switchTab('tracking')"><i class="fas fa-map-location-dot"></i> التتبع</button>
     </div>
-    <!-- CONTENT TABS -->
     <div id="overview" class="tab-content active"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">📊 ملخص النظام</h2><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;"><div style="background: rgba(255, 215, 0, 0.1); padding: 15px; border-radius: 10px;"><div style="font-size: 28px; color: var(--gold); font-weight: bold;" id="totalDeliveries">0</div><div>إجمالي الطلبات</div></div><div style="background: rgba(74, 222, 128, 0.1); padding: 15px; border-radius: 10px;"><div style="font-size: 28px; color: var(--success); font-weight: bold;" id="completedDeliveries">0</div><div>مكتملة</div></div><div style="background: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 10px;"><div style="font-size: 28px; color: var(--warning); font-weight: bold;" id="pendingDeliveries">0</div><div>قيد التوصيل</div></div><div style="background: rgba(96, 165, 250, 0.1); padding: 15px; border-radius: 10px;"><div style="font-size: 28px; color: var(--info); font-weight: bold;" id="totalDistributors">0</div><div>موزعون معتمدون</div></div></div></div></div>
     <div id="deliveries" class="tab-content"><div id="deliveriesContainer"></div></div>
     <div id="distributors" class="tab-content"><div id="distributorsContainer"></div></div>
-    <div id="distributorsTable" class="tab-content"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">🗺️ جدول الموزعين والولايات</h2><div class="search-box"><input type="text" id="searchDistributor" placeholder="🔍 بحث..." onkeyup="window.filterDistributorsTable()"><button class="btn btn-gold" onclick="window.exportDistributorsTable()"><i class="fas fa-download"></i> تصدير Excel</button><button class="btn btn-telegram" onclick="window.sendDistributorsTableToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button></div><div class="filter-buttons"><button class="filter-btn active" data-type="all" onclick="window.filterByType('all')">الكل</button><button class="filter-btn" data-type="delivery" onclick="window.filterByType('delivery')">🚚 شركات التوصيل</button><button class="filter-btn" data-type="distributor" onclick="window.filterByType('distributor')">📦 موزعون</button><button class="filter-btn" data-type="both" onclick="window.filterByType('both')">🔄 كليهما</button></div><div class="distributors-table-container"><table class="distributors-table"><thead><tr><th>#</th><th>الموزع</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولايات (الرمز)</th><th>الولايات (الاسم)</th><th>العدد</th></tr></thead><tbody id="distributorsTableBody"></tbody></table></div></div></div>
+    <div id="distributorsTable" class="tab-content"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">🗺️ جدول الموزعين والولايات</h2><div class="search-box"><input type="text" id="searchDistributor" placeholder="🔍 بحث..." onkeyup="window.filterDistributorsTable()"><button class="btn btn-gold" onclick="window.exportDistributorsTable()"><i class="fas fa-download"></i> تصدير Excel</button><button class="btn btn-pdf" onclick="window.exportDistributorsPDF()"><i class="fas fa-file-pdf"></i> تصدير PDF</button><button class="btn btn-telegram" onclick="window.sendDistributorsPDFToTelegram()"><i class="fab fa-telegram"></i> إرسال PDF للقناة</button></div><div class="filter-buttons"><button class="filter-btn active" data-type="all" onclick="window.filterByType('all')">الكل</button><button class="filter-btn" data-type="delivery" onclick="window.filterByType('delivery')">🚚 شركات التوصيل</button><button class="filter-btn" data-type="distributor" onclick="window.filterByType('distributor')">📦 موزعون</button><button class="filter-btn" data-type="both" onclick="window.filterByType('both')">🔄 كليهما</button></div><div class="distributors-table-container"><table class="distributors-table"><thead><tr><th>#</th><th>الموزع</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولايات (الرمز)</th><th>الولايات (الاسم)</th><th>العدد</th></tr></thead><tbody id="distributorsTableBody"></tbody></table></div></div></div>
     <div id="pending" class="tab-content"><div id="pendingContainer"></div></div>
     <div id="tracking" class="tab-content"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">🗺️ تتبع الطلبات</h2><div class="form-group"><label>رقم الطلب</label><div style="display: flex; gap: 10px;"><input type="text" id="trackingInput" placeholder="مثال: ORD-001" style="flex:1;"><button class="btn btn-gold" onclick="window.trackDelivery()">بحث</button></div></div><div id="trackingResult"></div></div></div>
 </div>
-<!-- MODALS -->
 <div id="deliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-plus-circle"></i> طلب توصيل جديد</h2><button class="close-btn" onclick="window.closeDeliveryModal()">&times;</button></div><form onsubmit="event.preventDefault(); window.submitDelivery();"><div class="form-group"><label>رقم الطلب</label><input type="text" id="deliveryOrderId" required></div><div class="form-group"><label>اسم الزبون</label><input type="text" id="deliveryCustomer" required></div><div class="form-group"><label>العنوان</label><textarea id="deliveryAddress" required rows="2"></textarea></div><div class="form-group"><label>الهاتف</label><input type="tel" id="deliveryPhone" required></div><div class="form-group"><label>الموزع</label><select id="deliveryDistributor" required><option value="">اختر موزع</option></select></div><div class="form-group"><label>القيمة (دج)</label><input type="number" id="deliveryAmount" required></div><div class="form-group"><label>ملاحظات</label><textarea id="deliveryNotes" rows="2"></textarea></div><button type="submit" class="btn btn-gold" style="width:100%">إنشاء الطلب</button></form></div></div>
 <div id="distributorModal" class="modal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-warehouse"></i> تسجيل موزع جديد</h2><button class="close-btn" onclick="window.closeDistributorModal()">&times;</button></div><form onsubmit="event.preventDefault(); window.submitDistributor();"><div class="form-group"><label>اسم الشركة</label><input type="text" id="companyName" required></div><div class="form-group"><label>المسؤول</label><input type="text" id="managerName" required></div><div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="distributorEmail" required></div><div class="form-group"><label>الهاتف</label><input type="tel" id="distributorPhone" required></div><div class="form-group"><label>نوع الخدمة</label><select id="serviceType" required onchange="window.handleServiceTypeChange()"><option value="">اختر</option><option value="delivery">شركة توصيل (تغطية كل الولايات)</option><option value="distributor">موزع معتمد</option><option value="both">كليهما</option></select></div><div class="form-group" id="coverageAreaGroup"><label>مناطق التغطية</label><select id="coverageArea" multiple size="8"></select><div id="selectedStatesContainer" class="selected-states"></div><div id="coverageNote" class="info-note"></div></div><div class="form-group"><label>وصف الخدمة</label><textarea id="serviceDescription" required rows="2"></textarea></div><button type="submit" class="btn btn-gold" style="width:100%">إرسال الطلب</button></form></div></div>
 <div class="footer"><p>© 2026 ناردو برو - نظام متكامل لإدارة التوصيل والموزعين</p></div>
 
 <script>
-    // ============================================================
-    // القسم 1: الثوابت والمتغيرات العامة (CONSTANTS & GLOBALS)
-    // ============================================================
     const TELEGRAM = { botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', channelId: '-1003822964890', apiUrl: 'https://api.telegram.org/bot' };
     const STORAGE_KEYS = { DELIVERIES: 'nardoo_deliveries', DISTRIBUTORS: 'nardoo_distributors', USERS: 'nardoo_users', CURRENT_USER: 'current_user' };
     let deliveries = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELIVERIES) || '[]');
     let distributors = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS) || '[]');
-    let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
     let currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.CURRENT_USER) || '{"role":"admin","name":"مدير النظام"}');
     let currentFilter = 'all';
     let currentSearch = '';
@@ -245,16 +237,230 @@
         { code: "TIP", name: "تيبازة" }, { code: "AYD", name: "عين الدفلى" }, { code: "AIN", name: "عين تموشنت" }, { code: "GHA", name: "غرداية" }, { code: "REL", name: "غليزان" }
     ];
 
-    // ============================================================
-    // القسم 2: دوال مساعدة (Helper Functions)
-    // ============================================================
     function showNotification(msg, type = 'info') { const n = document.createElement('div'); n.className = `notification ${type}`; n.textContent = msg; document.body.appendChild(n); setTimeout(() => n.remove(), 3000); }
+    
     function updateStats() {
         document.getElementById('totalDeliveries').innerText = deliveries.length;
         document.getElementById('completedDeliveries').innerText = deliveries.filter(d => d.status === 'completed').length;
         document.getElementById('pendingDeliveries').innerText = deliveries.filter(d => d.status === 'pending' || d.status === 'in_transit').length;
         document.getElementById('totalDistributors').innerText = distributors.filter(d => d.status === 'approved').length;
     }
+    
+    function generateDigitalSignature(data, stateCode) {
+        const timestamp = new Date().toISOString();
+        const hash = btoa(unescape(encodeURIComponent(JSON.stringify(data) + stateCode + timestamp)));
+        return {
+            signature: hash.substring(0, 32),
+            timestamp: timestamp,
+            stateCode: stateCode,
+            verifier: "ناردو برو - نظام إدارة الموزعين"
+        };
+    }
+    
+    async function sendDistributorsPDFToTelegram() {
+        const approved = distributors.filter(d => d.status === 'approved');
+        if (approved.length === 0) {
+            showNotification('⚠️ لا يوجد موزعون معتمدون', 'warning');
+            return;
+        }
+        
+        showNotification('📄 جاري إنشاء ملف PDF مع البصمات الرقمية...', 'info');
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let y = 20;
+        
+        doc.setFont("helvetica");
+        doc.setFontSize(22);
+        doc.setTextColor(0, 0, 0);
+        doc.text("ناردو برو - قائمة الموزعين المعتمدين", pageWidth / 2, y, { align: 'center' });
+        y += 10;
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`تاريخ الإنشاء: ${new Date().toLocaleString('ar-SA')}`, pageWidth / 2, y, { align: 'center' });
+        y += 15;
+        
+        for (const state of algerianStates) {
+            const stateDistributors = approved.filter(dist => {
+                const coverage = dist.coverageArea;
+                if (coverage.includes('جميع الولايات')) return true;
+                return coverage.includes(state.code);
+            });
+            
+            if (stateDistributors.length === 0) continue;
+            
+            if (y > 260) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 100, 0);
+            doc.setFont("helvetica", "bold");
+            doc.text(`📍 ولاية ${state.name} (${state.code})`, 20, y);
+            y += 8;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "normal");
+            
+            for (let i = 0; i < stateDistributors.length; i++) {
+                const dist = stateDistributors[i];
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                const typeIcon = dist.serviceType === 'delivery' ? '🚚' : (dist.serviceType === 'distributor' ? '📦' : '🔄');
+                doc.text(`${typeIcon} ${dist.companyName}`, 25, y);
+                doc.text(`   المسؤول: ${dist.managerName}`, 30, y + 5);
+                doc.text(`   الهاتف: ${dist.phone}`, 30, y + 10);
+                doc.text(`   النوع: ${dist.serviceType === 'delivery' ? 'شركة توصيل' : (dist.serviceType === 'distributor' ? 'موزع' : 'كليهما')}`, 30, y + 15);
+                
+                const signature = generateDigitalSignature(dist, state.code);
+                doc.setFont("helvetica", "italic");
+                doc.setTextColor(150, 150, 150);
+                doc.text(`   🔐 البصمة الرقمية: ${signature.signature}`, 30, y + 20);
+                doc.text(`   ⏱️ التوقيع: ${signature.timestamp.substring(0, 19)}`, 30, y + 25);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "normal");
+                
+                y += 32;
+            }
+            
+            const stateSignature = generateDigitalSignature({ state: state.name, count: stateDistributors.length }, state.code);
+            doc.setDrawColor(200, 200, 0);
+            doc.setLineWidth(0.5);
+            doc.line(20, y - 3, pageWidth - 20, y - 3);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 0);
+            doc.text(`🔒 بصمة الولاية: ${stateSignature.signature}`, pageWidth - 30, y - 1, { align: 'right' });
+            y += 5;
+        }
+        
+        const finalSignature = generateDigitalSignature({ total: approved.length, date: new Date().toISOString() }, "ALL_STATES");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 100, 200);
+        doc.text(`📜 البصمة الرقمية النهائية للمستند: ${finalSignature.signature}`, pageWidth / 2, y + 10, { align: 'center' });
+        doc.text(`🕒 توقيع الإصدار: ${finalSignature.timestamp}`, pageWidth / 2, y + 17, { align: 'center' });
+        doc.text(`✅ تم إنشاؤه بواسطة: ${finalSignature.verifier}`, pageWidth / 2, y + 24, { align: 'center' });
+        
+        const pdfBlob = doc.output('blob');
+        const formData = new FormData();
+        formData.append('chat_id', TELEGRAM.channelId);
+        formData.append('document', pdfBlob, `distributors_${new Date().toISOString().slice(0, 19)}.pdf`);
+        formData.append('caption', `📋 قائمة الموزعين المعتمدين\n📅 ${new Date().toLocaleString('ar-SA')}\n🔐 الملف موثق بالبصمة الرقمية\n✅ عدد الموزعين: ${approved.length}\n🏢 عدد الولايات المغطاة: ${algerianStates.filter(s => approved.some(d => d.coverageArea.includes('جميع الولايات') || d.coverageArea.includes(s.code))).length}`);
+        
+        try {
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                showNotification('✅ تم إرسال ملف PDF مع البصمة الرقمية إلى القناة', 'success');
+            } else {
+                throw new Error('فشل الإرسال');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification('❌ فشل إرسال الملف إلى التلغرام', 'error');
+        }
+    }
+    
+    function exportDistributorsPDF() {
+        const approved = distributors.filter(d => d.status === 'approved');
+        if (approved.length === 0) {
+            showNotification('⚠️ لا يوجد موزعون معتمدون', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let y = 20;
+        
+        doc.setFont("helvetica");
+        doc.setFontSize(22);
+        doc.setTextColor(0, 0, 0);
+        doc.text("ناردو برو - قائمة الموزعين المعتمدين", pageWidth / 2, y, { align: 'center' });
+        y += 10;
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`تاريخ الإنشاء: ${new Date().toLocaleString('ar-SA')}`, pageWidth / 2, y, { align: 'center' });
+        y += 15;
+        
+        for (const state of algerianStates) {
+            const stateDistributors = approved.filter(dist => {
+                const coverage = dist.coverageArea;
+                if (coverage.includes('جميع الولايات')) return true;
+                return coverage.includes(state.code);
+            });
+            
+            if (stateDistributors.length === 0) continue;
+            
+            if (y > 260) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 100, 0);
+            doc.setFont("helvetica", "bold");
+            doc.text(`📍 ولاية ${state.name} (${state.code})`, 20, y);
+            y += 8;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "normal");
+            
+            for (let i = 0; i < stateDistributors.length; i++) {
+                const dist = stateDistributors[i];
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                const typeIcon = dist.serviceType === 'delivery' ? '🚚' : (dist.serviceType === 'distributor' ? '📦' : '🔄');
+                doc.text(`${typeIcon} ${dist.companyName}`, 25, y);
+                doc.text(`   المسؤول: ${dist.managerName}`, 30, y + 5);
+                doc.text(`   الهاتف: ${dist.phone}`, 30, y + 10);
+                doc.text(`   النوع: ${dist.serviceType === 'delivery' ? 'شركة توصيل' : (dist.serviceType === 'distributor' ? 'موزع' : 'كليهما')}`, 30, y + 15);
+                
+                const signature = generateDigitalSignature(dist, state.code);
+                doc.setFont("helvetica", "italic");
+                doc.setTextColor(150, 150, 150);
+                doc.text(`   🔐 البصمة الرقمية: ${signature.signature}`, 30, y + 20);
+                doc.text(`   ⏱️ التوقيع: ${signature.timestamp.substring(0, 19)}`, 30, y + 25);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "normal");
+                
+                y += 32;
+            }
+            
+            const stateSignature = generateDigitalSignature({ state: state.name, count: stateDistributors.length }, state.code);
+            doc.setDrawColor(200, 200, 0);
+            doc.setLineWidth(0.5);
+            doc.line(20, y - 3, pageWidth - 20, y - 3);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 0);
+            doc.text(`🔒 بصمة الولاية: ${stateSignature.signature}`, pageWidth - 30, y - 1, { align: 'right' });
+            y += 5;
+        }
+        
+        const finalSignature = generateDigitalSignature({ total: approved.length, date: new Date().toISOString() }, "ALL_STATES");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 100, 200);
+        doc.text(`📜 البصمة الرقمية النهائية للمستند: ${finalSignature.signature}`, pageWidth / 2, y + 10, { align: 'center' });
+        doc.text(`🕒 توقيع الإصدار: ${finalSignature.timestamp}`, pageWidth / 2, y + 17, { align: 'center' });
+        doc.text(`✅ تم إنشاؤه بواسطة: ${finalSignature.verifier}`, pageWidth / 2, y + 24, { align: 'center' });
+        
+        doc.save(`distributors_${new Date().toISOString().slice(0, 19)}.pdf`);
+        showNotification('✅ تم تصدير PDF بنجاح', 'success');
+    }
+    
     function extractStateCodes(cov) { if (cov.includes('جميع الولايات')) return algerianStates.map(s => s.code); const codes = []; cov.split(',').forEach(p => { let m = p.trim().match(/^([A-Z]{3})/); if(m) codes.push(m[1]); }); return codes; }
     function extractStateNames(cov) { if (cov.includes('جميع الولايات')) return algerianStates.map(s => s.name); const names = []; cov.split(',').forEach(p => { let m = p.trim().match(/[A-Z]{3} - (.+)$/); if(m) names.push(m[1]); }); return names; }
     function getCoverageAreaText() { let type = document.getElementById('serviceType').value; if (type === 'delivery') return 'جميع الولايات الجزائرية (58 ولاية)'; let select = document.getElementById('coverageArea'); return Array.from(select.selectedOptions).map(opt => opt.value).join(', ') || 'غير محدد'; }
@@ -262,58 +468,40 @@
     function removeState(val) { let sel = document.getElementById('coverageArea'); if(sel){ for(let i=0;i<sel.options.length;i++) if(sel.options[i].value===val) sel.options[i].selected=false; updateSelectedStatesDisplay(); } }
     function handleServiceTypeChange() { let type = document.getElementById('serviceType').value; let sel = document.getElementById('coverageArea'), note = document.getElementById('coverageNote'); if(type==='delivery'){ if(sel){ for(let i=0;i<sel.options.length;i++) sel.options[i].selected=true; sel.disabled=true; updateSelectedStatesDisplay(); } note.innerHTML='✅ شركة توصيل - تغطية جميع الولايات (58 ولاية)'; note.style.color='var(--success)'; } else if(type==='distributor'||type==='both'){ if(sel){ for(let i=0;i<sel.options.length;i++) sel.options[i].selected=false; sel.disabled=false; updateSelectedStatesDisplay(); } note.innerHTML='📌 اختر الولايات التي تغطيها'; note.style.color='var(--info)'; } else { if(sel) sel.disabled=false; note.innerHTML=''; } }
     function loadStatesSelect() { let s = document.getElementById('coverageArea'); if(!s) return; s.innerHTML = ''; algerianStates.forEach(st=>{ let opt = document.createElement('option'); opt.value = `${st.code} - ${st.name}`; opt.textContent = `${st.code} | ${st.name}`; s.appendChild(opt); }); s.addEventListener('change', updateSelectedStatesDisplay); }
-
-    // ============================================================
-    // القسم 3: إدارة الطلبات والموزعين (Core CRUD)
-    // ============================================================
+    
     async function submitDelivery() {
         let delivery = { id: Date.now(), orderId: document.getElementById('deliveryOrderId').value, customer: document.getElementById('deliveryCustomer').value, address: document.getElementById('deliveryAddress').value, phone: document.getElementById('deliveryPhone').value, distributorId: parseInt(document.getElementById('deliveryDistributor').value), amount: parseInt(document.getElementById('deliveryAmount').value), notes: document.getElementById('deliveryNotes').value, status: 'pending', createdAt: new Date().toISOString(), createdBy: currentUser?.name || 'نظام' };
         deliveries.push(delivery); localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(deliveries));
-        await sendDeliveryToTelegram(delivery); showNotification('✅ تم إنشاء طلب التوصيل', 'success'); closeDeliveryModal(); document.getElementById('deliveryModal').querySelector('form').reset(); updateStats(); loadDeliveries();
+        showNotification('✅ تم إنشاء طلب التوصيل', 'success'); closeDeliveryModal(); document.getElementById('deliveryModal').querySelector('form').reset(); updateStats(); loadDeliveries();
     }
     async function submitDistributor() {
         let dist = { id: Date.now(), companyName: document.getElementById('companyName').value, managerName: document.getElementById('managerName').value, email: document.getElementById('distributorEmail').value, phone: document.getElementById('distributorPhone').value, serviceType: document.getElementById('serviceType').value, coverageArea: getCoverageAreaText(), serviceDescription: document.getElementById('serviceDescription').value, status: 'pending', createdAt: new Date().toISOString() };
         distributors.push(dist); localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors));
-        await sendDistributorRequestToTelegram(dist); showNotification('✅ تم إرسال طلب التسجيل', 'success'); closeDistributorModal(); document.getElementById('distributorModal').querySelector('form').reset(); updateStats();
+        showNotification('✅ تم إرسال طلب التسجيل', 'success'); closeDistributorModal(); document.getElementById('distributorModal').querySelector('form').reset(); updateStats();
     }
-    async function approveDistributor(id) { let d = distributors.find(x=>x.id==id); if(d){ d.status='approved'; d.approvedAt=new Date().toISOString(); d.approvedBy=currentUser?.name||'مدير'; localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); await sendApprovalNotification(d,'approved'); showNotification('✅ تمت الموافقة','success'); loadPendingRequests(); loadDistributors(); loadDistributorsTable(); updateStats(); } }
-    async function rejectDistributor(id) { let d = distributors.find(x=>x.id==id); if(d){ d.status='rejected'; d.rejectedAt=new Date().toISOString(); d.rejectedBy=currentUser?.name||'مدير'; localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); await sendApprovalNotification(d,'rejected'); showNotification('❌ تم الرفض','info'); loadPendingRequests(); updateStats(); } }
-    async function updateDeliveryStatus(id, status) { let d = deliveries.find(x=>x.id==id); if(d){ d.status=status; d.updatedAt=new Date().toISOString(); localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(deliveries)); await sendDeliveryStatusUpdate(d); showNotification('✅ تم تحديث الحالة','success'); loadDeliveries(); updateStats(); } }
+    async function approveDistributor(id) { let d = distributors.find(x=>x.id==id); if(d){ d.status='approved'; d.approvedAt=new Date().toISOString(); d.approvedBy=currentUser?.name||'مدير'; localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); showNotification('✅ تمت الموافقة','success'); loadPendingRequests(); loadDistributors(); loadDistributorsTable(); updateStats(); } }
+    async function rejectDistributor(id) { let d = distributors.find(x=>x.id==id); if(d){ d.status='rejected'; d.rejectedAt=new Date().toISOString(); d.rejectedBy=currentUser?.name||'مدير'; localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); showNotification('❌ تم الرفض','info'); loadPendingRequests(); updateStats(); } }
+    async function updateDeliveryStatus(id, status) { let d = deliveries.find(x=>x.id==id); if(d){ d.status=status; d.updatedAt=new Date().toISOString(); localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(deliveries)); showNotification('✅ تم تحديث الحالة','success'); loadDeliveries(); updateStats(); } }
     function trackDelivery() { let tid = document.getElementById('trackingInput').value; let delivery = deliveries.find(d=>d.orderId===tid || d.id==tid); let resDiv = document.getElementById('trackingResult'); if(!delivery){ resDiv.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><h3>لم يتم العثور على الطلب</h3></div>'; return; } let distributor = distributors.find(d=>d.id==delivery.distributorId); let steps = [{status:'pending',label:'قيد الانتظار',icon:'⏳'},{status:'in_transit',label:'قيد التوصيل',icon:'🚚'},{status:'completed',label:'مكتمل',icon:'✅'}]; let idx = steps.findIndex(s=>s.status===delivery.status); resDiv.innerHTML=`<div class="card"><h3 style="color:var(--gold)">📦 تفاصيل الطلب</h3><div>رقم: ${delivery.orderId}<br>الزبون: ${delivery.customer}<br>العنوان: ${delivery.address}<br>الموزع: ${distributor?.companyName||'غير محدد'}<br>مناطق التغطية: ${distributor?.coverageArea||'غير متوفر'}</div><div style="display:flex;justify-content:space-between;margin-top:20px;">${steps.map((s,i)=>`<div style="text-align:center;flex:1"><div style="font-size:28px;opacity:${i<=idx?1:0.3}">${s.icon}</div><div>${s.label}</div></div>${i<steps.length-1?'<div style="flex:1;height:2px;background:rgba(255,215,0,0.3)"></div>':''}`).join('')}</div></div>`; }
-
-    // ============================================================
-    // القسم 4: عرض البيانات (Rendering)
-    // ============================================================
-    function loadDeliveries() { let cont = document.getElementById('deliveriesContainer'); let filtered = deliveries.filter(d=>{ if(currentUser?.role==='admin') return true; return true; }); if(filtered.length===0){ cont.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><h3>لا توجد طلبات</h3></div>'; return; } cont.innerHTML = filtered.map(del=>{ let dist = distributors.find(x=>x.id==del.distributorId); return `<div class="card"><div class="card-header"><div><div class="card-title">📦 ${del.orderId}</div><div>👤 ${del.customer}</div></div><span class="status-badge status-${del.status}">${del.status==='pending'?'⏳ قيد الانتظار':del.status==='in_transit'?'🚚 قيد التوصيل':'✅ مكتمل'}</span></div><div><strong>العنوان:</strong> ${del.address}<br><strong>المبلغ:</strong> ${del.amount} دج<br><strong>الموزع:</strong> ${dist?.companyName||'غير محدد'}</div><div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-gold" onclick="window.updateDeliveryStatus(${del.id},'in_transit')">🚚 قيد التوصيل</button><button class="btn btn-outline" onclick="window.updateDeliveryStatus(${del.id},'completed')">✅ مكتمل</button></div></div>`; }).join(''); }
+    
+    function loadDeliveries() { let cont = document.getElementById('deliveriesContainer'); if(deliveries.length===0){ cont.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><h3>لا توجد طلبات</h3></div>'; return; } cont.innerHTML = deliveries.map(del=>{ let dist = distributors.find(x=>x.id==del.distributorId); return `<div class="card"><div class="card-header"><div><div class="card-title">📦 ${del.orderId}</div><div>👤 ${del.customer}</div></div><span class="status-badge status-${del.status}">${del.status==='pending'?'⏳ قيد الانتظار':del.status==='in_transit'?'🚚 قيد التوصيل':'✅ مكتمل'}</span></div><div><strong>العنوان:</strong> ${del.address}<br><strong>المبلغ:</strong> ${del.amount} دج<br><strong>الموزع:</strong> ${dist?.companyName||'غير محدد'}</div><div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-gold" onclick="window.updateDeliveryStatus(${del.id},'in_transit')">🚚 قيد التوصيل</button><button class="btn btn-outline" onclick="window.updateDeliveryStatus(${del.id},'completed')">✅ مكتمل</button></div></div>`; }).join(''); }
     function loadDistributors() { let cont = document.getElementById('distributorsContainer'); let approved = distributors.filter(d=>d.status==='approved'); if(approved.length===0){ cont.innerHTML='<div class="empty-state"><i class="fas fa-warehouse"></i><h3>لا يوجد موزعون معتمدون</h3></div>'; return; } cont.innerHTML = approved.map(d=>`<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div>👤 ${d.managerName}</div></div><span class="status-badge status-approved">✅ معتمد</span></div><div><strong>الهاتف:</strong> ${d.phone}<br><strong>المناطق:</strong> ${d.coverageArea}</div></div>`).join(''); }
     function loadPendingRequests() { let cont = document.getElementById('pendingContainer'); let pending = distributors.filter(d=>d.status==='pending'); if(currentUser?.role!=='admin'){ cont.innerHTML='<div class="empty-state"><i class="fas fa-lock"></i><h3>غير مصرح</h3></div>'; return; } if(pending.length===0){ cont.innerHTML='<div class="empty-state"><i class="fas fa-check-circle"></i><h3>لا توجد طلبات قيد الانتظار</h3></div>'; return; } cont.innerHTML = pending.map(d=>`<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div>👤 ${d.managerName}</div></div><span class="status-badge status-pending">⏳ قيد الانتظار</span></div><div><strong>البريد:</strong> ${d.email}<br><strong>المناطق:</strong> ${d.coverageArea}</div><div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-gold" onclick="window.approveDistributor(${d.id})">✅ موافقة</button><button class="btn btn-outline" onclick="window.rejectDistributor(${d.id})">❌ رفض</button></div></div>`).join(''); }
     function loadDistributorsTable() { let approved = distributors.filter(d=>d.status==='approved'); let filtered = approved; if(currentFilter!=='all') filtered = filtered.filter(d=>d.serviceType===currentFilter); if(currentSearch) filtered = filtered.filter(d=>d.companyName.includes(currentSearch)||d.managerName.includes(currentSearch)||d.phone.includes(currentSearch)); let tbody = document.getElementById('distributorsTableBody'); if(filtered.length===0){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center">لا توجد نتائج</td></tr>'; return; } tbody.innerHTML = filtered.map((d,i)=>{ let codes = extractStateCodes(d.coverageArea); let names = extractStateNames(d.coverageArea); let allFlag = d.coverageArea.includes('جميع الولايات'); let typeText = d.serviceType==='delivery'?'🚚 شركة توصيل':d.serviceType==='distributor'?'📦 موزع':'🔄 كليهما'; return `<tr><td>${i+1}</td><td><strong>${d.companyName}</strong></td><td>${d.managerName}</td><td>${d.phone}</td><td>${typeText}</td><td>${allFlag?'<span class="badge-all-states">جميع الولايات</span>':codes.map(c=>`<span class="state-code">${c}</span>`).join('')}</td><td>${allFlag?'الجزائر - أدرار ...':names.map(n=>`<span class="state-name">${n}</span>`).join('')}</td><td>${allFlag?58:codes.length}</td></tr>`; }).join(''); }
     function filterDistributorsTable() { currentSearch = document.getElementById('searchDistributor').value; loadDistributorsTable(); }
     function filterByType(type) { currentFilter = type; document.querySelectorAll('.filter-btn').forEach(btn=>btn.classList.remove('active')); event.target.classList.add('active'); loadDistributorsTable(); }
     function exportDistributorsTable() { let approved = distributors.filter(d=>d.status==='approved'); let filtered = approved; if(currentFilter!=='all') filtered = filtered.filter(d=>d.serviceType===currentFilter); if(currentSearch) filtered = filtered.filter(d=>d.companyName.includes(currentSearch)); let csv = "الرقم,الموزع,المسؤول,الهاتف,النوع,الولايات\n"; filtered.forEach((d,i)=>{ let codes = extractStateCodes(d.coverageArea); let allFlag = d.coverageArea.includes('جميع الولايات'); csv += `${i+1},${d.companyName},${d.managerName},${d.phone},${d.serviceType},${allFlag?'جميع الولايات':codes.join(' - ')}\n`; }); let blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"}); let link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = "الموزعون.csv"; link.click(); URL.revokeObjectURL(link); showNotification('✅ تم التصدير','success'); }
-
-    // ============================================================
-    // القسم 5: تكامل تلغرام (Telegram Integration)
-    // ============================================================
-    async function sendDeliveryToTelegram(delivery) { let dist = distributors.find(d=>d.id==delivery.distributorId); let msg = `🚚 *طلب توصيل جديد*\nرقم: ${delivery.orderId}\nالزبون: ${delivery.customer}\nالعنوان: ${delivery.address}\nالموزع: ${dist?.companyName||'غير محدد'}\nالمبلغ: ${delivery.amount} دج`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode:'Markdown' }) }); } catch(e){} }
-    async function sendDistributorRequestToTelegram(dist) { let msg = `🏢 *طلب تسجيل موزع*\nالشركة: ${dist.companyName}\nالمسؤول: ${dist.managerName}\nالهاتف: ${dist.phone}\nالمناطق: ${dist.coverageArea}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode:'Markdown' }) }); } catch(e){} }
-    async function sendApprovalNotification(dist, action) { let msg = `${action==='approved'?'✅ تمت الموافقة':'❌ تم الرفض'}\nالشركة: ${dist.companyName}\nالمسؤول: ${dist.managerName}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode:'Markdown' }) }); } catch(e){} }
-    async function sendDeliveryStatusUpdate(delivery) { let statusText = delivery.status==='pending'?'⏳ قيد الانتظار':delivery.status==='in_transit'?'🚚 قيد التوصيل':'✅ مكتمل'; let msg = `📦 تحديث حالة الطلب\nرقم: ${delivery.orderId}\nالحالة: ${statusText}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode:'Markdown' }) }); } catch(e){} }
-    async function sendDistributorsTableToTelegram() { let approved = distributors.filter(d=>d.status==='approved'); if(approved.length===0){ showNotification('⚠️ لا يوجد موزعون','warning'); return; } let stateMap = new Map(); algerianStates.forEach(st=>stateMap.set(st.code,{code:st.code,name:st.name,distributors:[]})); approved.forEach(dist=>{ let codes = extractStateCodes(dist.coverageArea); let allFlag = dist.coverageArea.includes('جميع الولايات'); let info = `• ${dist.companyName} (${dist.serviceType})\n  👤 ${dist.managerName} | 📞 ${dist.phone}`; if(allFlag){ stateMap.forEach(v=>v.distributors.push(info)); } else { codes.forEach(c=>{ if(stateMap.has(c)) stateMap.get(c).distributors.push(info); }); } }); let messages = []; let current = "📋 قائمة الموزعين حسب كل ولاية\n━━━━━━━━━━━━━━━━━━\n"; for(let [code,data] of stateMap){ if(data.distributors.length===0) continue; let block = `📍 ولاية ${data.name} (${code}) - العدد: ${data.distributors.length}\n${data.distributors.join('\n')}\n\n`; if((current+block).length>3900){ messages.push(current); current = "📋 قائمة الموزعين (تابع)\n━━━━━━━━━━━━━━━━━━\n"; } current += block; } if(current !== "📋 قائمة الموزعين حسب كل ولاية\n━━━━━━━━━━━━━━━━━━\n") messages.push(current); for(let msg of messages){ try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode:'Markdown' }) }); await new Promise(r=>setTimeout(r,500)); } catch(e){} } showNotification('✅ تم الإرسال','success'); }
-
-    // ============================================================
-    // القسم 6: دوال التحكم في النوافذ والتبويبات (UI Controls)
-    // ============================================================
+    
     function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById(tabName).classList.add('active'); event.target.classList.add('active'); if(tabName==='deliveries') loadDeliveries(); if(tabName==='distributors') loadDistributors(); if(tabName==='distributorsTable') loadDistributorsTable(); if(tabName==='pending') loadPendingRequests(); }
     function openDeliveryModal() { document.getElementById('deliveryModal').classList.add('active'); let select = document.getElementById('deliveryDistributor'); let approved = distributors.filter(d=>d.status==='approved'); select.innerHTML='<option value="">اختر موزع</option>'; approved.forEach(d=>{ let opt = document.createElement('option'); opt.value=d.id; opt.textContent=`${d.companyName} (${d.coverageArea.substring(0,30)})`; select.appendChild(opt); }); }
     function closeDeliveryModal() { document.getElementById('deliveryModal').classList.remove('active'); }
     function openDistributorModal() { loadStatesSelect(); document.getElementById('distributorModal').classList.add('active'); handleServiceTypeChange(); }
     function closeDistributorModal() { document.getElementById('distributorModal').classList.remove('active'); }
     function goBack() { window.history.back(); }
-    function checkPendingDelivery() { let pending = localStorage.getItem('nardo_pending_delivery'); if(pending){ let data = JSON.parse(pending); openDeliveryModal(); setTimeout(()=>{ if(document.getElementById('deliveryOrderId')) document.getElementById('deliveryOrderId').value = data.orderId||''; if(document.getElementById('deliveryCustomer')) document.getElementById('deliveryCustomer').value = data.customer||''; if(document.getElementById('deliveryPhone')) document.getElementById('deliveryPhone').value = data.phone||''; if(document.getElementById('deliveryAmount')) document.getElementById('deliveryAmount').value = data.amount||''; if(document.getElementById('deliveryAddress')) document.getElementById('deliveryAddress').value = data.address||''; localStorage.removeItem('nardo_pending_delivery'); showNotification('📦 تم استيراد بيانات الطلب','success'); },300); } }
-    window.onload = function() { updateStats(); checkPendingDelivery(); loadDistributorsTable(); if(!localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS)) localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify([])); if(!localStorage.getItem(STORAGE_KEYS.DELIVERIES)) localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify([])); };
-    // ربط الدوال العامة
-    Object.assign(window, { showNotification, updateStats, submitDelivery, submitDistributor, approveDistributor, rejectDistributor, updateDeliveryStatus, trackDelivery, loadDeliveries, loadDistributors, loadPendingRequests, loadDistributorsTable, filterDistributorsTable, filterByType, exportDistributorsTable, sendDistributorsTableToTelegram, switchTab, openDeliveryModal, closeDeliveryModal, openDistributorModal, closeDistributorModal, goBack, handleServiceTypeChange, removeState, getCoverageAreaText, updateSelectedStatesDisplay });
+    
+    window.onload = function() { updateStats(); loadDistributorsTable(); if(!localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS)) localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify([])); if(!localStorage.getItem(STORAGE_KEYS.DELIVERIES)) localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify([])); };
+    
+    Object.assign(window, { showNotification, updateStats, submitDelivery, submitDistributor, approveDistributor, rejectDistributor, updateDeliveryStatus, trackDelivery, loadDeliveries, loadDistributors, loadPendingRequests, loadDistributorsTable, filterDistributorsTable, filterByType, exportDistributorsTable, exportDistributorsPDF, sendDistributorsPDFToTelegram, switchTab, openDeliveryModal, closeDeliveryModal, openDistributorModal, closeDistributorModal, goBack, handleServiceTypeChange, removeState, getCoverageAreaText, updateSelectedStatesDisplay, generateDigitalSignature });
 </script>
 </body>
 </html>
