@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -105,7 +104,6 @@
             margin-bottom: 20px;
             transition: all 0.3s;
         }
-        .card:hover { border-color: var(--gold); transform: translateY(-5px); }
         .filter-row {
             display: flex;
             gap: 15px;
@@ -150,6 +148,9 @@
         }
         .selected-states { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
         .selected-state-tag { background: rgba(255, 215, 0, 0.2); border: 1px solid var(--gold); border-radius: 20px; padding: 5px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px; }
+        .pdf-preview { margin-top: 20px; border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; overflow: hidden; background: rgba(0,0,0,0.5); }
+        .pdf-preview iframe { width: 100%; height: 500px; border: none; }
+        .info-card { background: rgba(96, 165, 250, 0.1); border-right: 3px solid var(--info); padding: 15px; border-radius: 10px; margin-bottom: 20px; }
         @media (max-width: 768px) { .filter-row { flex-direction: column; } .filter-row select { max-width: 100%; } }
     </style>
 </head>
@@ -161,7 +162,7 @@
             <button class="btn btn-gold" onclick="window.openDeliveryModal()"><i class="fas fa-plus"></i> طلب توصيل</button>
             <button class="btn btn-outline" onclick="window.openDistributorModal()"><i class="fas fa-warehouse"></i> تسجيل موزع</button>
             <button class="btn btn-telegram" onclick="window.sendDistributorsPDFToTelegram()"><i class="fab fa-telegram"></i> إرسال PDF</button>
-            <button class="btn btn-import" onclick="window.fetchPinnedPDFFromTelegram()"><i class="fab fa-telegram"></i> جلب PDF من المثبت</button>
+            <button class="btn btn-import" onclick="window.fetchPinnedPDF()"><i class="fab fa-telegram"></i> جلب PDF من المثبت</button>
         </div>
     </div>
 
@@ -170,7 +171,8 @@
         <button class="tab-btn" onclick="window.switchTab('deliveries')"><i class="fas fa-boxes"></i> الطلبات</button>
         <button class="tab-btn" onclick="window.switchTab('distributors')"><i class="fas fa-warehouse"></i> الموزعون</button>
         <button class="tab-btn" onclick="window.switchTab('distributorsTable')"><i class="fas fa-table-list"></i> جدول الموزعين</button>
-        <button class="tab-btn" onclick="window.switchTab('importedData')"><i class="fas fa-file-pdf"></i> بيانات PDF المستوردة</button>
+        <button class="tab-btn" onclick="window.switchTab('importedData')"><i class="fas fa-file-pdf"></i> بيانات PDF</button>
+        <button class="tab-btn" onclick="window.switchTab('pdfViewer')"><i class="fas fa-eye"></i> معاينة PDF</button>
         <button class="tab-btn" onclick="window.switchTab('pending')"><i class="fas fa-hourglass"></i> قيد الانتظار</button>
         <button class="tab-btn" onclick="window.switchTab('tracking')"><i class="fas fa-map-location-dot"></i> التتبع</button>
     </div>
@@ -180,13 +182,18 @@
     <div id="distributors" class="tab-content"><div id="distributorsContainer"></div></div>
     <div id="distributorsTable" class="tab-content"><div id="localDistributorsTable"></div></div>
     
+    <!-- تبويب البيانات المستوردة -->
     <div id="importedData" class="tab-content">
         <div class="card">
             <h2 style="color: var(--gold); margin-bottom: 20px;">📄 بيانات الموزعين المستوردة من PDF (الرسالة المثبتة)</h2>
+            <div class="info-card">
+                <i class="fas fa-info-circle"></i> هذه البيانات تم استخراجها من ملف PDF المثبت في قناة التلغرام.
+                يمكنك فلترة البيانات حسب الولاية أو البحث بالاسم.
+            </div>
             <div class="filter-row">
                 <div class="form-group"><label><i class="fas fa-search"></i> بحث بالاسم</label><input type="text" id="searchImported" placeholder="اسم الموزع..." onkeyup="window.filterImportedData()"></div>
                 <div class="form-group"><label><i class="fas fa-map-marker-alt"></i> فلترة حسب الولاية</label><select id="stateFilter" onchange="window.filterImportedData()"><option value="all">🌍 جميع الولايات</option></select></div>
-                <div class="form-group"><button class="btn btn-import" onclick="window.fetchPinnedPDFFromTelegram()" style="width:100%"><i class="fab fa-telegram"></i> جلب PDF من المثبت</button></div>
+                <div class="form-group"><button class="btn btn-import" onclick="window.fetchPinnedPDF()" style="width:100%"><i class="fab fa-telegram"></i> جلب PDF من المثبت</button></div>
             </div>
             <div class="stats-summary">
                 <div class="stat-item"><i class="fas fa-warehouse"></i> <span id="totalImported">0</span> موزع</div>
@@ -198,6 +205,22 @@
                     <thead><tr><th>#</th><th>الموزع</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th><th>البصمة</th><th>التحقق</th></tr></thead>
                     <tbody id="importedTableBody"><tr><td colspan="8" style="text-align:center">📭 لا توجد بيانات. اضغط "جلب PDF من المثبت"</td></tr></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- تبويب معاينة PDF -->
+    <div id="pdfViewer" class="tab-content">
+        <div class="card">
+            <h2 style="color: var(--gold); margin-bottom: 20px;">📄 معاينة ملف PDF المثبت</h2>
+            <div class="info-card">
+                <i class="fas fa-info-circle"></i> هنا يمكنك معاينة ملف PDF المثبت في القناة مباشرة.
+            </div>
+            <div id="pdfPreviewContainer" class="pdf-preview">
+                <div style="text-align: center; padding: 50px;">
+                    <i class="fas fa-file-pdf" style="font-size: 48px; color: var(--gold);"></i>
+                    <p>اضغط "جلب PDF من المثبت" لعرض الملف هنا</p>
+                </div>
             </div>
         </div>
     </div>
@@ -216,11 +239,12 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     
     const TELEGRAM = { botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', channelId: '-1003822964890', apiUrl: 'https://api.telegram.org/bot' };
-    const STORAGE_KEYS = { DELIVERIES: 'nardoo_deliveries', DISTRIBUTORS: 'nardoo_distributors', IMPORTED_DATA: 'imported_distributors_data' };
+    const STORAGE_KEYS = { DELIVERIES: 'nardoo_deliveries', DISTRIBUTORS: 'nardoo_distributors', IMPORTED_DATA: 'imported_distributors_data', PDF_URL: 'pinned_pdf_url' };
     
     let deliveries = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELIVERIES) || '[]');
     let distributors = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS) || '[]');
     let importedDistributors = JSON.parse(localStorage.getItem(STORAGE_KEYS.IMPORTED_DATA) || '[]');
+    let currentPdfUrl = localStorage.getItem(STORAGE_KEYS.PDF_URL) || null;
     
     const algerianStates = [
         { code: "ALG", name: "الجزائر" }, { code: "ADE", name: "أدرار" }, { code: "ASH", name: "الشلف" }, { code: "LGH", name: "الأغواط" },
@@ -238,7 +262,6 @@
 
     function showNotification(msg, type) {
         const n = document.createElement('div');
-        n.className = `notification ${type}`;
         n.textContent = msg;
         n.style.cssText = `position:fixed;top:20px;right:20px;padding:15px 25px;border-radius:10px;font-weight:bold;z-index:2000;animation:slideIn 0.3s ease;background:${type==='success'?'#4ade80':type==='error'?'#f87171':'#60a5fa'};color:#000;`;
         document.body.appendChild(n);
@@ -251,123 +274,82 @@
         return { signature: hash.substring(0, 32), timestamp: timestamp, stateCode: stateCode };
     }
 
-    // ========== الوظيفة الجديدة: جلب PDF من الرسالة المثبتة ==========
-    async function fetchPinnedPDFFromTelegram() {
-        showNotification('📡 جلب الرسالة المثبتة من القناة...', 'info');
+    // ========== الوظيفة الرئيسية: جلب PDF من الرسالة المثبتة باستخدام getChat ==========
+    async function fetchPinnedPDF() {
+        showNotification('📡 جلب معلومات القناة والرسالة المثبتة...', 'info');
         
         try {
-            // الخطوة 1: جلب معلومات القناة للحصول على chat_id الصحيح
-            const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
-            const chatData = await chatRes.json();
+            // الخطوة 1: استخدام getChat للحصول على معلومات القناة (بما فيها pinned_message)
+            const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            const chatData = await chatResponse.json();
             
             if (!chatData.ok) {
-                throw new Error('لا يمكن الوصول إلى القناة');
+                throw new Error(`خطأ في جلب القناة: ${chatData.description}`);
             }
             
-            // الخطوة 2: محاولة جلب الرسالة المثبتة باستخدام pinned_message
-            // أولاً: جلب آخر التحديثات للعثور على الرسالة المثبتة
-            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100&offset=-1`);
-            const updates = await updatesRes.json();
+            const chat = chatData.result;
             
-            let pinnedMessageId = null;
-            
-            // البحث في التحديثات عن رسالة مثبتة
-            if (updates.ok && updates.result) {
-                for (const update of updates.result) {
-                    if (update.channel_post && update.channel_post.pinned_message) {
-                        pinnedMessageId = update.channel_post.pinned_message.message_id;
-                        break;
-                    }
-                    // أيضاً التحقق من message العادي
-                    if (update.message && update.message.pinned_message) {
-                        pinnedMessageId = update.message.pinned_message.message_id;
-                        break;
-                    }
-                }
-            }
-            
-            // إذا لم نجد الرسالة المثبتة في التحديثات، نحاول استخدام طريقة بديلة
-            if (!pinnedMessageId) {
-                showNotification('🔍 محاولة البحث المباشر عن الرسالة المثبتة...', 'info');
-                
-                // محاولة جلب آخر 50 رسالة والبحث عن ملف PDF
-                const messagesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`);
-                const messagesData = await messagesRes.json();
-                
-                if (messagesData.ok && messagesData.result) {
-                    // البحث عن أحدث ملف PDF
-                    for (let i = messagesData.result.length - 1; i >= 0; i--) {
-                        const msg = messagesData.result[i];
-                        const post = msg.channel_post || msg.message;
-                        if (post && post.document && post.document.mime_type === 'application/pdf') {
-                            pinnedMessageId = post.message_id;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (!pinnedMessageId) {
-                showNotification('⚠️ لم يتم العثور على ملف PDF مثبت في القناة', 'error');
+            // التحقق من وجود رسالة مثبتة
+            if (!chat.pinned_message) {
+                showNotification('⚠️ لا توجد رسالة مثبتة في هذه القناة', 'error');
                 return;
             }
             
-            showNotification(`📄 تم العثور على ملف PDF في الرسالة ${pinnedMessageId}، جاري التحميل...`, 'info');
+            const pinnedMsg = chat.pinned_message;
+            showNotification(`📌 تم العثور على رسالة مثبتة (ID: ${pinnedMsg.message_id})`, 'success');
             
-            // الخطوة 3: جلب محتوى الرسالة المثبتة
-            const forwardRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/forwardMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM.channelId,
-                    from_chat_id: TELEGRAM.channelId,
-                    message_id: pinnedMessageId
-                })
-            });
-            
-            // بدلاً من ذلك، نحاول جلب التحديثات مرة أخرى للحصول على file_id
-            const finalUpdatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
-            const finalUpdates = await finalUpdatesRes.json();
-            
-            let pdfFileId = null;
-            if (finalUpdates.ok && finalUpdates.result) {
-                for (const update of finalUpdates.result) {
-                    const post = update.channel_post || update.message;
-                    if (post && post.message_id === pinnedMessageId && post.document) {
-                        pdfFileId = post.document.file_id;
-                        break;
-                    }
-                    // البحث عن أي ملف PDF في الرسائل الأخيرة
-                    if (post && post.document && post.document.mime_type === 'application/pdf') {
-                        pdfFileId = post.document.file_id;
-                        break;
-                    }
-                }
-            }
-            
-            if (!pdfFileId) {
-                showNotification('❌ لم يتم العثور على ملف PDF في الرسالة المثبتة', 'error');
+            // الخطوة 2: التحقق من أن الرسالة تحتوي على ملف PDF
+            if (!pinnedMsg.document || pinnedMsg.document.mime_type !== 'application/pdf') {
+                showNotification('❌ الرسالة المثبتة لا تحتوي على ملف PDF', 'error');
                 return;
             }
             
-            // تحميل الملف
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pdfFileId}`);
-            const fileData = await fileRes.json();
+            const fileId = pinnedMsg.document.file_id;
+            const fileName = pinnedMsg.document.file_name || 'document.pdf';
+            showNotification(`📄 تم العثور على ملف PDF: ${fileName}`, 'success');
+            
+            // الخطوة 3: الحصول على رابط الملف
+            const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileResponse.json();
             
             if (!fileData.ok) {
                 throw new Error('فشل الحصول على رابط الملف');
             }
             
             const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+            currentPdfUrl = pdfUrl;
+            localStorage.setItem(STORAGE_KEYS.PDF_URL, pdfUrl);
+            
+            // الخطوة 4: عرض الملف في معاينة PDF
+            displayPDFPreview(pdfUrl);
+            
+            // الخطوة 5: تحميل وتحليل ملف PDF لاستخراج البيانات
+            showNotification('📥 جاري تحميل وتحليل ملف PDF...', 'info');
             const pdfResponse = await fetch(pdfUrl);
             const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-            
-            showNotification('📄 جاري تحليل ملف PDF...', 'info');
             await parsePDFAndExtractData(pdfArrayBuffer);
             
         } catch (error) {
             console.error('خطأ في جلب PDF:', error);
-            showNotification('❌ فشل جلب الملف: ' + error.message, 'error');
+            showNotification(`❌ فشل جلب الملف: ${error.message}`, 'error');
+        }
+    }
+    
+    // عرض معاينة PDF
+    function displayPDFPreview(pdfUrl) {
+        const container = document.getElementById('pdfPreviewContainer');
+        if (container) {
+            container.innerHTML = `
+                <iframe src="${pdfUrl}" style="width:100%; height:600px; border:none;"></iframe>
+                <div style="padding:10px; text-align:center; background:rgba(0,0,0,0.5);">
+                    <a href="${pdfUrl}" target="_blank" class="btn btn-gold" style="display:inline-block; margin:5px;">
+                        <i class="fas fa-download"></i> تحميل الملف
+                    </a>
+                    <a href="${pdfUrl}" target="_blank" class="btn btn-outline" style="display:inline-block; margin:5px;">
+                        <i class="fas fa-external-link-alt"></i> فتح في نافذة جديدة
+                    </a>
+                </div>
+            `;
         }
     }
 
@@ -383,7 +365,7 @@
             fullText += pageText + '\n';
         }
         
-        console.log('نص PDF:', fullText);
+        console.log('نص PDF المستخرج:', fullText);
         
         const extractedData = [];
         const lines = fullText.split('\n');
@@ -392,12 +374,8 @@
         for (const line of lines) {
             // البحث عن اسم الولاية بصيغ مختلفة
             let stateMatch = line.match(/📍\s*ولاية\s+(.+?)\s*\(([A-Z]{3})\)/);
-            if (!stateMatch) {
-                stateMatch = line.match(/ولاية\s+(.+?)\s*\(([A-Z]{3})\)/);
-            }
-            if (!stateMatch) {
-                stateMatch = line.match(/\(([A-Z]{3})\)\s*(.+)/);
-            }
+            if (!stateMatch) stateMatch = line.match(/ولاية\s+(.+?)\s*\(([A-Z]{3})\)/);
+            if (!stateMatch) stateMatch = line.match(/\(([A-Z]{3})\)\s*(.+)/);
             
             if (stateMatch && stateMatch[2]) {
                 const stateCode = stateMatch[2].toUpperCase();
@@ -412,12 +390,11 @@
             // البحث عن أسماء الموزعين
             if (currentState && (line.includes('🚚') || line.includes('📦') || line.includes('🔄') || line.match(/[A-Za-z\u0600-\u06FF]{3,}/))) {
                 let companyName = line.replace(/[🚚📦🔄]/g, '').trim();
-                if (companyName.length > 2 && !companyName.includes('العدد') && !companyName.includes('ولاية')) {
+                if (companyName.length > 2 && !companyName.includes('العدد') && !companyName.includes('ولاية') && !companyName.includes('تابع')) {
                     let serviceType = 'distributor';
                     if (line.includes('🚚')) serviceType = 'delivery';
                     else if (line.includes('🔄')) serviceType = 'both';
                     
-                    // استخراج رقم الهاتف إذا وجد
                     let phoneMatch = line.match(/[\d\s\-]{8,}/);
                     let phone = phoneMatch ? phoneMatch[0].trim() : 'غير متوفر';
                     
@@ -471,13 +448,12 @@
         if (searchTerm) filtered = filtered.filter(d => d.companyName.toLowerCase().includes(searchTerm));
         
         document.getElementById('totalImported').innerText = filtered.length;
-        const verified = filtered.filter(d => d.signature).length;
-        document.getElementById('verifiedCount').innerText = verified;
-        document.getElementById('unverifiedCount').innerText = filtered.length - verified;
+        document.getElementById('verifiedCount').innerText = filtered.length;
+        document.getElementById('unverifiedCount').innerText = 0;
         
         const tbody = document.getElementById('importedTableBody');
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">📭 لا توجد بيانات مطابقة</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">📭 لا توجد بيانات مطابقة</td</tr>';
             return;
         }
         
@@ -491,7 +467,7 @@
                 <td><span class="state-code">${d.stateCode}</span> ${d.stateName}</td>
                 <td class="signature-badge">${d.signature?.signature?.substring(0, 16)}...</td>
                 <td><span class="verified-badge"><i class="fas fa-check-circle"></i> موثقة</span></td>
-            </tr>
+            </table>
         `).join('');
     }
 
@@ -511,9 +487,10 @@
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(tabName).classList.add('active');
-        event.target.classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
         if (tabName === 'importedData') { loadStateFilter(); displayImportedData(); }
         if (tabName === 'overview') updateStats();
+        if (tabName === 'pdfViewer' && currentPdfUrl) displayPDFPreview(currentPdfUrl);
     }
 
     function openDeliveryModal() { document.getElementById('deliveryModal').style.display = 'flex'; }
@@ -529,10 +506,11 @@
     window.onload = function() {
         updateStats();
         if (importedDistributors.length > 0) { loadStateFilter(); displayImportedData(); }
+        if (currentPdfUrl) displayPDFPreview(currentPdfUrl);
     };
 
     Object.assign(window, {
-        showNotification, fetchPinnedPDFFromTelegram, displayImportedData, filterImportedData,
+        showNotification, fetchPinnedPDF, displayImportedData, filterImportedData,
         switchTab, openDeliveryModal, closeDeliveryModal, openDistributorModal, closeDistributorModal,
         submitDelivery, submitDistributor, trackDelivery, sendDistributorsPDFToTelegram, goBack, updateStats
     });
