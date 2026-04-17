@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -231,7 +229,7 @@
 
     <!-- قسم جلب الملفات -->
     <div class="card">
-        <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-link"></i> جلب ملف من رابط التليجرام</h2>
+        <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-telegram"></i> جلب البيانات من التليجرام</h2>
         
         <div class="step-box">
             <h4><i class="fas fa-info-circle"></i> منهج العمل:</h4>
@@ -243,6 +241,7 @@
         <div class="url-input-group">
             <input type="text" id="fileUrl" placeholder="مثال: https://t.me/c/3822964890/3713" dir="ltr">
             <button class="btn btn-info" onclick="fetchFromUrl()"><i class="fas fa-download"></i> جلب الملف</button>
+            <button class="btn btn-telegram" onclick="fetchDistributorsFromChannel()"><i class="fab fa-telegram"></i> جلب من القناة</button>
         </div>
         <div id="fetchStatus" class="status-text"></div>
     </div>
@@ -497,6 +496,127 @@
         }
     }
 
+    // ==================== جلب البيانات من القناة ====================
+    async function fetchDistributorsFromChannel() {
+        const BOT_TOKEN = '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA';
+        const CHANNEL_ID = '-1003822964890'; // يجب أن يكون معرف القناة هنا
+        const KEYWORD = 'الموزعين'; // الكلمة المفتاحية للبحث عن الرسالة
+
+        const statusDiv = document.getElementById('fetchStatus');
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري جلب البيانات من القناة...';
+        showNotification('📥 جاري جلب البيانات...', 'info');
+
+        try {
+            // جلب آخر الرسائل من القناة
+            const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?chat_id=${CHANNEL_ID}`);
+            const data = await response.json();
+
+            if (data.ok && data.result.length > 0) {
+                let foundMessageContent = null;
+                // البحث عن الرسالة التي تحتوي على الكلمة المفتاحية
+                for (let i = data.result.length - 1; i >= 0; i--) { // البحث من الأحدث للأقدم
+                    const message = data.result[i].channel_post || data.result[i].message;
+                    if (message && message.text && message.text.startsWith(KEYWORD)) {
+                        foundMessageContent = message.text;
+                        break;
+                    }
+                }
+
+                if (foundMessageContent) {
+                    // تحليل المحتوى
+                    const parsed = parseTxtContent(foundMessageContent);
+
+                    if (parsed.length > 0) {
+                        distributors = [...distributors, ...parsed];
+                        displayTable();
+                        statusDiv.innerHTML = `✅ تم استيراد ${parsed.length} موزع من القناة بنجاح`;
+                        showNotification(`✅ تم استيراد ${parsed.length} موزع`, 'success');
+                    } else {
+                        statusDiv.innerHTML = '⚠️ لم يتم العثور على بيانات صالحة في الرسالة - تأكد من التنسيق';
+                        showNotification('⚠️ لم يتم العثور على بيانات صالحة', 'error');
+                    }
+                } else {
+                    statusDiv.innerHTML = `⚠️ لم يتم العثور على رسالة تبدأ بـ "${KEYWORD}" في القناة`;
+                    showNotification(`⚠️ لم يتم العثور على رسالة بـ "${KEYWORD}"`, 'error');
+                }
+            } else {
+                statusDiv.innerHTML = '❌ فشل جلب التحديثات من القناة أو لا توجد رسائل';
+                showNotification('❌ فشل جلب التحديثات', 'error');
+            }
+        } catch (err) {
+            statusDiv.innerHTML = `❌ فشل: ${err.message}`;
+            showNotification(`❌ خطأ في جلب البيانات من القناة`, 'error');
+        }
+    }
+
+    // ==================== تحليل محتوى TXT ====================
+    function parseTxtContent(content) {
+        const url = document.getElementById('fileUrl').value.trim();
+        if (!url) {
+            showNotification('⚠️ الرجاء إدخال الرابط', 'error');
+            return;
+        }
+        
+        const statusDiv = document.getElementById('fetchStatus');
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري جلب الملف...';
+        showNotification('📥 جاري التحميل...', 'info');
+        
+        try {
+            // استخدام خدمة CORS proxy
+            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+            const response = await fetch(proxyUrl + url);
+            const html = await response.text();
+            
+            // استخراج رابط التحميل المباشر من HTML
+            // البحث عن رابط التنزيل في الصفحة
+            let downloadUrl = null;
+            
+            // محاولة استخراج الرابط من علامة meta أو link
+            const match = html.match(/href="([^"]+tg:\/\/[^"]+)/);
+            if (match) {
+                downloadUrl = match[1];
+            }
+            
+            // محاولة أخرى: البحث عن رابط الملف المباشر
+            const fileMatch = html.match(/https:\/\/[^\s"']+\.txt/);
+            if (fileMatch) {
+                downloadUrl = fileMatch[0];
+            }
+            
+            // محاولة استخراج النص من الصفحة
+            let textContent = '';
+            
+            // البحث عن محتوى الملف في الصفحة
+            const preMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+            if (preMatch) {
+                textContent = preMatch[1];
+            } else {
+                // إزالة علامات HTML واستخراج النص
+                textContent = html.replace(/<[^>]*>/g, ' ');
+            }
+            
+            // تنظيف النص
+            textContent = textContent.replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/g, ' ');
+            
+            // تحليل المحتوى
+            const parsed = parseTxtContent(textContent);
+            
+            if (parsed.length > 0) {
+                distributors = [...distributors, ...parsed];
+                displayTable();
+                statusDiv.innerHTML = `✅ تم استيراد ${parsed.length} موزع بنجاح`;
+                showNotification(`✅ تم استيراد ${parsed.length} موزع`, 'success');
+            } else {
+                statusDiv.innerHTML = '⚠️ لم يتم العثور على بيانات - تأكد من أن الملف يحتوي على جدول بالصيغة الصحيحة';
+                showNotification('⚠️ لم يتم العثور على بيانات صالحة', 'error');
+            }
+            
+        } catch(err) {
+            statusDiv.innerHTML = `❌ فشل: ${err.message}`;
+            showNotification(`❌ فشل الجلب`, 'error');
+        }
+    }
+
     // ==================== تحليل محتوى TXT ====================
     function parseTxtContent(content) {
         const lines = content.split('\n');
@@ -504,7 +624,10 @@
         
         for (const line of lines) {
             // تنسيق الجدول
-            if (line.includes('│')) {
+            // محاولة تحليل الرسائل التي تبدأ بـ "الموزعين" ثم تتبعها البيانات
+            if (line.startsWith("الموزعين")) {
+                continue; // تخطي سطر الكلمة المفتاحية
+            } else if (line.includes("│")) {
                 const parts = line.split('│').filter(p => p.trim() !== '');
                 if (parts.length >= 6) {
                     const company = parts[1]?.trim();
