@@ -199,12 +199,6 @@
             gap: 10px;
             flex-wrap: wrap;
         }
-        .status-badge {
-            background: rgba(255,215,0,0.2);
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-        }
         .modal {
             display: none;
             position: fixed;
@@ -259,6 +253,14 @@
             margin-bottom: 15px;
             font-size: 13px;
         }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        .test-success { background: rgba(40,167,69,0.2); color: #28a745; }
+        .test-error { background: rgba(220,53,69,0.2); color: #dc3545; }
     </style>
 </head>
 <body>
@@ -355,7 +357,6 @@
     const TELEGRAM = {
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
         channelId: '-1003822964890',
-        channelUsername: '@Nardo_Pro', // يمكنك تغيير هذا
         apiUrl: 'https://api.telegram.org/bot'
     };
 
@@ -531,52 +532,53 @@
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== جلب جميع ملفات TXT من القناة (الطريقة الصحيحة) ====================
+    // ==================== جلب جميع ملفات TXT من القناة ====================
     async function fetchAllTxtFromChannel() {
         const section = document.getElementById('channelFilesSection');
         const container = document.getElementById('channelFilesList');
         
         section.style.display = 'block';
-        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة...</p><p style="font-size: 12px; margin-top: 10px;">البوت مشرف على القناة ✅</p></div>';
+        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة...</p><p style="font-size: 12px; margin-top: 10px;">جاري اختبار اتصال البوت...</p></div>';
         
         try {
-            // أولاً: اختبار اتصال البوت بالقناة
+            // الخطوة 1: اختبار اتصال البوت
+            const botTest = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMe`);
+            const botInfo = await botTest.json();
+            
+            if (!botInfo.ok) throw new Error('البوت غير صالح');
+            
+            // الخطوة 2: جلب معلومات القناة
             const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
             const chatData = await chatRes.json();
             
             if (!chatData.ok) {
-                throw new Error(`البوت ليس لديه صلاحية الوصول للقناة: ${chatData.description}`);
+                throw new Error(`البوت ليس لديه صلاحية: ${chatData.description}`);
             }
             
-            // جلب آخر 100 رسالة من القناة باستخدام getUpdates مع تحديد chat_id
-            // ملاحظة: getUpdates لا يدخل chat_id مباشرة، لذلك نستخدم طريقة مختلفة
-            
-            // الطريقة الصحيحة: استخدام forwardMessage لاختبار إذا كان البوت يرى الرسائل
-            // أو استخدام رابط القناة المباشر إذا كانت عامة
-            
-            // بما أن البوت مشرف، يمكننا استخدام getChatHistory من خلال webhook أو طريقة أخرى
-            // سنستخدم مكتبة بديلة: جلب من خلال رابط القناة إذا كانت عامة
-            
-            // جلب آخر الرسائل من القناة عبر API
-            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100&timeout=1`);
+            // الخطوة 3: جلب آخر الرسائل من القناة باستخدام getUpdates
+            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100`);
             const updatesData = await updatesRes.json();
             
             const txtFiles = [];
             
             if (updatesData.ok && updatesData.result) {
                 for (const update of updatesData.result) {
-                    // التحقق من الرسائل القادمة من القناة
-                    const message = update.channel_post || update.message;
-                    if (message && message.chat && message.chat.id.toString() === TELEGRAM.channelId) {
-                        if (message.document) {
-                            const fileName = message.document.file_name || '';
-                            if (fileName.toLowerCase().endsWith('.txt')) {
+                    // البحث في channel_post و message
+                    const message = update.channel_post || update.message || update.edited_channel_post;
+                    
+                    if (message && message.document) {
+                        const fileName = message.document.file_name || '';
+                        if (fileName.toLowerCase().endsWith('.txt')) {
+                            // التحقق من أن الرسالة من القناة الصحيحة
+                            const chatId = message.chat?.id?.toString();
+                            if (chatId === TELEGRAM.channelId || chatId === TELEGRAM.channelId.toString()) {
                                 txtFiles.push({
                                     file_id: message.document.file_id,
                                     file_name: fileName,
                                     date: new Date(message.date * 1000).toLocaleString('ar-SA'),
                                     message_id: message.message_id,
-                                    file_size: message.document.file_size
+                                    file_size: message.document.file_size,
+                                    file_unique_id: message.document.file_unique_id
                                 });
                             }
                         }
@@ -584,17 +586,14 @@
                 }
             }
             
-            // إذا لم يتم العثور على ملفات، جرب طريقة بديلة باستخدام معرف القناة
+            // إذا لم يتم العثور على ملفات، جرب طريقة بديلة
             if (txtFiles.length === 0) {
-                // جلب معلومات آخر رسالة في القناة
-                const sendMessageRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage?chat_id=${TELEGRAM.channelId}&text=test&disable_notification=true`, {
-                    method: 'POST'
-                });
-                const sendResult = await sendMessageRes.json();
-                
-                if (sendResult.ok) {
-                    // حذف رسالة الاختبار
-                    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/deleteMessage?chat_id=${TELEGRAM.channelId}&message_id=${sendResult.result.message_id}`);
+                // محاولة جلب آخر رسالة من القناة بشكل مباشر
+                try {
+                    const lastMessageRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/forwardMessage?chat_id=${TELEGRAM.channelId}&from_chat_id=${TELEGRAM.channelId}&message_id=1&disable_notification=true`);
+                    // هذه مجرد محاولة لاختبار الوصول
+                } catch(e) {
+                    // تجاهل الخطأ
                 }
             }
             
@@ -603,9 +602,14 @@
                     <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
                         <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px;"></i>
                         <p>📂 لا توجد ملفات TXT في القناة حالياً</p>
-                        <p style="font-size: 12px; color: #aaa; margin-top: 10px;">يمكنك إرسال ملف TXT إلى القناة ثم الضغط على تحديث</p>
+                        <p style="font-size: 12px; color: #aaa; margin-top: 10px;">
+                            ✅ البوت متصل بنجاح<br>
+                            📌 تأكد من إرسال ملفات TXT إلى القناة<br>
+                            🔄 يمكنك إرسال ملف الآن ثم الضغط على تحديث
+                        </p>
                     </div>
                 `;
+                showNotification('ℹ️ لا توجد ملفات TXT في القناة', 'info');
                 return;
             }
             
@@ -638,7 +642,13 @@
                 <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ff9800; margin-bottom: 15px;"></i>
                     <p style="color: #ff6b6b;">❌ خطأ: ${err.message}</p>
-                    <p style="font-size: 12px; color: #aaa; margin-top: 10px;">تأكد من أن البوت مشرف على القناة وأنه تم إرسال ملفات TXT</p>
+                    <p style="font-size: 12px; color: #aaa; margin-top: 10px;">
+                        🔧 الحلول المقترحة:<br>
+                        1. تأكد من أن البوت مشرف على القناة<br>
+                        2. تأكد من صحة معرف القناة: ${TELEGRAM.channelId}<br>
+                        3. أعد إضافة البوت إلى القناة كمشرف<br>
+                        4. تأكد من وجود ملفات TXT في القناة
+                    </p>
                 </div>
             `;
             showNotification(`❌ فشل جلب الملفات: ${err.message}`, 'error');
@@ -847,11 +857,6 @@
     
     function openAddDistributor() { document.getElementById('addModal').style.display = 'flex'; }
     function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
-    
-    // تحميل الملفات تلقائياً عند فتح الصفحة
-    setTimeout(() => {
-        fetchAllTxtFromChannel();
-    }, 1000);
     
     displayTable();
 </script>
