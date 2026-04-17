@@ -41,7 +41,6 @@
             gap: 8px;
         }
         .btn-gold { background: #ffd700; color: #000; }
-        .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
         .btn-telegram { background: #0088cc; color: white; }
         .btn-txt { background: #6c757d; color: white; }
         .btn-info { background: #17a2b8; color: white; }
@@ -139,91 +138,37 @@
             background: #ffd700;
             color: #000;
         }
-        .files-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 15px;
+        .files-list {
             margin-top: 20px;
-            max-height: 400px;
-            overflow-y: auto;
         }
-        .file-card {
+        .file-item {
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,215,0,0.2);
             border-radius: 12px;
             padding: 15px;
-            transition: all 0.3s;
-        }
-        .file-card:hover {
-            background: rgba(255,215,0,0.1);
-            transform: translateY(-3px);
-        }
-        .file-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #ffd700;
-            margin-bottom: 8px;
-            word-break: break-all;
-        }
-        .file-date {
-            font-size: 12px;
-            color: #aaa;
             margin-bottom: 10px;
-        }
-        .file-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .file-actions button {
-            flex: 1;
-            padding: 8px;
-            font-size: 12px;
-        }
-        .loading-spinner {
-            text-align: center;
-            padding: 40px;
-        }
-        .loading-spinner i {
-            font-size: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .section-title {
-            color: #ffd700;
-            margin-bottom: 20px;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .channel-info {
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            font-size: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
         }
-        .live-badge {
+        .file-item:hover {
+            background: rgba(255,215,0,0.1);
+        }
+        .file-name {
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .status-badge {
             background: #28a745;
             padding: 5px 10px;
             border-radius: 20px;
-            font-size: 11px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
+            font-size: 12px;
         }
         .modal {
             display: none;
@@ -243,12 +188,10 @@
             border: 2px solid #ffd700;
             border-radius: 20px;
             padding: 30px;
-            max-width: 600px;
+            max-width: 500px;
             width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
         }
-        .modal-content input, .modal-content textarea {
+        .modal-content input, .modal-content select {
             width: 100%;
             padding: 12px;
             margin: 15px 0;
@@ -258,12 +201,6 @@
             color: white;
             font-family: 'Cairo', sans-serif;
         }
-        .modal-content textarea {
-            min-height: 300px;
-            font-family: monospace;
-            direction: ltr;
-            text-align: left;
-        }
         .close-btn {
             float: left;
             font-size: 28px;
@@ -272,19 +209,28 @@
             background: none;
             border: none;
         }
+        .log-area {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-family: monospace;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-file-alt"></i> ناردو برو | جلب من القناة</h1>
+        <h1><i class="fas fa-truck"></i> ناردو برو | جلب من القناة</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
+            <button class="btn btn-gold" onclick="openAddModal()"><i class="fas fa-plus"></i> إضافة موزع</button>
             <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-download"></i> تصدير TXT</button>
-            <button class="btn btn-telegram" onclick="sendTxtToTelegram()"><i class="fab fa-telegram"></i> إرسال TXT للقناة</button>
-            <button class="btn btn-info" onclick="startFetching()"><i class="fas fa-play"></i> بدء جلب الملفات</button>
-            <button class="btn btn-success" onclick="openImportTxtModal()"><i class="fas fa-upload"></i> استيراد TXT</button>
-            <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> مسح الكل</button>
+            <button class="btn btn-telegram" onclick="sendToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button>
+            <button class="btn btn-info" onclick="startFetching()"><i class="fas fa-play"></i> بدء الجلب</button>
+            <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
     </div>
 
@@ -292,29 +238,15 @@
 
     <!-- حالة الاتصال -->
     <div class="card">
-        <div class="section-title">
-            <i class="fab fa-telegram"></i>
-            <span>📡 بوت التليجرام</span>
-            <span id="liveIndicator" class="live-badge">🟢 يعمل</span>
-        </div>
-        <div id="channelInfo" class="channel-info">
-            <span><i class="fas fa-spinner fa-spin"></i> جاري التحقق...</span>
-        </div>
+        <h3><i class="fab fa-telegram"></i> حالة البوت <span id="botStatus" class="status-badge">جاري الاتصال...</span></h3>
+        <div id="connectionInfo" class="log-area"></div>
     </div>
 
     <!-- الملفات المستلمة -->
     <div class="card">
-        <div class="section-title">
-            <i class="fas fa-folder-open"></i>
-            <span>📁 الملفات المستلمة من القناة</span>
-            <button class="btn btn-info" onclick="fetchNewFiles()" style="padding: 5px 15px;"><i class="fas fa-sync-alt"></i> فحص الآن</button>
-        </div>
-        <div id="filesList" class="files-grid">
-            <div class="loading-spinner">
-                <i class="fas fa-spinner"></i>
-                <p>جاري الاستماع للملفات...</p>
-                <p style="font-size: 12px;">عند إرسال ملف TXT إلى القناة، سيظهر هنا تلقائياً</p>
-            </div>
+        <h3><i class="fas fa-file-alt"></i> الملفات المستلمة من القناة <span id="filesCount" class="status-badge">0</span></h3>
+        <div id="filesList" class="files-list">
+            <p style="text-align:center;color:#aaa;">📂 في انتظار استلام ملفات...</p>
         </div>
     </div>
 
@@ -331,9 +263,17 @@
             <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
         </div>
         <div style="overflow-x: auto;">
-            <table>
+            <table id="mainTable">
                 <thead>
-                    <tr><th>#</th><th>الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th><th>حذف</th></tr>
+                    <tr>
+                        <th>#</th>
+                        <th>الشركة</th>
+                        <th>المسؤول</th>
+                        <th>الهاتف</th>
+                        <th>النوع</th>
+                        <th>الولاية</th>
+                        <th></th>
+                    </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
@@ -341,219 +281,273 @@
     </div>
 </div>
 
-<!-- نافذة إضافة موزع -->
+<!-- نافذة الإضافة -->
 <div id="addModal" class="modal">
     <div class="modal-content">
         <button class="close-btn" onclick="closeAddModal()">&times;</button>
-        <h2 style="color: #ffd700;">إضافة موزع</h2>
+        <h2 style="color:#ffd700;">إضافة موزع</h2>
         <input type="text" id="compName" placeholder="اسم الشركة">
         <input type="text" id="mgrName" placeholder="المسؤول">
         <input type="tel" id="phone" placeholder="الهاتف">
-        <select id="type"><option value="delivery">توصيل</option><option value="distributor">موزع</option><option value="both">كليهما</option></select>
+        <select id="type">
+            <option value="delivery">توصيل</option>
+            <option value="distributor">موزع</option>
+            <option value="both">كليهما</option>
+        </select>
         <input type="text" id="state" placeholder="الولاية">
         <button class="btn btn-gold" onclick="addDistributor()" style="width:100%">إضافة</button>
     </div>
 </div>
 
-<!-- نافذة استيراد TXT -->
-<div id="importTxtModal" class="modal">
-    <div class="modal-content">
-        <button class="close-btn" onclick="closeImportTxtModal()">&times;</button>
-        <h2 style="color:#ffd700;">استيراد TXT</h2>
-        <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)">
-        <textarea id="txtRawContent" rows="10" placeholder="الصق محتوى TXT..."></textarea>
-        <button class="btn btn-info" onclick="previewTxtData()">معاينة</button>
-        <div id="importPreviewArea" style="background:rgba(0,0,0,0.3);padding:10px;border-radius:10px;margin-top:10px;display:none;"></div>
-        <button class="btn btn-success" onclick="importTxtToTable()" style="width:100%;margin-top:10px;">استيراد</button>
-    </div>
-</div>
-
 <script>
-    const TELEGRAM = {
-        botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
-        channelId: '-1003822964890',
-        apiUrl: 'https://api.telegram.org/bot'
-    };
+    // إعدادات البوت
+    const BOT_TOKEN = '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA';
+    const CHANNEL_ID = '-1003822964890';
+    const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
+    // البيانات
     let distributors = [
-        { id: 1, company: "شركة البراق", manager: "أحمد محمد", phone: "0555123456", type: "delivery", state: "الجزائر", status: "approved" }
+        { id: 1, company: "شركة البراق", manager: "أحمد محمد", phone: "0555123456", type: "delivery", state: "الجزائر" }
     ];
-    
-    let currentFilter = 'all';
-    let currentSearch = '';
     let receivedFiles = [];
     let lastUpdateId = 0;
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // سجل العمليات
+    function addLog(msg, type = 'info') {
+        const logDiv = document.getElementById('connectionInfo');
+        const time = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `<div style="color: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'}">[${time}] ${msg}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
 
     // عرض الجدول
     function displayTable() {
-        let filtered = distributors.filter(d => d.status === 'approved');
+        let filtered = distributors;
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
         if (currentSearch) filtered = filtered.filter(d => d.company.includes(currentSearch) || d.state.includes(currentSearch));
         
         const tbody = document.getElementById('tableBody');
-        if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات</td></tr>'; return; }
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد بيانات</td></tr>';
+            return;
+        }
         
         tbody.innerHTML = filtered.map((d, i) => `
-            <tr><td>${i+1}</td><td>${d.company}</td><td>${d.manager}</td><td>${d.phone}</td>
-            <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
-            <td>${d.state}</td>
-            <td><button class="btn btn-danger" style="padding:5px 10px;" onclick="deleteDistributor(${d.id})">🗑️ حذف</button></td></tr>
+            <tr>
+                <td>${i+1}</td>
+                <td>${d.company}</td>
+                <td>${d.manager}</td>
+                <td>${d.phone}</td>
+                <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
+                <td>${d.state}</td>
+                <td><button class="btn btn-danger" style="padding:5px 10px" onclick="deleteDistributor(${d.id})">🗑️</button></td>
+            </tr>
         `).join('');
-        updateStats();
-    }
-    
-    function updateStats() {
-        const approved = distributors.filter(d => d.status === 'approved');
+        
         document.getElementById('stats').innerHTML = `
-            <div class="stat-card"><div class="stat-number">${approved.length}</div><div>الموزعون</div></div>
-            <div class="stat-card"><div class="stat-number">${approved.filter(d => d.type === 'delivery' || d.type === 'both').length}</div><div>توصيل</div></div>
-            <div class="stat-card"><div class="stat-number">${approved.filter(d => d.type === 'distributor' || d.type === 'both').length}</div><div>موزعون</div></div>
+            <div class="stat-card"><div class="stat-number">${distributors.length}</div><div>الموزعون</div></div>
+            <div class="stat-card"><div class="stat-number">${distributors.filter(d => d.type === 'delivery' || d.type === 'both').length}</div><div>توصيل</div></div>
+            <div class="stat-card"><div class="stat-number">${distributors.filter(d => d.type === 'distributor' || d.type === 'both').length}</div><div>موزعون</div></div>
         `;
     }
-    
+
     function filterTable() { currentSearch = document.getElementById('searchInput').value; displayTable(); }
     function filterByType(type) { currentFilter = type; displayTable(); }
-    function deleteDistributor(id) { distributors = distributors.filter(d => d.id !== id); displayTable(); showNotification('✅ تم الحذف', 'success'); }
+    function deleteDistributor(id) { distributors = distributors.filter(d => d.id !== id); displayTable(); addLog(`✅ تم حذف موزع`, 'success'); }
     
     function addDistributor() {
-        const newDist = { id: Date.now(), company: document.getElementById('compName').value, manager: document.getElementById('mgrName').value, phone: document.getElementById('phone').value, type: document.getElementById('type').value, state: document.getElementById('state').value, status: 'approved' };
-        if (newDist.company && newDist.phone) { distributors.push(newDist); displayTable(); closeAddModal(); showNotification('✅ تم الإضافة', 'success'); }
-        else showNotification('⚠️ املأ الحقول', 'error');
+        const newDist = {
+            id: Date.now(),
+            company: document.getElementById('compName').value,
+            manager: document.getElementById('mgrName').value,
+            phone: document.getElementById('phone').value,
+            type: document.getElementById('type').value,
+            state: document.getElementById('state').value
+        };
+        if (newDist.company && newDist.phone) {
+            distributors.push(newDist);
+            displayTable();
+            closeAddModal();
+            addLog(`✅ تم إضافة ${newDist.company}`, 'success');
+        } else {
+            addLog(`⚠️ الرجاء ملء الحقول`, 'error');
+        }
     }
-    
-    function clearAllData() { if (confirm('مسح الكل؟')) { distributors = []; displayTable(); showNotification('🗑️ تم المسح', 'info'); } }
-    
+
+    function clearAll() {
+        if (confirm('مسح جميع البيانات؟')) {
+            distributors = [];
+            displayTable();
+            addLog(`🗑️ تم مسح جميع البيانات`, 'info');
+        }
+    }
+
     // تصدير TXT
-    function generateTxtContent() {
-        const filtered = distributors.filter(d => d.status === 'approved');
+    function exportToTxt() {
         let content = `╔════════════════════════════════════════════════╗\n`;
         content += `║           ناردو برو - قائمة الموزعين           ║\n`;
         content += `╠════════════════════════════════════════════════╣\n`;
         content += `║ 📅 ${new Date().toLocaleDateString('ar-SA')}\n`;
-        content += `║ 📊 إجمالي: ${filtered.length}\n`;
+        content += `║ 📊 العدد: ${distributors.length}\n`;
         content += `╚════════════════════════════════════════════════╝\n\n`;
-        content += `┌──┬──────────────────┬──────────────────┬──────────────┬────────────┬──────────────┐\n`;
-        content += `│# │ الشركة           │ المسؤول          │ الهاتف       │ النوع      │ الولاية      │\n`;
-        content += `├──┼──────────────────┼──────────────────┼──────────────┼────────────┼──────────────┤\n`;
-        filtered.forEach((d, i) => {
-            content += `│${i+1} │${d.company.padEnd(18)}│${d.manager.padEnd(18)}│${d.phone.padEnd(14)}│${(d.type==='delivery'?'توصيل':'موزع').padEnd(12)}│${d.state.padEnd(14)}│\n`;
+        
+        distributors.forEach((d, i) => {
+            content += `${i+1}. ${d.company} | ${d.manager} | ${d.phone} | ${d.type} | ${d.state}\n`;
         });
-        content += `└──┴──────────────────┴──────────────────┴──────────────┴────────────┴──────────────┘\n`;
-        return content;
-    }
-    
-    function exportToTxt() {
-        const blob = new Blob([generateTxtContent()], { type: 'text/plain' });
+        
+        const blob = new Blob([content], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `nardo_${Date.now()}.txt`;
         link.click();
-        showNotification('✅ تم التصدير', 'success');
+        addLog(`📄 تم تصدير ${distributors.length} موزع`, 'success');
     }
-    
-    async function sendTxtToTelegram() {
-        showNotification('📤 جاري الإرسال...', 'info');
-        try {
-            const blob = new Blob([generateTxtContent()], { type: 'text/plain' });
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM.channelId);
-            formData.append('document', blob, `distributors_${Date.now()}.txt`);
-            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
-            const result = await res.json();
-            if(result.ok) showNotification('✅ تم الإرسال', 'success');
-            else throw new Error(result.description);
-        } catch(err) { showNotification(`❌ ${err.message}`, 'error'); }
-    }
-    
-    // جلب الملفات من القناة
-    async function startFetching() {
-        showNotification('📡 بدء جلب الملفات...', 'info');
-        document.getElementById('channelInfo').innerHTML = '<span>✅ البوت متصل - في انتظار الملفات</span><span>📁 سيظهر أي ملف TXT ترسله للقناة هنا</span>';
-        await checkChannelConnection();
-        fetchNewFiles();
-        setInterval(fetchNewFiles, 5000);
-    }
-    
-    async function checkChannelConnection() {
-        try {
-            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMe`);
-            const data = await res.json();
-            if(data.ok) document.getElementById('liveIndicator').innerHTML = `🟢 @${data.result.username}`;
-        } catch(e) { console.log(e); }
-    }
-    
-    async function fetchNewFiles() {
-        try {
-            const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${lastUpdateId}&timeout=10`;
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.ok && data.result) {
-                let newFiles = false;
-                for (const update of data.result) {
-                    lastUpdateId = update.update_id + 1;
-                    const message = update.channel_post || update.message;
-                    if (message && message.document && message.document.file_name && message.document.file_name.endsWith('.txt')) {
-                        await processFile(message);
-                        newFiles = true;
-                    }
-                }
-                if (newFiles) displayFilesList();
-            }
-        } catch(err) { console.log(err); }
-    }
-    
-    async function processFile(message) {
-        const fileName = message.document.file_name;
-        showNotification(`📥 تم اكتشاف ملف: ${fileName}`, 'info');
+
+    async function sendToTelegram() {
+        let content = `ناردو برو - ${new Date().toLocaleDateString('ar-SA')}\n`;
+        content += `═══════════════════════════\n`;
+        distributors.forEach((d, i) => {
+            content += `${i+1}. ${d.company} | ${d.phone} | ${d.state}\n`;
+        });
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const formData = new FormData();
+        formData.append('chat_id', CHANNEL_ID);
+        formData.append('document', blob, `distributors_${Date.now()}.txt`);
         
         try {
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${message.document.file_id}`);
+            const res = await fetch(`${API_URL}/sendDocument`, { method: 'POST', body: formData });
+            const result = await res.json();
+            if (result.ok) {
+                addLog(`✅ تم إرسال الملف إلى القناة`, 'success');
+            } else {
+                addLog(`❌ فشل الإرسال: ${result.description}`, 'error');
+            }
+        } catch(err) {
+            addLog(`❌ خطأ: ${err.message}`, 'error');
+        }
+    }
+
+    // جلب الملفات من القناة
+    async function startFetching() {
+        addLog(`🚀 بدء جلب الملفات من القناة...`, 'info');
+        document.getElementById('botStatus').innerHTML = '🟢 يعمل';
+        
+        // التحقق من البوت
+        try {
+            const res = await fetch(`${API_URL}/getMe`);
+            const data = await res.json();
+            if (data.ok) {
+                addLog(`✅ البوت متصل: @${data.result.username}`, 'success');
+            }
+        } catch(err) {
+            addLog(`❌ فشل الاتصال: ${err.message}`, 'error');
+        }
+        
+        // بدء الاستماع
+        listenForFiles();
+    }
+
+    async function listenForFiles() {
+        addLog(`👂 جاري الاستماع للملفات الجديدة...`, 'info');
+        
+        while (true) {
+            try {
+                const url = `${API_URL}/getUpdates?offset=${lastUpdateId}&timeout=25`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.ok && data.result) {
+                    for (const update of data.result) {
+                        lastUpdateId = update.update_id + 1;
+                        const message = update.channel_post || update.message;
+                        
+                        if (message && message.chat && message.chat.id.toString() === CHANNEL_ID) {
+                            if (message.document && message.document.file_name && message.document.file_name.endsWith('.txt')) {
+                                addLog(`📁 تم اكتشاف ملف: ${message.document.file_name}`, 'info');
+                                await downloadAndSaveFile(message);
+                            }
+                        }
+                    }
+                }
+                await new Promise(r => setTimeout(r, 1000));
+            } catch(err) {
+                addLog(`⚠️ خطأ في الاستماع: ${err.message}`, 'error');
+                await new Promise(r => setTimeout(r, 5000));
+            }
+        }
+    }
+
+    async function downloadAndSaveFile(message) {
+        const fileName = message.document.file_name;
+        const fileId = message.document.file_id;
+        
+        try {
+            const fileRes = await fetch(`${API_URL}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
+            
             if (fileData.ok) {
-                const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
                 const contentRes = await fetch(fileUrl);
                 const content = await contentRes.text();
                 
                 receivedFiles.unshift({
                     id: Date.now(),
-                    file_name: fileName,
+                    name: fileName,
                     content: content,
                     date: new Date().toLocaleString(),
                     size: message.document.file_size
                 });
-                showNotification(`✅ تم استلام ${fileName}`, 'success');
+                
+                displayFiles();
+                addLog(`✅ تم استلام وتخزين: ${fileName}`, 'success');
             }
-        } catch(err) { showNotification(`❌ خطأ: ${err.message}`, 'error'); }
+        } catch(err) {
+            addLog(`❌ فشل تحميل الملف: ${err.message}`, 'error');
+        }
     }
-    
-    function displayFilesList() {
+
+    function displayFiles() {
         const container = document.getElementById('filesList');
+        const countSpan = document.getElementById('filesCount');
+        countSpan.textContent = receivedFiles.length;
+        
         if (receivedFiles.length === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;"><i class="fas fa-inbox" style="font-size:48px"></i><p>لا توجد ملفات بعد</p><p>أرسل ملف TXT إلى القناة وسيظهر هنا</p></div>`;
+            container.innerHTML = '<p style="text-align:center;color:#aaa;">📂 في انتظار استلام ملفات...</p>';
             return;
         }
         
         container.innerHTML = receivedFiles.map((file, i) => `
-            <div class="file-card">
-                <div class="file-name"><i class="fas fa-file-alt"></i> ${file.file_name} <span style="background:#28a745;padding:2px 8px;border-radius:20px;font-size:10px;">من القناة</span></div>
-                <div class="file-date">📅 ${file.date} | 📦 ${(file.size/1024).toFixed(2)} KB</div>
+            <div class="file-item">
+                <div>
+                    <div class="file-name">📄 ${file.name}</div>
+                    <div style="font-size:11px;color:#aaa;">📅 ${file.date} | 📦 ${(file.size/1024).toFixed(2)} KB</div>
+                </div>
                 <div class="file-actions">
-                    <button class="btn btn-info" onclick="viewFile(${i})"><i class="fas fa-eye"></i> معاينة</button>
-                    <button class="btn btn-success" onclick="importFile(${i})"><i class="fas fa-download"></i> استيراد</button>
+                    <button class="btn btn-info" style="padding:5px 12px" onclick="viewFile(${i})">👁️ معاينة</button>
+                    <button class="btn btn-success" style="padding:5px 12px" onclick="importFile(${i})">📥 استيراد</button>
                 </div>
             </div>
         `).join('');
     }
-    
+
     function viewFile(index) {
         const file = receivedFiles[index];
         if (file) {
             const win = window.open();
-            win.document.write(`<html dir="ltr"><head><title>${file.file_name}</title><style>body{background:#1a1a2e;color:#fff;font-family:monospace;padding:20px;}pre{white-space:pre-wrap;background:#0003;padding:15px;border-radius:10px;}</style></head><body><h2>📄 ${file.file_name}</h2><pre>${escapeHtml(file.content)}</pre></body></html>`);
+            win.document.write(`
+                <html dir="ltr">
+                <head><title>${file.name}</title>
+                <style>body{background:#1a1a2e;color:#fff;font-family:monospace;padding:20px;}pre{white-space:pre-wrap;background:#0003;padding:15px;border-radius:10px;}</style>
+                </head>
+                <body><h2>📄 ${file.name}</h2><pre>${escapeHtml(file.content)}</pre></body>
+                </html>
+            `);
         }
     }
-    
+
     function importFile(index) {
         const file = receivedFiles[index];
         if (file && file.content) {
@@ -561,16 +555,20 @@
             if (parsed.length > 0) {
                 distributors = [...distributors, ...parsed];
                 displayTable();
-                showNotification(`✅ تم استيراد ${parsed.length} موزع`, 'success');
-            } else showNotification('⚠️ لم يتم العثور على بيانات', 'error');
+                addLog(`✅ تم استيراد ${parsed.length} موزع من ${file.name}`, 'success');
+            } else {
+                addLog(`⚠️ لم يتم العثور على بيانات صالحة في ${file.name}`, 'error');
+            }
         }
     }
-    
+
     function parseTxtToDistributors(content) {
         const lines = content.split('\n');
         const list = [];
+        
         for (const line of lines) {
-            if (line.includes('│') && !line.includes('┌') && !line.includes('├') && !line.includes('└')) {
+            // تنسيق الجدول
+            if (line.includes('│')) {
                 const parts = line.split('│').filter(p => p.trim());
                 if (parts.length >= 6) {
                     const company = parts[1]?.trim();
@@ -578,31 +576,59 @@
                     const phone = parts[3]?.trim();
                     let type = parts[4]?.trim();
                     const state = parts[5]?.trim();
-                    if (company && phone && !company.includes('الشركة')) {
+                    
+                    if (company && phone && !company.includes('الشركة') && !company.includes('─')) {
                         if (type.includes('توصيل')) type = 'delivery';
                         else if (type.includes('موزع')) type = 'distributor';
                         else type = 'delivery';
-                        list.push({ id: Date.now() + Math.random(), company, manager: manager || '', phone, type, state: state || '', status: 'approved' });
+                        
+                        list.push({
+                            id: Date.now() + Math.random(),
+                            company: company,
+                            manager: manager || '',
+                            phone: phone,
+                            type: type,
+                            state: state || ''
+                        });
+                    }
+                }
+            }
+            // تنسيق بسيط
+            else if (line.includes('|')) {
+                const parts = line.split('|').filter(p => p.trim());
+                if (parts.length >= 5) {
+                    const company = parts[1]?.trim();
+                    const phone = parts[3]?.trim();
+                    if (company && phone) {
+                        list.push({
+                            id: Date.now() + Math.random(),
+                            company: company,
+                            manager: parts[2]?.trim() || '',
+                            phone: phone,
+                            type: 'delivery',
+                            state: parts[4]?.trim() || ''
+                        });
                     }
                 }
             }
         }
+        
         return list;
     }
-    
-    function escapeHtml(text) { return text.replace(/[&<>]/g, function(m) { if(m === '&') return '&amp;'; if(m === '<') return '&lt;'; if(m === '>') return '&gt;'; return m; }); }
-    
-    // استيراد يدوي
-    function openImportTxtModal() { document.getElementById('importTxtModal').style.display = 'flex'; document.getElementById('txtRawContent').value = ''; document.getElementById('importPreviewArea').style.display = 'none'; }
-    function closeImportTxtModal() { document.getElementById('importTxtModal').style.display = 'none'; }
-    function handleTxtFileUpload(input) { if(input.files && input.files[0]) { const reader = new FileReader(); reader.onload = e => { document.getElementById('txtRawContent').value = e.target.result; previewTxtData(); }; reader.readAsText(input.files[0]); input.value = ''; } }
-    function previewTxtData() { const content = document.getElementById('txtRawContent').value; const parsed = parseTxtToDistributors(content); const preview = document.getElementById('importPreviewArea'); if(parsed.length) { preview.innerHTML = `<p style="color:#ffd700;">✅ ${parsed.length} موزع</p><ul>${parsed.slice(0,5).map(d=>`<li>${d.company} - ${d.phone}</li>`).join('')}</ul>`; preview.style.display='block'; } else { preview.innerHTML='<p style="color:#ff6b6b;">❌ لا توجد بيانات</p>'; preview.style.display='block'; } }
-    function importTxtToTable() { const content = document.getElementById('txtRawContent').value; const parsed = parseTxtToDistributors(content); if(parsed.length) { distributors = [...distributors, ...parsed]; displayTable(); closeImportTxtModal(); showNotification(`✅ تم استيراد ${parsed.length} موزع`, 'success'); } else showNotification('❌ لا توجد بيانات', 'error'); }
-    
-    function showNotification(msg, type) { const n = document.createElement('div'); n.className = `notification ${type}`; n.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i> ${msg}`; document.body.appendChild(n); setTimeout(() => n.remove(), 3000); }
-    function openAddDistributor() { document.getElementById('addModal').style.display = 'flex'; }
-    function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
-    
+
+    function escapeHtml(text) {
+        return text.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function openAddModal() { document.getElementById('addModal').classList.add('active'); }
+    function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+
+    // بدء التشغيل
     startFetching();
     displayTable();
 </script>
