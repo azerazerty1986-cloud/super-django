@@ -298,8 +298,11 @@
 <script>
     // ==================== البيانات الأساسية ====================
     let distributors = [
-        { id: 1, company: "شركة البراق", manager: "أحمد محمد", phone: "0555123456", type: "delivery", state: "الجزائر" },
-        { id: 2, company: "مؤسسة السريع", manager: "سعيد علي", phone: "0555234567", type: "distributor", state: "وهران" }
+        { id: 1, company: "شركة النور للتوزيع", manager: "أحمد محمد", phone: "0555112233", type: "distributor", state: "الجزائر" },
+        { id: 2, company: "مؤسسة السريع للتوصيل", manager: "سعيد علي", phone: "0555223344", type: "delivery", state: "وهران" },
+        { id: 3, company: "الوفاء لخدمات الشحن", manager: "فاطمة الزهراء", phone: "0555334455", type: "both", state: "قسنطينة" },
+        { id: 4, company: "المجد للتجارة", manager: "يوسف إبراهيم", phone: "0555445566", type: "distributor", state: "عنابة" },
+        { id: 5, company: "النجمة الذهبية", manager: "ليلى بن علي", phone: "0555556677", type: "delivery", state: "سطيف" }
     ];
     
     let currentFilter = 'all';
@@ -404,12 +407,16 @@
         
         showNotification('📤 جاري الإرسال...', 'info');
         
-        let content = `ناردو برو - ${new Date().toLocaleDateString('ar-SA')}\n`;
-        content += `═══════════════════════════\n`;
-        distributors.forEach((d, i) => {
-            content += `${i+1}. ${d.company} | ${d.phone} | ${d.state}\n`;
-        });
+        let content = `الموزعين\n`; // الكلمة المفتاحية
+        content += `┌──┬──────────────────┬──────────────────┬──────────────┬────────────┬──────────────┐\n`;
+        content += `│# │ اسم الشركة       │ المسؤول          │ الهاتف       │ النوع      │ الولاية      │\n`;
+        content += `├──┼──────────────────┼──────────────────┼──────────────┼────────────┼──────────────┤\n`;
         
+        distributors.forEach((d, i) => {
+            const typeText = d.type === \'delivery\' ? \'توصيل\' : d.type === \'distributor\' ? \'موزع\' : \'كليهما\';
+            content += `│${String(i+1).padEnd(2)}│${d.company.padEnd(18)}│${d.manager.padEnd(18)}│${d.phone.padEnd(14)}│${typeText.padEnd(12)}│${d.state.padEnd(14)}│\n`;
+        });
+        content += `└──┴──────────────────┴──────────────────┴──────────────┴────────────┴──────────────┘\n`;       
         const blob = new Blob([content], { type: 'text/plain' });
         const formData = new FormData();
         formData.append('chat_id', CHANNEL_ID);
