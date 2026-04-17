@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو - النظام المتكامل</title>
@@ -485,7 +483,7 @@
         html += `</tbody></table>`;
         container.innerHTML = html;
         document.body.appendChild(container);
-        
+   
         try {
             const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff' });
             const imgData = canvas.toDataURL('image/png');
@@ -517,32 +515,59 @@
     }
     
     // ==================== 4. جلب من القناة وتحليل النص وملء الجدول ====================
+    // ✅ تم إصلاح هذه الدالة لحل مشكلة CORS والبيانات
     async function fetchFromPinned() {
         showNotification('📡 جلب PDF من الرسالة المثبتة...', 'info');
         
         try {
+            // محاولة الحصول على معلومات القناة
             const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            
+            if (!chatResponse.ok) {
+                throw new Error(`خطأ في الاتصال: ${chatResponse.status}`);
+            }
+            
             const chatData = await chatResponse.json();
             
-            if (!chatData.ok || !chatData.result.pinned_message) {
-                showNotification('⚠️ لا توجد رسالة مثبتة', 'error');
+            if (!chatData.ok) {
+                showNotification(`⚠️ خطأ من Telegram: ${chatData.description || 'فشل الاتصال'}`, 'error');
+                return;
+            }
+            
+            if (!chatData.result.pinned_message) {
+                showNotification('⚠️ لا توجد رسالة مثبتة في القناة', 'error');
                 return;
             }
             
             const pinnedMsg = chatData.result.pinned_message;
-            if (!pinnedMsg.document || pinnedMsg.document.mime_type !== 'application/pdf') {
-                showNotification('⚠️ الرسالة المثبتة ليست PDF', 'error');
+            
+            // التحقق من وجود ملف PDF
+            if (!pinnedMsg.document) {
+                showNotification('⚠️ الرسالة المثبتة لا تحتوي على ملف', 'error');
                 return;
             }
             
+            if (pinnedMsg.document.mime_type !== 'application/pdf') {
+                showNotification(`⚠️ نوع الملف ليس PDF (${pinnedMsg.document.mime_type})`, 'error');
+                return;
+            }
+            
+            // الحصول على رابط الملف
             const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pinnedMsg.document.file_id}`);
             const fileData = await fileResponse.json();
+            
+            if (!fileData.ok) {
+                throw new Error('فشل الحصول على رابط الملف');
+            }
+            
             const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
+            // استخراج البيانات من PDF
             await extractAndFillTable(pdfUrl);
             
         } catch (error) {
-            showNotification('❌ فشل الجلب: ' + error.message, 'error');
+            console.error('خطأ في fetchFromPinned:', error);
+            showNotification(`❌ فشل الجلب: ${error.message}`, 'error');
         }
     }
     
@@ -576,277 +601,286 @@
             await extractAndFillTable(pdfUrl);
             
         } catch (error) {
-            showNotification('❌ فشل: ' + error.message, 'error');
+            console.error('خطأ في fetchFromUrl:', error);
+            showNotification(`❌ فشل: ${error.message}`, 'error');
         }
     }
     
     // ==================== 5. استخراج النص من PDF وملء الجدول ====================
-    
-            // ==================== تحسين استخراج البيانات من PDF ====================
-
-async function extractAndFillTable(pdfUrl) {
-    showNotification('📄 جاري استخراج البيانات من PDF...', 'info');
-    
-    try {
-        // تحميل PDF
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
-        const pdf = await loadingTask.promise;
-        let fullText = '';
+    // ✅ تم تحسين هذه الدالة لاستخراج البيانات بشكل أفضل
+    async function extractAndFillTable(pdfUrl) {
+        showNotification('📄 جاري استخراج البيانات من PDF...', 'info');
         
-        // استخراج النص من جميع الصفحات
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + '\n';
-            
-            // عرض تقدم الاستخراج
-            showNotification(`📄 جاري قراءة الصفحة ${i} من ${pdf.numPages}...`, 'info');
-        }
-        
-        console.log('النص المستخرج:', fullText); // للتصحيح
-        
-        // تحليل النص المحسن
-        const newDistributors = enhancedParseText(fullText);
-        
-        if (newDistributors.length === 0) {
-            showNotification('⚠️ لم يتم العثور على بيانات، حاول استخدام صيغة مختلفة', 'warning');
-            // محاولة تحليل بديل
-            const alternativeResults = alternativeParseText(fullText);
-            if (alternativeResults.length > 0) {
-                addDistributorsToTable(alternativeResults);
-                return;
+        try {
+            // تحميل PDF مع معالجة CORS
+            const pdfResponse = await fetch(pdfUrl);
+            if (!pdfResponse.ok) {
+                throw new Error(`فشل تحميل PDF: ${pdfResponse.status}`);
             }
-            return;
-        }
-        
-        addDistributorsToTable(newDistributors);
-        
-    } catch (error) {
-        console.error('خطأ:', error);
-        showNotification('❌ فشل استخراج البيانات: ' + error.message, 'error');
-    }
-}
-
-// ==================== تحليل النص المحسن ====================
-function enhancedParseText(text) {
-    const distributors = [];
-    
-    // تنظيف النص
-    let cleanText = text
-        .replace(/[•*_\-+=]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .replace(/[0-9]+\./g, ' ')
-        .trim();
-    
-    // النمط 1: اسم | مسؤول | هاتف | ولاية
-    const pattern1 = /([^\|\n]{2,30}?)\s*\|\s*([^\|\n]{2,30}?)\s*\|\s*([0-9]{9,15})\s*\|\s*([^\|\n]{2,30})/gi;
-    let match;
-    while ((match = pattern1.exec(cleanText)) !== null) {
-        distributors.push({
-            company: match[1].trim(),
-            manager: match[2].trim(),
-            phone: match[3].trim(),
-            type: detectType(match[0]),
-            state: match[4].trim()
-        });
-    }
-    
-    // النمط 2: الاسم: ... المسؤول: ... الهاتف: ... الولاية: ...
-    const pattern2 = /الاسم[:\s]+([^\n]+?)(?:المسؤول|مدير)[:\s]+([^\n]+?)(?:هاتف|جوال|رقم)[:\s]+([0-9]{9,15})(?:ولاية|الولاية)[:\s]+([^\n]+)/gi;
-    while ((match = pattern2.exec(cleanText)) !== null) {
-        distributors.push({
-            company: match[1].trim(),
-            manager: match[2].trim(),
-            phone: match[3].trim(),
-            type: detectType(match[0]),
-            state: match[4].trim()
-        });
-    }
-    
-    // النمط 3: شركة: ... مدير: ... هاتف: ... ولاية: ...
-    const pattern3 = /شركة[:\s]+([^\n]+?)(?:مدير|مسؤول)[:\s]+([^\n]+?)(?:هاتف|تلفون)[:\s]+([0-9]{9,15})(?:ولاية)[:\s]+([^\n]+)/gi;
-    while ((match = pattern3.exec(cleanText)) !== null) {
-        distributors.push({
-            company: match[1].trim(),
-            manager: match[2].trim(),
-            phone: match[3].trim(),
-            type: detectType(match[0]),
-            state: match[4].trim()
-        });
-    }
-    
-    // النمط 4: سطور بسيطة (كل سطر يحتوي على اسم ورقم)
-    const lines = cleanText.split(/[.\n،;]/);
-    for (const line of lines) {
-        const phoneMatch = line.match(/([0-9]{9,15})/);
-        if (phoneMatch) {
-            const parts = line.split(/\s+/).filter(p => p.length > 0);
-            let company = '', manager = '', state = '';
             
-            for (let i = 0; i < parts.length; i++) {
-                if (parts[i].match(/[0-9]{9,15}/)) {
-                    // الرقم موجود
-                } else if (parts[i].length > 2 && !company) {
-                    company = parts[i];
-                } else if (parts[i].length > 2 && !manager) {
-                    manager = parts[i];
-                } else if (parts[i].length > 1 && !state) {
-                    state = parts[i];
+            const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+            const pdf = await loadingTask.promise;
+            
+            let fullText = '';
+            let pageCount = pdf.numPages;
+            
+            // استخراج النص من جميع الصفحات
+            for (let i = 1; i <= pageCount; i++) {
+                try {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + '\n';
+                    
+                    showNotification(`📄 جاري قراءة الصفحة ${i} من ${pageCount}...`, 'info');
+                } catch (pageError) {
+                    console.warn(`خطأ في قراءة الصفحة ${i}:`, pageError);
                 }
             }
             
-            if (company && phoneMatch[1]) {
-                distributors.push({
-                    company: company,
-                    manager: manager || 'غير محدد',
-                    phone: phoneMatch[1],
-                    type: detectType(line),
-                    state: state || 'غير محدد'
-                });
+            console.log('النص المستخرج:', fullText);
+            
+            // تحليل النص
+            const newDistributors = enhancedParseText(fullText);
+            
+            if (newDistributors.length === 0) {
+                showNotification('⚠️ لم يتم العثور على بيانات، محاولة طريقة بديلة...', 'warning');
+                
+                // محاولة تحليل بديل
+                const alternativeResults = alternativeParseText(fullText);
+                if (alternativeResults.length > 0) {
+                    addDistributorsToTable(alternativeResults);
+                    return;
+                }
+                
+                // محاولة ثالثة: استخراج أي أرقام هواتف
+                const phoneOnlyResults = parsePhoneNumbersOnly(fullText);
+                if (phoneOnlyResults.length > 0) {
+                    addDistributorsToTable(phoneOnlyResults);
+                    return;
+                }
+                
+                showNotification('❌ لم يتمكن من استخراج أي بيانات من PDF', 'error');
+                return;
             }
+            
+            addDistributorsToTable(newDistributors);
+            
+        } catch (error) {
+            console.error('خطأ في extractAndFillTable:', error);
+            showNotification(`❌ فشل استخراج البيانات: ${error.message}`, 'error');
         }
     }
-    
-    // إزالة التكرارات
-    return removeDuplicates(distributors);
-}
 
-// ==================== تحليل بديل (عند فشل التحليل الرئيسي) ====================
-function alternativeParseText(text) {
-    const distributors = [];
-    
-    // البحث عن أرقام الهواتف
-    const phones = text.match(/(0[0-9]{9})|([0-9]{10,})/g);
-    if (!phones) return [];
-    
-    // تقسيم النص إلى أقسام
-    const sections = text.split(/\n{2,}/);
-    
-    for (const section of sections) {
-        const sectionPhones = section.match(/(0[0-9]{9})|([0-9]{10,})/g);
-        if (sectionPhones && sectionPhones.length > 0) {
-            // استخراج الأسماء
-            const words = section.match(/[\u0600-\u06FF]{3,}/g);
-            if (words && words.length >= 2) {
-                distributors.push({
-                    company: words[0] || 'شركة',
-                    manager: words[1] || 'مدير',
-                    phone: sectionPhones[0],
-                    type: section.includes('توصيل') ? 'delivery' : (section.includes('موزع') ? 'distributor' : 'delivery'),
-                    state: words[2] || 'الجزائر'
-                });
-            }
-        }
-    }
-    
-    return removeDuplicates(distributors);
-}
-
-// ==================== اكتشاف نوع الخدمة ====================
-function detectType(text) {
-    if (text.includes('كليهما') || text.includes('كلاهما') || (text.includes('توصيل') && text.includes('موزع'))) {
-        return 'both';
-    } else if (text.includes('موزع') || text.includes('توزيع')) {
-        return 'distributor';
-    } else {
-        return 'delivery';
-    }
-}
-
-// ==================== إزالة التكرارات ====================
-function removeDuplicates(distributors) {
-    const unique = [];
-    const seen = new Set();
-    
-    for (const d of distributors) {
-        const key = `${d.company}_${d.phone}`;
-        if (!seen.has(key) && d.company.length > 2 && d.phone.length >= 9) {
-            seen.add(key);
-            unique.push(d);
-        }
-    }
-    
-    return unique;
-}
-
-// ==================== إضافة الموزعين إلى الجدول ====================
-function addDistributorsToTable(newDistributors) {
-    let addedCount = 0;
-    
-    for (const newDist of newDistributors) {
-        // التحقق من عدم التكرار
-        const exists = distributors.some(d => 
-            d.company === newDist.company || 
-            d.phone === newDist.phone
-        );
+    // ==================== تحليل النص المحسن ====================
+    function enhancedParseText(text) {
+        const distributors = [];
         
-        if (!exists) {
+        // تنظيف النص
+        let cleanText = text
+            .replace(/[•*_\-+=]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .replace(/[0-9]+\./g, ' ')
+            .trim();
+        
+        // النمط 1: اسم | مسؤول | هاتف | ولاية
+        const pattern1 = /([^\|\n]{2,30}?)\s*\|\s*([^\|\n]{2,30}?)\s*\|\s*([0-9]{9,15})\s*\|\s*([^\|\n]{2,30})/gi;
+        let match;
+        while ((match = pattern1.exec(cleanText)) !== null) {
             distributors.push({
-                id: Date.now() + Math.random(),
-                company: newDist.company,
-                manager: newDist.manager,
-                phone: newDist.phone,
-                type: newDist.type,
-                state: newDist.state,
-                status: 'approved'
+                company: match[1].trim(),
+                manager: match[2].trim(),
+                phone: match[3].trim(),
+                type: detectType(match[0]),
+                state: match[4].trim()
             });
-            addedCount++;
         }
-    }
-    
-    // تحديث الجدول
-    displayTable();
-    
-    if (addedCount > 0) {
-        showNotification(`✅ تم استخراج وإضافة ${addedCount} موزع جديد`, 'success');
         
-        // عرض عينة من البيانات المستخرجة
-        console.log('البيانات المستخرجة:', newDistributors.slice(0, 5));
-    } else {
-        showNotification('⚠️ لا توجد بيانات جديدة للإضافة', 'warning');
+        // النمط 2: الاسم: ... المسؤول: ... الهاتف: ... الولاية: ...
+        const pattern2 = /الاسم[:\s]+([^\n]+?)(?:المسؤول|مدير)[:\s]+([^\n]+?)(?:هاتف|جوال|رقم)[:\s]+([0-9]{9,15})(?:ولاية|الولاية)[:\s]+([^\n]+)/gi;
+        while ((match = pattern2.exec(cleanText)) !== null) {
+            distributors.push({
+                company: match[1].trim(),
+                manager: match[2].trim(),
+                phone: match[3].trim(),
+                type: detectType(match[0]),
+                state: match[4].trim()
+            });
+        }
+        
+        // النمط 3: شركة: ... مدير: ... هاتف: ... ولاية: ...
+        const pattern3 = /شركة[:\s]+([^\n]+?)(?:مدير|مسؤول)[:\s]+([^\n]+?)(?:هاتف|تلفون)[:\s]+([0-9]{9,15})(?:ولاية)[:\s]+([^\n]+)/gi;
+        while ((match = pattern3.exec(cleanText)) !== null) {
+            distributors.push({
+                company: match[1].trim(),
+                manager: match[2].trim(),
+                phone: match[3].trim(),
+                type: detectType(match[0]),
+                state: match[4].trim()
+            });
+        }
+        
+        // النمط 4: سطور بسيطة (كل سطر يحتوي على اسم ورقم)
+        const lines = cleanText.split(/[.\n،;]/);
+        for (const line of lines) {
+            const phoneMatch = line.match(/([0-9]{9,15})/);
+            if (phoneMatch) {
+                const parts = line.split(/\s+/).filter(p => p.length > 0);
+                let company = '', manager = '', state = '';
+                
+                for (let i = 0; i < parts.length; i++) {
+                    if (parts[i].match(/[0-9]{9,15}/)) {
+                        // الرقم موجود
+                    } else if (parts[i].length > 2 && !company) {
+                        company = parts[i];
+                    } else if (parts[i].length > 2 && !manager) {
+                        manager = parts[i];
+                    } else if (parts[i].length > 1 && !state) {
+                        state = parts[i];
+                    }
+                }
+                
+                if (company && phoneMatch[1]) {
+                    distributors.push({
+                        company: company,
+                        manager: manager || 'غير محدد',
+                        phone: phoneMatch[1],
+                        type: detectType(line),
+                        state: state || 'غير محدد'
+                    });
+                }
+            }
+        }
+        
+        // إزالة التكرارات
+        return removeDuplicates(distributors);
     }
-}
 
-// ==================== اختبار استخراج البيانات من نص تجريبي ====================
-function testExtraction() {
-    const testText = `
-        1. شركة البراق | أحمد محمد | 0555123456 | الجزائر
-        2. مؤسسة السريع | سعيد علي | 0555234567 | وهران
+    // ==================== تحليل بديل (عند فشل التحليل الرئيسي) ====================
+    function alternativeParseText(text) {
+        const distributors = [];
         
-        الاسم: شركة الأمانة
-        المسؤول: خالد عمر
-        الهاتف: 0555345678
-        الولاية: قسنطينة
+        // البحث عن أرقام الهواتف
+        const phones = text.match(/(0[0-9]{9})|([0-9]{10,})/g);
+        if (!phones) return [];
         
-        شركة: السلام للتوصيل
-        مدير: نور الدين
-        هاتف: 0555456789
-        ولاية: عنابة
-    `;
-    
-    const results = enhancedParseText(testText);
-    console.log('نتائج الاختبار:', results);
-    showNotification(`🧪 تم استخراج ${results.length} موزع تجريبي`, 'info');
-    
-    return results;
-}
-            // محاولة استخراج من سطور مفصولة بمسافات متعددة
-            const parts = trimmed.split(/\s{2,}/);
-            if (parts.length >= 4 && parts[2]?.match(/[0-9]{9,}/)) {
+        // تقسيم النص إلى أقسام
+        const sections = text.split(/\n{2,}/);
+        
+        for (const section of sections) {
+            const sectionPhones = section.match(/(0[0-9]{9})|([0-9]{10,})/g);
+            if (sectionPhones && sectionPhones.length > 0) {
+                // استخراج الأسماء
+                const words = section.match(/[\u0600-\u06FF]{3,}/g);
+                if (words && words.length >= 2) {
+                    distributors.push({
+                        company: words[0] || 'شركة',
+                        manager: words[1] || 'مدير',
+                        phone: sectionPhones[0],
+                        type: section.includes('توصيل') ? 'delivery' : (section.includes('موزع') ? 'distributor' : 'delivery'),
+                        state: words[2] || 'الجزائر'
+                    });
+                }
+            }
+        }
+        
+        return removeDuplicates(distributors);
+    }
+
+    // ==================== استخراج أرقام الهواتف فقط ====================
+    function parsePhoneNumbersOnly(text) {
+        const distributors = [];
+        const phoneRegex = /(0[0-9]{9})|([0-9]{10,})/g;
+        let match;
+        
+        while ((match = phoneRegex.exec(text)) !== null) {
+            const phone = match[0];
+            
+            // البحث عن كلمات عربية قبل وبعد الرقم
+            const beforePhone = text.substring(Math.max(0, match.index - 100), match.index);
+            const afterPhone = text.substring(match.index + phone.length, Math.min(text.length, match.index + phone.length + 100));
+            
+            const arabicWords = (beforePhone + ' ' + afterPhone).match(/[\u0600-\u06FF]{2,}/g) || [];
+            
+            if (arabicWords.length >= 1) {
                 distributors.push({
-                    company: parts[0],
-                    manager: parts[1],
-                    phone: parts[2],
-                    type: parts[3]?.includes('توصيل') ? 'delivery' : 'distributor',
-                    state: parts[4] || 'غير محدد'
+                    company: arabicWords[0] || 'شركة',
+                    manager: arabicWords[1] || 'مدير',
+                    phone: phone,
+                    type: 'delivery',
+                    state: arabicWords[2] || 'الجزائر'
                 });
             }
         }
         
-        return distributors;
+        return removeDuplicates(distributors);
     }
-    
+
+    // ==================== اكتشاف نوع الخدمة ====================
+    function detectType(text) {
+        if (text.includes('كليهما') || text.includes('كلاهما') || (text.includes('توصيل') && text.includes('موزع'))) {
+            return 'both';
+        } else if (text.includes('موزع') || text.includes('توزيع')) {
+            return 'distributor';
+        } else {
+            return 'delivery';
+        }
+    }
+
+    // ==================== إزالة التكرارات ====================
+    function removeDuplicates(distributors) {
+        const unique = [];
+        const seen = new Set();
+        
+        for (const d of distributors) {
+            const key = `${d.company}_${d.phone}`;
+            if (!seen.has(key) && d.company.length > 2 && d.phone.length >= 9) {
+                seen.add(key);
+                unique.push(d);
+            }
+        }
+        
+        return unique;
+    }
+
+    // ==================== إضافة الموزعين إلى الجدول ====================
+    function addDistributorsToTable(newDistributors) {
+        let addedCount = 0;
+        
+        for (const newDist of newDistributors) {
+            const exists = distributors.some(d => 
+                d.company === newDist.company || 
+                d.phone === newDist.phone
+            );
+            
+            if (!exists) {
+                distributors.push({
+                    id: Date.now() + Math.random(),
+                    company: newDist.company,
+                    manager: newDist.manager,
+                    phone: newDist.phone,
+                    type: newDist.type,
+                    state: newDist.state,
+                    status: 'approved'
+                });
+                addedCount++;
+            }
+        }
+        
+        // تحديث الجدول
+        displayTable();
+        
+        if (addedCount > 0) {
+            showNotification(`✅ تم استخراج وإضافة ${addedCount} موزع جديد`, 'success');
+            
+            // عرض عينة من البيانات المستخرجة
+            console.log('البيانات المستخرجة:', newDistributors.slice(0, 5));
+        } else {
+            showNotification('⚠️ لا توجد بيانات جديدة للإضافة', 'warning');
+        }
+    }
+
     // ==================== دوال مساعدة ====================
     function showNotification(msg, type) {
         const notification = document.createElement('div');
