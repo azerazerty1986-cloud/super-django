@@ -1,4 +1,5 @@
-html lang="ar" dir="rtl">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,8 @@ html lang="ar" dir="rtl">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- مكتبة Excel (SheetJS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- مكتبة DOCX (mammoth.js) لقراءة ملفات Word -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -47,6 +50,8 @@ html lang="ar" dir="rtl">
         .btn-excel { background: #1d6f42; color: white; }
         .btn-info { background: #17a2b8; color: white; }
         .btn-success { background: #28a745; color: white; }
+        .btn-docx { background: #2b5797; color: white; }
+        .btn-docx:hover { transform: translateY(-2px); background: #1e3c6f; }
         .card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.2);
@@ -160,7 +165,7 @@ html lang="ar" dir="rtl">
             max-width: 500px;
             width: 90%;
         }
-        .modal-content input, .modal-content select {
+        .modal-content input, .modal-content select, .modal-content textarea {
             width: 100%;
             padding: 12px;
             margin: 15px 0;
@@ -170,6 +175,10 @@ html lang="ar" dir="rtl">
             color: white;
             font-family: 'Cairo', sans-serif;
         }
+        .modal-content textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
         .close-btn {
             float: left;
             font-size: 28px;
@@ -177,6 +186,48 @@ html lang="ar" dir="rtl">
             color: #ffd700;
             background: none;
             border: none;
+        }
+        .docx-content {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+        .docx-content h1, .docx-content h2, .docx-content h3 {
+            color: #ffd700;
+            margin: 15px 0;
+        }
+        .docx-content p {
+            margin: 10px 0;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+            padding-bottom: 10px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: #ffd700;
+            color: #000;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
     </style>
 </head>
@@ -188,39 +239,64 @@ html lang="ar" dir="rtl">
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
             <button class="btn btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
             <button class="btn btn-telegram" onclick="sendExcelToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button>
-            <button class="btn btn-info" onclick="fetchFromPinned()"><i class="fas fa-thumbtack"></i> جلب من المثبتة</button>
+            <button class="btn btn-info" onclick="fetchFromPinned()"><i class="fas fa-thumbtack"></i> جلب Excel</button>
+            <button class="btn btn-docx" onclick="fetchDocxFromPinned()"><i class="fas fa-file-word"></i> جلب DOCX</button>
             <button class="btn btn-success" onclick="showUrlModal()"><i class="fas fa-link"></i> جلب من رابط</button>
         </div>
     </div>
 
     <div class="stats" id="stats"></div>
 
-    <div class="card">
-        <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع..." onkeyup="filterTable()">
+    <!-- أزرار التبويب -->
+    <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('table')"><i class="fas fa-table"></i> جدول الموزعين</button>
+        <button class="tab-btn" onclick="switchTab('docx')"><i class="fas fa-file-word"></i> محتوى DOCX</button>
+    </div>
+
+    <!-- تبويب الجدول -->
+    <div id="tableTab" class="tab-content active">
+        <div class="card">
+            <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع..." onkeyup="filterTable()">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
+                <button class="filter-btn" onclick="filterByType('delivery')">🚚 توصيل</button>
+                <button class="filter-btn" onclick="filterByType('distributor')">📦 موزع</button>
+                <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>اسم الشركة</th>
+                            <th>المسؤول</th>
+                            <th>الهاتف</th>
+                            <th>النوع</th>
+                            <th>الولاية</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
         </div>
-        <div class="filter-buttons">
-            <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
-            <button class="filter-btn" onclick="filterByType('delivery')">🚚 توصيل</button>
-            <button class="filter-btn" onclick="filterByType('distributor')">📦 موزع</button>
-            <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
-        </div>
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>اسم الشركة</th>
-                        <th>المسؤول</th>
-                        <th>الهاتف</th>
-                        <th>النوع</th>
-                        <th>الولاية</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
+    </div>
+
+    <!-- تبويب عرض DOCX -->
+    <div id="docxTab" class="tab-content">
+        <div class="card">
+            <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-file-word"></i> محتوى ملف DOCX</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-docx" onclick="fetchDocxFromPinned()"><i class="fab fa-telegram"></i> جلب من الرسالة المثبتة</button>
+                <label for="docxFileInput" class="btn btn-info" style="cursor: pointer;"><i class="fas fa-upload"></i> رفع ملف محلي</label>
+                <input type="file" id="docxFileInput" accept=".docx" style="display: none;" onchange="handleLocalDocx(this)">
+            </div>
+            <div id="docxDisplayArea" class="docx-content">
+                <p style="text-align: center; color: #aaa;">📄 سيتم عرض محتوى ملف DOCX هنا...</p>
+            </div>
         </div>
     </div>
 </div>
@@ -229,7 +305,7 @@ html lang="ar" dir="rtl">
     <div class="modal-content">
         <button class="close-btn" onclick="closeUrlModal()">&times;</button>
         <h2 style="color: #ffd700;">جلب بيانات من رابط</h2>
-        <input type="text" id="fileUrl" placeholder="رابط ملف Excel أو CSV">
+        <input type="text" id="fileUrl" placeholder="رابط ملف Excel أو CSV أو DOCX">
         <button class="btn btn-gold" onclick="fetchFromUrl()" style="width: 100%;">جلب وتحليل</button>
     </div>
 </div>
@@ -267,7 +343,26 @@ html lang="ar" dir="rtl">
     
     let currentFilter = 'all';
     let currentSearch = '';
+    let currentDocxContent = '';
 
+    // ==================== دوال التبويب ====================
+    function switchTab(tab) {
+        // تبديل أزرار التبويب
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // تبديل المحتوى
+        document.getElementById('tableTab').classList.remove('active');
+        document.getElementById('docxTab').classList.remove('active');
+        
+        if (tab === 'table') {
+            document.getElementById('tableTab').classList.add('active');
+        } else if (tab === 'docx') {
+            document.getElementById('docxTab').classList.add('active');
+        }
+    }
+
+    // ==================== دوال الجدول الأساسية ====================
     function displayTable() {
         let filtered = distributors.filter(d => d.status === 'approved');
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
@@ -332,7 +427,110 @@ html lang="ar" dir="rtl">
         }
     }
 
-    // ==================== Excel Logic ====================
+    // ==================== دوال معالجة DOCX ====================
+    async function processDocxFile(arrayBuffer, fileName = 'document.docx') {
+        try {
+            showNotification('📄 جاري معالجة ملف DOCX...', 'info');
+            
+            // استخدام mammoth لاستخراج النص من DOCX
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+            const htmlContent = result.value;
+            const messages = result.messages;
+            
+            if (messages.length > 0) {
+                console.log('تحذيرات:', messages);
+            }
+            
+            // تخزين المحتوى وعرضه
+            currentDocxContent = htmlContent;
+            displayDocxContent(htmlContent);
+            
+            showNotification('✅ تم عرض محتوى DOCX بنجاح', 'success');
+            
+            // التبديل تلقائياً إلى تبويب DOCX
+            document.getElementById('docxTab').classList.add('active');
+            document.getElementById('tableTab').classList.remove('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText.includes('DOCX')) btn.classList.add('active');
+            });
+            
+        } catch (error) {
+            console.error(error);
+            showNotification(`❌ فشل معالجة DOCX: ${error.message}`, 'error');
+            displayDocxContent(`<p style="color: #ff6b6b;">❌ خطأ في معالجة الملف: ${error.message}</p>`);
+        }
+    }
+    
+    function displayDocxContent(htmlContent) {
+        const displayArea = document.getElementById('docxDisplayArea');
+        if (htmlContent && htmlContent.trim()) {
+            displayArea.innerHTML = htmlContent;
+        } else {
+            displayArea.innerHTML = '<p style="text-align: center; color: #aaa;">📄 لا يوجد محتوى لعرضه</p>';
+        }
+    }
+    
+    // جلب ملف DOCX من الرسالة المثبتة في التليجرام
+    async function fetchDocxFromPinned() {
+        showNotification('📡 جاري البحث عن ملف DOCX في الرسالة المثبتة...', 'info');
+        try {
+            const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            const chatData = await chatRes.json();
+            if(!chatData.ok || !chatData.result.pinned_message) throw new Error("لا توجد رسالة مثبتة");
+            
+            const pinned = chatData.result.pinned_message;
+            let fileId = null;
+            
+            // التحقق من وجود ملف DOCX في الرسالة المثبتة
+            if (pinned.document) {
+                const fileName = pinned.document.file_name || '';
+                if (fileName.toLowerCase().endsWith('.docx')) {
+                    fileId = pinned.document.file_id;
+                } else {
+                    throw new Error("الملف المثبت ليس من نوع DOCX (الملف الحالي: " + fileName + ")");
+                }
+            } else {
+                throw new Error("الرسالة المثبتة لا تحتوي على ملف");
+            }
+            
+            if(!fileId) throw new Error("لم يتم العثور على ملف DOCX في الرسالة المثبتة");
+            
+            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileRes.json();
+            const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+            
+            const res = await fetch(fileUrl);
+            const buffer = await res.arrayBuffer();
+            await processDocxFile(buffer, pinned.document.file_name);
+            
+        } catch (err) { 
+            showNotification(`❌ خطأ: ${err.message}`, 'error');
+            displayDocxContent(`<p style="color: #ff6b6b;">❌ فشل جلب الملف: ${err.message}</p>`);
+        }
+    }
+    
+    // معالجة ملف DOCX محلي
+    async function handleLocalDocx(input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            if (!file.name.toLowerCase().endsWith('.docx')) {
+                showNotification('⚠️ الرجاء اختيار ملف DOCX صالح', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                await processDocxFile(e.target.result, file.name);
+            };
+            reader.readAsArrayBuffer(file);
+            
+            // إعادة تعيين input للسماح برفع نفس الملف مرة أخرى
+            input.value = '';
+        }
+    }
+
+    // ==================== دوال Excel ====================
     function exportToExcel() {
         showNotification('📊 جاري إنشاء ملف Excel...', 'info');
         const data = distributors.filter(d => d.status === 'approved').map((d, i) => ({
@@ -378,8 +576,15 @@ html lang="ar" dir="rtl">
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== Flexible Excel Parsing ====================
-    async function processFile(arrayBuffer) {
+    // ==================== معالجة الملفات العامة ====================
+    async function processFile(arrayBuffer, fileName = '') {
+        // التحقق من نوع الملف
+        if (fileName.toLowerCase().endsWith('.docx')) {
+            await processDocxFile(arrayBuffer, fileName);
+            return;
+        }
+        
+        // معالجة Excel
         try {
             const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -388,7 +593,6 @@ html lang="ar" dir="rtl">
             if (!rawData.length) throw new Error("الملف فارغ");
 
             const newDistributors = rawData.map(row => {
-                // دالة للبحث عن القيمة بناءً على احتمالات اسم العمود
                 const findVal = (keys) => {
                     const foundKey = Object.keys(row).find(k => keys.some(key => k.toLowerCase().includes(key.toLowerCase())));
                     return foundKey ? row[foundKey] : "";
@@ -411,7 +615,7 @@ html lang="ar" dir="rtl">
                 displayTable();
                 showNotification(`✅ تم جلب ${newDistributors.length} موزع بنجاح`, 'success');
             } else {
-                throw new Error("لم يتم العثور على بيانات صالحة (تأكد من وجود أعمدة الشركة والهاتف)");
+                throw new Error("لم يتم العثور على بيانات صالحة");
             }
         } catch (err) {
             showNotification(`❌ فشل معالجة الملف: ${err.message}`, 'error');
@@ -427,16 +631,18 @@ html lang="ar" dir="rtl">
             if(!chatData.ok || !chatData.result.pinned_message) throw new Error("لا توجد رسالة مثبتة");
             
             const pinned = chatData.result.pinned_message;
-            const fileId = pinned.document ? pinned.document.file_id : (pinned.audio ? pinned.audio.file_id : null);
+            const fileId = pinned.document ? pinned.document.file_id : null;
             if(!fileId) throw new Error("الرسالة المثبتة لا تحتوي على ملف");
-
+            
+            const fileName = pinned.document.file_name || '';
+            
             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
             const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
             const res = await fetch(fileUrl);
             const buffer = await res.arrayBuffer();
-            await processFile(buffer);
+            await processFile(buffer, fileName);
         } catch (err) { showNotification(`❌ خطأ: ${err.message}`, 'error'); }
     }
 
@@ -448,7 +654,9 @@ html lang="ar" dir="rtl">
         try {
             const res = await fetch(url);
             const buffer = await res.arrayBuffer();
-            await processFile(buffer);
+            // استخراج اسم الملف من الرابط
+            const fileName = url.split('/').pop() || 'file';
+            await processFile(buffer, fileName);
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
@@ -459,10 +667,12 @@ html lang="ar" dir="rtl">
         document.body.appendChild(n);
         setTimeout(() => n.remove(), 3500);
     }
+    
     function openAddDistributor() { document.getElementById('addModal').classList.add('active'); }
     function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
     function showUrlModal() { document.getElementById('urlModal').classList.add('active'); }
     function closeUrlModal() { document.getElementById('urlModal').classList.remove('active'); }
+    
     displayTable();
 </script>
 </body>
