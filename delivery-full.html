@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو | جلب بيانات PDF من قناة التليجرام</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>ناردو برو - النظام المتكامل</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -15,87 +17,132 @@
         body {
             font-family: 'Cairo', sans-serif;
             background: linear-gradient(135deg, #0f3460, #16213e);
-            color: #fff;
-            min-height: 100vh;
+            color: white;
             direction: rtl;
+            min-height: 100vh;
         }
-        .container { max-width: 1300px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .header {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.3);
-            border-radius: 25px;
-            padding: 25px;
-            text-align: center;
+            border-radius: 20px;
+            padding: 20px;
             margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
         }
-        .header h1 { color: #ffd700; font-size: 28px; margin: 10px 0; }
-        .header i { font-size: 45px; color: #ffd700; }
         .btn {
-            padding: 12px 28px;
+            padding: 12px 25px;
             border: none;
-            border-radius: 12px;
-            font-size: 14px;
+            border-radius: 10px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
-            margin: 5px;
             font-family: 'Cairo', sans-serif;
         }
-        .btn-telegram { background: #0088cc; color: white; }
-        .btn-telegram:hover { background: #006699; transform: translateY(-2px); }
-        .btn-excel { background: #25a35c; color: white; }
-        .btn-excel:hover { background: #1e8a4d; transform: translateY(-2px); }
         .btn-gold { background: #ffd700; color: #000; }
-        .btn-gold:hover { background: #ffed4e; transform: translateY(-2px); }
+        .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
+        .btn-telegram { background: #0088cc; color: white; }
+        .btn-telegram:hover { transform: translateY(-2px); background: #006699; }
+        .btn-pdf { background: #dc3545; color: white; }
+        .btn-pdf:hover { transform: translateY(-2px); background: #bb2d3b; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { transform: translateY(-2px); background: #138496; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { transform: translateY(-2px); background: #218838; }
         .card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.2);
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 25px;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
         }
-        .filter-bar {
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        th {
+            background: rgba(255,215,0,0.1);
+            color: #ffd700;
+            padding: 15px;
+            text-align: right;
+            border-bottom: 2px solid #ffd700;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,215,0,0.1);
+        }
+        .search-box {
             display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-bottom: 25px;
-            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
         }
-        .filter-bar input, .filter-bar select {
-            padding: 12px 18px;
-            border-radius: 12px;
+        .search-box input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
             border: 1px solid rgba(255,215,0,0.3);
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.3);
             color: white;
             font-family: 'Cairo', sans-serif;
-            font-size: 14px;
-            flex: 1;
-            min-width: 200px;
         }
-        .filter-bar input:focus, .filter-bar select:focus {
-            outline: none;
-            border-color: #ffd700;
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+        .notification.success { background: #28a745; color: white; }
+        .notification.error { background: #dc3545; color: white; }
+        .notification.info { background: #17a2b8; color: white; }
+        @keyframes slideIn {
+            from { transform: translateX(-400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         .stats {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
         }
-        .stat-box {
-            background: rgba(0,0,0,0.3);
-            padding: 18px 25px;
+        .stat-card {
+            background: rgba(255,255,255,0.05);
             border-radius: 15px;
+            padding: 20px;
             text-align: center;
-            flex: 1;
             border: 1px solid rgba(255,215,0,0.2);
         }
-        .stat-box .number { font-size: 32px; font-weight: bold; color: #ffd700; }
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 14px 16px; text-align: right; border-bottom: 1px solid rgba(255,215,0,0.2); }
-        th { background: rgba(255,215,0,0.1); color: #ffd700; font-weight: bold; }
-        tr:hover { background: rgba(255,215,0,0.05); }
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            color: white;
+        }
+        .filter-btn.active {
+            background: #ffd700;
+            color: #000;
+        }
         .modal {
             display: none;
             position: fixed;
@@ -103,8 +150,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
             align-items: center;
             justify-content: center;
         }
@@ -112,198 +159,429 @@
         .modal-content {
             background: #1a1a2e;
             border: 2px solid #ffd700;
-            border-radius: 25px;
-            padding: 35px;
+            border-radius: 20px;
+            padding: 30px;
             max-width: 500px;
             width: 90%;
-            text-align: center;
         }
-        .modal-content h2 { color: #ffd700; margin-bottom: 20px; }
-        .modal-content p { margin-bottom: 25px; color: #ccc; }
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            left: 20px;
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 15px 20px;
-            border-radius: 12px;
-            background: #333;
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.3);
             color: white;
-            text-align: center;
-            z-index: 2000;
-            animation: slideIn 0.3s ease;
         }
-        .notification.success { background: #28a745; }
-        .notification.error { background: #dc3545; }
-        .notification.info { background: #17a2b8; }
-        .notification.warning { background: #ffc107; color: #000; }
-        @keyframes slideIn {
-            from { transform: translateX(100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .close-btn {
+            float: left;
+            font-size: 28px;
+            cursor: pointer;
+            color: #ffd700;
+            background: none;
+            border: none;
         }
-        .loading { text-align: center; padding: 50px; font-size: 18px; }
-        .loading i { font-size: 35px; animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .empty-data { text-align: center; padding: 50px; color: #aaa; }
-        footer { text-align: center; padding: 30px; color: #888; border-top: 1px solid rgba(255,215,0,0.2); margin-top: 40px; }
-        @media (max-width: 768px) { th, td { padding: 10px; font-size: 13px; } .btn { padding: 8px 16px; font-size: 12px; } .stat-box .number { font-size: 24px; } }
     </style>
 </head>
 <body>
-
 <div class="container">
     <div class="header">
-        <i class="fab fa-telegram"></i>
-        <h1>ناردو برو | جلب بيانات PDF من القناة</h1>
-        <p>يتم جلب PDF من الرسالة المثبتة في التليجرام ← تحويل إلى نص ← استخراج (الاسم، الهاتف، الولاية)</p>
+        <h1><i class="fas fa-truck"></i> ناردو برو | النظام المتكامل</h1>
+        <div>
+            <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
+            <button class="btn btn-pdf" onclick="createAndSendPDF()"><i class="fas fa-file-pdf"></i> إنشاء PDF</button>
+            <button class="btn btn-telegram" onclick="sendPDFToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button>
+            <button class="btn btn-info" onclick="fetchFromPinned()"><i class="fas fa-thumbtack"></i> جلب من المثبتة</button>
+            <button class="btn btn-success" onclick="showUrlModal()"><i class="fas fa-link"></i> جلب من رابط</button>
+        </div>
     </div>
+
+    <div class="stats" id="stats"></div>
 
     <div class="card">
-        <div class="filter-bar">
-            <input type="text" id="searchInput" placeholder="🔍 بحث بالاسم..." onkeyup="filterTable()">
-            <select id="stateFilter" onchange="filterTable()">
-                <option value="all">جميع الولايات</option>
-            </select>
-            <button class="btn btn-telegram" onclick="showTelegramModal()">
-                <i class="fab fa-telegram"></i> جلب من القناة
-            </button>
-            <button class="btn btn-excel" onclick="exportToExcel()">
-                <i class="fas fa-file-excel"></i> تصدير Excel
-            </button>
+        <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع..." onkeyup="filterTable()">
         </div>
-
-        <div class="stats">
-            <div class="stat-box"><div class="number" id="totalCount">0</div><div>إجمالي الموزعين</div></div>
-            <div class="stat-box"><div class="number" id="statesCount">0</div><div>الولايات</div></div>
+        <div class="filter-buttons">
+            <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
+            <button class="filter-btn" onclick="filterByType('delivery')">🚚 توصيل</button>
+            <button class="filter-btn" onclick="filterByType('distributor')">📦 موزع</button>
+            <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
         </div>
-
-        <div id="tableContainer">
-            <div class="empty-data">
-                <i class="fab fa-telegram" style="font-size: 40px; margin-bottom: 15px; display: block;"></i>
-                اضغط على زر "جلب من القناة" لاستخراج البيانات من PDF المرسل إلى القناة
-            </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الشركة</th>
+                        <th>المسؤول</th>
+                        <th>الهاتف</th>
+                        <th>النوع</th>
+                        <th>الولاية</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
         </div>
     </div>
-
-    <footer>
-        <i class="fas fa-info-circle"></i> يتم جلب PDF من الرسالة المثبتة في القناة واستخراج البيانات تلقائياً
-    </footer>
 </div>
 
-<!-- نافذة منبثقة لجلب PDF من القناة -->
-<div id="telegramModal" class="modal">
+<div id="urlModal" class="modal">
     <div class="modal-content">
-        <i class="fab fa-telegram" style="font-size: 50px; color: #ffd700; margin-bottom: 15px;"></i>
-        <h2>📡 جلب PDF من قناة التليجرام</h2>
-        <p>سيتم جلب أحدث ملف PDF من <strong>الرسالة المثبتة</strong> في القناة<br>واستخراج البيانات (الاسم، الهاتف، الولاية)</p>
-        <p style="font-size: 12px; color: #ffd700;">⚠️ تأكد من إرسال PDF إلى القناة وتثبيته أولاً</p>
-        <button class="btn btn-telegram" onclick="fetchFromPinnedMessage()" style="margin: 10px; padding: 12px 30px;">
-            <i class="fas fa-download"></i> جلب وتحليل PDF
-        </button>
-        <button class="btn btn-gold" onclick="closeTelegramModal()" style="margin: 10px;">
-            <i class="fas fa-times"></i> إغلاق
-        </button>
+        <button class="close-btn" onclick="closeUrlModal()">&times;</button>
+        <h2 style="color: #ffd700;">جلب PDF من رابط</h2>
+        <input type="text" id="pdfUrl" placeholder="رابط PDF من تليجرام">
+        <button class="btn btn-gold" onclick="fetchFromUrl()" style="width: 100%;">جلب وتحليل</button>
+    </div>
+</div>
+
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeAddModal()">&times;</button>
+        <h2 style="color: #ffd700;">إضافة موزع جديد</h2>
+        <input type="text" id="compName" placeholder="اسم الشركة">
+        <input type="text" id="mgrName" placeholder="اسم المسؤول">
+        <input type="tel" id="phone" placeholder="رقم الهاتف">
+        <select id="type" style="width:100%; padding:12px; margin:10px 0; border-radius:10px;">
+            <option value="delivery">توصيل</option>
+            <option value="distributor">موزع</option>
+            <option value="both">كليهما</option>
+        </select>
+        <input type="text" id="state" placeholder="الولاية">
+        <button class="btn btn-gold" onclick="addDistributor()" style="width: 100%;">إضافة</button>
     </div>
 </div>
 
 <script>
-    // ============================================
-    // إعدادات التليجرام
-    // ============================================
+    // ==================== الإعدادات الأساسية ====================
     const TELEGRAM = {
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
         channelId: '-1003822964890',
         apiUrl: 'https://api.telegram.org/bot'
     };
 
-    // قائمة الولايات (الرمز الفرنسي + الاسم العربي)
-    const STATES_MAP = {
-        'ALG': 'الجزائر', 'ORA': 'وهران', 'CON': 'قسنطينة',
-        'ANA': 'عنابة', 'SET': 'سطيف', 'TIZ': 'تيزي وزو',
-        'BJA': 'بجاية', 'BAT': 'باتنة', 'BLA': 'البليدة',
-        'TLE': 'تلمسان', 'SKI': 'سكيكدة', 'BMD': 'بومرداس',
-        'TIP': 'تيبازة', 'AIN': 'عين الدفلى', 'NAA': 'النعامة'
-    };
+    // البيانات
+    let distributors = [
+        { id: 1, company: "شركة البراق", manager: "أحمد محمد", phone: "0555123456", type: "delivery", state: "الجزائر", status: "approved" },
+        { id: 2, company: "مؤسسة السريع", manager: "سعيد علي", phone: "0555234567", type: "distributor", state: "وهران", status: "approved" },
+        { id: 3, company: "شركة الأمانة", manager: "خالد عمر", phone: "0555345678", type: "both", state: "قسنطينة", status: "approved" }
+    ];
+    
+    let currentFilter = 'all';
+    let currentSearch = '';
 
-    let currentData = [];
-
-    // ============================================
-    // النافذة المنبثقة
-    // ============================================
-    function showTelegramModal() {
-        document.getElementById('telegramModal').classList.add('active');
-    }
-
-    function closeTelegramModal() {
-        document.getElementById('telegramModal').classList.remove('active');
-    }
-
-    function showNotification(message, type) {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3500);
-    }
-
-    // ============================================
-    // جلب PDF من الرسالة المثبتة (المرسل إلى القناة)
-    // ============================================
-    async function fetchFromPinnedMessage() {
-        closeTelegramModal();
-        showNotification('📡 جاري الاتصال بقناة التليجرام...', 'info');
+    // ==================== 1. عرض البيانات في الجدول ====================
+    function displayTable() {
+        let filtered = distributors.filter(d => d.status === 'approved');
         
-        document.getElementById('tableContainer').innerHTML = `
-            <div class="loading">
-                <i class="fas fa-spinner"></i><br>
-                جلب PDF من القناة وتحويله إلى نص...
-            </div>
+        if (currentFilter !== 'all') {
+            filtered = filtered.filter(d => d.type === currentFilter);
+        }
+        if (currentSearch) {
+            filtered = filtered.filter(d => d.company.includes(currentSearch));
+        }
+        
+        const tbody = document.getElementById('tableBody');
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد بيانات</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = filtered.map((d, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${d.company}</td>
+                <td>${d.manager}</td>
+                <td>${d.phone}</td>
+                <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
+                <td>${d.state}</td>
+                <td><span style="background:#28a745; padding:5px 10px; border-radius:20px; font-size:12px;">معتمد</span></td>
+            </tr>
+        `).join('');
+        
+        updateStats();
+    }
+    
+    function updateStats() {
+        const approved = distributors.filter(d => d.status === 'approved');
+        const delivery = approved.filter(d => d.type === 'delivery' || d.type === 'both').length;
+        const distributor = approved.filter(d => d.type === 'distributor' || d.type === 'both').length;
+        
+        document.getElementById('stats').innerHTML = `
+            <div class="stat-card"><div class="stat-number">${approved.length}</div><div>إجمالي الموزعين</div></div>
+            <div class="stat-card"><div class="stat-number">${delivery}</div><div>خدمة توصيل</div></div>
+            <div class="stat-card"><div class="stat-number">${distributor}</div><div>موزعون</div></div>
+            <div class="stat-card"><div class="stat-number">${new Set(approved.map(d => d.state)).size}</div><div>ولايات</div></div>
         `;
-
+    }
+    
+    function filterTable() {
+        currentSearch = document.getElementById('searchInput').value;
+        displayTable();
+    }
+    
+    function filterByType(type) {
+        currentFilter = type;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        displayTable();
+    }
+    
+    function addDistributor() {
+        const newDist = {
+            id: Date.now(),
+            company: document.getElementById('compName').value,
+            manager: document.getElementById('mgrName').value,
+            phone: document.getElementById('phone').value,
+            type: document.getElementById('type').value,
+            state: document.getElementById('state').value,
+            status: 'approved'
+        };
+        
+        if (newDist.company && newDist.manager && newDist.phone && newDist.state) {
+            distributors.push(newDist);
+            displayTable();
+            closeAddModal();
+            showNotification('✅ تم إضافة الموزع بنجاح', 'success');
+        } else {
+            showNotification('⚠️ الرجاء ملء جميع الحقول', 'error');
+        }
+    }
+    
+    // ==================== 2. إنشاء PDF ====================
+    async function createAndSendPDF() {
+        const approved = distributors.filter(d => d.status === 'approved');
+        if (approved.length === 0) {
+            showNotification('⚠️ لا يوجد موزعون', 'error');
+            return;
+        }
+        
+        showNotification('📄 جاري إنشاء PDF...', 'info');
+        
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '800px';
+        container.style.backgroundColor = 'white';
+        container.style.padding = '30px';
+        container.style.fontFamily = 'Cairo, sans-serif';
+        container.style.direction = 'rtl';
+        container.style.color = '#000';
+        
+        let html = `
+            <div style="text-align:center; border-bottom:3px solid #ffd700; padding-bottom:20px; margin-bottom:20px;">
+                <h1 style="color:#1a1a2e;">ناردو برو</h1>
+                <h2 style="color:#2e7d32;">قائمة الموزعين المعتمدين</h2>
+                <p>📅 ${new Date().toLocaleString('ar-SA')}</p>
+                <p>📊 إجمالي الموزعين: ${approved.length}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; direction:rtl;">
+                <thead>
+                    <tr style="background:#f2f2f2;">
+                        <th style="border:1px solid #ddd; padding:10px;">#</th>
+                        <th style="border:1px solid #ddd; padding:10px;">الشركة</th>
+                        <th style="border:1px solid #ddd; padding:10px;">المسؤول</th>
+                        <th style="border:1px solid #ddd; padding:10px;">الهاتف</th>
+                        <th style="border:1px solid #ddd; padding:10px;">النوع</th>
+                        <th style="border:1px solid #ddd; padding:10px;">الولاية</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        approved.forEach((d, i) => {
+            const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
+            html += `
+                <tr>
+                    <td style="border:1px solid #ddd; padding:10px;">${i+1}</td>
+                    <td style="border:1px solid #ddd; padding:10px;">${d.company}</td>
+                    <td style="border:1px solid #ddd; padding:10px;">${d.manager}</td>
+                    <td style="border:1px solid #ddd; padding:10px;">${d.phone}</td>
+                    <td style="border:1px solid #ddd; padding:10px;">${typeText}</td>
+                    <td style="border:1px solid #ddd; padding:10px;">${d.state}</td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        document.body.appendChild(container);
+        
         try {
-            // 1. جلب معلومات القناة والرسالة المثبتة
+            const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff' });
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            
+            // حفظ PDF محلياً
+            doc.save(`distributors_${Date.now()}.pdf`);
+            showNotification('✅ تم إنشاء PDF بنجاح', 'success');
+            
+            return doc;
+        } catch (error) {
+            showNotification('❌ فشل: ' + error.message, 'error');
+        } finally {
+            document.body.removeChild(container);
+        }
+    }
+    
+    // ==================== 3. إرسال PDF إلى القناة ====================
+    async function sendPDFToTelegram() {
+        const approved = distributors.filter(d => d.status === 'approved');
+        if (approved.length === 0) {
+            showNotification('⚠️ لا يوجد موزعون', 'error');
+            return;
+        }
+        
+        showNotification('📤 جاري إنشاء وإرسال PDF...', 'info');
+        
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '800px';
+        container.style.backgroundColor = 'white';
+        container.style.padding = '30px';
+        container.style.fontFamily = 'Cairo, sans-serif';
+        container.style.direction = 'rtl';
+        container.style.color = '#000';
+        
+        let html = `
+            <div style="text-align:center; border-bottom:3px solid #ffd700; padding-bottom:20px; margin-bottom:20px;">
+                <h1 style="color:#1a1a2e;">ناردو برو</h1>
+                <h2 style="color:#2e7d32;">قائمة الموزعين المعتمدين</h2>
+                <p>📅 ${new Date().toLocaleString('ar-SA')}</p>
+                <p>📊 إجمالي الموزعين: ${approved.length}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; direction:rtl;">
+                <thead><tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #ddd; padding:10px;">#</th>
+                    <th style="border:1px solid #ddd; padding:10px;">الشركة</th>
+                    <th style="border:1px solid #ddd; padding:10px;">المسؤول</th>
+                    <th style="border:1px solid #ddd; padding:10px;">الهاتف</th>
+                    <th style="border:1px solid #ddd; padding:10px;">النوع</th>
+                    <th style="border:1px solid #ddd; padding:10px;">الولاية</th>
+                </tr></thead><tbody>
+        `;
+        
+        approved.forEach((d, i) => {
+            const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
+            html += `<tr>
+                <td style="border:1px solid #ddd; padding:10px;">${i+1}</td>
+                <td style="border:1px solid #ddd; padding:10px;">${d.company}</td>
+                <td style="border:1px solid #ddd; padding:10px;">${d.manager}</td>
+                <td style="border:1px solid #ddd; padding:10px;">${d.phone}</td>
+                <td style="border:1px solid #ddd; padding:10px;">${typeText}</td>
+                <td style="border:1px solid #ddd; padding:10px;">${d.state}</td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        document.body.appendChild(container);
+        
+        try {
+            const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff' });
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            
+            const pdfBlob = doc.output('blob');
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM.channelId);
+            formData.append('document', pdfBlob, `distributors_${Date.now()}.pdf`);
+            formData.append('caption', `📋 قائمة الموزعين المعتمدين\n📅 ${new Date().toLocaleString('ar-SA')}\n✅ العدد: ${approved.length}`);
+            
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
+            const result = await response.json();
+            
+            if (response.ok && result.ok) {
+                showNotification('✅ تم إرسال PDF إلى القناة بنجاح', 'success');
+            } else {
+                throw new Error(result.description);
+            }
+        } catch (error) {
+            showNotification('❌ فشل الإرسال: ' + error.message, 'error');
+        } finally {
+            document.body.removeChild(container);
+        }
+    }
+    
+    // ==================== 4. جلب من القناة وتحليل النص وملء الجدول ====================
+    async function fetchFromPinned() {
+        showNotification('📡 جلب PDF من الرسالة المثبتة...', 'info');
+        
+        try {
             const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
             const chatData = await chatResponse.json();
-
-            if (!chatData.ok) throw new Error('فشل الاتصال بالقناة');
-            if (!chatData.result.pinned_message) throw new Error('لا توجد رسالة مثبتة في القناة');
-
+            
+            if (!chatData.ok || !chatData.result.pinned_message) {
+                showNotification('⚠️ لا توجد رسالة مثبتة', 'error');
+                return;
+            }
+            
             const pinnedMsg = chatData.result.pinned_message;
             if (!pinnedMsg.document || pinnedMsg.document.mime_type !== 'application/pdf') {
-                throw new Error('الرسالة المثبتة لا تحتوي على ملف PDF');
+                showNotification('⚠️ الرسالة المثبتة ليست PDF', 'error');
+                return;
             }
-
-            // 2. الحصول على رابط تحميل PDF
+            
             const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pinnedMsg.document.file_id}`);
             const fileData = await fileResponse.json();
-            if (!fileData.ok) throw new Error('فشل الحصول على ملف PDF');
-
             const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
-            showNotification('📄 تم جلب PDF، جاري التحليل...', 'info');
+            await extractAndFillTable(pdfUrl);
             
-            // 3. استخراج البيانات من PDF
-            await extractDataFromPDF(pdfUrl);
+        } catch (error) {
+            showNotification('❌ فشل الجلب: ' + error.message, 'error');
+        }
+    }
+    
+    async function fetchFromUrl() {
+        let url = document.getElementById('pdfUrl').value.trim();
+        if (!url) {
+            showNotification('⚠️ أدخل الرابط', 'error');
+            return;
+        }
+        
+        closeUrlModal();
+        showNotification('📡 جاري جلب وتحليل PDF...', 'info');
+        
+        try {
+            let pdfUrl = url;
+            const tgMatch = url.match(/t\.me\/c\/(\d+)\/(\d+)/);
+            
+            if (tgMatch) {
+                const chatId = `-100${tgMatch[1]}`;
+                const messageId = parseInt(tgMatch[2]);
+                const msgResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMessage?chat_id=${chatId}&message_id=${messageId}`);
+                const msgData = await msgResponse.json();
+                
+                if (msgData.ok && msgData.result.document) {
+                    const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${msgData.result.document.file_id}`);
+                    const fileData = await fileResponse.json();
+                    pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                }
+            }
+            
+            await extractAndFillTable(pdfUrl);
             
         } catch (error) {
             showNotification('❌ فشل: ' + error.message, 'error');
-            document.getElementById('tableContainer').innerHTML = `
-                <div class="empty-data">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 40px; margin-bottom: 15px; display: block;"></i>
-                    فشل جلب البيانات: ${error.message}<br>
-                    <small>تأكد من إرسال PDF إلى القناة وتثبيته كرسالة مثبتة</small><br>
-                    <button class="btn btn-telegram" onclick="showTelegramModal()" style="margin-top: 20px;">🔄 المحاولة مرة أخرى</button>
-                </div>
-            `;
         }
     }
-
-    // ============================================
-    // تحميل PDF وتحويله إلى نص
-    // ============================================
-    async function extractDataFromPDF(pdfUrl) {
+    
+    // ==================== 5. استخراج النص من PDF وملء الجدول ====================
+    async function extractAndFillTable(pdfUrl) {
         try {
             const loadingTask = pdfjsLib.getDocument(pdfUrl);
             const pdf = await loadingTask.promise;
@@ -312,137 +590,123 @@
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
-                fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
             }
             
-            if (!fullText.trim()) throw new Error('لم يتم العثور على نص في PDF');
+            // تحليل النص واستخراج البيانات
+            const newDistributors = parseTextToDistributors(fullText);
             
-            const extractedData = parseTextToData(fullText);
-            
-            if (extractedData.length === 0) {
-                throw new Error('لم يتم العثور على بيانات بالصيغة المطلوبة');
+            if (newDistributors.length === 0) {
+                showNotification('⚠️ لم يتم العثور على بيانات في PDF', 'warning');
+                return;
             }
             
-            currentData = extractedData;
-            displayDataInTable(currentData);
-            updateFiltersAndStats(currentData);
-            showNotification(`✅ تم استخراج ${currentData.length} موزع بنجاح`, 'success');
-            
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    // ============================================
-    // تحليل النص واستخراج البيانات
-    // النمط: الاسم + (3 حروف فرنسية) + الولاية + رقم الهاتف
-    // ============================================
-    function parseTextToData(text) {
-        const lines = text.split(/\r?\n/);
-        const results = [];
-        const pattern = /([\u0600-\u06FF\s]{2,}?)\s*([A-Z]{3})\s+([\u0600-\u06FF\s]+?)\s*([0-9]{10,})/g;
-        
-        for (const line of lines) {
-            let match;
-            while ((match = pattern.exec(line)) !== null) {
-                let name = match[1].trim().replace(/[^\u0600-\u06FF\s]/g, '');
-                const stateCode = match[2].trim().toUpperCase();
-                let stateName = match[3].trim().replace(/[^\u0600-\u06FF\s]/g, '');
-                const phone = match[4].trim();
-                
-                if (name && name.length >= 2 && phone && phone.length >= 9) {
-                    const finalStateName = STATES_MAP[stateCode] || stateName;
-                    results.push({
-                        id: results.length + 1,
-                        name: name,
-                        phone: phone,
-                        stateCode: stateCode,
-                        state: finalStateName,
-                        fullState: `${stateCode} - ${finalStateName}`
-                    });
+            // إضافة البيانات الجديدة مع تجنب التكرار
+            let addedCount = 0;
+            for (const newDist of newDistributors) {
+                const exists = distributors.some(d => d.company === newDist.company && d.phone === newDist.phone);
+                if (!exists) {
+                    distributors.push({ ...newDist, id: Date.now() + Math.random(), status: 'approved' });
+                    addedCount++;
                 }
             }
+            
+            displayTable();
+            showNotification(`✅ تم استخراج وإضافة ${addedCount} موزع جديد`, 'success');
+            
+        } catch (error) {
+            showNotification('❌ فشل استخراج البيانات: ' + error.message, 'error');
         }
-        
-        // إزالة التكرارات
-        const unique = [];
-        const phones = new Set();
-        for (const item of results) {
-            if (!phones.has(item.phone)) {
-                phones.add(item.phone);
-                unique.push(item);
-            }
-        }
-        unique.forEach((item, idx) => item.id = idx + 1);
-        return unique;
-    }
-
-    // ============================================
-    // عرض البيانات في الجدول
-    // ============================================
-    function displayDataInTable(data) {
-        if (!data || data.length === 0) {
-            document.getElementById('tableContainer').innerHTML = `<div class="empty-data">لا توجد بيانات للعرض</div>`;
-            return;
-        }
-        
-        let html = `<div class="table-wrapper"><table><thead><tr><th>#</th><th>الاسم</th><th>رقم الهاتف</th><th>الولاية</th></tr></thead><tbody>`;
-        data.forEach(item => {
-            html += `<tr><td>${item.id}</td><td>${item.name}</td><td>${item.phone}</td><td>${item.fullState}</td></tr>`;
-        });
-        html += `</tbody></table></div>`;
-        document.getElementById('tableContainer').innerHTML = html;
-    }
-
-    function filterTable() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        const selectedState = document.getElementById('stateFilter').value;
-        let filtered = currentData.filter(item => {
-            const matchSearch = searchTerm === '' || item.name.toLowerCase().includes(searchTerm);
-            const matchState = selectedState === 'all' || item.stateCode === selectedState;
-            return matchSearch && matchState;
-        });
-        filtered = filtered.map((item, idx) => ({ ...item, id: idx + 1 }));
-        displayDataInTable(filtered);
-        updateStatsOnly(filtered);
-    }
-
-    function updateFiltersAndStats(data) {
-        const statesSet = new Set();
-        data.forEach(item => { if (item.stateCode) statesSet.add(item.stateCode); });
-        
-        let options = '<option value="all">جميع الولايات</option>';
-        [...statesSet].sort().forEach(code => {
-            options += `<option value="${code}">${code} - ${STATES_MAP[code] || code}</option>`;
-        });
-        document.getElementById('stateFilter').innerHTML = options;
-        document.getElementById('totalCount').innerText = data.length;
-        document.getElementById('statesCount').innerText = statesSet.size;
     }
     
-    function updateStatsOnly(data) {
-        const statesSet = new Set();
-        data.forEach(item => { if (item.stateCode) statesSet.add(item.stateCode); });
-        document.getElementById('totalCount').innerText = data.length;
-        document.getElementById('statesCount').innerText = statesSet.size;
+    function parseTextToDistributors(text) {
+        const distributors = [];
+        const lines = text.split('\n');
+        
+        // أنماط البحث عن البيانات في النص
+        const patterns = [
+            /([^\|\n]{3,})\s*\|\s*([^\|\n]{3,})\s*\|\s*([0-9]{10,})\s*\|\s*([^\|\n]{2,})/gi,
+            /الشركة[:\s]+([^\n]+).*?المسؤول[:\s]+([^\n]+).*?هاتف[:\s]+([0-9]+).*?الولاية[:\s]+([^\n]+)/gi,
+            /([\u0600-\u06FF\s]{3,})\s+([\u0600-\u06FF\s]{3,})\s+([0-9]{10,})\s+([\u0600-\u06FF]{2,})/g
+        ];
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.length < 20) continue;
+            
+            for (const pattern of patterns) {
+                let match;
+                while ((match = pattern.exec(trimmed)) !== null) {
+                    const company = match[1]?.trim();
+                    const manager = match[2]?.trim();
+                    const phone = match[3]?.trim();
+                    const state = match[4]?.trim();
+                    
+                    if (company && company.length > 2 && phone && phone.length >= 9) {
+                        let type = 'delivery';
+                        if (trimmed.includes('موزع') && !trimmed.includes('توصيل')) type = 'distributor';
+                        if (trimmed.includes('كليهما') || trimmed.includes('كلاهما')) type = 'both';
+                        
+                        distributors.push({
+                            company: company,
+                            manager: manager || 'غير محدد',
+                            phone: phone,
+                            type: type,
+                            state: state || 'غير محدد'
+                        });
+                    }
+                }
+            }
+            
+            // محاولة استخراج من سطور مفصولة بمسافات متعددة
+            const parts = trimmed.split(/\s{2,}/);
+            if (parts.length >= 4 && parts[2]?.match(/[0-9]{9,}/)) {
+                distributors.push({
+                    company: parts[0],
+                    manager: parts[1],
+                    phone: parts[2],
+                    type: parts[3]?.includes('توصيل') ? 'delivery' : 'distributor',
+                    state: parts[4] || 'غير محدد'
+                });
+            }
+        }
+        
+        return distributors;
     }
-
-    function exportToExcel() {
-        if (!currentData.length) { showNotification('⚠️ لا توجد بيانات', 'warning'); return; }
-        let csv = '\uFEFFالاسم,رقم الهاتف,الولاية\n';
-        currentData.forEach(item => { csv += `"${item.name}","${item.phone}","${item.fullState}"\n`; });
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `distributors_${Date.now()}.csv`;
-        link.click();
-        URL.revokeObjectURL(link.href);
-        showNotification('✅ تم التصدير', 'success');
+    
+    // ==================== دوال مساعدة ====================
+    function showNotification(msg, type) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${msg}`;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
     }
-
-    window.onload = function() {
-        showTelegramModal();
-    };
+    
+    function openAddDistributor() {
+        document.getElementById('addModal').classList.add('active');
+    }
+    
+    function closeAddModal() {
+        document.getElementById('addModal').classList.remove('active');
+        document.getElementById('compName').value = '';
+        document.getElementById('mgrName').value = '';
+        document.getElementById('phone').value = '';
+        document.getElementById('state').value = '';
+    }
+    
+    function showUrlModal() {
+        document.getElementById('urlModal').classList.add('active');
+    }
+    
+    function closeUrlModal() {
+        document.getElementById('urlModal').classList.remove('active');
+        document.getElementById('pdfUrl').value = '';
+    }
+    
+    // تهيئة الصفحة
+    displayTable();
 </script>
 </body>
 </html>
