@@ -1,7 +1,8 @@
-head>
+html lang="ar" dir="rtl">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - النظام المتكامل (نسخة الإكسل)</title>
+    <title>ناردو برو - النسخة النهائية المصلحة</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- مكتبة Excel (SheetJS) -->
@@ -26,6 +27,7 @@ head>
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 15px;
+            align-items: center;
         }
         .btn {
             padding: 12px 25px;
@@ -42,13 +44,9 @@ head>
         .btn-gold { background: #ffd700; color: #000; }
         .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
         .btn-telegram { background: #0088cc; color: white; }
-        .btn-telegram:hover { transform: translateY(-2px); background: #006699; }
         .btn-excel { background: #1d6f42; color: white; }
-        .btn-excel:hover { transform: translateY(-2px); background: #248a52; }
         .btn-info { background: #17a2b8; color: white; }
-        .btn-info:hover { transform: translateY(-2px); background: #138496; }
         .btn-success { background: #28a745; color: white; }
-        .btn-success:hover { transform: translateY(-2px); background: #218838; }
         .card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.2);
@@ -96,6 +94,7 @@ head>
             border-radius: 10px;
             z-index: 1000;
             animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         .notification.success { background: #28a745; color: white; }
         .notification.error { background: #dc3545; color: white; }
@@ -185,10 +184,10 @@ head>
 <div class="container">
     <div class="header">
         <h1><i class="fas fa-truck"></i> ناردو برو | النظام المتكامل</h1>
-        <div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
             <button class="btn btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
-            <button class="btn btn-telegram" onclick="sendExcelToTelegram()"><i class="fab fa-telegram"></i> إرسال Excel للقناة</button>
+            <button class="btn btn-telegram" onclick="sendExcelToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button>
             <button class="btn btn-info" onclick="fetchFromPinned()"><i class="fas fa-thumbtack"></i> جلب من المثبتة</button>
             <button class="btn btn-success" onclick="showUrlModal()"><i class="fas fa-link"></i> جلب من رابط</button>
         </div>
@@ -260,7 +259,6 @@ head>
         apiUrl: 'https://api.telegram.org/bot'
     };
 
-    // البيانات
     let distributors = [
         { id: 1, company: "شركة البراق", manager: "أحمد محمد", phone: "0555123456", type: "delivery", state: "الجزائر", status: "approved" },
         { id: 2, company: "مؤسسة السريع", manager: "سعيد علي", phone: "0555234567", type: "distributor", state: "وهران", status: "approved" },
@@ -270,16 +268,10 @@ head>
     let currentFilter = 'all';
     let currentSearch = '';
 
-    // ==================== 1. عرض البيانات في الجدول ====================
     function displayTable() {
         let filtered = distributors.filter(d => d.status === 'approved');
-        
-        if (currentFilter !== 'all') {
-            filtered = filtered.filter(d => d.type === currentFilter);
-        }
-        if (currentSearch) {
-            filtered = filtered.filter(d => d.company.includes(currentSearch));
-        }
+        if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
+        if (currentSearch) filtered = filtered.filter(d => d.company.includes(currentSearch));
         
         const tbody = document.getElementById('tableBody');
         if (filtered.length === 0) {
@@ -298,7 +290,6 @@ head>
                 <td><span style="background:#28a745; padding:5px 10px; border-radius:20px; font-size:12px;">معتمد</span></td>
             </tr>
         `).join('');
-        
         updateStats();
     }
     
@@ -306,7 +297,6 @@ head>
         const approved = distributors.filter(d => d.status === 'approved');
         const delivery = approved.filter(d => d.type === 'delivery' || d.type === 'both').length;
         const distributor = approved.filter(d => d.type === 'distributor' || d.type === 'both').length;
-        
         document.getElementById('stats').innerHTML = `
             <div class="stat-card"><div class="stat-number">${approved.length}</div><div>إجمالي الموزعين</div></div>
             <div class="stat-card"><div class="stat-number">${delivery}</div><div>خدمة توصيل</div></div>
@@ -315,11 +305,7 @@ head>
         `;
     }
     
-    function filterTable() {
-        currentSearch = document.getElementById('searchInput').value;
-        displayTable();
-    }
-    
+    function filterTable() { currentSearch = document.getElementById('searchInput').value; displayTable(); }
     function filterByType(type) {
         currentFilter = type;
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -337,20 +323,19 @@ head>
             state: document.getElementById('state').value,
             status: 'approved'
         };
-        
-        if (newDist.company && newDist.manager && newDist.phone && newDist.state) {
+        if (newDist.company && newDist.phone) {
             distributors.push(newDist);
-            displayTable();
-            closeAddModal();
+            displayTable(); closeAddModal();
             showNotification('✅ تم إضافة الموزع بنجاح', 'success');
         } else {
-            showNotification('⚠️ الرجاء ملء جميع الحقول', 'error');
+            showNotification('⚠️ الرجاء ملء الحقول الأساسية', 'error');
         }
     }
-    
-    // ==================== 2. وظائف Excel ====================
-    function getExcelData() {
-        return distributors.filter(d => d.status === 'approved').map((d, i) => ({
+
+    // ==================== Excel Logic ====================
+    function exportToExcel() {
+        showNotification('📊 جاري إنشاء ملف Excel...', 'info');
+        const data = distributors.filter(d => d.status === 'approved').map((d, i) => ({
             "#": i + 1,
             "اسم الشركة": d.company,
             "المسؤول": d.manager,
@@ -358,21 +343,24 @@ head>
             "النوع": d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
             "الولاية": d.state
         }));
-    }
-
-    function exportToExcel() {
-        showNotification('📊 جاري إنشاء ملف Excel...', 'info');
-        const ws = XLSX.utils.json_to_sheet(getExcelData());
+        const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "الموزعون");
-        XLSX.writeFile(wb, `nardo_pro_list_${Date.now()}.xlsx`);
-        showNotification('✅ تم تحميل ملف Excel بنجاح', 'success');
+        XLSX.writeFile(wb, `nardo_pro_${Date.now()}.xlsx`);
     }
 
     async function sendExcelToTelegram() {
-        showNotification('📤 جاري إرسال ملف Excel للقناة...', 'info');
+        showNotification('📤 جاري الإرسال للقناة...', 'info');
         try {
-            const ws = XLSX.utils.json_to_sheet(getExcelData());
+            const data = distributors.filter(d => d.status === 'approved').map((d, i) => ({
+                "#": i + 1,
+                "اسم الشركة": d.company,
+                "المسؤول": d.manager,
+                "رقم الهاتف": d.phone,
+                "النوع": d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
+                "الولاية": d.state
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "الموزعون");
             const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -381,91 +369,100 @@ head>
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, `distributors_${Date.now()}.xlsx`);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة (Excel)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
+            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
 
             const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await res.json();
-            if(result.ok) showNotification('✅ تم إرسال ملف Excel بنجاح', 'success');
+            if(result.ok) showNotification('✅ تم الإرسال بنجاح', 'success');
             else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
+    }
+
+    // ==================== Flexible Excel Parsing ====================
+    async function processFile(arrayBuffer) {
+        try {
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rawData = XLSX.utils.sheet_to_json(sheet);
+            
+            if (!rawData.length) throw new Error("الملف فارغ");
+
+            const newDistributors = rawData.map(row => {
+                // دالة للبحث عن القيمة بناءً على احتمالات اسم العمود
+                const findVal = (keys) => {
+                    const foundKey = Object.keys(row).find(k => keys.some(key => k.toLowerCase().includes(key.toLowerCase())));
+                    return foundKey ? row[foundKey] : "";
+                };
+
+                return {
+                    id: Math.random(),
+                    company: findVal(["شركة", "company", "الاسم", "name"]),
+                    manager: findVal(["مسؤول", "manager", "مدير"]),
+                    phone: findVal(["هاتف", "phone", "رقم", "tel", "mobile"]),
+                    type: findVal(["نوع", "type"]).toString().includes("موزع") ? "distributor" : 
+                          (findVal(["نوع", "type"]).toString().includes("كل") ? "both" : "delivery"),
+                    state: findVal(["ولاية", "state", "city", "مكان"]),
+                    status: 'approved'
+                };
+            }).filter(d => d.company && d.phone);
+
+            if (newDistributors.length > 0) {
+                distributors = newDistributors;
+                displayTable();
+                showNotification(`✅ تم جلب ${newDistributors.length} موزع بنجاح`, 'success');
+            } else {
+                throw new Error("لم يتم العثور على بيانات صالحة (تأكد من وجود أعمدة الشركة والهاتف)");
+            }
         } catch (err) {
-            showNotification(`❌ فشل الإرسال: ${err.message}`, 'error');
+            showNotification(`❌ فشل معالجة الملف: ${err.message}`, 'error');
+            console.error(err);
         }
     }
 
-    // ==================== 3. جلب من القناة ====================
     async function fetchFromPinned() {
-        showNotification('📡 جلب الملف من الرسالة المثبتة...', 'info');
+        showNotification('📡 جاري الجلب من تليجرام...', 'info');
         try {
             const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
             const chatData = await chatRes.json();
-            if(!chatData.ok || !chatData.result.pinned_message) {
-                showNotification('⚠️ لا توجد رسالة مثبتة', 'error');
-                return;
-            }
+            if(!chatData.ok || !chatData.result.pinned_message) throw new Error("لا توجد رسالة مثبتة");
+            
             const pinned = chatData.result.pinned_message;
-            if(!pinned.document) {
-                showNotification('⚠️ الرسالة المثبتة ليست ملفاً', 'error');
-                return;
-            }
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pinned.document.file_id}`);
+            const fileId = pinned.document ? pinned.document.file_id : (pinned.audio ? pinned.audio.file_id : null);
+            if(!fileId) throw new Error("الرسالة المثبتة لا تحتوي على ملف");
+
+            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
             const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
-            await processFileFromUrl(fileUrl);
+            const res = await fetch(fileUrl);
+            const buffer = await res.arrayBuffer();
+            await processFile(buffer);
         } catch (err) { showNotification(`❌ خطأ: ${err.message}`, 'error'); }
     }
 
     async function fetchFromUrl() {
         const url = document.getElementById('fileUrl').value.trim();
-        if (!url) {
-            showNotification('⚠️ أدخل الرابط', 'error');
-            return;
-        }
+        if(!url) return;
         closeUrlModal();
-        showNotification('📡 جاري جلب الملف...', 'info');
-        await processFileFromUrl(url);
-    }
-
-    async function processFileFromUrl(url) {
+        showNotification('📡 جاري الجلب...', 'info');
         try {
-            const response = await fetch(url);
-            const arrayBuffer = await response.arrayBuffer();
-            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-            
-            if(jsonData.length) {
-                distributors = jsonData.map(d => ({
-                    id: Math.random(),
-                    company: d["اسم الشركة"] || d.company || "",
-                    manager: d["المسؤول"] || d.manager || "",
-                    phone: d["رقم الهاتف"] || d.phone || "",
-                    type: d["النوع"] === 'توصيل' ? 'delivery' : (d["النوع"] === 'موزع' ? 'distributor' : 'both'),
-                    state: d["الولاية"] || d.state || "",
-                    status: 'approved'
-                }));
-                displayTable();
-                showNotification(`✅ تم تحديث البيانات بنجاح`, 'success');
-            }
-        } catch (err) {
-            showNotification(`❌ فشل معالجة الملف: ${err.message}`, 'error');
-        }
+            const res = await fetch(url);
+            const buffer = await res.arrayBuffer();
+            await processFile(buffer);
+        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== دوال مساعدة ====================
     function showNotification(msg, type) {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${msg}`;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        const n = document.createElement('div');
+        n.className = `notification ${type}`;
+        n.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i> ${msg}`;
+        document.body.appendChild(n);
+        setTimeout(() => n.remove(), 3500);
     }
-    
     function openAddDistributor() { document.getElementById('addModal').classList.add('active'); }
     function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
     function showUrlModal() { document.getElementById('urlModal').classList.add('active'); }
     function closeUrlModal() { document.getElementById('urlModal').classList.remove('active'); }
-    
     displayTable();
 </script>
 </body>
