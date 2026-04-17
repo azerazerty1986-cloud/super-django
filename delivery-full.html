@@ -139,98 +139,64 @@
             background: #ffd700;
             color: #000;
         }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
         }
-        .modal.active { display: flex; }
-        .modal-content {
-            background: #1a1a2e;
-            border: 2px solid #ffd700;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        .modal-content input, .modal-content select, .modal-content textarea {
-            width: 100%;
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 10px;
-            border: 1px solid rgba(255,215,0,0.3);
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-family: 'Cairo', sans-serif;
-        }
-        .modal-content textarea {
-            min-height: 300px;
-            resize: vertical;
-            font-family: monospace;
-            direction: ltr;
-            text-align: left;
-        }
-        .close-btn {
-            float: left;
-            font-size: 28px;
-            cursor: pointer;
-            color: #ffd700;
-            background: none;
-            border: none;
-        }
-        .txt-preview {
-            background: rgba(0,0,0,0.4);
+        .file-card {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 12px;
             padding: 15px;
-            border-radius: 10px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            direction: ltr;
-            text-align: left;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .tab-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255,215,0,0.3);
-            padding-bottom: 10px;
-        }
-        .tab-btn {
-            background: none;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            cursor: pointer;
-            border-radius: 10px;
             transition: all 0.3s;
         }
-        .tab-btn.active {
-            background: #ffd700;
-            color: #000;
+        .file-card:hover {
+            background: rgba(255,215,0,0.1);
+            transform: translateY(-3px);
         }
-        .tab-content {
-            display: none;
+        .file-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 8px;
+            word-break: break-all;
         }
-        .tab-content.active {
-            display: block;
+        .file-date {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 10px;
         }
-        .import-preview {
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 10px;
+        .file-actions {
+            display: flex;
+            gap: 10px;
             margin-top: 10px;
-            max-height: 200px;
-            overflow-y: auto;
+        }
+        .file-actions button {
+            flex: 1;
+            padding: 8px;
+            font-size: 12px;
+        }
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+        }
+        .loading-spinner i {
+            font-size: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .section-title {
+            color: #ffd700;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
     </style>
 </head>
@@ -242,7 +208,7 @@
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
             <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-download"></i> تصدير TXT</button>
             <button class="btn btn-telegram" onclick="sendTxtToTelegram()"><i class="fab fa-telegram"></i> إرسال TXT للقناة</button>
-            <button class="btn btn-info" onclick="fetchTxtFromPinned()"><i class="fas fa-thumbtack"></i> جلب TXT من القناة</button>
+            <button class="btn btn-info" onclick="fetchAllTxtFromChannel()"><i class="fab fa-telegram"></i> جلب TXT من القناة</button>
             <button class="btn btn-success" onclick="openImportTxtModal()"><i class="fas fa-upload"></i> استيراد TXT</button>
             <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
@@ -250,87 +216,80 @@
 
     <div class="stats" id="stats"></div>
 
-    <!-- أزرار التبويب -->
-    <div class="tab-buttons">
-        <button class="tab-btn active" onclick="switchTab('table')"><i class="fas fa-table"></i> جدول الموزعين</button>
-        <button class="tab-btn" onclick="switchTab('preview')"><i class="fas fa-eye"></i> معاينة آخر TXT</button>
-    </div>
-
-    <!-- تبويب الجدول -->
-    <div id="tableTab" class="tab-content active">
-        <div class="card">
-            <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع أو الولاية..." onkeyup="filterTable()">
-            </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
-                <button class="filter-btn" onclick="filterByType('delivery')">🚚 توصيل</button>
-                <button class="filter-btn" onclick="filterByType('distributor')">📦 موزع</button>
-                <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
-            </div>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>اسم الشركة</th>
-                            <th>المسؤول</th>
-                            <th>الهاتف</th>
-                            <th>النوع</th>
-                            <th>الولاية</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
+    <!-- قائمة ملفات TXT من القناة -->
+    <div class="card" id="channelFilesSection" style="display: none;">
+        <div class="section-title">
+            <i class="fab fa-telegram"></i>
+            <span>ملفات TXT من قناة التليجرام</span>
+            <button class="btn btn-info" onclick="fetchAllTxtFromChannel()" style="padding: 5px 15px; margin-right: auto;"><i class="fas fa-sync-alt"></i> تحديث</button>
+        </div>
+        <div id="channelFilesList" class="files-grid">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner"></i>
+                <p>جاري تحميل الملفات...</p>
             </div>
         </div>
     </div>
 
-    <!-- تبويب معاينة TXT -->
-    <div id="previewTab" class="tab-content">
-        <div class="card">
-            <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-eye"></i> معاينة آخر ملف TXT</h2>
-            <div id="txtPreviewContent" class="txt-preview">
-                <p style="text-align: center; color: #aaa;">📄 لا يوجد ملف TXT تم استيراده بعد...</p>
-            </div>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn btn-txt" onclick="copyTxtToClipboard()"><i class="fas fa-copy"></i> نسخ النص</button>
-                <button class="btn btn-success" onclick="importFromPreview()"><i class="fas fa-arrow-down"></i> استيراد للجدول</button>
-            </div>
+    <!-- جدول الموزعين -->
+    <div class="card">
+        <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع أو الولاية..." onkeyup="filterTable()">
+        </div>
+        <div class="filter-buttons">
+            <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
+            <button class="filter-btn" onclick="filterByType('delivery')">🚚 توصيل</button>
+            <button class="filter-btn" onclick="filterByType('distributor')">📦 موزع</button>
+            <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
+        </div>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>اسم الشركة</th>
+                        <th>المسؤول</th>
+                        <th>الهاتف</th>
+                        <th>النوع</th>
+                        <th>الولاية</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <!-- نافذة إضافة موزع -->
-<div id="addModal" class="modal">
-    <div class="modal-content">
-        <button class="close-btn" onclick="closeAddModal()">&times;</button>
+<div id="addModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: #1a1a2e; border: 2px solid #ffd700; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%;">
+        <button class="close-btn" onclick="closeAddModal()" style="float: left; font-size: 28px; cursor: pointer; color: #ffd700; background: none; border: none;">&times;</button>
         <h2 style="color: #ffd700;">إضافة موزع جديد</h2>
-        <input type="text" id="compName" placeholder="اسم الشركة">
-        <input type="text" id="mgrName" placeholder="اسم المسؤول">
-        <input type="tel" id="phone" placeholder="رقم الهاتف">
-        <select id="type">
+        <input type="text" id="compName" placeholder="اسم الشركة" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
+        <input type="text" id="mgrName" placeholder="اسم المسؤول" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
+        <input type="tel" id="phone" placeholder="رقم الهاتف" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
+        <select id="type" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
             <option value="delivery">توصيل</option>
             <option value="distributor">موزع</option>
             <option value="both">كليهما</option>
         </select>
-        <input type="text" id="state" placeholder="الولاية">
+        <input type="text" id="state" placeholder="الولاية" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
         <button class="btn btn-gold" onclick="addDistributor()" style="width: 100%;">إضافة</button>
     </div>
 </div>
 
 <!-- نافذة استيراد TXT -->
-<div id="importTxtModal" class="modal">
-    <div class="modal-content">
-        <button class="close-btn" onclick="closeImportTxtModal()">&times;</button>
+<div id="importTxtModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: #1a1a2e; border: 2px solid #ffd700; border-radius: 20px; padding: 30px; max-width: 600px; width: 90%;">
+        <button class="close-btn" onclick="closeImportTxtModal()" style="float: left; font-size: 28px; cursor: pointer; color: #ffd700; background: none; border: none;">&times;</button>
         <h2 style="color: #ffd700;"><i class="fas fa-upload"></i> استيراد بيانات من TXT</h2>
         <p style="margin: 10px 0;">قم بلصق محتوى ملف TXT أو تحميل ملف:</p>
-        <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)">
-        <textarea id="txtRawContent" rows="10" placeholder="الصق هنا محتوى ملف TXT..."></textarea>
+        <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
+        <textarea id="txtRawContent" rows="10" placeholder="الصق هنا محتوى ملف TXT..." style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white; font-family: monospace;"></textarea>
         <button class="btn btn-info" onclick="previewTxtData()">معاينة البيانات</button>
-        <div id="importPreviewArea" class="import-preview" style="display: none;"></div>
+        <div id="importPreviewArea" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; margin-top: 10px; display: none;"></div>
         <button class="btn btn-success" onclick="importTxtToTable()" style="width: 100%; margin-top: 10px;">استيراد للجدول</button>
     </div>
 </div>
@@ -351,22 +310,6 @@
     
     let currentFilter = 'all';
     let currentSearch = '';
-    let lastImportedTxt = '';
-
-    // ==================== دوال التبويب ====================
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        
-        document.getElementById('tableTab').classList.remove('active');
-        document.getElementById('previewTab').classList.remove('active');
-        
-        if (tab === 'table') {
-            document.getElementById('tableTab').classList.add('active');
-        } else if (tab === 'preview') {
-            document.getElementById('previewTab').classList.add('active');
-        }
-    }
 
     // ==================== دوال الجدول الأساسية ====================
     function getFilteredData() {
@@ -443,7 +386,6 @@
             distributors.push(newDist);
             displayTable(); closeAddModal();
             showNotification('✅ تم إضافة الموزع بنجاح', 'success');
-            // تفريغ الحقول
             document.getElementById('compName').value = '';
             document.getElementById('mgrName').value = '';
             document.getElementById('phone').value = '';
@@ -532,28 +474,79 @@
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== دوال جلب TXT ====================
-    async function fetchTxtFromPinned() {
-        showNotification('📡 جاري البحث عن ملف TXT في الرسالة المثبتة...', 'info');
+    // ==================== جلب جميع ملفات TXT من القناة مباشرة ====================
+    async function fetchAllTxtFromChannel() {
+        const section = document.getElementById('channelFilesSection');
+        const container = document.getElementById('channelFilesList');
+        
+        section.style.display = 'block';
+        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة...</p></div>';
+        
         try {
-            const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
-            const chatData = await chatRes.json();
-            if(!chatData.ok || !chatData.result.pinned_message) throw new Error("لا توجد رسالة مثبتة");
+            // جلب آخر 50 رسالة من القناة
+            const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-50`;
+            const response = await fetch(url);
+            const data = await response.json();
             
-            const pinned = chatData.result.pinned_message;
-            let fileId = null;
+            const txtFiles = [];
             
-            if (pinned.document) {
-                const fileName = pinned.document.file_name || '';
-                if (fileName.toLowerCase().endsWith('.txt')) {
-                    fileId = pinned.document.file_id;
-                } else {
-                    throw new Error("الملف المثبت ليس من نوع TXT (الملف الحالي: " + fileName + ")");
+            if (data.ok && data.result) {
+                for (const update of data.result) {
+                    const message = update.message || update.channel_post || update.edited_message;
+                    if (message && message.document) {
+                        const fileName = message.document.file_name || '';
+                        if (fileName.toLowerCase().endsWith('.txt')) {
+                            txtFiles.push({
+                                file_id: message.document.file_id,
+                                file_name: fileName,
+                                date: new Date(message.date * 1000).toLocaleString('ar-SA'),
+                                message_id: message.message_id,
+                                file_size: message.document.file_size
+                            });
+                        }
+                    }
                 }
-            } else {
-                throw new Error("الرسالة المثبتة لا تحتوي على ملف");
             }
             
+            if (txtFiles.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #aaa; grid-column: 1/-1;">📂 لا توجد ملفات TXT في القناة</p>';
+                return;
+            }
+            
+            // عرض الملفات
+            container.innerHTML = txtFiles.map((file, index) => `
+                <div class="file-card">
+                    <div class="file-name">
+                        <i class="fas fa-file-alt"></i> ${file.file_name}
+                    </div>
+                    <div class="file-date">
+                        <i class="far fa-calendar-alt"></i> ${file.date}
+                        <span style="margin-right: 10px;">📦 ${(file.file_size / 1024).toFixed(2)} KB</span>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-info" onclick="viewTxtFile('${file.file_id}', '${file.file_name}')">
+                            <i class="fas fa-eye"></i> معاينة
+                        </button>
+                        <button class="btn btn-success" onclick="importTxtFile('${file.file_id}', '${file.file_name}')">
+                            <i class="fas fa-download"></i> استيراد
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            showNotification(`✅ تم العثور على ${txtFiles.length} ملف TXT في القناة`, 'success');
+            
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `<p style="text-align: center; color: #ff6b6b; grid-column: 1/-1;">❌ خطأ: ${err.message}</p>`;
+            showNotification(`❌ فشل جلب الملفات: ${err.message}`, 'error');
+        }
+    }
+    
+    async function viewTxtFile(fileId, fileName) {
+        showNotification(`📄 جاري تحميل ${fileName}...`, 'info');
+        
+        try {
             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
             const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
@@ -561,44 +554,66 @@
             const res = await fetch(fileUrl);
             const text = await res.text();
             
-            lastImportedTxt = text;
-            document.getElementById('txtPreviewContent').innerHTML = `<pre style="direction: ltr; text-align: left; font-family: monospace; margin: 0;">${escapeHtml(text)}</pre>`;
-            showNotification('✅ تم جلب ملف TXT بنجاح', 'success');
+            // عرض في نافذة منبثقة
+            const win = window.open();
+            win.document.write(`
+                <html dir="ltr">
+                <head>
+                    <title>${fileName}</title>
+                    <style>
+                        body { 
+                            font-family: monospace; 
+                            padding: 20px; 
+                            background: #1a1a2e; 
+                            color: #fff;
+                            direction: ltr;
+                            text-align: left;
+                        }
+                        pre { 
+                            white-space: pre-wrap; 
+                            word-wrap: break-word;
+                            background: rgba(0,0,0,0.3);
+                            padding: 15px;
+                            border-radius: 10px;
+                        }
+                        h2 { color: #ffd700; }
+                    </style>
+                </head>
+                <body>
+                    <h2>📄 ${fileName}</h2>
+                    <pre>${escapeHtml(text)}</pre>
+                </body>
+                </html>
+            `);
             
-            // التبديل إلى تبويب المعاينة
-            document.getElementById('previewTab').classList.add('active');
-            document.getElementById('tableTab').classList.remove('active');
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if(btn.innerText.includes('معاينة')) btn.classList.add('active');
-            });
-            
-        } catch (err) { 
-            showNotification(`❌ خطأ: ${err.message}`, 'error');
+            showNotification(`✅ تم تحميل ${fileName}`, 'success');
+        } catch (err) {
+            showNotification(`❌ فشل تحميل الملف: ${err.message}`, 'error');
         }
     }
     
-    // ==================== دوال استيراد TXT ====================
-    function openImportTxtModal() {
-        document.getElementById('importTxtModal').classList.add('active');
-        document.getElementById('txtRawContent').value = '';
-        document.getElementById('importPreviewArea').style.display = 'none';
-    }
-    
-    function closeImportTxtModal() {
-        document.getElementById('importTxtModal').classList.remove('active');
-    }
-    
-    function handleTxtFileUpload(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('txtRawContent').value = e.target.result;
-                showNotification('📁 تم تحميل الملف بنجاح', 'success');
-                previewTxtData();
-            };
-            reader.readAsText(input.files[0], 'UTF-8');
-            input.value = '';
+    async function importTxtFile(fileId, fileName) {
+        showNotification(`📥 جاري استيراد ${fileName}...`, 'info');
+        
+        try {
+            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileRes.json();
+            const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+            
+            const res = await fetch(fileUrl);
+            const text = await res.text();
+            
+            const parsed = parseTxtToDistributors(text);
+            
+            if (parsed.length > 0) {
+                distributors = [...distributors, ...parsed];
+                displayTable();
+                showNotification(`✅ تم استيراد ${parsed.length} موزع من ${fileName}`, 'success');
+            } else {
+                showNotification(`⚠️ لم يتم العثور على بيانات صالحة في ${fileName}`, 'error');
+            }
+        } catch (err) {
+            showNotification(`❌ فشل الاستيراد: ${err.message}`, 'error');
         }
     }
     
@@ -607,18 +622,15 @@
         const distributorsList = [];
         
         for (const line of lines) {
-            // البحث عن سطور تحتوي على | وتنسيق الجدول
             if (line.includes('│') && !line.includes('┌') && !line.includes('├') && !line.includes('└') && !line.includes('═')) {
                 const parts = line.split('│').filter(p => p.trim() !== '');
                 if (parts.length >= 6) {
-                    const num = parts[0].trim();
                     const company = parts[1].trim();
                     const manager = parts[2].trim();
                     const phone = parts[3].trim();
                     let type = parts[4].trim();
                     const state = parts[5].trim();
                     
-                    // تحويل النوع من نص إلى قيمة
                     if (type.includes('توصيل') && !type.includes('كليهما')) type = 'delivery';
                     else if (type.includes('موزع') && !type.includes('كليهما')) type = 'distributor';
                     else if (type.includes('كليهما')) type = 'both';
@@ -640,6 +652,36 @@
         }
         
         return distributorsList;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ==================== دوال استيراد TXT ====================
+    function openImportTxtModal() {
+        document.getElementById('importTxtModal').style.display = 'flex';
+        document.getElementById('txtRawContent').value = '';
+        document.getElementById('importPreviewArea').style.display = 'none';
+    }
+    
+    function closeImportTxtModal() {
+        document.getElementById('importTxtModal').style.display = 'none';
+    }
+    
+    function handleTxtFileUpload(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('txtRawContent').value = e.target.result;
+                showNotification('📁 تم تحميل الملف بنجاح', 'success');
+                previewTxtData();
+            };
+            reader.readAsText(input.files[0], 'UTF-8');
+            input.value = '';
+        }
     }
     
     function previewTxtData() {
@@ -681,44 +723,10 @@
             return;
         }
         
-        // إضافة البيانات الجديدة إلى القائمة الموجودة
         distributors = [...distributors, ...parsed];
         displayTable();
-        lastImportedTxt = txtContent;
-        
-        // حفظ في المعاينة
-        document.getElementById('txtPreviewContent').innerHTML = `<pre style="direction: ltr; text-align: left; font-family: monospace; margin: 0;">${escapeHtml(txtContent)}</pre>`;
-        
         closeImportTxtModal();
         showNotification(`✅ تم استيراد ${parsed.length} موزع بنجاح`, 'success');
-    }
-    
-    function copyTxtToClipboard() {
-        if (lastImportedTxt) {
-            navigator.clipboard.writeText(lastImportedTxt);
-            showNotification('📋 تم نسخ النص إلى الحافظة', 'success');
-        } else {
-            showNotification('⚠️ لا يوجد نص لنسخه', 'error');
-        }
-    }
-    
-    function importFromPreview() {
-        if (lastImportedTxt) {
-            const parsed = parseTxtToDistributors(lastImportedTxt);
-            if (parsed.length > 0) {
-                distributors = [...distributors, ...parsed];
-                displayTable();
-                showNotification(`✅ تم استيراد ${parsed.length} موزع من المعاينة`, 'success');
-            }
-        } else {
-            showNotification('⚠️ لا توجد بيانات للاستيراد', 'error');
-        }
-    }
-    
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     }
     
     function showNotification(msg, type) {
@@ -729,8 +737,13 @@
         setTimeout(() => n.remove(), 3500);
     }
     
-    function openAddDistributor() { document.getElementById('addModal').classList.add('active'); }
-    function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+    function openAddDistributor() { document.getElementById('addModal').style.display = 'flex'; }
+    function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
+    
+    // تحميل الملفات تلقائياً عند فتح الصفحة
+    setTimeout(() => {
+        fetchAllTxtFromChannel();
+    }, 1000);
     
     displayTable();
 </script>
