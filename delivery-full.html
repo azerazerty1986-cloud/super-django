@@ -1,9 +1,11 @@
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - النظام الاحترافي (الرسالة المثبتة)</title>
+    <title>ناردو برو - النظام الاحترافي (توليد الباركود)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- مكتبة توليد الـ QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --gold: #ffd700; --bg: #0f3460; --card-bg: #16213e; --text: #ffffff; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,10 +32,12 @@
         .badge-distributor { background: #007bff; color: white; }
         .badge-both { background: #6f42c1; color: white; }
         
-        /* قسم الصورة المجلوبة */
-        .photo-card { display: none; margin-top: 15px; background: rgba(255, 215, 0, 0.05); border: 1px dashed var(--gold); padding: 15px; border-radius: 10px; text-align: center; }
-        .photo-card h3 { font-size: 16px; color: var(--gold); margin-bottom: 10px; }
-        .photo-card img { max-width: 100%; max-height: 400px; border-radius: 10px; border: 2px solid var(--gold); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        /* قسم الباركود المولد */
+        .qr-card { display: none; margin-top: 15px; background: white; padding: 20px; border-radius: 15px; text-align: center; border: 3px solid var(--gold); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .qr-card h3 { font-size: 18px; color: #0f3460; margin-bottom: 15px; font-weight: 700; }
+        #qrcode { display: flex; justify-content: center; margin-bottom: 10px; }
+        #qrcode img { border: 5px solid white; }
+        .qr-info { color: #333; font-size: 14px; margin-top: 10px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -47,10 +51,11 @@
         </div>
         <div id="status" class="status-bar">جاهز للعمل</div>
         
-        <!-- قسم الصورة المجلوبة -->
-        <div id="photoCard" class="photo-card">
-            <h3><i class="fas fa-image"></i> الصورة المجلوبة من الرسالة المثبتة</h3>
-            <img id="pinnedPhoto" src="" alt="Pinned Photo">
+        <!-- قسم الباركود المولد -->
+        <div id="qrContainer" class="qr-card">
+            <h3><i class="fas fa-qrcode"></i> رمز الاستجابة السريعة (QR) للبيانات الحالية</h3>
+            <div id="qrcode"></div>
+            <div class="qr-info">قم بمسح الرمز لمشاركة قائمة الموزعين</div>
         </div>
     </div>
 
@@ -104,16 +109,20 @@
     const KEYWORD = '📋 قائمة الموزعين حسب كل ولاية';
 
     let distributors = [];
+    let qrcode = null;
 
     function updateTable() {
         const tbody = document.getElementById('tableBody');
         const filter = document.getElementById('stateFilter').value;
         const filtered = filter === 'all' ? distributors : distributors.filter(d => d.state === filter);
         document.getElementById('countDisplay').innerText = `العدد: ${filtered.length}`;
+        
         if (filtered.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات حالياً</td></tr>';
+            document.getElementById('qrContainer').style.display = 'none';
             return;
         }
+
         tbody.innerHTML = filtered.map((d, i) => `
             <tr>
                 <td>${i+1}</td>
@@ -125,7 +134,39 @@
                 <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${distributors.indexOf(d)})"><i class="fas fa-trash"></i></button></td>
             </tr>
         `).join('');
+        
         updateFilterOptions();
+        generateQRCode(); // توليد الباركود تلقائياً عند كل تحديث للجدول
+    }
+
+    function generateQRCode() {
+        if (distributors.length === 0) return;
+
+        // تحويل البيانات الحالية إلى نص بنفس تنسيق التيليجرام
+        let text = `${KEYWORD}\n━━━━━━━━━━━━━━━━━━\n`;
+        const states = [...new Set(distributors.map(d => d.state))];
+        states.forEach(state => {
+            const stateItems = distributors.filter(d => d.state === state);
+            text += `📍 ولاية ${state} - العدد: ${stateItems.length}\n`;
+            stateItems.forEach(d => {
+                text += `• ${d.company} (${d.type})\n  👤 ${d.manager} | 📞 ${d.phone}\n`;
+            });
+            text += `\n`;
+        });
+
+        // مسح الباركود القديم وتوليد جديد
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.innerHTML = "";
+        document.getElementById('qrContainer').style.display = 'block';
+        
+        new QRCode(qrDiv, {
+            text: text,
+            width: 256,
+            height: 256,
+            colorDark : "#0f3460",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.L // مستوى تصحيح منخفض لزيادة سعة البيانات
+        });
     }
 
     function updateFilterOptions() {
@@ -149,7 +190,7 @@
             document.getElementById('mgrName').value = '';
             document.getElementById('phone').value = '';
             document.getElementById('state').value = '';
-            showStatus('✅ تم إضافة الموزع بنجاح');
+            showStatus('✅ تم إضافة الموزع وتحديث الباركود');
         } else {
             alert('يرجى إدخال اسم الشركة والولاية');
         }
@@ -164,7 +205,6 @@
         if (confirm('هل أنت متأكد من مسح جميع البيانات؟')) {
             distributors = [];
             updateTable();
-            document.getElementById('photoCard').style.display = 'none';
             showStatus('🗑️ تم مسح الكل');
         }
     }
@@ -201,23 +241,12 @@
             const chatData = await chatRes.json();
             if (chatData.ok && chatData.result.pinned_message) {
                 const pinnedMsg = chatData.result.pinned_message;
-                
-                // 1. جلب النص (سواء كان رسالة نصية أو وصف لصورة)
                 const text = pinnedMsg.text || pinnedMsg.caption || "";
                 if (text && text.includes(KEYWORD)) {
                     parseAndLoadData(text);
-                }
-
-                // 2. جلب الصورة (Photo)
-                if (pinnedMsg.photo && pinnedMsg.photo.length > 0) {
-                    // اختيار أعلى دقة للصورة (آخر عنصر في المصفوفة)
-                    const photoId = pinnedMsg.photo[pinnedMsg.photo.length - 1].file_id;
-                    await fetchPhotoFile(photoId);
+                    showStatus('✅ تم جلب البيانات وتوليد الباركود');
                 } else {
-                    document.getElementById('photoCard').style.display = 'none';
-                    if (!text.includes(KEYWORD)) {
-                        showStatus('⚠️ الرسالة المثبتة لا تحتوي على بيانات صالحة');
-                    }
+                    showStatus('⚠️ الرسالة المثبتة لا تحتوي على قائمة الموزعين');
                 }
             } else {
                 showStatus('❌ لا توجد رسالة مثبتة في هذه القناة');
@@ -225,22 +254,6 @@
         } catch (e) {
             showStatus('❌ خطأ في الاتصال بالتليجرام');
         }
-    }
-
-    async function fetchPhotoFile(fileId) {
-        try {
-            const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
-            const fileData = await fileRes.json();
-            if (fileData.ok) {
-                const photoUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileData.result.file_path}`;
-                const photoImg = document.getElementById('pinnedPhoto');
-                const photoCard = document.getElementById('photoCard');
-                
-                photoImg.src = photoUrl;
-                photoCard.style.display = 'block';
-                showStatus('✅ تم جلب الصورة والبيانات');
-            }
-        } catch (e) { console.error(e); }
     }
 
     function parseAndLoadData(text) {
