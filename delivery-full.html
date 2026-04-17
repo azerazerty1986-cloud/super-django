@@ -72,21 +72,6 @@
         .btn-info:hover { background: #138496; transform: translateY(-2px); }
         .btn-success { background: #28a745; color: white; border: none; }
         .btn-success:hover { background: #218838; transform: translateY(-2px); }
-        .url-input-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .url-input-group input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            color: var(--text-primary);
-            font-family: 'Cairo', sans-serif;
-            font-size: 14px;
-        }
         .tabs-container {
             display: flex;
             gap: 10px;
@@ -385,7 +370,7 @@
     }
 
     // ============================================================
-    // جلب PDF من رابط (يدعم روابط التليجرام والروابط المباشرة)
+    // جلب PDF من رابط
     // ============================================================
     function showURLImportModal() {
         document.getElementById('urlModal').classList.add('active');
@@ -409,13 +394,11 @@
         try {
             let pdfUrl = url;
             
-            // معالجة رابط رسالة التليجرام
             const tgMatch = url.match(/t\.me\/c\/(\d+)\/(\d+)/);
             if (tgMatch) {
                 const chatId = `-100${tgMatch[1]}`;
                 const messageId = parseInt(tgMatch[2]);
                 
-                // جلب تفاصيل الرسالة
                 const msgResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMessage?chat_id=${chatId}&message_id=${messageId}`);
                 const msgData = await msgResponse.json();
                 
@@ -438,7 +421,7 @@
     }
 
     // ============================================================
-    // استخراج النص من PDF وعرض البيانات
+    // استخراج النص من PDF
     // ============================================================
     async function extractTextFromPDF(pdfUrl) {
         try {
@@ -527,7 +510,6 @@
             }
         }
         
-        // إزالة التكرارات
         const uniqueData = [];
         const keys = new Set();
         for (const item of extractedData) {
@@ -542,7 +524,7 @@
     }
 
     // ============================================================
-    // إنشاء وإرسال PDF (مع دعم اللغة العربية)
+    // إرسال PDF إلى القناة (الحل المُحسّن)
     // ============================================================
     async function sendDistributorsPDFToTelegram() {
         const approved = distributors.filter(d => d.status === 'approved');
@@ -551,24 +533,30 @@
             return;
         }
         
-        showNotification('📄 جاري إنشاء ملف PDF...', 'info');
+        showNotification('📄 جاري إنشاء ملف PDF... قد يستغرق لحظة', 'info');
         
-        // إنشاء عنصر HTML مؤقت لعرض المحتوى العربي
-        const printDiv = document.createElement('div');
-        printDiv.style.direction = 'rtl';
-        printDiv.style.fontFamily = 'Cairo, Arial, sans-serif';
-        printDiv.style.padding = '20px';
-        printDiv.style.backgroundColor = 'white';
-        printDiv.style.color = 'black';
+        // إنشاء عنصر مؤقت لعرض المحتوى
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '800px';
+        container.style.backgroundColor = 'white';
+        container.style.padding = '30px';
+        container.style.fontFamily = 'Cairo, Arial, sans-serif';
+        container.style.direction = 'rtl';
+        container.style.color = '#000';
         
         let html = `
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #1a1a2e;">ناردو برو - قائمة الموزعين المعتمدين</h1>
-                <p>تاريخ الإنشاء: ${new Date().toLocaleString('ar-SA')}</p>
-                <p>عدد الموزعين: ${approved.length}</p>
+            <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #ffd700; padding-bottom: 20px;">
+                <h1 style="color: #1a1a2e; margin: 0;">ناردو برو</h1>
+                <h2 style="color: #2e7d32;">قائمة الموزعين المعتمدين</h2>
+                <p style="color: #666;">تاريخ الإنشاء: ${new Date().toLocaleString('ar-SA')}</p>
+                <p style="color: #666;">📊 إجمالي الموزعين: ${approved.length}</p>
             </div>
         `;
         
+        // تجميع الموزعين حسب الولايات
         for (const state of algerianStates) {
             const stateDistributors = approved.filter(dist => {
                 const coverage = dist.coverageArea;
@@ -579,21 +567,22 @@
             if (stateDistributors.length === 0) continue;
             
             html += `
-                <div style="margin-bottom: 25px; page-break-inside: avoid;">
-                    <h2 style="color: #2e7d32; border-bottom: 2px solid #ffd700; padding-bottom: 5px;">📍 ولاية ${state.name} (${state.code})</h2>
+                <div style="margin-bottom: 30px; page-break-inside: avoid; border: 1px solid #ddd; border-radius: 10px; padding: 15px; background: #f9f9f9;">
+                    <h3 style="color: #ffd700; background: #1a1a2e; padding: 8px 12px; border-radius: 8px; margin: -15px -15px 15px -15px;">📍 ولاية ${state.name} (${state.code})</h3>
             `;
             
             for (const dist of stateDistributors) {
                 const typeIcon = dist.serviceType === 'delivery' ? '🚚' : (dist.serviceType === 'distributor' ? '📦' : '🔄');
-                const typeText = dist.serviceType === 'delivery' ? 'شركة توصيل' : (dist.serviceType === 'distributor' ? 'موزع' : 'كليهما');
+                const typeText = dist.serviceType === 'delivery' ? 'شركة توصيل' : (dist.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما');
                 
                 html += `
-                    <div style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
-                        <div><strong>${typeIcon} ${dist.companyName}</strong></div>
-                        <div style="margin-right: 20px;">
-                            <div>المسؤول: ${dist.managerName}</div>
-                            <div>الهاتف: ${dist.phone}</div>
-                            <div>النوع: ${typeText}</div>
+                    <div style="margin: 12px 0; padding: 10px; border-right: 3px solid #ffd700; background: white; border-radius: 5px;">
+                        <div style="font-weight: bold; font-size: 16px;">${typeIcon} ${dist.companyName}</div>
+                        <div style="margin-right: 25px; margin-top: 8px; color: #555;">
+                            <div>👤 المسؤول: ${dist.managerName}</div>
+                            <div>📞 الهاتف: ${dist.phone}</div>
+                            <div>📧 البريد: ${dist.email}</div>
+                            <div>🏷️ النوع: ${typeText}</div>
                         </div>
                     </div>
                 `;
@@ -601,39 +590,69 @@
             html += `</div>`;
         }
         
-        printDiv.innerHTML = html;
-        document.body.appendChild(printDiv);
+        container.innerHTML = html;
+        document.body.appendChild(container);
         
         try {
-            const canvas = await html2canvas(printDiv, { scale: 2, backgroundColor: '#ffffff' });
+            // تحويل HTML إلى صورة
+            const canvas = await html2canvas(container, { 
+                scale: 2, 
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: true
+            });
+            
             const imgData = canvas.toDataURL('image/png');
             
+            // إنشاء PDF من الصورة
             const { jsPDF } = window.jspdf;
             const imgWidth = 210;
             const pageHeight = 297;
             const imgHeight = (canvas.height * imgWidth) / canvas.width;
             let doc = new jsPDF('p', 'mm', 'a4');
             let position = 0;
+            let heightLeft = imgHeight;
             
             doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
             
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            
+            // تحويل PDF إلى Blob
             const pdfBlob = doc.output('blob');
+            
+            // إرسال إلى تليجرام
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
-            formData.append('document', pdfBlob, `distributors_${new Date().toISOString().slice(0, 19)}.pdf`);
+            formData.append('document', pdfBlob, `distributors_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`);
             formData.append('caption', `📋 قائمة الموزعين المعتمدين\n📅 ${new Date().toLocaleString('ar-SA')}\n✅ عدد الموزعين: ${approved.length}`);
             
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
-            if (response.ok) {
-                showNotification('✅ تم إرسال ملف PDF إلى القناة', 'success');
+            showNotification('📤 جاري إرسال الملف إلى تليجرام...', 'info');
+            
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { 
+                method: 'POST', 
+                body: formData 
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.ok) {
+                showNotification('✅ تم إرسال ملف PDF إلى القناة بنجاح', 'success');
             } else {
-                throw new Error('فشل الإرسال');
+                console.error('Telegram API Error:', result);
+                showNotification('❌ فشل الإرسال: ' + (result.description || 'خطأ غير معروف'), 'error');
             }
+            
         } catch (error) {
-            console.error(error);
-            showNotification('❌ فشل إرسال الملف', 'error');
+            console.error('Error:', error);
+            showNotification('❌ فشل إنشاء أو إرسال الملف: ' + error.message, 'error');
         } finally {
-            document.body.removeChild(printDiv);
+            document.body.removeChild(container);
         }
     }
 
@@ -688,7 +707,7 @@
     function filterImportedData() { displayImportedData(); }
 
     // ============================================================
-    // الدوال الأساسية للنظام
+    // الدوال الأساسية
     // ============================================================
     function extractStateCodes(cov) {
         if (cov.includes('جميع الولايات')) return algerianStates.map(s => s.code);
@@ -887,7 +906,7 @@
         if (currentSearch) filtered = filtered.filter(d => d.companyName.includes(currentSearch) || d.managerName.includes(currentSearch));
         let tbody = document.getElementById('distributorsTableBody');
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">لا توجد نتائج</td></tr>';
+            tbody.innerHTML = '<td><td colspan="8" style="text-align:center">لا توجد نتائج</td></tr>';
             return;
         }
         tbody.innerHTML = filtered.map((d, i) => {
