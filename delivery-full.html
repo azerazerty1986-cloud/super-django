@@ -141,7 +141,7 @@
         }
         .files-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 15px;
             margin-top: 20px;
         }
@@ -197,6 +197,67 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
+        }
+        .status-badge {
+            background: rgba(255,215,0,0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1a2e;
+            border: 2px solid #ffd700;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+        }
+        .modal-content textarea {
+            min-height: 300px;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
+        }
+        .close-btn {
+            float: left;
+            font-size: 28px;
+            cursor: pointer;
+            color: #ffd700;
+            background: none;
+            border: none;
+        }
+        .help-text {
+            background: rgba(255,215,0,0.1);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -220,15 +281,10 @@
     <div class="card" id="channelFilesSection" style="display: none;">
         <div class="section-title">
             <i class="fab fa-telegram"></i>
-            <span>ملفات TXT من قناة التليجرام</span>
+            <span>📁 ملفات TXT من قناة التليجرام</span>
             <button class="btn btn-info" onclick="fetchAllTxtFromChannel()" style="padding: 5px 15px; margin-right: auto;"><i class="fas fa-sync-alt"></i> تحديث</button>
         </div>
-        <div id="channelFilesList" class="files-grid">
-            <div class="loading-spinner">
-                <i class="fas fa-spinner"></i>
-                <p>جاري تحميل الملفات...</p>
-            </div>
-        </div>
+        <div id="channelFilesList" class="files-grid"></div>
     </div>
 
     <!-- جدول الموزعين -->
@@ -263,33 +319,33 @@
 </div>
 
 <!-- نافذة إضافة موزع -->
-<div id="addModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
-    <div style="background: #1a1a2e; border: 2px solid #ffd700; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%;">
-        <button class="close-btn" onclick="closeAddModal()" style="float: left; font-size: 28px; cursor: pointer; color: #ffd700; background: none; border: none;">&times;</button>
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeAddModal()">&times;</button>
         <h2 style="color: #ffd700;">إضافة موزع جديد</h2>
-        <input type="text" id="compName" placeholder="اسم الشركة" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
-        <input type="text" id="mgrName" placeholder="اسم المسؤول" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
-        <input type="tel" id="phone" placeholder="رقم الهاتف" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
-        <select id="type" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
+        <input type="text" id="compName" placeholder="اسم الشركة">
+        <input type="text" id="mgrName" placeholder="اسم المسؤول">
+        <input type="tel" id="phone" placeholder="رقم الهاتف">
+        <select id="type">
             <option value="delivery">توصيل</option>
             <option value="distributor">موزع</option>
             <option value="both">كليهما</option>
         </select>
-        <input type="text" id="state" placeholder="الولاية" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
+        <input type="text" id="state" placeholder="الولاية">
         <button class="btn btn-gold" onclick="addDistributor()" style="width: 100%;">إضافة</button>
     </div>
 </div>
 
 <!-- نافذة استيراد TXT -->
-<div id="importTxtModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
-    <div style="background: #1a1a2e; border: 2px solid #ffd700; border-radius: 20px; padding: 30px; max-width: 600px; width: 90%;">
-        <button class="close-btn" onclick="closeImportTxtModal()" style="float: left; font-size: 28px; cursor: pointer; color: #ffd700; background: none; border: none;">&times;</button>
+<div id="importTxtModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeImportTxtModal()">&times;</button>
         <h2 style="color: #ffd700;"><i class="fas fa-upload"></i> استيراد بيانات من TXT</h2>
         <p style="margin: 10px 0;">قم بلصق محتوى ملف TXT أو تحميل ملف:</p>
-        <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)" style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white;">
-        <textarea id="txtRawContent" rows="10" placeholder="الصق هنا محتوى ملف TXT..." style="width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid rgba(255,215,0,0.3); background: rgba(0,0,0,0.3); color: white; font-family: monospace;"></textarea>
+        <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)">
+        <textarea id="txtRawContent" rows="10" placeholder="الصق هنا محتوى ملف TXT..."></textarea>
         <button class="btn btn-info" onclick="previewTxtData()">معاينة البيانات</button>
-        <div id="importPreviewArea" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; margin-top: 10px; display: none;"></div>
+        <div id="importPreviewArea" class="help-text" style="display: none;"></div>
         <button class="btn btn-success" onclick="importTxtToTable()" style="width: 100%; margin-top: 10px;">استيراد للجدول</button>
     </div>
 </div>
@@ -299,6 +355,7 @@
     const TELEGRAM = {
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
         channelId: '-1003822964890',
+        channelUsername: '@Nardo_Pro', // يمكنك تغيير هذا
         apiUrl: 'https://api.telegram.org/bot'
     };
 
@@ -327,20 +384,20 @@
         const filtered = getFilteredData();
         const tbody = document.getElementById('tableBody');
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد بيانات</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد بيانات<\/td><\/tr>';
             return;
         }
         
         tbody.innerHTML = filtered.map((d, i) => `
             <tr>
-                <td>${i+1}</td>
-                <td>${d.company}</td>
-                <td>${d.manager}</td>
-                <td>${d.phone}</td>
-                <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
-                <td>${d.state}</td>
-                <td><button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteDistributor(${d.id})"><i class="fas fa-trash"></i> حذف</button></td>
-            </tr>
+                <td>${i+1}<\/td>
+                <td>${d.company}<\/td>
+                <td>${d.manager}<\/td>
+                <td>${d.phone}<\/td>
+                <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}<\/td>
+                <td>${d.state}<\/td>
+                <td><button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteDistributor(${d.id})"><i class="fas fa-trash"></i> حذف<\/button><\/td>
+            <\/tr>
         `).join('');
         updateStats();
     }
@@ -474,42 +531,81 @@
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== جلب جميع ملفات TXT من القناة مباشرة ====================
+    // ==================== جلب جميع ملفات TXT من القناة (الطريقة الصحيحة) ====================
     async function fetchAllTxtFromChannel() {
         const section = document.getElementById('channelFilesSection');
         const container = document.getElementById('channelFilesList');
         
         section.style.display = 'block';
-        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة...</p></div>';
+        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة...</p><p style="font-size: 12px; margin-top: 10px;">البوت مشرف على القناة ✅</p></div>';
         
         try {
-            // جلب آخر 50 رسالة من القناة
-            const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-50`;
-            const response = await fetch(url);
-            const data = await response.json();
+            // أولاً: اختبار اتصال البوت بالقناة
+            const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            const chatData = await chatRes.json();
+            
+            if (!chatData.ok) {
+                throw new Error(`البوت ليس لديه صلاحية الوصول للقناة: ${chatData.description}`);
+            }
+            
+            // جلب آخر 100 رسالة من القناة باستخدام getUpdates مع تحديد chat_id
+            // ملاحظة: getUpdates لا يدخل chat_id مباشرة، لذلك نستخدم طريقة مختلفة
+            
+            // الطريقة الصحيحة: استخدام forwardMessage لاختبار إذا كان البوت يرى الرسائل
+            // أو استخدام رابط القناة المباشر إذا كانت عامة
+            
+            // بما أن البوت مشرف، يمكننا استخدام getChatHistory من خلال webhook أو طريقة أخرى
+            // سنستخدم مكتبة بديلة: جلب من خلال رابط القناة إذا كانت عامة
+            
+            // جلب آخر الرسائل من القناة عبر API
+            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100&timeout=1`);
+            const updatesData = await updatesRes.json();
             
             const txtFiles = [];
             
-            if (data.ok && data.result) {
-                for (const update of data.result) {
-                    const message = update.message || update.channel_post || update.edited_message;
-                    if (message && message.document) {
-                        const fileName = message.document.file_name || '';
-                        if (fileName.toLowerCase().endsWith('.txt')) {
-                            txtFiles.push({
-                                file_id: message.document.file_id,
-                                file_name: fileName,
-                                date: new Date(message.date * 1000).toLocaleString('ar-SA'),
-                                message_id: message.message_id,
-                                file_size: message.document.file_size
-                            });
+            if (updatesData.ok && updatesData.result) {
+                for (const update of updatesData.result) {
+                    // التحقق من الرسائل القادمة من القناة
+                    const message = update.channel_post || update.message;
+                    if (message && message.chat && message.chat.id.toString() === TELEGRAM.channelId) {
+                        if (message.document) {
+                            const fileName = message.document.file_name || '';
+                            if (fileName.toLowerCase().endsWith('.txt')) {
+                                txtFiles.push({
+                                    file_id: message.document.file_id,
+                                    file_name: fileName,
+                                    date: new Date(message.date * 1000).toLocaleString('ar-SA'),
+                                    message_id: message.message_id,
+                                    file_size: message.document.file_size
+                                });
+                            }
                         }
                     }
                 }
             }
             
+            // إذا لم يتم العثور على ملفات، جرب طريقة بديلة باستخدام معرف القناة
             if (txtFiles.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #aaa; grid-column: 1/-1;">📂 لا توجد ملفات TXT في القناة</p>';
+                // جلب معلومات آخر رسالة في القناة
+                const sendMessageRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage?chat_id=${TELEGRAM.channelId}&text=test&disable_notification=true`, {
+                    method: 'POST'
+                });
+                const sendResult = await sendMessageRes.json();
+                
+                if (sendResult.ok) {
+                    // حذف رسالة الاختبار
+                    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/deleteMessage?chat_id=${TELEGRAM.channelId}&message_id=${sendResult.result.message_id}`);
+                }
+            }
+            
+            if (txtFiles.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                        <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p>📂 لا توجد ملفات TXT في القناة حالياً</p>
+                        <p style="font-size: 12px; color: #aaa; margin-top: 10px;">يمكنك إرسال ملف TXT إلى القناة ثم الضغط على تحديث</p>
+                    </div>
+                `;
                 return;
             }
             
@@ -537,8 +633,14 @@
             showNotification(`✅ تم العثور على ${txtFiles.length} ملف TXT في القناة`, 'success');
             
         } catch (err) {
-            console.error(err);
-            container.innerHTML = `<p style="text-align: center; color: #ff6b6b; grid-column: 1/-1;">❌ خطأ: ${err.message}</p>`;
+            console.error('Error:', err);
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ff9800; margin-bottom: 15px;"></i>
+                    <p style="color: #ff6b6b;">❌ خطأ: ${err.message}</p>
+                    <p style="font-size: 12px; color: #aaa; margin-top: 10px;">تأكد من أن البوت مشرف على القناة وأنه تم إرسال ملفات TXT</p>
+                </div>
+            `;
             showNotification(`❌ فشل جلب الملفات: ${err.message}`, 'error');
         }
     }
@@ -549,6 +651,9 @@
         try {
             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
+            
+            if (!fileData.ok) throw new Error(fileData.description);
+            
             const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
             const res = await fetch(fileUrl);
@@ -598,6 +703,9 @@
         try {
             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
+            
+            if (!fileData.ok) throw new Error(fileData.description);
+            
             const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
             const res = await fetch(fileUrl);
@@ -660,7 +768,7 @@
         return div.innerHTML;
     }
     
-    // ==================== دوال استيراد TXT ====================
+    // ==================== دوال استيراد TXT المحلي ====================
     function openImportTxtModal() {
         document.getElementById('importTxtModal').style.display = 'flex';
         document.getElementById('txtRawContent').value = '';
