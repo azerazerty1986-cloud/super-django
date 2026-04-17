@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو برو | إدارة التوصيل والموزعين</title>
+    <title>ناردو برو | إدارة التوصيل والموزعين - النسخة النهائية</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -66,6 +67,8 @@
         .btn-telegram:hover { background: #006699; transform: translateY(-2px); }
         .btn-pdf { background: #dc3545; color: white; border: none; }
         .btn-pdf:hover { background: #bb2d3b; transform: translateY(-2px); }
+        .btn-info { background: #17a2b8; color: white; border: none; }
+        .btn-info:hover { background: #138496; transform: translateY(-2px); }
         .tabs-container {
             display: flex;
             gap: 10px;
@@ -176,6 +179,8 @@
         .notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 10px; font-weight: bold; z-index: 2000; animation: slideIn 0.3s ease; }
         .notification.success { background: var(--success); color: #000; }
         .notification.error { background: var(--error); color: #fff; }
+        .notification.warning { background: var(--warning); color: #000; }
+        .notification.info { background: var(--info); color: #000; }
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
         .footer { text-align: center; padding: 30px; color: var(--text-secondary); border-top: 1px solid rgba(255, 215, 0, 0.2); margin-top: 50px; }
         .info-note { background: rgba(96, 165, 250, 0.1); border-right: 3px solid var(--info); padding: 10px; margin-top: 10px; border-radius: 8px; font-size: 12px; color: var(--info); }
@@ -186,17 +191,20 @@
         .stat-item { background: var(--glass); padding: 15px; border-radius: 10px; flex: 1; text-align: center; }
         @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } .delivery-header { flex-direction: column; text-align: center; } .stats-grid { grid-template-columns: 1fr; } .filter-row { flex-direction: column; } .filter-row select { max-width: 100%; } }
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: var(--gold); animation: spin 1s ease-in-out infinite; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="delivery-header">
-        <div class="header-title"><i class="fas fa-truck"></i><h1>إدارة التوصيل والموزعين</h1></div>
+        <div class="header-title"><i class="fas fa-truck"></i><h1>ناردو برو | إدارة التوصيل والموزعين</h1></div>
         <div class="header-actions">
             <button class="btn btn-gold" onclick="openDeliveryModal()"><i class="fas fa-plus"></i> طلب توصيل</button>
             <button class="btn btn-outline" onclick="openDistributorModal()"><i class="fas fa-warehouse"></i> تسجيل موزع</button>
             <button class="btn btn-telegram" onclick="sendDistributorsPDFToTelegram()"><i class="fab fa-telegram"></i> إرسال PDF للقناة</button>
             <button class="btn btn-pdf" onclick="fetchPDFFromTelegram()"><i class="fab fa-telegram"></i> جلب PDF من القناة</button>
+            <button class="btn btn-info" onclick="viewPinnedPDF()"><i class="fas fa-eye"></i> عرض PDF المثبت</button>
             <button class="btn btn-outline" onclick="goBack()"><i class="fas fa-arrow-left"></i> رجوع</button>
         </div>
     </div>
@@ -248,7 +256,7 @@
 
 <div id="distributorModal" class="modal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-warehouse"></i> تسجيل موزع جديد</h2><button class="close-btn" onclick="closeDistributorModal()">&times;</button></div><form onsubmit="event.preventDefault(); submitDistributor();"><div class="form-group"><label>اسم الشركة</label><input type="text" id="companyName" required></div><div class="form-group"><label>المسؤول</label><input type="text" id="managerName" required></div><div class="form-group"><label>البريد الإلكتروني</label><input type="email" id="distributorEmail" required></div><div class="form-group"><label>الهاتف</label><input type="tel" id="distributorPhone" required></div><div class="form-group"><label>نوع الخدمة</label><select id="serviceType" required onchange="handleServiceTypeChange()"><option value="">اختر</option><option value="delivery">شركة توصيل (تغطية كل الولايات)</option><option value="distributor">موزع معتمد</option><option value="both">كليهما</option></select></div><div class="form-group" id="coverageAreaGroup"><label>مناطق التغطية</label><select id="coverageArea" multiple size="8"></select><div id="selectedStatesContainer" class="selected-states"></div><div id="coverageNote" class="info-note"></div></div><div class="form-group"><label>وصف الخدمة</label><textarea id="serviceDescription" required rows="2"></textarea></div><button type="submit" class="btn btn-gold" style="width:100%">إرسال الطلب</button></form></div></div>
 
-<div class="footer"><p>© 2026 ناردو برو - نظام متكامل لإدارة التوصيل والموزعين</p></div>
+<div class="footer"><p>© 2026 ناردو برو - نظام متكامل لإدارة التوصيل والموزعين - النسخة النهائية</p></div>
 
 <script>
     // ============================================================
@@ -262,6 +270,9 @@
     let importedDistributors = JSON.parse(localStorage.getItem(STORAGE_KEYS.IMPORTED_DATA) || '[]');
     let currentFilter = 'all';
     let currentSearch = '';
+    
+    // تكوين PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     
     const algerianStates = [
         { code: "ALG", name: "الجزائر" }, { code: "ADE", name: "أدرار" }, { code: "ASH", name: "الشلف" }, { code: "LGH", name: "الأغواط" },
@@ -293,6 +304,203 @@
             <div class="stat-item"><div style="font-size:28px;color:var(--info);font-weight:bold">${distributors.filter(d => d.status === 'approved').length}</div><div>موزعون معتمدون</div></div>
             <div class="stat-item"><div style="font-size:28px;color:var(--gold);font-weight:bold">${importedDistributors.length}</div><div>مستورد من PDF</div></div>
         `;
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-item"><i class="fas fa-box"></i><div style="font-size:24px;font-weight:bold">${deliveries.length}</div><div>إجمالي الطلبات</div></div>
+            <div class="stat-item"><i class="fas fa-check-circle"></i><div style="font-size:24px;font-weight:bold;color:var(--success)">${deliveries.filter(d => d.status === 'completed').length}</div><div>مكتملة</div></div>
+            <div class="stat-item"><i class="fas fa-truck"></i><div style="font-size:24px;font-weight:bold;color:var(--warning)">${deliveries.filter(d => d.status === 'in_transit').length}</div><div>قيد التوصيل</div></div>
+            <div class="stat-item"><i class="fas fa-warehouse"></i><div style="font-size:24px;font-weight:bold;color:var(--info)">${distributors.filter(d => d.status === 'approved').length}</div><div>موزعون معتمدون</div></div>
+        `;
+    }
+
+    // ============================================================
+    // عرض PDF المثبت مباشرة
+    // ============================================================
+    async function viewPinnedPDF() {
+        showNotification('📡 جلب رابط PDF من الرسالة المثبتة...', 'info');
+        try {
+            const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            const chatData = await chatResponse.json();
+            
+            if (!chatData.ok || !chatData.result.pinned_message) {
+                showNotification('⚠️ لا توجد رسالة مثبتة في القناة', 'warning');
+                return;
+            }
+            
+            const pinnedMsg = chatData.result.pinned_message;
+            if (pinnedMsg.document && pinnedMsg.document.mime_type === 'application/pdf') {
+                const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pinnedMsg.document.file_id}`);
+                const fileData = await fileResponse.json();
+                const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                window.open(pdfUrl, '_blank');
+                showNotification('✅ تم فتح PDF في نافذة جديدة', 'success');
+            } else {
+                showNotification('⚠️ الرسالة المثبتة لا تحتوي على ملف PDF', 'warning');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification('❌ فشل عرض PDF', 'error');
+        }
+    }
+
+    // ============================================================
+    // جلب PDF من القناة باستخدام الرسالة المثبتة (الحل الأمثل)
+    // ============================================================
+    async function fetchPDFFromTelegram() {
+        showNotification('📡 جلب PDF من الرسالة المثبتة في القناة...', 'info');
+        
+        try {
+            // 1. جلب معلومات القناة (بما فيها الرسالة المثبتة)
+            const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            const chatData = await chatResponse.json();
+            
+            if (!chatData.ok) {
+                throw new Error('فشل جلب معلومات القناة');
+            }
+            
+            const chat = chatData.result;
+            
+            // 2. التحقق من وجود رسالة مثبتة
+            if (!chat.pinned_message) {
+                showNotification('⚠️ لا توجد رسالة مثبتة في القناة', 'warning');
+                return;
+            }
+            
+            const pinnedMsg = chat.pinned_message;
+            
+            // 3. التحقق من أن الرسالة المثبتة تحتوي على PDF
+            if (!pinnedMsg.document || pinnedMsg.document.mime_type !== 'application/pdf') {
+                showNotification('⚠️ الرسالة المثبتة لا تحتوي على ملف PDF', 'warning');
+                return;
+            }
+            
+            const fileId = pinnedMsg.document.file_id;
+            
+            // 4. الحصول على رابط الملف
+            const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileResponse.json();
+            
+            if (!fileData.ok) {
+                throw new Error('فشل الحصول على رابط الملف');
+            }
+            
+            const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+            
+            // 5. استخراج النص من PDF
+            showNotification('📄 جاري تحميل وتحليل ملف PDF...', 'info');
+            await extractTextFromPDF(pdfUrl);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('❌ فشل جلب الملف: ' + error.message, 'error');
+        }
+    }
+
+    // استخراج النص من PDF باستخدام PDF.js
+    async function extractTextFromPDF(pdfUrl) {
+        try {
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const pdf = await loadingTask.promise;
+            let fullText = '';
+            
+            showNotification(`📄 جاري استخراج النص من ${pdf.numPages} صفحة...`, 'info');
+            
+            // استخراج النص من جميع الصفحات
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+            
+            // استخراج بيانات الموزعين من النص المستخرج
+            const extractedData = extractDataFromPDFText(fullText);
+            
+            if (extractedData.length > 0) {
+                importedDistributors = extractedData;
+                localStorage.setItem(STORAGE_KEYS.IMPORTED_DATA, JSON.stringify(importedDistributors));
+                showNotification(`✅ تم استيراد ${extractedData.length} موزع بنجاح من PDF المثبت`, 'success');
+                loadStateFilter();
+                displayImportedData();
+                updateStats();
+            } else {
+                showNotification('⚠️ لم يتم العثور على بيانات موزعين في ملف PDF', 'warning');
+            }
+            
+        } catch (error) {
+            console.error('PDF extraction error:', error);
+            showNotification('❌ فشل استخراج البيانات من PDF', 'error');
+        }
+    }
+
+    // استخراج بيانات الموزعين من النص
+    function extractDataFromPDFText(text) {
+        const extractedData = [];
+        const lines = text.split('\n');
+        let currentState = null;
+        
+        // نمط للبحث عن الولايات
+        const statePattern = /(?:ولاية|📍)\s*([^\d\(\)]+?)\s*\(([A-Z]{3})\)/i;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            // البحث عن اسم الولاية
+            const stateMatch = line.match(statePattern);
+            if (stateMatch) {
+                currentState = {
+                    name: stateMatch[1].trim(),
+                    code: stateMatch[2].trim()
+                };
+                continue;
+            }
+            
+            // البحث عن الموزعين
+            if (currentState && (line.includes('🚚') || line.includes('📦') || line.includes('🔄') || line.match(/شركة|موزع|توصيل/i))) {
+                let companyName = '';
+                let serviceType = 'distributor';
+                
+                if (line.includes('🚚')) {
+                    serviceType = 'delivery';
+                    companyName = line.replace(/[🚚\s]+/, '').trim();
+                } else if (line.includes('📦')) {
+                    serviceType = 'distributor';
+                    companyName = line.replace(/[📦\s]+/, '').trim();
+                } else if (line.includes('🔄')) {
+                    serviceType = 'both';
+                    companyName = line.replace(/[🔄\s]+/, '').trim();
+                } else {
+                    const nameMatch = line.match(/^[^0-9]+/);
+                    if (nameMatch) companyName = nameMatch[0].trim();
+                }
+                
+                if (companyName && companyName.length > 2 && companyName.length < 100) {
+                    extractedData.push({
+                        id: Date.now() + Math.random(),
+                        companyName: companyName.substring(0, 100),
+                        managerName: 'مستورد من PDF',
+                        phone: 'غير متوفر',
+                        serviceType: serviceType,
+                        stateCode: currentState.code,
+                        stateName: currentState.name,
+                        importedAt: new Date().toLocaleString('ar-SA')
+                    });
+                }
+            }
+        }
+        
+        // إزالة التكرارات
+        const uniqueData = [];
+        const keys = new Set();
+        for (const item of extractedData) {
+            const key = `${item.companyName}_${item.stateCode}`;
+            if (!keys.has(key)) {
+                keys.add(key);
+                uniqueData.push(item);
+            }
+        }
+        
+        return uniqueData;
     }
 
     // ============================================================
@@ -375,95 +583,6 @@
         }
     }
 
-    // ============================================================
-    // جلب PDF من القناة وعرض البيانات
-    // ============================================================
-    async function fetchPDFFromTelegram() {
-        showNotification('📡 جلب أحدث ملف PDF من القناة...', 'info');
-        
-        try {
-            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`);
-            const updates = await updatesRes.json();
-            
-            let pdfFileId = null;
-            if (updates.ok && updates.result) {
-                for (let i = updates.result.length - 1; i >= 0; i--) {
-                    const msg = updates.result[i];
-                    const post = msg.channel_post || msg.message;
-                    if (post && post.document && post.document.mime_type === 'application/pdf') {
-                        pdfFileId = post.document.file_id;
-                        break;
-                    }
-                }
-            }
-            
-            if (!pdfFileId) {
-                showNotification('❌ لم يتم العثور على ملف PDF في القناة', 'error');
-                return;
-            }
-            
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pdfFileId}`);
-            const fileData = await fileRes.json();
-            if (!fileData.ok) throw new Error('فشل الحصول على رابط الملف');
-            
-            const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-            const pdfResponse = await fetch(pdfUrl);
-            const pdfText = await pdfResponse.text();
-            
-            const extractedData = extractDataFromPDFText(pdfText);
-            
-            if (extractedData.length > 0) {
-                importedDistributors = extractedData;
-                localStorage.setItem(STORAGE_KEYS.IMPORTED_DATA, JSON.stringify(importedDistributors));
-                showNotification(`✅ تم استيراد ${extractedData.length} موزع بنجاح`, 'success');
-                loadStateFilter();
-                displayImportedData();
-                updateStats();
-            } else {
-                showNotification('⚠️ لم يتم العثور على بيانات في ملف PDF', 'warning');
-            }
-        } catch (error) {
-            console.error(error);
-            showNotification('❌ فشل جلب الملف', 'error');
-        }
-    }
-    
-    function extractDataFromPDFText(text) {
-        const extractedData = [];
-        const lines = text.split('\n');
-        let currentState = null;
-        
-        for (const line of lines) {
-            const stateMatch = line.match(/📍 ولاية (.+?) \(([A-Z]{3})\)/);
-            if (stateMatch) {
-                currentState = { name: stateMatch[1], code: stateMatch[2] };
-                continue;
-            }
-            
-            if (currentState && (line.includes('🚚') || line.includes('📦') || line.includes('🔄'))) {
-                const typeMatch = line.match(/([🚚📦🔄])\s+(.+)/);
-                if (typeMatch) {
-                    const typeIcon = typeMatch[1];
-                    const companyName = typeMatch[2].trim();
-                    let serviceType = typeIcon === '🚚' ? 'delivery' : (typeIcon === '📦' ? 'distributor' : 'both');
-                    
-                    extractedData.push({
-                        id: Date.now() + Math.random(),
-                        companyName: companyName,
-                        managerName: 'مستورد من PDF',
-                        phone: 'غير متوفر',
-                        serviceType: serviceType,
-                        stateCode: currentState.code,
-                        stateName: currentState.name,
-                        importedAt: new Date().toLocaleString('ar-SA')
-                    });
-                }
-            }
-        }
-        
-        return extractedData;
-    }
-    
     function loadStateFilter() {
         const stateSelect = document.getElementById('stateFilter');
         if (!stateSelect) return;
@@ -495,7 +614,7 @@
         
         const tbody = document.getElementById('importedTableBody');
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">📭 لا توجد بيانات مطابقة</td</tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">📭 لا توجد بيانات مطابقة</td></tr>';
             return;
         }
         
@@ -623,6 +742,7 @@
         closeDistributorModal();
         document.getElementById('distributorModal').querySelector('form').reset();
         updateStats();
+        loadPendingRequests();
     }
     
     function approveDistributor(id) {
@@ -631,7 +751,7 @@
             d.status = 'approved';
             d.approvedAt = new Date().toISOString();
             localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors));
-            showNotification('✅ تمت الموافقة', 'success');
+            showNotification('✅ تمت الموافقة على الموزع', 'success');
             loadPendingRequests();
             loadDistributors();
             loadDistributorsTable();
@@ -644,7 +764,7 @@
         if (d) {
             d.status = 'rejected';
             localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors));
-            showNotification('❌ تم الرفض', 'info');
+            showNotification('❌ تم رفض طلب الموزع', 'info');
             loadPendingRequests();
             updateStats();
         }
@@ -656,7 +776,7 @@
             d.status = status;
             d.updatedAt = new Date().toISOString();
             localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(deliveries));
-            showNotification('✅ تم تحديث الحالة', 'success');
+            showNotification('✅ تم تحديث حالة الطلب', 'success');
             loadDeliveries();
             updateStats();
         }
@@ -671,13 +791,13 @@
             return;
         }
         let distributor = distributors.find(d => d.id == delivery.distributorId);
-        resDiv.innerHTML = `<div class="card"><h3 style="color:var(--gold)">📦 تفاصيل الطلب</h3><div>رقم: ${delivery.orderId}<br>الزبون: ${delivery.customer}<br>العنوان: ${delivery.address}<br>الموزع: ${distributor?.companyName || 'غير محدد'}<br>الحالة: ${delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : '✅ مكتمل'}</div></div>`;
+        resDiv.innerHTML = `<div class="card"><h3 style="color:var(--gold)">📦 تفاصيل الطلب</h3><div><strong>رقم الطلب:</strong> ${delivery.orderId}<br><strong>الزبون:</strong> ${delivery.customer}<br><strong>العنوان:</strong> ${delivery.address}<br><strong>الهاتف:</strong> ${delivery.phone}<br><strong>المبلغ:</strong> ${delivery.amount} دج<br><strong>الموزع:</strong> ${distributor?.companyName || 'غير محدد'}<br><strong>الحالة:</strong> ${delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : '✅ مكتمل'}<br><strong>تاريخ الإنشاء:</strong> ${new Date(delivery.createdAt).toLocaleString('ar-SA')}</div></div>`;
     }
     
     function loadDeliveries() {
         let cont = document.getElementById('deliveriesContainer');
         if (deliveries.length === 0) {
-            cont.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><h3>لا توجد طلبات</h3></div>';
+            cont.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><h3>لا توجد طلبات</h3><p>يمكنك إنشاء طلب توصيل جديد من الزر أعلاه</p></div>';
             return;
         }
         cont.innerHTML = deliveries.map(del => {
@@ -690,20 +810,20 @@
         let cont = document.getElementById('distributorsContainer');
         let approved = distributors.filter(d => d.status === 'approved');
         if (approved.length === 0) {
-            cont.innerHTML = '<div class="empty-state"><i class="fas fa-warehouse"></i><h3>لا يوجد موزعون معتمدون</h3></div>';
+            cont.innerHTML = '<div class="empty-state"><i class="fas fa-warehouse"></i><h3>لا يوجد موزعون معتمدون</h3><p>يمكنك الموافقة على طلبات التسجيل من علامة تبويب "قيد الانتظار"</p></div>';
             return;
         }
-        cont.innerHTML = approved.map(d => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div>👤 ${d.managerName}</div></div><span class="status-badge status-approved">✅ معتمد</span></div><div><strong>الهاتف:</strong> ${d.phone}<br><strong>المناطق:</strong> ${d.coverageArea}</div></div>`).join('');
+        cont.innerHTML = approved.map(d => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div>👤 ${d.managerName}</div></div><span class="status-badge status-approved">✅ معتمد</span></div><div><strong>الهاتف:</strong> ${d.phone}<br><strong>البريد:</strong> ${d.email}<br><strong>النوع:</strong> ${d.serviceType === 'delivery' ? '🚚 شركة توصيل' : d.serviceType === 'distributor' ? '📦 موزع' : '🔄 كليهما'}<br><strong>مناطق التغطية:</strong> ${d.coverageArea}</div></div>`).join('');
     }
     
     function loadPendingRequests() {
         let cont = document.getElementById('pendingContainer');
         let pending = distributors.filter(d => d.status === 'pending');
         if (pending.length === 0) {
-            cont.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><h3>لا توجد طلبات قيد الانتظار</h3></div>';
+            cont.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><h3>لا توجد طلبات قيد الانتظار</h3><p>جميع طلبات التسجيل تمت معالجتها</p></div>';
             return;
         }
-        cont.innerHTML = pending.map(d => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div>👤 ${d.managerName}</div></div><span class="status-badge status-pending">⏳ قيد الانتظار</span></div><div><strong>البريد:</strong> ${d.email}<br><strong>المناطق:</strong> ${d.coverageArea}</div><div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-gold" onclick="approveDistributor(${d.id})">✅ موافقة</button><button class="btn btn-outline" onclick="rejectDistributor(${d.id})">❌ رفض</button></div></div>`).join('');
+        cont.innerHTML = pending.map(d => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div>👤 ${d.managerName}</div></div><span class="status-badge status-pending">⏳ قيد الانتظار</span></div><div><strong>البريد:</strong> ${d.email}<br><strong>الهاتف:</strong> ${d.phone}<br><strong>النوع:</strong> ${d.serviceType === 'delivery' ? '🚚 شركة توصيل' : d.serviceType === 'distributor' ? '📦 موزع' : '🔄 كليهما'}<br><strong>مناطق التغطية:</strong> ${d.coverageArea}</div><div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-gold" onclick="approveDistributor(${d.id})">✅ موافقة</button><button class="btn btn-outline" onclick="rejectDistributor(${d.id})">❌ رفض</button></div></div>`).join('');
     }
     
     function loadDistributorsTable() {
@@ -742,11 +862,11 @@
         let filtered = approved;
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.serviceType === currentFilter);
         if (currentSearch) filtered = filtered.filter(d => d.companyName.includes(currentSearch));
-        let csv = "الرقم,الموزع,المسؤول,الهاتف,النوع,الولايات\n";
+        let csv = "الرقم,الموزع,المسؤول,الهاتف,النوع,الولايات,عدد الولايات\n";
         filtered.forEach((d, i) => {
             let codes = extractStateCodes(d.coverageArea);
             let allFlag = d.coverageArea.includes('جميع الولايات');
-            csv += `${i + 1},${d.companyName},${d.managerName},${d.phone},${d.serviceType},${allFlag ? 'جميع الولايات' : codes.join(' - ')}\n`;
+            csv += `${i + 1},${d.companyName},${d.managerName},${d.phone},${d.serviceType},${allFlag ? 'جميع الولايات' : codes.join(' - ')},${allFlag ? 58 : codes.length}\n`;
         });
         let blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
         let link = document.createElement('a');
@@ -754,7 +874,7 @@
         link.download = "الموزعون.csv";
         link.click();
         URL.revokeObjectURL(link);
-        showNotification('✅ تم التصدير', 'success');
+        showNotification('✅ تم تصدير البيانات بنجاح', 'success');
     }
     
     function switchTab(tabName) {
@@ -794,6 +914,7 @@
         if (importedDistributors.length > 0) { loadStateFilter(); displayImportedData(); }
         if (!localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS)) localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify([]));
         if (!localStorage.getItem(STORAGE_KEYS.DELIVERIES)) localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify([]));
+        showNotification('🎉 مرحباً بك في نظام ناردو برو - النسخة النهائية', 'success');
     };
 </script>
 </body>
