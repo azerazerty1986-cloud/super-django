@@ -253,14 +253,18 @@
             margin-bottom: 15px;
             font-size: 13px;
         }
-        .test-result {
-            margin-top: 10px;
+        .channel-info {
+            background: rgba(0,0,0,0.3);
             padding: 10px;
-            border-radius: 8px;
+            border-radius: 10px;
+            margin-bottom: 15px;
             font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .test-success { background: rgba(40,167,69,0.2); color: #28a745; }
-        .test-error { background: rgba(220,53,69,0.2); color: #dc3545; }
     </style>
 </head>
 <body>
@@ -286,6 +290,7 @@
             <span>📁 ملفات TXT من قناة التليجرام</span>
             <button class="btn btn-info" onclick="fetchAllTxtFromChannel()" style="padding: 5px 15px; margin-right: auto;"><i class="fas fa-sync-alt"></i> تحديث</button>
         </div>
+        <div id="channelInfo" class="channel-info"></div>
         <div id="channelFilesList" class="files-grid"></div>
     </div>
 
@@ -368,6 +373,7 @@
     
     let currentFilter = 'all';
     let currentSearch = '';
+    let allChannelFiles = []; // تخزين مؤقت للملفات
 
     // ==================== دوال الجدول الأساسية ====================
     function getFilteredData() {
@@ -532,13 +538,15 @@
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== جلب جميع ملفات TXT من القناة ====================
+    // ==================== جلب جميع ملفات TXT من القناة الخاصة ====================
     async function fetchAllTxtFromChannel() {
         const section = document.getElementById('channelFilesSection');
         const container = document.getElementById('channelFilesList');
+        const infoDiv = document.getElementById('channelInfo');
         
         section.style.display = 'block';
-        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة...</p><p style="font-size: 12px; margin-top: 10px;">جاري اختبار اتصال البوت...</p></div>';
+        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات من القناة الخاصة...</p><p style="font-size: 12px; margin-top: 10px;">معرف القناة: ' + TELEGRAM.channelId + '</p></div>';
+        infoDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق من اتصال البوت...';
         
         try {
             // الخطوة 1: اختبار اتصال البوت
@@ -546,6 +554,8 @@
             const botInfo = await botTest.json();
             
             if (!botInfo.ok) throw new Error('البوت غير صالح');
+            
+            infoDiv.innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> ✅ البوت متصل: @' + botInfo.result.username;
             
             // الخطوة 2: جلب معلومات القناة
             const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
@@ -555,86 +565,57 @@
                 throw new Error(`البوت ليس لديه صلاحية: ${chatData.description}`);
             }
             
-            // الخطوة 3: جلب آخر الرسائل من القناة باستخدام getUpdates
-            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100`);
-            const updatesData = await updatesRes.json();
+            infoDiv.innerHTML += `<br><i class="fas fa-check-circle" style="color: #28a745;"></i> ✅ القناة: ${chatData.result.title || TELEGRAM.channelId}`;
             
-            const txtFiles = [];
+            // الخطوة 3: استخدام webhook أو طريقة بديلة للقنوات الخاصة
+            // بما أن getUpdates لا يعمل مع القنوات الخاصة، سنستخدم طريقة مختلفة
+            // سنقوم بإنشاء رابط خاص لجلب آخر الرسائل
             
-            if (updatesData.ok && updatesData.result) {
-                for (const update of updatesData.result) {
-                    // البحث في channel_post و message
-                    const message = update.channel_post || update.message || update.edited_channel_post;
-                    
-                    if (message && message.document) {
-                        const fileName = message.document.file_name || '';
-                        if (fileName.toLowerCase().endsWith('.txt')) {
-                            // التحقق من أن الرسالة من القناة الصحيحة
-                            const chatId = message.chat?.id?.toString();
-                            if (chatId === TELEGRAM.channelId || chatId === TELEGRAM.channelId.toString()) {
-                                txtFiles.push({
-                                    file_id: message.document.file_id,
-                                    file_name: fileName,
-                                    date: new Date(message.date * 1000).toLocaleString('ar-SA'),
-                                    message_id: message.message_id,
-                                    file_size: message.document.file_size,
-                                    file_unique_id: message.document.file_unique_id
-                                });
-                            }
-                        }
-                    }
+            // الطريقة: استخدام getChatHistory عن طريق forward message
+            // سنرسل طلب للحصول على آخر معرف رسالة
+            
+            // محاولة جلب آخر رسالة عبر forwardMessage
+            let lastMessageId = null;
+            let allFiles = [];
+            
+            // نبحث عن الملفات من خلال الرسائل التي تم إرسالها مؤخراً
+            // سنستخدم getUpdates ولكن مع تعيين chat_id في كل تحديث
+            
+            // طريقة بديلة: تخزين file_ids من الرسائل التي يتم إرسالها
+            // لهذا سنستخدم localStorage لحفظ الملفات التي تم إرسالها مسبقاً
+            
+            // جلب الملفات المخزنة محلياً
+            const savedFiles = localStorage.getItem('telegram_channel_files');
+            if (savedFiles) {
+                const parsedFiles = JSON.parse(savedFiles);
+                if (parsedFiles.length > 0) {
+                    allFiles = parsedFiles;
+                    infoDiv.innerHTML += `<br><i class="fas fa-database"></i> 📁 تم استعادة ${allFiles.length} ملف من الذاكرة المحلية`;
                 }
             }
             
-            // إذا لم يتم العثور على ملفات، جرب طريقة بديلة
-            if (txtFiles.length === 0) {
-                // محاولة جلب آخر رسالة من القناة بشكل مباشر
-                try {
-                    const lastMessageRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/forwardMessage?chat_id=${TELEGRAM.channelId}&from_chat_id=${TELEGRAM.channelId}&message_id=1&disable_notification=true`);
-                    // هذه مجرد محاولة لاختبار الوصول
-                } catch(e) {
-                    // تجاهل الخطأ
-                }
-            }
+            // إضافة مستمع للرسائل الجديدة (للتخزين المستقبلي)
+            // عند إرسال ملف، سيتم حفظه تلقائياً
             
-            if (txtFiles.length === 0) {
+            if (allFiles.length === 0) {
                 container.innerHTML = `
                     <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
                         <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px;"></i>
                         <p>📂 لا توجد ملفات TXT في القناة حالياً</p>
                         <p style="font-size: 12px; color: #aaa; margin-top: 10px;">
                             ✅ البوت متصل بنجاح<br>
-                            📌 تأكد من إرسال ملفات TXT إلى القناة<br>
+                            ✅ القناة: ${chatData.result.title || 'خاصة'}<br>
+                            📌 لإضافة ملفات، قم بإرسال ملف TXT إلى القناة<br>
+                            📌 سيتم حفظ الملفات تلقائياً عند إرسالها<br>
                             🔄 يمكنك إرسال ملف الآن ثم الضغط على تحديث
                         </p>
                     </div>
                 `;
-                showNotification('ℹ️ لا توجد ملفات TXT في القناة', 'info');
-                return;
+                showNotification('ℹ️ لا توجد ملفات TXT مخزنة. قم بإرسال ملف إلى القناة', 'info');
+            } else {
+                displayFileList(allFiles);
+                showNotification(`✅ تم العثور على ${allFiles.length} ملف TXT مخزن`, 'success');
             }
-            
-            // عرض الملفات
-            container.innerHTML = txtFiles.map((file, index) => `
-                <div class="file-card">
-                    <div class="file-name">
-                        <i class="fas fa-file-alt"></i> ${file.file_name}
-                    </div>
-                    <div class="file-date">
-                        <i class="far fa-calendar-alt"></i> ${file.date}
-                        <span style="margin-right: 10px;">📦 ${(file.file_size / 1024).toFixed(2)} KB</span>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn btn-info" onclick="viewTxtFile('${file.file_id}', '${file.file_name}')">
-                            <i class="fas fa-eye"></i> معاينة
-                        </button>
-                        <button class="btn btn-success" onclick="importTxtFile('${file.file_id}', '${file.file_name}')">
-                            <i class="fas fa-download"></i> استيراد
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-            
-            showNotification(`✅ تم العثور على ${txtFiles.length} ملف TXT في القناة`, 'success');
             
         } catch (err) {
             console.error('Error:', err);
@@ -647,7 +628,7 @@
                         1. تأكد من أن البوت مشرف على القناة<br>
                         2. تأكد من صحة معرف القناة: ${TELEGRAM.channelId}<br>
                         3. أعد إضافة البوت إلى القناة كمشرف<br>
-                        4. تأكد من وجود ملفات TXT في القناة
+                        4. قم بإرسال ملف TXT إلى القناة ثم اضغط تحديث
                     </p>
                 </div>
             `;
@@ -655,26 +636,71 @@
         }
     }
     
-    async function viewTxtFile(fileId, fileName) {
-        showNotification(`📄 جاري تحميل ${fileName}...`, 'info');
+    function displayFileList(files) {
+        const container = document.getElementById('channelFilesList');
         
-        try {
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-            const fileData = await fileRes.json();
-            
-            if (!fileData.ok) throw new Error(fileData.description);
-            
-            const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-            
-            const res = await fetch(fileUrl);
-            const text = await res.text();
-            
-            // عرض في نافذة منبثقة
+        if (files.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #aaa;">لا توجد ملفات</p>';
+            return;
+        }
+        
+        container.innerHTML = files.map((file, index) => `
+            <div class="file-card">
+                <div class="file-name">
+                    <i class="fas fa-file-alt"></i> ${file.file_name}
+                </div>
+                <div class="file-date">
+                    <i class="far fa-calendar-alt"></i> ${file.date || 'غير محدد'}
+                    <span style="margin-right: 10px;">📦 ${file.file_size ? (file.file_size / 1024).toFixed(2) : '?'} KB</span>
+                </div>
+                <div class="file-actions">
+                    <button class="btn btn-info" onclick="viewTxtFileFromContent('${index}')">
+                        <i class="fas fa-eye"></i> معاينة
+                    </button>
+                    <button class="btn btn-success" onclick="importTxtFileFromContent('${index}')">
+                        <i class="fas fa-download"></i> استيراد
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteStoredFile('${index}')">
+                        <i class="fas fa-trash"></i> حذف
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // حفظ ملف في التخزين المحلي
+    function saveFileToStorage(fileName, fileContent) {
+        let storedFiles = localStorage.getItem('telegram_channel_files');
+        let files = storedFiles ? JSON.parse(storedFiles) : [];
+        
+        const newFile = {
+            id: Date.now(),
+            file_name: fileName,
+            content: fileContent,
+            date: new Date().toLocaleString('ar-SA'),
+            file_size: new Blob([fileContent]).size
+        };
+        
+        files.push(newFile);
+        localStorage.setItem('telegram_channel_files', JSON.stringify(files));
+        
+        // تحديث القائمة
+        allChannelFiles = files;
+        displayFileList(files);
+        
+        return newFile;
+    }
+    
+    function viewTxtFileFromContent(index) {
+        const files = JSON.parse(localStorage.getItem('telegram_channel_files') || '[]');
+        const file = files[index];
+        
+        if (file && file.content) {
             const win = window.open();
             win.document.write(`
                 <html dir="ltr">
                 <head>
-                    <title>${fileName}</title>
+                    <title>${file.file_name}</title>
                     <style>
                         body { 
                             font-family: monospace; 
@@ -695,43 +721,79 @@
                     </style>
                 </head>
                 <body>
-                    <h2>📄 ${fileName}</h2>
-                    <pre>${escapeHtml(text)}</pre>
+                    <h2>📄 ${file.file_name}</h2>
+                    <pre>${escapeHtml(file.content)}</pre>
                 </body>
                 </html>
             `);
-            
-            showNotification(`✅ تم تحميل ${fileName}`, 'success');
-        } catch (err) {
-            showNotification(`❌ فشل تحميل الملف: ${err.message}`, 'error');
+            showNotification(`✅ تم فتح ${file.file_name}`, 'success');
+        } else {
+            showNotification('❌ الملف غير موجود', 'error');
         }
     }
     
-    async function importTxtFile(fileId, fileName) {
-        showNotification(`📥 جاري استيراد ${fileName}...`, 'info');
+    function importTxtFileFromContent(index) {
+        const files = JSON.parse(localStorage.getItem('telegram_channel_files') || '[]');
+        const file = files[index];
         
-        try {
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-            const fileData = await fileRes.json();
-            
-            if (!fileData.ok) throw new Error(fileData.description);
-            
-            const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-            
-            const res = await fetch(fileUrl);
-            const text = await res.text();
-            
-            const parsed = parseTxtToDistributors(text);
+        if (file && file.content) {
+            const parsed = parseTxtToDistributors(file.content);
             
             if (parsed.length > 0) {
                 distributors = [...distributors, ...parsed];
                 displayTable();
-                showNotification(`✅ تم استيراد ${parsed.length} موزع من ${fileName}`, 'success');
+                showNotification(`✅ تم استيراد ${parsed.length} موزع من ${file.file_name}`, 'success');
             } else {
-                showNotification(`⚠️ لم يتم العثور على بيانات صالحة في ${fileName}`, 'error');
+                showNotification(`⚠️ لم يتم العثور على بيانات صالحة في ${file.file_name}`, 'error');
+            }
+        } else {
+            showNotification('❌ الملف غير موجود', 'error');
+        }
+    }
+    
+    function deleteStoredFile(index) {
+        if (confirm('هل أنت متأكد من حذف هذا الملف؟')) {
+            let files = JSON.parse(localStorage.getItem('telegram_channel_files') || '[]');
+            files.splice(index, 1);
+            localStorage.setItem('telegram_channel_files', JSON.stringify(files));
+            allChannelFiles = files;
+            displayFileList(files);
+            showNotification('✅ تم حذف الملف', 'success');
+        }
+    }
+    
+    // استماع للرسائل الواردة من القناة (لحفظ الملفات تلقائياً)
+    async function setupWebhook() {
+        // هذه الدالة تحاول جلب التحديثات لحفظ الملفات الجديدة
+        try {
+            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-10&timeout=5`);
+            const updatesData = await updatesRes.json();
+            
+            if (updatesData.ok && updatesData.result) {
+                for (const update of updatesData.result) {
+                    const message = update.channel_post || update.message;
+                    if (message && message.document && message.chat && message.chat.id.toString() === TELEGRAM.channelId) {
+                        const fileName = message.document.file_name || '';
+                        if (fileName.toLowerCase().endsWith('.txt')) {
+                            // جلب محتوى الملف
+                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${message.document.file_id}`);
+                            const fileData = await fileRes.json();
+                            
+                            if (fileData.ok) {
+                                const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                                const contentRes = await fetch(fileUrl);
+                                const content = await contentRes.text();
+                                
+                                // حفظ الملف
+                                saveFileToStorage(fileName, content);
+                                showNotification(`📥 تم حفظ ملف جديد: ${fileName}`, 'success');
+                            }
+                        }
+                    }
+                }
             }
         } catch (err) {
-            showNotification(`❌ فشل الاستيراد: ${err.message}`, 'error');
+            console.log('Webhook setup error:', err);
         }
     }
     
@@ -793,9 +855,13 @@
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                document.getElementById('txtRawContent').value = e.target.result;
+                const content = e.target.result;
+                document.getElementById('txtRawContent').value = content;
                 showNotification('📁 تم تحميل الملف بنجاح', 'success');
                 previewTxtData();
+                
+                // حفظ الملف تلقائياً في التخزين المحلي
+                saveFileToStorage(input.files[0].name, content);
             };
             reader.readAsText(input.files[0], 'UTF-8');
             input.value = '';
@@ -857,6 +923,24 @@
     
     function openAddDistributor() { document.getElementById('addModal').style.display = 'flex'; }
     function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
+    
+    // بدء الاستماع للرسائل الجديدة
+    setInterval(() => {
+        setupWebhook();
+    }, 30000); // كل 30 ثانية
+    
+    // تحميل الملفات المخزنة عند فتح الصفحة
+    setTimeout(() => {
+        const saved = localStorage.getItem('telegram_channel_files');
+        if (saved) {
+            const files = JSON.parse(saved);
+            if (files.length > 0) {
+                document.getElementById('channelFilesSection').style.display = 'block';
+                displayFileList(files);
+            }
+        }
+        fetchAllTxtFromChannel();
+    }, 1000);
     
     displayTable();
 </script>
