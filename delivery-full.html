@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - النظام الاحترافي</title>
+    <title>ناردو برو - النظام الاحترافي (الرسالة المثبتة)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -39,7 +37,7 @@
         <h1><i class="fas fa-shuttle-van"></i> ناردو برو | إدارة الموزعين</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
             <button class="btn btn-gold" onclick="exportToTelegram()"><i class="fab fa-telegram-plane"></i> تصدير وإرسال للقناة</button>
-            <button class="btn btn-info" onclick="fetchFromChannel()"><i class="fas fa-sync-alt"></i> جلب البيانات من القناة</button>
+            <button class="btn btn-info" onclick="fetchPinnedFromChannel()"><i class="fas fa-thumbtack"></i> جلب الرسالة المثبتة</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
         </div>
         <div id="status" class="status-bar">جاهز للعمل</div>
@@ -94,11 +92,7 @@
     const CHANNEL_ID = '-1003822964890';
     const KEYWORD = '📋 قائمة الموزعين حسب كل ولاية';
 
-    let distributors = [
-        { company: "كوكا كولا", manager: "كريم", phone: "055569", type: "delivery", state: "الجزائر" },
-        { company: "لوزوو", manager: "ممشزسز", phone: "05669", type: "distributor", state: "الجزائر" },
-        { company: "شركة ناردو", manager: "ناردو برو", phone: "0566", type: "delivery", state: "وهران" }
-    ];
+    let distributors = [];
 
     function updateTable() {
         const tbody = document.getElementById('tableBody');
@@ -109,7 +103,7 @@
         document.getElementById('countDisplay').innerText = `العدد: ${filtered.length}`;
 
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات لهذه الولاية</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات حالياً</td></tr>';
             return;
         }
 
@@ -193,59 +187,66 @@
                 body: JSON.stringify({ chat_id: CHANNEL_ID, text: text })
             });
             const data = await res.json();
-            if (data.ok) showStatus('✅ تم الإرسال للقناة بالتنسيق الجديد');
+            if (data.ok) showStatus('✅ تم الإرسال للقناة بنجاح');
             else showStatus('❌ فشل الإرسال');
         } catch (e) { showStatus('❌ خطأ في الاتصال'); }
     }
 
-    async function fetchFromChannel() {
-        showStatus('⏳ جاري جلب البيانات وفلترتها...');
+    async function fetchPinnedFromChannel() {
+        showStatus('⏳ جاري جلب الرسالة المثبتة...');
         try {
-            const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1`);
-            const data = await res.json();
+            // الخطوة 1: جلب معلومات القناة للحصول على معرف الرسالة المثبتة
+            const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
+            const chatData = await chatRes.json();
             
-            if (data.ok && data.result.length > 0) {
-                let lastMsg = null;
-                for (let i = data.result.length - 1; i >= 0; i--) {
-                    const m = data.result[i].channel_post || data.result[i].message;
-                    if (m && m.text && m.text.includes(KEYWORD)) {
-                        lastMsg = m.text;
-                        break;
-                    }
+            if (chatData.ok && chatData.result.pinned_message) {
+                const pinnedMsg = chatData.result.pinned_message;
+                const text = pinnedMsg.text || pinnedMsg.caption;
+
+                if (text && text.includes(KEYWORD)) {
+                    parseAndLoadData(text);
+                } else {
+                    showStatus('⚠️ الرسالة المثبتة لا تحمل المعرف المطلوب');
                 }
+            } else {
+                showStatus('❌ لا توجد رسالة مثبتة في هذه القناة');
+            }
+        } catch (e) {
+            showStatus('❌ خطأ في الاتصال بالتليجرام');
+        }
+    }
 
-                if (lastMsg) {
-                    const newDistributors = [];
-                    const sections = lastMsg.split('📍 ولاية ');
+    function parseAndLoadData(text) {
+        const newDistributors = [];
+        const sections = text.split('📍 ولاية ');
+        
+        sections.slice(1).forEach(section => {
+            const lines = section.split('\n');
+            const stateName = lines[0].split(' - ')[0].trim();
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].startsWith('• ')) {
+                    const compLine = lines[i].substring(2);
+                    const company = compLine.split(' (')[0];
+                    const type = compLine.includes('(') ? compLine.split('(')[1].replace(')', '') : 'delivery';
                     
-                    sections.slice(1).forEach(section => {
-                        const lines = section.split('\n');
-                        const stateName = lines[0].split(' - ')[0].trim();
-                        
-                        for (let i = 1; i < lines.length; i++) {
-                            if (lines[i].startsWith('• ')) {
-                                const compLine = lines[i].substring(2);
-                                const company = compLine.split(' (')[0];
-                                const type = compLine.includes('(') ? compLine.split('(')[1].replace(')', '') : 'delivery';
-                                
-                                const infoLine = lines[i+1] || '';
-                                const manager = infoLine.includes('👤 ') ? infoLine.split('👤 ')[1].split(' |')[0] : '';
-                                const phone = infoLine.includes('📞 ') ? infoLine.split('📞 ')[1] : '';
-                                
-                                newDistributors.push({ company, manager, phone, type, state: stateName });
-                                i++; // تخطي سطر المعلومات
-                            }
-                        }
-                    });
+                    const infoLine = lines[i+1] || '';
+                    const manager = infoLine.includes('👤 ') ? infoLine.split('👤 ')[1].split(' |')[0] : '';
+                    const phone = infoLine.includes('📞 ') ? infoLine.split('📞 ')[1] : '';
+                    
+                    newDistributors.push({ company, manager, phone, type, state: stateName });
+                    i++; // تخطي سطر المعلومات
+                }
+            }
+        });
 
-                    if (newDistributors.length > 0) {
-                        distributors = newDistributors;
-                        updateTable();
-                        showStatus(`✅ تم جلب ${newDistributors.length} موزع بنجاح`);
-                    } else { showStatus('⚠️ لم يتم العثور على بيانات صالحة'); }
-                } else { showStatus(`⚠️ لم يتم العثور على المعرف الجديد`); }
-            } else { showStatus('❌ لا توجد تحديثات'); }
-        } catch (e) { showStatus('❌ خطأ في الجلب'); }
+        if (newDistributors.length > 0) {
+            distributors = newDistributors;
+            updateTable();
+            showStatus(`✅ تم جلب ${newDistributors.length} موزع من الرسالة المثبتة`);
+        } else {
+            showStatus('⚠️ لم يتم العثور على بيانات صالحة في الرسالة');
+        }
     }
 
     function showStatus(msg) { document.getElementById('status').innerText = msg; }
