@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو برو - سلتي | نظام طلبات مع موزعين حسب الولاية</title>
+    <title>ناردو برو - سلتي | نظام طلبات متكامل</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
+    
     <style>
+        /* ============================================ */
+        /* 1.0 - المتغيرات العامة وإعدادات CSS الأساسية    */
+        /* ============================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --primary: #1a1a2e;
@@ -26,15 +26,29 @@
             --warning: #fbbf24;
             --info: #60a5fa;
         }
+        
+        /* 1.1 - ألوان المتاجر المخصصة */
+        .merchant-color-0 { border-right: 5px solid #ff6b6b; }
+        .merchant-color-1 { border-right: 5px solid #4ecdc4; }
+        .merchant-color-2 { border-right: 5px solid #45b7d1; }
+        .merchant-color-3 { border-right: 5px solid #96ceb4; }
+        .merchant-color-4 { border-right: 5px solid #ffeaa7; }
+        .merchant-color-5 { border-right: 5px solid #dfe6e9; }
+        .merchant-color-6 { border-right: 5px solid #fd79a8; }
+        .merchant-color-7 { border-right: 5px solid #e84393; }
+        .merchant-color-8 { border-right: 5px solid #6c5ce7; }
+        .merchant-color-9 { border-right: 5px solid #a29bfe; }
+        
+        /* 1.2 - أنماط الجسم الرئيسي والعناصر العامة */
         body {
             font-family: 'Cairo', sans-serif;
             background: linear-gradient(135deg, #0f3460, #16213e);
             color: var(--text-primary);
             direction: rtl;
-            min-height: 100vh;
         }
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         
+        /* 1.3 - أنماط رأس الصفحة */
         .header {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
@@ -49,7 +63,7 @@
         }
         .header-title { display: flex; align-items: center; gap: 15px; }
         .header-title i { font-size: 40px; color: var(--gold); }
-        .header-title h1 { font-size: 28px; color: var(--gold); margin: 0; }
+        .header-title h1 { font-size: 32px; color: var(--gold); margin: 0; }
         .header-info { display: flex; gap: 20px; flex-wrap: wrap; }
         .info-item {
             display: flex;
@@ -63,6 +77,7 @@
         }
         .info-item:hover { background: rgba(255, 215, 0, 0.2); }
         
+        /* 1.4 - أنماط الأزرار */
         .btn {
             padding: 12px 25px;
             border: none;
@@ -80,11 +95,10 @@
         .btn-success:hover { background: #5ee890; transform: translateY(-2px); }
         .btn-danger { background: rgba(248, 113, 113, 0.2); border: 1px solid var(--error); color: var(--error); }
         .btn-danger:hover { background: var(--error); color: white; }
-        .btn-telegram { background: #0088cc; color: white; }
-        .btn-telegram:hover { background: #006699; transform: translateY(-2px); }
-        .btn-info { background: #17a2b8; color: white; }
-        .btn-info:hover { background: #138496; transform: translateY(-2px); }
+        .btn-info { background: linear-gradient(135deg, #60a5fa, #3b82f6); color: white; }
+        .btn-info:hover { transform: translateY(-2px); }
         
+        /* 1.5 - أنماط أقسام المتاجر */
         .merchant-section {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
@@ -115,13 +129,17 @@
             font-size: 24px;
         }
         .merchant-name { font-size: 20px; font-weight: bold; color: var(--gold); }
+        .merchant-id { font-size: 12px; color: var(--text-secondary); font-family: monospace; }
         .merchant-stats { display: flex; gap: 20px; font-size: 14px; color: var(--text-secondary); }
         .merchant-stats span { color: var(--gold); font-weight: bold; }
         .merchant-toggle { font-size: 20px; transition: transform 0.3s; }
         .merchant-toggle.collapsed { transform: rotate(-90deg); }
+        
+        /* 1.6 - أنماط محتوى المتاجر والمنتجات */
         .merchant-products { padding: 20px; }
         .merchant-products.collapsed { display: none; }
         
+        /* 1.7 - أنماط عناصر عربة التسوق */
         .cart-item {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 215, 0, 0.15);
@@ -137,16 +155,19 @@
             width: 70px;
             height: 70px;
             border-radius: 12px;
+            overflow: hidden;
             background: rgba(255, 215, 0, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
+        .product-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
         .product-thumbnail i { font-size: 30px; color: var(--gold); }
         .product-details { flex: 2; min-width: 150px; }
         .product-name { font-size: 16px; font-weight: bold; color: var(--gold); }
         .product-price { font-size: 13px; color: var(--success); }
+        .product-id { font-size: 11px; color: var(--text-secondary); margin-top: 5px; }
         .cart-item-quantity {
             display: flex;
             align-items: center;
@@ -170,6 +191,7 @@
         .cart-item-total { font-size: 16px; font-weight: bold; color: var(--gold); min-width: 100px; text-align: center; }
         .cart-item-remove { background: rgba(248, 113, 113, 0.2); color: var(--error); border: 1px solid var(--error); padding: 8px 15px; border-radius: 10px; cursor: pointer; }
         
+        /* 1.8 - أنماط ملخص السلة */
         .cart-summary {
             background: rgba(255, 215, 0, 0.05);
             border-radius: 15px;
@@ -189,6 +211,7 @@
         .cart-actions { display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
         .cart-actions .btn { flex: 1; }
         
+        /* 1.9 - أنماط النوافذ المنبثقة */
         .modal {
             display: none;
             position: fixed;
@@ -196,7 +219,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.9);
             z-index: 3000;
             align-items: center;
             justify-content: center;
@@ -226,6 +249,9 @@
             outline: none;
             border-color: var(--gold);
         }
+        .modal-buttons { display: flex; gap: 15px; margin-top: 20px; }
+        
+        /* 1.10 - أنماط الحقول الإضافية */
         .form-group { margin-bottom: 20px; }
         .form-group label {
             display: block;
@@ -234,11 +260,10 @@
             color: var(--gold);
             font-size: 13px;
         }
-        .modal-buttons { display: flex; gap: 15px; margin-top: 20px; }
         
+        /* 1.11 - أنماط الحالات الفارغة والإشعارات */
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
         .empty-state i { font-size: 70px; color: var(--gold); }
-        
         .notification {
             position: fixed;
             top: 20px;
@@ -262,6 +287,7 @@
             to { transform: translateY(0); opacity: 1; }
         }
         
+        /* 1.12 - أنماط أرشيف الطلبات */
         .order-archive { margin-top: 40px; border-top: 2px dashed rgba(255, 215, 0, 0.2); padding-top: 30px; }
         .order-archive h2 { margin-bottom: 20px; font-size: 24px; color: var(--gold); }
         .order-card {
@@ -277,144 +303,129 @@
         .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
         .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); }
         .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .order-details div { margin-bottom: 8px; font-size: 14px; }
         
-        .distributor-list {
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            margin-top: 5px;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        .distributor-option {
-            padding: 12px;
-            margin: 5px 0;
-            border-radius: 10px;
-            background: rgba(255,215,0,0.1);
-            cursor: pointer;
-            transition: all 0.3s;
-            border-right: 3px solid transparent;
-        }
-        .distributor-option:hover {
-            background: rgba(255,215,0,0.2);
-            border-right-color: var(--gold);
-        }
-        .distributor-option.selected {
-            background: rgba(255,215,0,0.3);
-            border-right-color: var(--gold);
-        }
-        .distributor-name { font-weight: bold; color: var(--gold); }
-        .distributor-type { font-size: 11px; color: var(--text-secondary); }
-        .distributor-phone { font-size: 11px; color: var(--success); }
-        
-        .url-input-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .url-input-group input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,215,0,0.3);
-            background: rgba(0,0,0,0.3);
-            color: white;
-        }
-        
+        /* 1.13 - استعلامات الوسائط للاستجابة */
         @media (max-width: 768px) {
             .cart-item { flex-direction: column; align-items: stretch; }
             .cart-actions { flex-direction: column; }
         }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,215,0,0.3);
-            border-radius: 50%;
-            border-top-color: var(--gold);
-            animation: spin 0.8s linear infinite;
-            margin-right: 10px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .distributor-badge {
-            background: rgba(74, 222, 128, 0.2);
-            border: 1px solid var(--success);
-            border-radius: 20px;
-            padding: 5px 12px;
-            font-size: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
+    <!-- ============================================ -->
+    <!-- 2.0 - هيكل HTML الرئيسي للصفحة                  -->
+    <!-- ============================================ -->
     <div class="container">
+        <!-- 2.1 - رأس الصفحة وعناصر التحكم -->
         <div class="header">
             <div class="header-title"><i class="fas fa-shopping-cart"></i><h1>سلة المشتريات</h1></div>
             <div class="header-info">
-                <div class="info-item" onclick="showDistributorPanel()"><i class="fas fa-truck"></i><span>الموزعون</span></div>
+                <div class="info-item" onclick="window.location.href='index.html'"><i class="fas fa-store"></i><span>العودة للمتجر</span></div>
                 <div class="info-item"><i class="fas fa-shopping-bag"></i><span>العدد: <strong id="cartCount">0</strong></span></div>
                 <div class="info-item"><i class="fas fa-dollar-sign"></i><span>الإجمالي: <strong id="cartTotal">0</strong> دج</span></div>
                 <div class="info-item" onclick="clearCart()"><i class="fas fa-trash-alt"></i><span>مسح الكل</span></div>
             </div>
         </div>
         
+        <!-- 2.2 - حاوية عرض السلة -->
         <div class="cart-section"><div id="cartContainer"></div></div>
         
+        <!-- 2.3 - أرشيف الطلبات -->
         <div class="order-archive"><h2><i class="fas fa-history"></i> أرشيف طلباتي</h2><div id="ordersArchiveContainer"></div></div>
     </div>
 
-    <!-- نافذة معلومات المشتري مع قائمة الموزعين -->
+    <!-- 2.4 - نافذة معلومات المشتري المتطورة -->
     <div id="customerModal" class="modal">
         <div class="modal-content">
             <h2><i class="fas fa-user-circle"></i> معلومات المشتري</h2>
             
+            <!-- الاسم - يتم تعبئته تلقائياً -->
             <div class="form-group">
                 <label><i class="fas fa-user"></i> الاسم الكامل</label>
-                <input type="text" id="customerName" placeholder="الاسم الكامل">
+                <input type="text" id="customerName" placeholder="الاسم الكامل" readonly style="background: rgba(255,215,0,0.1); cursor: not-allowed;">
+                <small style="color: var(--gold);">✓ تم جلب الاسم من حسابك</small>
             </div>
             
+            <!-- رقم الهاتف -->
             <div class="form-group">
                 <label><i class="fas fa-phone"></i> رقم الهاتف</label>
                 <input type="tel" id="customerPhone" placeholder="05XXXXXXXX">
             </div>
             
+            <!-- العنوان مع قائمة منسدلة للولايات -->
             <div class="form-group">
                 <label><i class="fas fa-map-marker-alt"></i> الولاية</label>
-                <select id="customerState" onchange="updateDistributorsList()">
+                <select id="customerState" onchange="updateFullAddress()">
                     <option value="">اختر الولاية</option>
-                    <option value="الجزائر">الجزائر العاصمة</option>
-                    <option value="وهران">وهران</option>
-                    <option value="قسنطينة">قسنطينة</option>
-                    <option value="عنابة">عنابة</option>
-                    <option value="سطيف">سطيف</option>
-                    <option value="تيزي وزو">تيزي وزو</option>
-                    <option value="بجاية">بجاية</option>
-                    <option value="باتنة">باتنة</option>
-                    <option value="البليدة">البليدة</option>
-                    <option value="تلمسان">تلمسان</option>
-                    <option value="بسكرة">بسكرة</option>
+                    <option value="أدرار">أدرار</option>
                     <option value="الشلف">الشلف</option>
+                    <option value="الأغواط">الأغواط</option>
+                    <option value="أم البواقي">أم البواقي</option>
+                    <option value="باتنة">باتنة</option>
+                    <option value="بجاية">بجاية</option>
+                    <option value="بسكرة">بسكرة</option>
+                    <option value="بشار">بشار</option>
+                    <option value="البليدة">البليدة</option>
+                    <option value="البويرة">البويرة</option>
+                    <option value="تمنراست">تمنراست</option>
+                    <option value="تبسة">تبسة</option>
+                    <option value="تلمسان">تلمسان</option>
+                    <option value="تيارت">تيارت</option>
+                    <option value="تيزي وزو">تيزي وزو</option>
+                    <option value="الجزائر">الجزائر العاصمة</option>
+                    <option value="الجلفة">الجلفة</option>
+                    <option value="جيجل">جيجل</option>
+                    <option value="سطيف">سطيف</option>
+                    <option value="سعيدة">سعيدة</option>
+                    <option value="سكيكدة">سكيكدة</option>
+                    <option value="سيدي بلعباس">سيدي بلعباس</option>
+                    <option value="عنابة">عنابة</option>
+                    <option value="قالمة">قالمة</option>
+                    <option value="قسنطينة">قسنطينة</option>
+                    <option value="المدية">المدية</option>
+                    <option value="مستغانم">مستغانم</option>
+                    <option value="المسيلة">المسيلة</option>
+                    <option value="معسكر">معسكر</option>
+                    <option value="ورقلة">ورقلة</option>
+                    <option value="وهران">وهران</option>
+                    <option value="برج بوعريريج">برج بوعريريج</option>
+                    <option value="بومرداس">بومرداس</option>
+                    <option value="الطارف">الطارف</option>
+                    <option value="تندوف">تندوف</option>
+                    <option value="تيسمسيلت">تيسمسيلت</option>
+                    <option value="الوادي">الوادي</option>
+                    <option value="خنشلة">خنشلة</option>
+                    <option value="سوق أهراس">سوق أهراس</option>
+                    <option value="تيبازة">تيبازة</option>
+                    <option value="ميلة">ميلة</option>
+                    <option value="عين الدفلى">عين الدفلى</option>
+                    <option value="النعامة">النعامة</option>
+                    <option value="عين تموشنت">عين تموشنت</option>
+                    <option value="غرداية">غرداية</option>
+                    <option value="غليزان">غليزان</option>
                 </select>
             </div>
             
-            <!-- قائمة الموزعين حسب الولاية -->
-            <div class="form-group" id="distributorGroup" style="display: none;">
-                <label><i class="fas fa-truck"></i> اختر الموزع</label>
-                <div id="distributorsList" class="distributor-list"></div>
-                <input type="hidden" id="selectedDistributor">
-            </div>
-            
+            <!-- العنوان التفصيلي مع أيقونة الخريطة -->
             <div class="form-group">
                 <label><i class="fas fa-location-dot"></i> العنوان التفصيلي</label>
-                <input type="text" id="customerAddress" placeholder="الشارع، رقم البيت، الحي...">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="customerAddress" placeholder="الشارع، رقم البيت، الحي..." style="flex: 1;">
+                    <button type="button" class="btn btn-outline" onclick="openMapLocation()" style="padding: 10px 15px;" title="تحديد الموقع على الخريطة">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </button>
+                </div>
+                <small style="color: var(--text-secondary);">📍 سيتم عرض العنوان الكامل: [الولاية] - [العنوان التفصيلي]</small>
             </div>
             
+            <!-- العنوان الكامل (للقراءة فقط) -->
+            <div class="form-group">
+                <label><i class="fas fa-map-pin"></i> العنوان الكامل</label>
+                <input type="text" id="fullAddress" placeholder="سيظهر العنوان الكامل تلقائياً" readonly style="background: rgba(0,0,0,0.3); color: var(--gold);">
+            </div>
+            
+            <!-- ملاحظات -->
             <div class="form-group">
                 <label><i class="fas fa-pen"></i> ملاحظات إضافية</label>
                 <textarea id="customerNotes" placeholder="ملاحظات إضافية (اختياري)" rows="2"></textarea>
@@ -427,318 +438,37 @@
         </div>
     </div>
 
-    <!-- نافذة إدارة الموزعين -->
-    <div id="distributorModal" class="modal">
-        <div class="modal-content">
-            <h2><i class="fas fa-truck"></i> إدارة الموزعين</h2>
-            
-            <div class="form-group">
-                <label><i class="fas fa-link"></i> جلب من القناة (رابط PDF)</label>
-                <div class="url-input-group">
-                    <input type="text" id="pdfUrlInput" placeholder="https://t.me/c/3822964890/3633">
-                    <button class="btn btn-telegram" onclick="fetchPDFFromURL()">جلب</button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-plus-circle"></i> إضافة موزع يدوي</label>
-                <div style="display: grid; gap: 10px;">
-                    <input type="text" id="newDistributorName" placeholder="اسم الموزع">
-                    <input type="text" id="newDistributorPhone" placeholder="رقم الهاتف">
-                    <select id="newDistributorState">
-                        <option value="">اختر الولاية</option>
-                        <option value="الجزائر">الجزائر</option>
-                        <option value="وهران">وهران</option>
-                        <option value="قسنطينة">قسنطينة</option>
-                        <option value="عنابة">عنابة</option>
-                        <option value="سطيف">سطيف</option>
-                    </select>
-                    <select id="newDistributorType">
-                        <option value="delivery">🚚 شركة توصيل</option>
-                        <option value="distributor">📦 موزع معتمد</option>
-                        <option value="both">🔄 كليهما</option>
-                    </select>
-                    <button class="btn btn-success" onclick="addDistributor()">➕ إضافة موزع</button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label><i class="fas fa-list"></i> قائمة الموزعين الحاليين</label>
-                <div id="allDistributorsList" style="max-height: 300px; overflow-y: auto;"></div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="btn btn-outline" onclick="closeDistributorModal()">إغلاق</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- ============================================ -->
+    <!-- 3.0 - كود JavaScript (الدوال والمنطق)          -->
+    <!-- ============================================ -->
     <script>
         // ============================================
-        // الإعدادات الأساسية
+        // 3.1 - الثوابت العامة والإعدادات
         // ============================================
-        const TELEGRAM = { 
-            botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', 
-            channelId: '-1003822964890', 
-            apiUrl: 'https://api.telegram.org/bot' 
-        };
-        
+        const TELEGRAM = { botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', channelId: '-1003822964890', apiUrl: 'https://api.telegram.org/bot' };
         const CART_STORAGE_KEY = 'nardoo_cart';
         const ORDERS_STORAGE_KEY = 'nardo_orders';
-        const DISTRIBUTORS_STORAGE_KEY = 'nardoo_distributors_data';
-        
         let cart = [];
-        let distributorsData = [];
         let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
-        let selectedDistributorData = null;
-        
+        let storeColors = {};
+
         // ============================================
-        // بيانات الموزعين الافتراضية
+        // 3.2 - دوال الألوان وحالة المتاجر
         // ============================================
-        const defaultDistributors = [
-            { id: 1, name: "شركة البراق للتوصيل", phone: "0555123456", type: "delivery", state: "الجزائر" },
-            { id: 2, name: "شركة السريع", phone: "0555234567", type: "delivery", state: "الجزائر" },
-            { id: 3, name: "موزع الجزائر", phone: "0555345678", type: "distributor", state: "الجزائر" },
-            { id: 4, name: "شركة الأمان", phone: "0555456789", type: "both", state: "وهران" },
-            { id: 5, name: "موزع وهران", phone: "0555567890", type: "distributor", state: "وهران" },
-            { id: 6, name: "شركة الصحراء", phone: "0555678901", type: "delivery", state: "قسنطينة" },
-            { id: 7, name: "موزع قسنطينة", phone: "0555789012", type: "distributor", state: "قسنطينة" },
-            { id: 8, name: "شركة البريد", phone: "0555890123", type: "delivery", state: "عنابة" },
-            { id: 9, name: "موزع سطيف", phone: "0555901234", type: "distributor", state: "سطيف" },
-            { id: 10, name: "شركة الشرق", phone: "0556012345", type: "delivery", state: "تيزي وزو" }
-        ];
-        
-        // ============================================
-        // دوال الإشعارات
-        // ============================================
-        function showNotification(msg, type = 'success') {
-            const n = document.createElement('div');
-            n.className = `notification ${type}`;
-            n.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${msg}`;
-            document.body.appendChild(n);
-            setTimeout(() => n.remove(), 3000);
+        function getStoreColor(storeID) { 
+            if (!storeColors[storeID]) { 
+                const colors = ['merchant-color-0','merchant-color-1','merchant-color-2','merchant-color-3','merchant-color-4','merchant-color-5','merchant-color-6','merchant-color-7','merchant-color-8','merchant-color-9']; 
+                const index = Object.keys(storeColors).length % colors.length; 
+                storeColors[storeID] = colors[index]; 
+            } 
+            return storeColors[storeID]; 
         }
         
-        // ============================================
-        // تحميل وحفظ بيانات الموزعين
-        // ============================================
-        function loadDistributors() {
-            const saved = localStorage.getItem(DISTRIBUTORS_STORAGE_KEY);
-            if (saved) {
-                distributorsData = JSON.parse(saved);
-            } else {
-                distributorsData = [...defaultDistributors];
-                saveDistributors();
-            }
-            renderAllDistributorsList();
-        }
-        
-        function saveDistributors() {
-            localStorage.setItem(DISTRIBUTORS_STORAGE_KEY, JSON.stringify(distributorsData));
-        }
-        
-        function addDistributor() {
-            const name = document.getElementById('newDistributorName').value.trim();
-            const phone = document.getElementById('newDistributorPhone').value.trim();
-            const state = document.getElementById('newDistributorState').value;
-            const type = document.getElementById('newDistributorType').value;
-            
-            if (!name || !phone || !state) {
-                showNotification('الرجاء ملء جميع الحقول', 'error');
-                return;
-            }
-            
-            const newId = Date.now();
-            distributorsData.push({ id: newId, name, phone, type, state });
-            saveDistributors();
-            renderAllDistributorsList();
-            
-            document.getElementById('newDistributorName').value = '';
-            document.getElementById('newDistributorPhone').value = '';
-            document.getElementById('newDistributorState').value = '';
-            
-            showNotification('✓ تم إضافة الموزع بنجاح', 'success');
-        }
-        
-        function deleteDistributor(id) {
-            distributorsData = distributorsData.filter(d => d.id !== id);
-            saveDistributors();
-            renderAllDistributorsList();
-            showNotification('✓ تم حذف الموزع', 'success');
-        }
-        
-        function renderAllDistributorsList() {
-            const container = document.getElementById('allDistributorsList');
-            if (!container) return;
-            
-            if (distributorsData.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">لا يوجد موزعون</p>';
-                return;
-            }
-            
-            container.innerHTML = distributorsData.map(d => {
-                const typeIcon = d.type === 'delivery' ? '🚚' : (d.type === 'distributor' ? '📦' : '🔄');
-                const typeText = d.type === 'delivery' ? 'توصيل' : (d.type === 'distributor' ? 'موزع' : 'كليهما');
-                return `
-                    <div class="distributor-option" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div class="distributor-name">${typeIcon} ${d.name}</div>
-                            <div class="distributor-type">${d.state} - ${typeText}</div>
-                            <div class="distributor-phone">📞 ${d.phone}</div>
-                        </div>
-                        <button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteDistributor(${d.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-        }
+        function saveStoresState() { localStorage.setItem('stores_state', JSON.stringify(storesState)); }
+        function toggleStore(storeID) { storesState[storeID] = !storesState[storeID]; saveStoresState(); updateCartDisplay(); }
         
         // ============================================
-        // جلب PDF من الرابط
-        // ============================================
-        async function fetchPDFFromURL() {
-            let url = document.getElementById('pdfUrlInput').value.trim();
-            if (!url) {
-                showNotification('الرجاء إدخال رابط PDF', 'warning');
-                return;
-            }
-            
-            showNotification('📡 جاري جلب PDF...', 'info');
-            
-            try {
-                let pdfUrl = url;
-                const tgMatch = url.match(/t\.me\/c\/(\d+)\/(\d+)/);
-                if (tgMatch) {
-                    const chatId = `-100${tgMatch[1]}`;
-                    const messageId = parseInt(tgMatch[2]);
-                    const msgResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMessage?chat_id=${chatId}&message_id=${messageId}`);
-                    const msgData = await msgResponse.json();
-                    if (msgData.ok && msgData.result.document) {
-                        const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${msgData.result.document.file_id}`);
-                        const fileData = await fileResponse.json();
-                        pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                    }
-                }
-                
-                const loadingTask = pdfjsLib.getDocument(pdfUrl);
-                const pdf = await loadingTask.promise;
-                let fullText = '';
-                
-                for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-                }
-                
-                // استخراج الموزعين من النص
-                const extracted = extractDistributorsFromText(fullText);
-                if (extracted.length > 0) {
-                    distributorsData = [...distributorsData, ...extracted];
-                    saveDistributors();
-                    renderAllDistributorsList();
-                    showNotification(`✅ تم استيراد ${extracted.length} موزع جديد`, 'success');
-                } else {
-                    showNotification('⚠️ لم يتم العثور على موزعين في PDF', 'warning');
-                }
-                
-            } catch (error) {
-                showNotification('❌ فشل الجلب: ' + error.message, 'error');
-            }
-        }
-        
-        function extractDistributorsFromText(text) {
-            const extracted = [];
-            const lines = text.split('\n');
-            let currentState = null;
-            
-            const statePattern = /(?:ولاية|📍)\s*([^\d\(\)]+)/i;
-            
-            for (const line of lines) {
-                const stateMatch = line.match(statePattern);
-                if (stateMatch) {
-                    currentState = stateMatch[1].trim();
-                    continue;
-                }
-                
-                if (currentState && (line.includes('🚚') || line.includes('📦') || line.includes('🔄'))) {
-                    let name = '';
-                    let type = 'distributor';
-                    
-                    if (line.includes('🚚')) { type = 'delivery'; name = line.replace(/[🚚\s]+/, '').trim(); }
-                    else if (line.includes('📦')) { type = 'distributor'; name = line.replace(/[📦\s]+/, '').trim(); }
-                    else if (line.includes('🔄')) { type = 'both'; name = line.replace(/[🔄\s]+/, '').trim(); }
-                    
-                    if (name && name.length > 2) {
-                        extracted.push({
-                            id: Date.now() + Math.random(),
-                            name: name.substring(0, 50),
-                            phone: 'غير متوفر',
-                            type: type,
-                            state: currentState
-                        });
-                    }
-                }
-            }
-            
-            return extracted;
-        }
-        
-        // ============================================
-        // عرض الموزعين حسب الولاية
-        // ============================================
-        function updateDistributorsList() {
-            const selectedState = document.getElementById('customerState').value;
-            const distributorGroup = document.getElementById('distributorGroup');
-            const distributorsList = document.getElementById('distributorsList');
-            
-            if (!selectedState) {
-                distributorGroup.style.display = 'none';
-                return;
-            }
-            
-            const stateDistributors = distributorsData.filter(d => d.state === selectedState);
-            
-            if (stateDistributors.length === 0) {
-                distributorGroup.style.display = 'none';
-                showNotification('⚠️ لا يوجد موزعون متاحون في هذه الولاية', 'warning');
-                return;
-            }
-            
-            distributorGroup.style.display = 'block';
-            
-            let html = '';
-            stateDistributors.forEach(dist => {
-                const typeIcon = dist.type === 'delivery' ? '🚚' : (dist.type === 'distributor' ? '📦' : '🔄');
-                const typeText = dist.type === 'delivery' ? 'شركة توصيل' : (dist.type === 'distributor' ? 'موزع معتمد' : 'كليهما');
-                
-                html += `
-                    <div class="distributor-option" onclick="selectDistributor('${dist.name.replace(/'/g, "\\'")}', '${dist.phone}', '${dist.type}', '${dist.id}')">
-                        <div class="distributor-name">${typeIcon} ${dist.name}</div>
-                        <div class="distributor-type">${typeText}</div>
-                        <div class="distributor-phone"><i class="fas fa-phone"></i> ${dist.phone}</div>
-                    </div>
-                `;
-            });
-            
-            distributorsList.innerHTML = html;
-        }
-        
-        function selectDistributor(name, phone, type, id) {
-            selectedDistributorData = { name, phone, type, id };
-            
-            document.querySelectorAll('.distributor-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.querySelector('.distributor-name')?.innerText.includes(name)) {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            showNotification(`✅ تم اختيار ${name} كموزع للطلب`, 'success');
-        }
-        
-        // ============================================
-        // دوال إدارة السلة
+        // 3.3 - دوال إدارة السلة (حفظ، تحميل، عدادات)
         // ============================================
         function saveCart() { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); updateCartCounters(); }
         
@@ -756,28 +486,47 @@
             document.getElementById('cartTotal').textContent = total.toLocaleString('ar-EG'); 
         }
         
+        // ============================================
+        // 3.4 - دوال الإشعارات
+        // ============================================
+        function showNotification(m, type='success') { 
+            const n = document.createElement('div'); 
+            n.className = `notification ${type}`; 
+            n.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':'fa-info-circle'}"></i> ${m}`; 
+            document.body.appendChild(n); 
+            setTimeout(()=>n.remove(),3000); 
+        }
+        
+        // ============================================
+        // 3.5 - دوال تحديث الكمية والحذف من السلة
+        // ============================================
         function updateCartQuantity(productId, change) { 
-            const idx = cart.findIndex(i => i.id === productId); 
-            if (idx === -1) return; 
-            const newQ = cart[idx].quantity + change; 
-            if (newQ <= 0) removeFromCart(productId); 
+            const idx = cart.findIndex(i=>i.id===productId); 
+            if(idx===-1) return; 
+            const newQ = cart[idx].quantity+change; 
+            if(newQ<=0) removeFromCart(productId); 
             else { 
-                cart[idx].quantity = newQ; 
+                cart[idx].quantity=newQ; 
                 saveCart(); 
                 updateCartDisplay(); 
+                showNotification(`✓ تم تحديث كمية ${cart[idx].name}`); 
             } 
         }
         
         function removeFromCart(productId) { 
-            cart = cart.filter(i => i.id !== productId); 
-            saveCart(); 
-            updateCartDisplay(); 
+            const item = cart.find(i=>i.id===productId); 
+            if(item){ 
+                cart = cart.filter(i=>i.id!==productId); 
+                saveCart(); 
+                updateCartDisplay(); 
+                showNotification(`✓ تم إزالة ${item.name}`); 
+            } 
         }
         
         function clearCart() { 
-            if (cart.length === 0) showNotification('السلة فارغة', 'warning'); 
-            else if (confirm('مسح السلة؟')) { 
-                cart = []; 
+            if(cart.length===0) showNotification('السلة فارغة','warning'); 
+            else if(confirm('مسح السلة؟')){ 
+                cart=[]; 
                 saveCart(); 
                 updateCartDisplay(); 
                 showNotification('✓ تم مسح السلة'); 
@@ -785,46 +534,445 @@
         }
         
         // ============================================
-        // دوال التجميع والعرض
+        // 3.6 - دوال التجميع حسب المتجر
         // ============================================
         function groupByStore(items) { 
-            const g = {}; 
-            items.forEach(item => { 
+            const g={}; 
+            items.forEach(item=>{ 
                 const sid = item.storeID || 'unknown-store'; 
                 const sname = item.storeName || 'ناردو برو'; 
-                if (!g[sid]) g[sid] = { storeID: sid, storeName: sname, items: [], total: 0, count: 0 }; 
+                if(!g[sid]) g[sid]={storeID:sid, storeName:sname, items:[], total:0, count:0}; 
                 g[sid].items.push(item); 
                 g[sid].total += item.price * item.quantity; 
                 g[sid].count += item.quantity; 
             }); 
             return g; 
         }
+
+        // ============================================
+        // 3.7 - دوال تنسيق المنتجات للرسائل
+        // ============================================
+        function formatProductVertical(item) {
+            let productMsg = "";
+            productMsg += `🛒 ${item.name}\n`;
+            productMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
+            productMsg += `   📦 الكمية: ${item.quantity}\n`;
+            productMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
+            productMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+            if(item.imageData) {
+                productMsg += `   🖼️ [صورة المنتج](${item.imageData})\n`;
+            }
+            return productMsg;
+        }
+
+        // ============================================
+        // 3.8 - دوال توليد معرف الطلب الجديد
+        // ============================================
         
+        // تحويل اسم الولاية إلى رمز مختصر
+        function getStateCode(stateName) {
+            const stateCodes = {
+                'أدرار': 'ADR', 'الشلف': 'CHL', 'الأغواط': 'LGH', 'أم البواقي': 'UMB',
+                'باتنة': 'BAT', 'بجاية': 'BJA', 'بسكرة': 'BSK', 'بشار': 'BSH',
+                'البليدة': 'BLD', 'البويرة': 'BOU', 'تمنراست': 'TAM', 'تبسة': 'TEB',
+                'تلمسان': 'TLM', 'تيارت': 'TIA', 'تيزي وزو': 'TIZ', 'الجزائر': 'ALG',
+                'الجزائر العاصمة': 'ALG', 'الجلفة': 'DJF', 'جيجل': 'JIJ', 'سطيف': 'SET',
+                'سعيدة': 'SAI', 'سكيكدة': 'SKI', 'سيدي بلعباس': 'SBA', 'عنابة': 'ANA',
+                'قالمة': 'GUE', 'قسنطينة': 'CON', 'المدية': 'MED', 'مستغانم': 'MGT',
+                'المسيلة': 'MSL', 'معسكر': 'MSC', 'ورقلة': 'OUA', 'وهران': 'WAH',
+                'برج بوعريريج': 'BBA', 'بومرداس': 'BMD', 'الطارف': 'ELF', 'تندوف': 'TIN',
+                'تيسمسيلت': 'TIS', 'الوادي': 'ELO', 'خنشلة': 'KHE', 'سوق أهراس': 'SUK',
+                'تيبازة': 'TIP', 'ميلة': 'MIL', 'عين الدفلى': 'AIND', 'النعامة': 'NAA',
+                'عين تموشنت': 'AINT', 'غرداية': 'GHA', 'غليزان': 'REL'
+            };
+            
+            for (const [key, code] of Object.entries(stateCodes)) {
+                if (stateName.includes(key) || key.includes(stateName)) return code;
+            }
+            
+            const cleanName = stateName.replace(/[^\u0600-\u06FFa-zA-Z]/g, '');
+            return cleanName.substring(0, 3).toUpperCase() || 'GEN';
+        }
+        
+        // تنظيف اسم المشتري
+        function cleanCustomerName(name) {
+            let clean = name.replace(/[^\u0600-\u06FFa-zA-Z]/g, '');
+            return clean.substring(0, 15) || 'CUST';
+        }
+        
+        // توليد 6 أرقام عشوائية
+        function generateRandomNumbers() {
+            return Math.floor(Math.random() * 900000 + 100000).toString();
+        }
+        
+        // توليد معرف الطلب الجديد
+        function generateOrderId(customerName, stateName) {
+            const stateCode = getStateCode(stateName || 'الجزائر');
+            const cleanName = cleanCustomerName(customerName);
+            const randomNumbers = generateRandomNumbers();
+            return `${stateCode}-${cleanName}-${randomNumbers}`;
+        }
+        
+        // ============================================
+        // 3.9 - دوال إرسال الطلب إلى تلغرام
+        // ============================================
+        async function sendOrderToTelegram(customerData, groupedStores, grandTotal) {
+            const timestamp = new Date().toLocaleString('ar-EG');
+            const mainOrderId = generateOrderId(customerData.name, customerData.state);
+            
+            let merchantErrors = [];
+            
+            try {
+                // الرسالة الرئيسية للقناة
+                let channelMsg = `🟢 *طلب جديد #${mainOrderId}* 🟢\n`;
+                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                channelMsg += `👤 *المشتري:* ${customerData.name}\n`;
+                channelMsg += `📞 *الهاتف:* ${customerData.phone}\n`;
+                if(customerData.state) channelMsg += `📍 *الولاية:* ${customerData.state}\n`;
+                if(customerData.addressDetail) channelMsg += `🏠 *العنوان:* ${customerData.addressDetail}\n`;
+                if(customerData.address) channelMsg += `📍 *العنوان الكامل:* ${customerData.address}\n`;
+                if(customerData.notes) channelMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
+                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                
+                for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                    channelMsg += `🏪 *${storeData.storeName}*\n`;
+                    channelMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
+                    channelMsg += `───────────────────────────────\n`;
+                    
+                    storeData.items.forEach(item => {
+                        channelMsg += formatProductVertical(item);
+                        channelMsg += `───────────────────────────────\n`;
+                    });
+                    
+                    channelMsg += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
+                    channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                }
+                
+                channelMsg += `💎 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n`;
+                channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
+                channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
+                
+                // إرسال الرسالة الرئيسية
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({
+                        chat_id: TELEGRAM.channelId, 
+                        text: channelMsg, 
+                        parse_mode: 'Markdown', 
+                        disable_web_page_preview: false
+                    })
+                });
+                
+                // إرسال رسالة منفصلة لكل متجر
+                for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                    try {
+                        let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `🆔 *رقم الطلب الموحد:* \`${mainOrderId}\`\n`;
+                        merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
+                        merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
+                        if(customerData.state) merchantMsg += `📍 *الولاية:* ${customerData.state}\n`;
+                        if(customerData.addressDetail) merchantMsg += `🏠 *العنوان:* ${customerData.addressDetail}\n`;
+                        if(customerData.address) merchantMsg += `📍 *العنوان الكامل:* ${customerData.address}\n`;
+                        merchantMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
+                        merchantMsg += `───────────────────────────────\n`;
+                        
+                        storeData.items.forEach((item, idx) => {
+                            merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
+                            merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
+                            merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
+                            merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
+                            merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
+                            if(item.imageData) {
+                                merchantMsg += `   🖼️ [صورة المنتج](${item.imageData})\n`;
+                            }
+                            merchantMsg += `───────────────────────────────\n`;
+                        });
+                        
+                        merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
+                        merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
+                        if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
+                        merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                        merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
+                        merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
+                        
+                        await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                            method:'POST', 
+                            headers:{'Content-Type':'application/json'},
+                            body:JSON.stringify({
+                                chat_id: TELEGRAM.channelId, 
+                                text: merchantMsg, 
+                                parse_mode: 'Markdown', 
+                                disable_web_page_preview: false
+                            })
+                        });
+                    } catch(e) {
+                        merchantErrors.push(storeData.storeName);
+                        console.error('فشل إرسال رسالة المتجر:', e);
+                    }
+                }
+                
+                // حفظ الطلب محلياً
+                saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp);
+                
+                if (merchantErrors.length > 0) {
+                    showNotification(`⚠️ تم إرسال الطلب ولكن فشل إشعار بعض المتاجر: ${merchantErrors.join(', ')}`, 'warning');
+                }
+                
+                return true;
+                
+            } catch(e) { 
+                console.error('خطأ في إرسال الطلب:', e); 
+                return false; 
+            }
+        }
+
+        // ============================================
+        // 3.10 - دوال حفظ الطلب محلياً
+        // ============================================
+        function saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp) {
+            let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            
+            for (const [storeID, storeData] of Object.entries(groupedStores)) {
+                allOrders.unshift({ 
+                    id: `${mainOrderId}-${storeID.substring(0,5)}`, 
+                    originalOrderId: mainOrderId,
+                    date: timestamp, 
+                    customerName: customerData.name, 
+                    customerPhone: customerData.phone, 
+                    customerAddress: customerData.address,
+                    customerState: customerData.state,
+                    customerAddressDetail: customerData.addressDetail,
+                    customerNotes: customerData.notes, 
+                    storeID: storeID, 
+                    storeName: storeData.storeName, 
+                    items: storeData.items, 
+                    total: storeData.total, 
+                    status: 'pending'
+                });
+            }
+            
+            localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
+            renderOrdersArchive();
+        }
+        
+        // ============================================
+        // 3.11 - دوال عرض وإدارة أرشيف الطلبات
+        // ============================================
+        function renderOrdersArchive() {
+            const container = document.getElementById('ordersArchiveContainer');
+            if(!container) return;
+            const orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            if(orders.length === 0){ 
+                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">لا توجد طلبات سابقة</p>'; 
+                return; 
+            }
+            container.innerHTML = orders.map(o => `
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <span class="order-id">#${o.originalOrderId || o.id}</span>
+                        <span class="order-status ${o.status === 'pending' ? 'status-pending' : (o.status === 'received' ? 'status-received' : 'status-approved')}">
+                            ${o.status === 'pending' ? '⏳ قيد المعالجة' : (o.status === 'received' ? '📦 وصل للتاجر' : '✅ تم تعيين الموزع')}
+                        </span>
+                    </div>
+                    <div class="order-details">
+                        <div>🏪 ${o.storeName}</div>
+                        <div>📅 ${o.date}</div>
+                        <div>📍 ${o.customerState ? `${o.customerState} - ` : ''}${o.customerAddressDetail || ''}</div>
+                        <div>📦 ${o.items.map(i => `${i.name} (${i.quantity})`).join(', ')}</div>
+                        <div>💰 ${o.total.toLocaleString()} دج</div>
+                    </div>
+                    <div class="cart-actions" style="margin-top:10px;">
+                        ${o.status === 'pending' ? `<button class="btn btn-outline" onclick="updateOrderStatus('${o.id}','received')">تأكيد الوصول</button>` : ''}
+                        ${o.status === 'received' ? `<button class="btn btn-success" onclick="updateOrderStatus('${o.id}','approved')">الموافقة</button>` : ''}
+                        <button class="btn btn-danger" onclick="deleteOrderArchive('${o.id}')">حذف</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function updateOrderStatus(orderId, newStatus) {
+            let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            const idx = orders.findIndex(o => o.id === orderId);
+            if(idx !== -1){ 
+                orders[idx].status = newStatus; 
+                localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); 
+                let statusText = newStatus === 'received' ? '📦 وصل المنتج إلى التاجر' : '✅ تم تعيين الموزع لتوصيل الطلب';
+                const msg = `🔄 *تحديث حالة الطلب*\n━━━━━━━━━━━━━━━━━━━━━━\n🆔 رقم الطلب: #${orders[idx].originalOrderId}\n🏪 المتجر: ${orders[idx].storeName}\n👤 المشتري: ${orders[idx].customerName}\n📌 الحالة الجديدة: ${statusText}\n📅 التاريخ: ${new Date().toLocaleString('ar-EG')}\n━━━━━━━━━━━━━━━━━━━━━━`;
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { 
+                    method:'POST', 
+                    headers:{'Content-Type':'application/json'}, 
+                    body:JSON.stringify({chat_id: TELEGRAM.channelId, text: msg, parse_mode: 'Markdown'}) 
+                });
+                renderOrdersArchive(); 
+                showNotification('تم تحديث حالة الطلب'); 
+            }
+        }
+        
+        function deleteOrderArchive(orderId) { 
+            let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]'); 
+            orders = orders.filter(o => o.id !== orderId); 
+            localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders)); 
+            renderOrdersArchive(); 
+            showNotification('تم حذف الطلب'); 
+        }
+        
+        // ============================================
+        // 3.12 - دوال النافذة المنبثقة والطلب
+        // ============================================
+        let pendingGroupedStores = null, pendingGrandTotal = null;
+        
+        function loadUserProfile() {
+            let userName = '';
+            const currentStore = localStorage.getItem('nardo_current_store');
+            if (currentStore) {
+                try {
+                    const store = JSON.parse(currentStore);
+                    if (store.storeName) userName = store.storeName;
+                } catch(e) {}
+            }
+            const savedUser = localStorage.getItem('nardo_customer_name');
+            if (savedUser && !userName) userName = savedUser;
+            if (!userName) userName = 'زائر ناردو برو';
+            document.getElementById('customerName').value = userName;
+        }
+        
+        function updateFullAddress() {
+            const state = document.getElementById('customerState').value;
+            const detail = document.getElementById('customerAddress').value;
+            const fullAddress = state && detail ? `${state} - ${detail}` : (state || detail || '');
+            document.getElementById('fullAddress').value = fullAddress;
+        }
+        
+        function openMapLocation() {
+            const state = document.getElementById('customerState').value;
+            const address = document.getElementById('customerAddress').value;
+            const query = encodeURIComponent(`${state} ${address}`);
+            window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+            showNotification('🗺️ تم فتح الخريطة، يمكنك نسخ العنوان التفصيلي', 'info');
+        }
+        
+        function openCustomerModal() { 
+            if(cart.length === 0){ 
+                showNotification('السلة فارغة','warning'); 
+                return; 
+            } 
+            pendingGroupedStores = groupByStore(cart); 
+            pendingGrandTotal = cart.reduce((s,i) => s + (i.price * i.quantity), 0); 
+            
+            loadUserProfile();
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('customerState').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('fullAddress').value = '';
+            document.getElementById('customerNotes').value = '';
+            
+            document.getElementById('customerModal').style.display = 'flex'; 
+        }
+        
+        function closeModal() { 
+            document.getElementById('customerModal').style.display = 'none'; 
+        }
+        
+        function saveCustomerName(name) {
+            if (name && name !== 'زائر ناردو برو') {
+                localStorage.setItem('nardo_customer_name', name);
+            }
+        }
+        
+        async function submitOrder() {
+            const name = document.getElementById('customerName').value.trim(); 
+            const phone = document.getElementById('customerPhone').value.trim(); 
+            const state = document.getElementById('customerState').value;
+            const addressDetail = document.getElementById('customerAddress').value.trim();
+            const fullAddress = document.getElementById('fullAddress').value.trim();
+            const notes = document.getElementById('customerNotes').value.trim();
+            
+            if(!name){ 
+                showNotification('الرجاء إدخال الاسم','error'); 
+                return; 
+            }
+            if(!phone){ 
+                showNotification('الرجاء إدخال رقم الهاتف','error'); 
+                return; 
+            }
+            if(!state && !addressDetail){ 
+                showNotification('الرجاء إدخال العنوان (الولاية أو العنوان التفصيلي)','error'); 
+                return; 
+            }
+            
+            saveCustomerName(name);
+            
+            const finalAddress = fullAddress || (state && addressDetail ? `${state} - ${addressDetail}` : (state || addressDetail));
+            
+            const customerData = {
+                name, phone, address: finalAddress,
+                state: state, addressDetail: addressDetail, notes
+            };
+            
+            const currentGrouped = pendingGroupedStores;
+            const currentTotal = pendingGrandTotal;
+            
+            if(!currentGrouped || Object.keys(currentGrouped).length === 0) {
+                showNotification('لا توجد منتجات في السلة','error');
+                closeModal();
+                return;
+            }
+            
+            showNotification('جاري إرسال الطلب...','info');
+            
+            const success = await sendOrderToTelegram(customerData, currentGrouped, currentTotal);
+            
+            closeModal();
+            
+            if(success){
+                cart = [];
+                saveCart();
+                updateCartDisplay();
+                showNotification('✓ تم إرسال الطلب بنجاح! سيتم التواصل معك قريباً', 'success');
+                renderOrdersArchive();
+            } else {
+                showNotification('❌ فشل إرسال الطلب. يرجى التحقق من الاتصال والمحاولة مرة أخرى', 'error');
+            }
+            
+            pendingGroupedStores = null;
+            pendingGrandTotal = null;
+        }
+        
+        // ============================================
+        // 3.13 - دوال عرض السلة الأساسية
+        // ============================================
         function updateCartDisplay() {
             const container = document.getElementById('cartContainer');
-            if (!container) return;
+            if(!container) return;
             
-            if (cart.length === 0) { 
-                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="addDemoProducts()">إضافة منتجات تجريبية</button></div>`; 
+            if(cart.length === 0){ 
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="window.location.href='index.html'">تصفح المنتجات</button></div>`; 
                 return; 
             }
             
             const grouped = groupByStore(cart);
             let grandTotal = 0, grandCount = 0, storesHtml = '';
             
-            for (const [sid, sd] of Object.entries(grouped)) { 
+            for(const [sid, sd] of Object.entries(grouped)){ 
                 grandTotal += sd.total; 
                 grandCount += sd.count; 
                 const isCollapsed = storesState[sid] === true; 
+                const colorClass = getStoreColor(sid);
                 let itemsHtml = '';
                 
                 sd.items.forEach(it => { 
+                    const thumbnailHtml = it.imageData ? `<img src="${it.imageData}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box"></i>';
                     itemsHtml += `
                         <div class="cart-item">
-                            <div class="product-thumbnail"><i class="fas fa-box"></i></div>
+                            <div class="product-thumbnail">${thumbnailHtml}</div>
                             <div class="product-details">
                                 <div class="product-name">${it.name}</div>
                                 <div class="product-price">${it.price.toLocaleString()} دج</div>
+                                <div class="product-id">🆔 ${it.productCompositeID || it.id || '---'}</div>
                             </div>
                             <div class="cart-item-quantity">
                                 <button onclick="updateCartQuantity(${it.id},-1)">−</button>
@@ -838,12 +986,13 @@
                 });
                 
                 storesHtml += `
-                    <div class="merchant-section">
+                    <div class="merchant-section ${colorClass}">
                         <div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g, "\\'")}')">
                             <div class="merchant-info">
                                 <div class="merchant-avatar"><i class="fas fa-store"></i></div>
                                 <div>
                                     <div class="merchant-name">${sd.storeName}</div>
+                                    <div class="merchant-id">🆔 ${sid}</div>
                                     <div class="merchant-stats"><span>📦 ${sd.count}</span><span>💰 ${sd.total.toLocaleString()} دج</span></div>
                                 </div>
                             </div>
@@ -867,229 +1016,33 @@
             `;
         }
         
-        function addDemoProducts() {
-            cart = [
-                { id: 101, name: "هاتف ذكي", price: 25000, quantity: 1, storeID: "store1", storeName: "متجر الإلكترونيات" },
-                { id: 102, name: "سماعات لاسلكية", price: 3500, quantity: 2, storeID: "store1", storeName: "متجر الإلكترونيات" },
-                { id: 201, name: "قماش قطني", price: 1500, quantity: 3, storeID: "store2", storeName: "متجر الأقمشة" }
-            ];
-            saveCart();
-            updateCartDisplay();
-            showNotification('✓ تم إضافة منتجات تجريبية', 'success');
-        }
-        
-        function toggleStore(storeID) { 
-            storesState[storeID] = !storesState[storeID]; 
-            localStorage.setItem('stores_state', JSON.stringify(storesState)); 
-            updateCartDisplay(); 
-        }
-        
         // ============================================
-        // دوال الطلب والإرسال
+        // 3.14 - مستمعات الأحداث والتهيئة الأولية
         // ============================================
-        function openCustomerModal() { 
-            if (cart.length === 0) { 
-                showNotification('السلة فارغة', 'warning'); 
-                return; 
-            }
-            
-            document.getElementById('customerName').value = localStorage.getItem('nardo_customer_name') || '';
-            document.getElementById('customerPhone').value = '';
-            document.getElementById('customerState').value = '';
-            document.getElementById('customerAddress').value = '';
-            document.getElementById('customerNotes').value = '';
-            document.getElementById('distributorGroup').style.display = 'none';
-            selectedDistributorData = null;
-            
-            document.getElementById('customerModal').style.display = 'flex'; 
-        }
+        window.addEventListener('storage', e => { 
+            if(e.key === CART_STORAGE_KEY){ 
+                cart = e.newValue ? JSON.parse(e.newValue) : []; 
+                updateCartDisplay(); 
+                updateCartCounters(); 
+            } 
+        });
         
-        function showDistributorPanel() {
-            document.getElementById('distributorModal').style.display = 'flex';
-        }
+        loadCart(); 
+        renderOrdersArchive();
         
-        function closeModal() { 
-            document.getElementById('customerModal').style.display = 'none'; 
-        }
-        
-        function closeDistributorModal() {
-            document.getElementById('distributorModal').style.display = 'none';
-        }
-        
-        function generateOrderId(customerName, stateName) {
-            const stateCode = (stateName || 'GEN').substring(0, 3).toUpperCase();
-            const cleanName = (customerName || 'CUST').replace(/[^\u0600-\u06FFa-zA-Z]/g, '').substring(0, 10);
-            const randomNum = Math.floor(Math.random() * 90000 + 10000);
-            return `${stateCode}-${cleanName}-${randomNum}`;
-        }
-        
-        async function sendOrderToTelegram(customerData, groupedStores, grandTotal, distributor) {
-            const timestamp = new Date().toLocaleString('ar-EG');
-            const mainOrderId = generateOrderId(customerData.name, customerData.state);
-            
-            let channelMsg = `🟢 *طلب جديد #${mainOrderId}* 🟢\n`;
-            channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-            channelMsg += `👤 *المشتري:* ${customerData.name}\n`;
-            channelMsg += `📞 *الهاتف:* ${customerData.phone}\n`;
-            if (customerData.state) channelMsg += `📍 *الولاية:* ${customerData.state}\n`;
-            if (customerData.address) channelMsg += `🏠 *العنوان:* ${customerData.address}\n`;
-            if (customerData.notes) channelMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
-            if (distributor) {
-                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                channelMsg += `🚚 *الموزع المعين:*\n`;
-                channelMsg += `   📛 الاسم: ${distributor.name}\n`;
-                channelMsg += `   📞 الهاتف: ${distributor.phone}\n`;
-                channelMsg += `   🏷️ النوع: ${distributor.type === 'delivery' ? 'شركة توصيل' : (distributor.type === 'distributor' ? 'موزع معتمد' : 'كليهما')}\n`;
-            }
-            channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-            
-            for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                channelMsg += `🏪 *${storeData.storeName}*\n`;
-                channelMsg += `───────────────────────────────\n`;
-                storeData.items.forEach(item => {
-                    channelMsg += `🛒 ${item.name}\n`;
-                    channelMsg += `   📦 الكمية: ${item.quantity}\n`;
-                    channelMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
-                    channelMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
-                    channelMsg += `───────────────────────────────\n`;
-                });
-                channelMsg += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
-                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-            }
-            
-            channelMsg += `💎 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n`;
-            channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
-            channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
-            
-            try {
-                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: channelMsg, parse_mode: 'Markdown' })
-                });
-                
-                saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor);
-                return true;
-            } catch (e) {
-                console.error(e);
-                saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor);
-                return true;
-            }
-        }
-        
-        function saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor) {
-            let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
-            
-            for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                allOrders.unshift({ 
-                    id: `${mainOrderId}-${storeID.substring(0, 5)}`, 
-                    originalOrderId: mainOrderId,
-                    date: timestamp, 
-                    customerName: customerData.name, 
-                    customerPhone: customerData.phone, 
-                    customerAddress: customerData.address,
-                    customerState: customerData.state,
-                    customerNotes: customerData.notes, 
-                    storeID: storeID, 
-                    storeName: storeData.storeName, 
-                    items: storeData.items, 
-                    total: storeData.total, 
-                    distributor: distributor,
-                    status: 'pending'
-                });
-            }
-            
-            localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
-            renderOrdersArchive();
-        }
-        
-        async function submitOrder() {
-            const name = document.getElementById('customerName').value.trim();
-            const phone = document.getElementById('customerPhone').value.trim();
-            const state = document.getElementById('customerState').value;
-            const address = document.getElementById('customerAddress').value.trim();
-            const notes = document.getElementById('customerNotes').value.trim();
-            
-            if (!name) { showNotification('الرجاء إدخال الاسم', 'error'); return; }
-            if (!phone) { showNotification('الرجاء إدخال رقم الهاتف', 'error'); return; }
-            if (!selectedDistributorData) { showNotification('الرجاء اختيار موزع', 'error'); return; }
-            
-            localStorage.setItem('nardo_customer_name', name);
-            
-            const grouped = groupByStore(cart);
-            const grandTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-            const customerData = { name, phone, address, state, notes };
-            
-            showNotification('جاري إرسال الطلب...', 'info');
-            
-            const success = await sendOrderToTelegram(customerData, grouped, grandTotal, selectedDistributorData);
-            
-            closeModal();
-            
-            if (success) {
-                cart = [];
-                saveCart();
-                updateCartDisplay();
-                showNotification('✓ تم إرسال الطلب بنجاح!', 'success');
-                renderOrdersArchive();
-            } else {
-                showNotification('❌ فشل إرسال الطلب', 'error');
-            }
-        }
-        
-        function renderOrdersArchive() {
-            const container = document.getElementById('ordersArchiveContainer');
-            if (!container) return;
-            const orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
-            if (orders.length === 0) { 
-                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">لا توجد طلبات سابقة</p>'; 
-                return; 
-            }
-            container.innerHTML = orders.map(o => `
-                <div class="order-card">
-                    <div class="order-card-header">
-                        <span class="order-id">#${o.originalOrderId || o.id}</span>
-                        <span class="order-status ${o.status === 'pending' ? 'status-pending' : (o.status === 'received' ? 'status-received' : 'status-approved')}">
-                            ${o.status === 'pending' ? '⏳ قيد المعالجة' : (o.status === 'received' ? '📦 وصل للتاجر' : '✅ تم التوصيل')}
-                        </span>
-                    </div>
-                    <div class="order-details">
-                        <div>🏪 ${o.storeName}</div>
-                        <div>📅 ${o.date}</div>
-                        <div>📍 ${o.customerState || ''} - ${o.customerAddress || ''}</div>
-                        ${o.distributor ? `<div class="distributor-badge"><i class="fas fa-truck"></i> الموزع: ${o.distributor.name}</div>` : ''}
-                        <div>💰 ${o.total.toLocaleString()} دج</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        // ============================================
-        // التهيئة الأولية
-        // ============================================
-        window.onload = function() {
-            loadCart();
-            loadDistributors();
-            renderOrdersArchive();
-            showNotification('🎉 مرحباً بك! يمكنك اختيار الموزع حسب الولاية', 'success');
-        };
-        
-        // ربط الدوال
-        window.updateCartQuantity = updateCartQuantity;
-        window.removeFromCart = removeFromCart;
-        window.clearCart = clearCart;
-        window.toggleStore = toggleStore;
-        window.openCustomerModal = openCustomerModal;
-        window.closeModal = closeModal;
-        window.submitOrder = submitOrder;
-        window.updateDistributorsList = updateDistributorsList;
-        window.selectDistributor = selectDistributor;
-        window.showDistributorPanel = showDistributorPanel;
-        window.closeDistributorModal = closeDistributorModal;
-        window.addDistributor = addDistributor;
-        window.deleteDistributor = deleteDistributor;
-        window.fetchPDFFromURL = fetchPDFFromURL;
-        window.addDemoProducts = addDemoProducts;
+        // ربط الدوال بالكائن العمومي window
+        window.updateCartQuantity = updateCartQuantity; 
+        window.removeFromCart = removeFromCart; 
+        window.clearCart = clearCart; 
+        window.toggleStore = toggleStore; 
+        window.openCustomerModal = openCustomerModal; 
+        window.closeModal = closeModal; 
+        window.submitOrder = submitOrder; 
+        window.updateOrderStatus = updateOrderStatus; 
+        window.deleteOrderArchive = deleteOrderArchive;
+        window.updateFullAddress = updateFullAddress;
+        window.openMapLocation = openMapLocation;
     </script>
 </body>
 </html>
+
