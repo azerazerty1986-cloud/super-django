@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - النظام المتكامل</title>
+    <title>ناردو برو - نظام TXT المتكامل</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- مكتبة DOCX (mammoth.js) لقراءة ملفات Word -->
-    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
-    <!-- مكتبة إنشاء DOCX -->
-    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -48,9 +44,9 @@
         .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
         .btn-telegram { background: #0088cc; color: white; }
         .btn-txt { background: #6c757d; color: white; }
-        .btn-docx { background: #2b5797; color: white; }
         .btn-info { background: #17a2b8; color: white; }
         .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
         .card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.2);
@@ -161,8 +157,10 @@
             border: 2px solid #ffd700;
             border-radius: 20px;
             padding: 30px;
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
         }
         .modal-content input, .modal-content select, .modal-content textarea {
             width: 100%;
@@ -175,8 +173,11 @@
             font-family: 'Cairo', sans-serif;
         }
         .modal-content textarea {
-            min-height: 200px;
+            min-height: 300px;
             resize: vertical;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
         }
         .close-btn {
             float: left;
@@ -186,21 +187,16 @@
             background: none;
             border: none;
         }
-        .docx-content {
+        .txt-preview {
             background: rgba(0,0,0,0.4);
-            padding: 20px;
-            border-radius: 15px;
-            max-height: 500px;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            direction: ltr;
+            text-align: left;
+            max-height: 400px;
             overflow-y: auto;
-            line-height: 1.8;
-            font-size: 16px;
-        }
-        .docx-content h1, .docx-content h2, .docx-content h3 {
-            color: #ffd700;
-            margin: 15px 0;
-        }
-        .docx-content p {
-            margin: 10px 0;
         }
         .tab-buttons {
             display: flex;
@@ -228,20 +224,27 @@
         .tab-content.active {
             display: block;
         }
+        .import-preview {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-truck"></i> ناردو برو | النظام المتكامل</h1>
+        <h1><i class="fas fa-file-alt"></i> ناردو برو | نظام TXT المتكامل</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
-            <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-file-alt"></i> تصدير TXT</button>
-            <button class="btn btn-docx" onclick="exportToDocx()"><i class="fas fa-file-word"></i> تصدير DOCX</button>
+            <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-download"></i> تصدير TXT</button>
             <button class="btn btn-telegram" onclick="sendTxtToTelegram()"><i class="fab fa-telegram"></i> إرسال TXT للقناة</button>
-            <button class="btn btn-docx" onclick="sendDocxToTelegram()"><i class="fab fa-telegram"></i> إرسال DOCX للقناة</button>
-            <button class="btn btn-info" onclick="fetchDocxFromPinned()"><i class="fas fa-thumbtack"></i> جلب DOCX</button>
-            <button class="btn btn-success" onclick="showUrlModal()"><i class="fas fa-link"></i> جلب من رابط</button>
+            <button class="btn btn-info" onclick="fetchTxtFromPinned()"><i class="fas fa-thumbtack"></i> جلب TXT من القناة</button>
+            <button class="btn btn-success" onclick="openImportTxtModal()"><i class="fas fa-upload"></i> استيراد TXT</button>
+            <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
     </div>
 
@@ -250,7 +253,7 @@
     <!-- أزرار التبويب -->
     <div class="tab-buttons">
         <button class="tab-btn active" onclick="switchTab('table')"><i class="fas fa-table"></i> جدول الموزعين</button>
-        <button class="tab-btn" onclick="switchTab('docx')"><i class="fas fa-file-word"></i> محتوى DOCX</button>
+        <button class="tab-btn" onclick="switchTab('preview')"><i class="fas fa-eye"></i> معاينة آخر TXT</button>
     </div>
 
     <!-- تبويب الجدول -->
@@ -258,7 +261,7 @@
         <div class="card">
             <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع..." onkeyup="filterTable()">
+                <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع أو الولاية..." onkeyup="filterTable()">
             </div>
             <div class="filter-buttons">
                 <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
@@ -276,7 +279,7 @@
                             <th>الهاتف</th>
                             <th>النوع</th>
                             <th>الولاية</th>
-                            <th>الحالة</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"></tbody>
@@ -285,31 +288,22 @@
         </div>
     </div>
 
-    <!-- تبويب عرض DOCX -->
-    <div id="docxTab" class="tab-content">
+    <!-- تبويب معاينة TXT -->
+    <div id="previewTab" class="tab-content">
         <div class="card">
-            <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-file-word"></i> محتوى ملف DOCX</h2>
-            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-docx" onclick="fetchDocxFromPinned()"><i class="fab fa-telegram"></i> جلب من الرسالة المثبتة</button>
-                <label for="docxFileInput" class="btn btn-info" style="cursor: pointer;"><i class="fas fa-upload"></i> رفع ملف محلي</label>
-                <input type="file" id="docxFileInput" accept=".docx" style="display: none;" onchange="handleLocalDocx(this)">
+            <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-eye"></i> معاينة آخر ملف TXT</h2>
+            <div id="txtPreviewContent" class="txt-preview">
+                <p style="text-align: center; color: #aaa;">📄 لا يوجد ملف TXT تم استيراده بعد...</p>
             </div>
-            <div id="docxDisplayArea" class="docx-content">
-                <p style="text-align: center; color: #aaa;">📄 سيتم عرض محتوى ملف DOCX هنا...</p>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-txt" onclick="copyTxtToClipboard()"><i class="fas fa-copy"></i> نسخ النص</button>
+                <button class="btn btn-success" onclick="importFromPreview()"><i class="fas fa-arrow-down"></i> استيراد للجدول</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="urlModal" class="modal">
-    <div class="modal-content">
-        <button class="close-btn" onclick="closeUrlModal()">&times;</button>
-        <h2 style="color: #ffd700;">جلب بيانات من رابط</h2>
-        <input type="text" id="fileUrl" placeholder="رابط ملف DOCX">
-        <button class="btn btn-gold" onclick="fetchFromUrl()" style="width: 100%;">جلب وتحليل</button>
-    </div>
-</div>
-
+<!-- نافذة إضافة موزع -->
 <div id="addModal" class="modal">
     <div class="modal-content">
         <button class="close-btn" onclick="closeAddModal()">&times;</button>
@@ -324,6 +318,20 @@
         </select>
         <input type="text" id="state" placeholder="الولاية">
         <button class="btn btn-gold" onclick="addDistributor()" style="width: 100%;">إضافة</button>
+    </div>
+</div>
+
+<!-- نافذة استيراد TXT -->
+<div id="importTxtModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeImportTxtModal()">&times;</button>
+        <h2 style="color: #ffd700;"><i class="fas fa-upload"></i> استيراد بيانات من TXT</h2>
+        <p style="margin: 10px 0;">قم بلصق محتوى ملف TXT أو تحميل ملف:</p>
+        <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)">
+        <textarea id="txtRawContent" rows="10" placeholder="الصق هنا محتوى ملف TXT..."></textarea>
+        <button class="btn btn-info" onclick="previewTxtData()">معاينة البيانات</button>
+        <div id="importPreviewArea" class="import-preview" style="display: none;"></div>
+        <button class="btn btn-success" onclick="importTxtToTable()" style="width: 100%; margin-top: 10px;">استيراد للجدول</button>
     </div>
 </div>
 
@@ -343,7 +351,7 @@
     
     let currentFilter = 'all';
     let currentSearch = '';
-    let currentDocxContent = '';
+    let lastImportedTxt = '';
 
     // ==================== دوال التبويب ====================
     function switchTab(tab) {
@@ -351,12 +359,12 @@
         event.target.classList.add('active');
         
         document.getElementById('tableTab').classList.remove('active');
-        document.getElementById('docxTab').classList.remove('active');
+        document.getElementById('previewTab').classList.remove('active');
         
         if (tab === 'table') {
             document.getElementById('tableTab').classList.add('active');
-        } else if (tab === 'docx') {
-            document.getElementById('docxTab').classList.add('active');
+        } else if (tab === 'preview') {
+            document.getElementById('previewTab').classList.add('active');
         }
     }
 
@@ -364,7 +372,11 @@
     function getFilteredData() {
         let filtered = distributors.filter(d => d.status === 'approved');
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
-        if (currentSearch) filtered = filtered.filter(d => d.company.includes(currentSearch));
+        if (currentSearch) filtered = filtered.filter(d => 
+            d.company.includes(currentSearch) || 
+            d.state.includes(currentSearch) ||
+            d.phone.includes(currentSearch)
+        );
         return filtered;
     }
 
@@ -384,7 +396,7 @@
                 <td>${d.phone}</td>
                 <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
                 <td>${d.state}</td>
-                <td><span style="background:#28a745; padding:5px 10px; border-radius:20px; font-size:12px;">معتمد</span></td>
+                <td><button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteDistributor(${d.id})"><i class="fas fa-trash"></i> حذف</button></td>
             </tr>
         `).join('');
         updateStats();
@@ -403,11 +415,18 @@
     }
     
     function filterTable() { currentSearch = document.getElementById('searchInput').value; displayTable(); }
+    
     function filterByType(type) {
         currentFilter = type;
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
         event.target.classList.add('active');
         displayTable();
+    }
+    
+    function deleteDistributor(id) {
+        distributors = distributors.filter(d => d.id !== id);
+        displayTable();
+        showNotification('✅ تم حذف الموزع بنجاح', 'success');
     }
     
     function addDistributor() {
@@ -424,8 +443,21 @@
             distributors.push(newDist);
             displayTable(); closeAddModal();
             showNotification('✅ تم إضافة الموزع بنجاح', 'success');
+            // تفريغ الحقول
+            document.getElementById('compName').value = '';
+            document.getElementById('mgrName').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('state').value = '';
         } else {
             showNotification('⚠️ الرجاء ملء الحقول الأساسية', 'error');
+        }
+    }
+    
+    function clearAllData() {
+        if (confirm('⚠️ هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع!')){
+            distributors = [];
+            displayTable();
+            showNotification('🗑️ تم حذف جميع البيانات', 'info');
         }
     }
 
@@ -433,25 +465,36 @@
     function generateTxtContent() {
         const filtered = getFilteredData();
         const date = new Date().toLocaleDateString('ar-SA');
+        const time = new Date().toLocaleTimeString('ar-SA');
         
-        let content = `========================================\n`;
-        content += `        ناردو برو - قائمة الموزعين        \n`;
-        content += `========================================\n`;
-        content += `📅 التاريخ: ${date}\n`;
-        content += `📊 إجمالي الموزعين: ${filtered.length}\n`;
-        content += `========================================\n\n`;
+        let content = `╔════════════════════════════════════════════════════════════╗\n`;
+        content += `║                    ناردو برو - قائمة الموزعين                    ║\n`;
+        content += `╠════════════════════════════════════════════════════════════╣\n`;
+        content += `║ 📅 التاريخ: ${date.padEnd(45)}║\n`;
+        content += `║ ⏰ الوقت: ${time.padEnd(47)}║\n`;
+        content += `║ 📊 إجمالي الموزعين: ${String(filtered.length).padEnd(38)}║\n`;
+        content += `╚════════════════════════════════════════════════════════════╝\n\n`;
         
-        content += `| # | اسم الشركة | المسؤول | الهاتف | النوع | الولاية |\n`;
-        content += `--------------------------------------------------------\n`;
+        content += `┌────┬──────────────────────────┬──────────────────────┬──────────────┬────────────┬──────────────────┐\n`;
+        content += `│ #  │ اسم الشركة               │ المسؤول              │ الهاتف       │ النوع      │ الولاية         │\n`;
+        content += `├────┼──────────────────────────┼──────────────────────┼──────────────┼────────────┼──────────────────┤\n`;
         
         filtered.forEach((d, i) => {
             const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
-            content += `${i+1} | ${d.company} | ${d.manager} | ${d.phone} | ${typeText} | ${d.state}\n`;
+            const num = String(i+1).padEnd(3);
+            const company = d.company.substring(0, 24).padEnd(24);
+            const manager = d.manager.substring(0, 20).padEnd(20);
+            const phone = d.phone.substring(0, 12).padEnd(12);
+            const type = typeText.substring(0, 10).padEnd(10);
+            const state = d.state.substring(0, 16).padEnd(16);
+            content += `│ ${num} │ ${company} │ ${manager} │ ${phone} │ ${type} │ ${state} │\n`;
         });
         
-        content += `\n========================================\n`;
-        content += `        نهاية القائمة        \n`;
-        content += `========================================\n`;
+        content += `└────┴──────────────────────────┴──────────────────────┴──────────────┴────────────┴──────────────────┘\n\n`;
+        content += `╔════════════════════════════════════════════════════════════╗\n`;
+        content += `║                      نهاية القائمة                          ║\n`;
+        content += `║              تم الإنشاء بواسطة نظام ناردو برو               ║\n`;
+        content += `╚════════════════════════════════════════════════════════════╝\n`;
         
         return content;
     }
@@ -479,184 +522,19 @@
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, `distributors_${Date.now()}.txt`);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف نصي TXT`);
+            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف TXT`);
 
             const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await res.json();
-            if(result.ok) showNotification('✅ تم إرسال TXT بنجاح', 'success');
-            else throw new Error(result.description);
+            if(result.ok) {
+                showNotification('✅ تم إرسال TXT بنجاح', 'success');
+            } else throw new Error(result.description);
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== دوال تصدير DOCX ====================
-    async function exportToDocx() {
-        showNotification('📄 جاري إنشاء ملف DOCX...', 'info');
-        try {
-            const filtered = getFilteredData();
-            const date = new Date().toLocaleDateString('ar-SA');
-            
-            // إنشاء محتوى HTML للتنسيق
-            let htmlContent = `
-                <!DOCTYPE html>
-                <html dir="rtl">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>قائمة الموزعين</title>
-                    <style>
-                        body { font-family: 'Arial', sans-serif; margin: 40px; }
-                        h1 { color: #2b5797; text-align: center; }
-                        h2 { color: #2b5797; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th { background: #2b5797; color: white; padding: 12px; border: 1px solid #ddd; }
-                        td { padding: 10px; border: 1px solid #ddd; text-align: right; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>ناردو برو</h1>
-                        <h2>قائمة الموزعين</h2>
-                        <p>📅 التاريخ: ${date}</p>
-                        <p>📊 إجمالي الموزعين: ${filtered.length}</p>
-                    </div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>اسم الشركة</th>
-                                <th>المسؤول</th>
-                                <th>رقم الهاتف</th>
-                                <th>النوع</th>
-                                <th>الولاية</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            filtered.forEach((d, i) => {
-                const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
-                htmlContent += `
-                    <tr>
-                        <td>${i+1}</td>
-                        <td>${d.company}</td>
-                        <td>${d.manager}</td>
-                        <td>${d.phone}</td>
-                        <td>${typeText}</td>
-                        <td>${d.state}</td>
-                    </tr>
-                `;
-            });
-            
-            htmlContent += `
-                        </tbody>
-                    </table>
-                    <div class="footer">
-                        <p>تم إنشاء هذا التقرير بواسطة نظام ناردو برو</p>
-                    </div>
-                </body>
-                </html>
-            `;
-            
-            // تحويل HTML إلى Blob وفتحه للتحميل
-            const blob = new Blob([htmlContent], { type: 'application/msword' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.href = url;
-            link.download = `nardo_pro_${Date.now()}.doc`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            showNotification('✅ تم تصدير ملف DOCX بنجاح', 'success');
-        } catch (err) {
-            showNotification(`❌ فشل: ${err.message}`, 'error');
-        }
-    }
-    
-    async function sendDocxToTelegram() {
-        showNotification('📤 جاري إرسال DOCX للقناة...', 'info');
-        try {
-            const filtered = getFilteredData();
-            const date = new Date().toLocaleDateString('ar-SA');
-            
-            let htmlContent = `
-                <html dir="rtl">
-                <head><meta charset="UTF-8"><title>قائمة الموزعين</title>
-                <style>
-                    body { font-family: Arial; margin: 40px; }
-                    h1 { color: #2b5797; text-align: center; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th { background: #2b5797; color: white; padding: 12px; border: 1px solid #ddd; }
-                    td { padding: 10px; border: 1px solid #ddd; text-align: right; }
-                </style>
-                </head>
-                <body>
-                    <h1>ناردو برو - قائمة الموزعين</h1>
-                    <p>📅 التاريخ: ${date}</p>
-                    <p>📊 إجمالي الموزعين: ${filtered.length}</p>
-                    <table>
-                        <tr><th>#</th><th>اسم الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th></tr>
-            `;
-            
-            filtered.forEach((d, i) => {
-                const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
-                htmlContent += `<tr><td>${i+1}</td><td>${d.company}</td><td>${d.manager}</td><td>${d.phone}</td><td>${typeText}</td><td>${d.state}</td></tr>`;
-            });
-            
-            htmlContent += `</table></body></html>`;
-            
-            const blob = new Blob([htmlContent], { type: 'application/msword' });
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM.channelId);
-            formData.append('document', blob, `distributors_${Date.now()}.doc`);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف DOCX`);
-
-            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
-            const result = await res.json();
-            if(result.ok) showNotification('✅ تم إرسال DOCX بنجاح', 'success');
-            else throw new Error(result.description);
-        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
-    }
-
-    // ==================== دوال معالجة DOCX للجلب ====================
-    async function processDocxFile(arrayBuffer, fileName = 'document.docx') {
-        try {
-            showNotification('📄 جاري معالجة ملف DOCX...', 'info');
-            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-            const htmlContent = result.value;
-            
-            currentDocxContent = htmlContent;
-            displayDocxContent(htmlContent);
-            
-            showNotification('✅ تم عرض محتوى DOCX بنجاح', 'success');
-            
-            document.getElementById('docxTab').classList.add('active');
-            document.getElementById('tableTab').classList.remove('active');
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if(btn.innerText.includes('DOCX')) btn.classList.add('active');
-            });
-            
-        } catch (error) {
-            showNotification(`❌ فشل معالجة DOCX: ${error.message}`, 'error');
-            displayDocxContent(`<p style="color: #ff6b6b;">❌ خطأ في معالجة الملف: ${error.message}</p>`);
-        }
-    }
-    
-    function displayDocxContent(htmlContent) {
-        const displayArea = document.getElementById('docxDisplayArea');
-        if (htmlContent && htmlContent.trim()) {
-            displayArea.innerHTML = htmlContent;
-        } else {
-            displayArea.innerHTML = '<p style="text-align: center; color: #aaa;">📄 لا يوجد محتوى لعرضه</p>';
-        }
-    }
-    
-    async function fetchDocxFromPinned() {
-        showNotification('📡 جاري البحث عن ملف DOCX في الرسالة المثبتة...', 'info');
+    // ==================== دوال جلب TXT ====================
+    async function fetchTxtFromPinned() {
+        showNotification('📡 جاري البحث عن ملف TXT في الرسالة المثبتة...', 'info');
         try {
             const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
             const chatData = await chatRes.json();
@@ -667,78 +545,192 @@
             
             if (pinned.document) {
                 const fileName = pinned.document.file_name || '';
-                if (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')) {
+                if (fileName.toLowerCase().endsWith('.txt')) {
                     fileId = pinned.document.file_id;
                 } else {
-                    throw new Error("الملف المثبت ليس من نوع DOCX (الملف الحالي: " + fileName + ")");
+                    throw new Error("الملف المثبت ليس من نوع TXT (الملف الحالي: " + fileName + ")");
                 }
             } else {
                 throw new Error("الرسالة المثبتة لا تحتوي على ملف");
             }
-            
-            if(!fileId) throw new Error("لم يتم العثور على ملف DOCX");
             
             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
             const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
             
             const res = await fetch(fileUrl);
-            const buffer = await res.arrayBuffer();
-            await processDocxFile(buffer, pinned.document.file_name);
+            const text = await res.text();
+            
+            lastImportedTxt = text;
+            document.getElementById('txtPreviewContent').innerHTML = `<pre style="direction: ltr; text-align: left; font-family: monospace; margin: 0;">${escapeHtml(text)}</pre>`;
+            showNotification('✅ تم جلب ملف TXT بنجاح', 'success');
+            
+            // التبديل إلى تبويب المعاينة
+            document.getElementById('previewTab').classList.add('active');
+            document.getElementById('tableTab').classList.remove('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.innerText.includes('معاينة')) btn.classList.add('active');
+            });
             
         } catch (err) { 
             showNotification(`❌ خطأ: ${err.message}`, 'error');
-            displayDocxContent(`<p style="color: #ff6b6b;">❌ فشل جلب الملف: ${err.message}</p>`);
         }
     }
     
-    async function handleLocalDocx(input) {
+    // ==================== دوال استيراد TXT ====================
+    function openImportTxtModal() {
+        document.getElementById('importTxtModal').classList.add('active');
+        document.getElementById('txtRawContent').value = '';
+        document.getElementById('importPreviewArea').style.display = 'none';
+    }
+    
+    function closeImportTxtModal() {
+        document.getElementById('importTxtModal').classList.remove('active');
+    }
+    
+    function handleTxtFileUpload(input) {
         if (input.files && input.files[0]) {
-            const file = input.files[0];
-            if (!file.name.toLowerCase().endsWith('.docx') && !file.name.toLowerCase().endsWith('.doc')) {
-                showNotification('⚠️ الرجاء اختيار ملف DOCX صالح', 'error');
-                return;
-            }
-            
             const reader = new FileReader();
-            reader.onload = async function(e) {
-                await processDocxFile(e.target.result, file.name);
+            reader.onload = function(e) {
+                document.getElementById('txtRawContent').value = e.target.result;
+                showNotification('📁 تم تحميل الملف بنجاح', 'success');
+                previewTxtData();
             };
-            reader.readAsArrayBuffer(file);
+            reader.readAsText(input.files[0], 'UTF-8');
             input.value = '';
         }
     }
-
-    async function fetchFromUrl() {
-        const url = document.getElementById('fileUrl').value.trim();
-        if(!url) return;
-        closeUrlModal();
-        showNotification('📡 جاري الجلب...', 'info');
-        try {
-            const res = await fetch(url);
-            const buffer = await res.arrayBuffer();
-            const fileName = url.split('/').pop() || 'file';
-            
-            if (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')) {
-                await processDocxFile(buffer, fileName);
-            } else {
-                showNotification('⚠️ الرجاء إدخال رابط ملف DOCX صالح', 'error');
+    
+    function parseTxtToDistributors(txtContent) {
+        const lines = txtContent.split('\n');
+        const distributorsList = [];
+        
+        for (const line of lines) {
+            // البحث عن سطور تحتوي على | وتنسيق الجدول
+            if (line.includes('│') && !line.includes('┌') && !line.includes('├') && !line.includes('└') && !line.includes('═')) {
+                const parts = line.split('│').filter(p => p.trim() !== '');
+                if (parts.length >= 6) {
+                    const num = parts[0].trim();
+                    const company = parts[1].trim();
+                    const manager = parts[2].trim();
+                    const phone = parts[3].trim();
+                    let type = parts[4].trim();
+                    const state = parts[5].trim();
+                    
+                    // تحويل النوع من نص إلى قيمة
+                    if (type.includes('توصيل') && !type.includes('كليهما')) type = 'delivery';
+                    else if (type.includes('موزع') && !type.includes('كليهما')) type = 'distributor';
+                    else if (type.includes('كليهما')) type = 'both';
+                    else type = 'delivery';
+                    
+                    if (company && phone && !company.includes('اسم الشركة') && !company.includes('─')) {
+                        distributorsList.push({
+                            id: Date.now() + Math.random(),
+                            company: company,
+                            manager: manager || 'غير محدد',
+                            phone: phone,
+                            type: type,
+                            state: state || 'غير محدد',
+                            status: 'approved'
+                        });
+                    }
+                }
             }
-        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
+        }
+        
+        return distributorsList;
     }
-
+    
+    function previewTxtData() {
+        const txtContent = document.getElementById('txtRawContent').value;
+        if (!txtContent.trim()) {
+            showNotification('⚠️ الرجاء إدخال محتوى TXT أولاً', 'error');
+            return;
+        }
+        
+        const parsed = parseTxtToDistributors(txtContent);
+        const previewArea = document.getElementById('importPreviewArea');
+        
+        if (parsed.length === 0) {
+            previewArea.innerHTML = '<p style="color: #ff6b6b;">❌ لم يتم العثور على بيانات صالحة في الملف</p>';
+            previewArea.style.display = 'block';
+        } else {
+            previewArea.innerHTML = `
+                <p style="color: #ffd700;">✅ تم العثور على ${parsed.length} موزع:</p>
+                <ul style="margin-top: 10px;">
+                    ${parsed.slice(0, 5).map(d => `<li>📌 ${d.company} - ${d.phone} - ${d.state}</li>`).join('')}
+                    ${parsed.length > 5 ? `<li>... و ${parsed.length - 5} آخرين</li>` : ''}
+                </ul>
+            `;
+            previewArea.style.display = 'block';
+        }
+    }
+    
+    function importTxtToTable() {
+        const txtContent = document.getElementById('txtRawContent').value;
+        if (!txtContent.trim()) {
+            showNotification('⚠️ الرجاء إدخال محتوى TXT أولاً', 'error');
+            return;
+        }
+        
+        const parsed = parseTxtToDistributors(txtContent);
+        
+        if (parsed.length === 0) {
+            showNotification('❌ لم يتم العثور على بيانات صالحة للاستيراد', 'error');
+            return;
+        }
+        
+        // إضافة البيانات الجديدة إلى القائمة الموجودة
+        distributors = [...distributors, ...parsed];
+        displayTable();
+        lastImportedTxt = txtContent;
+        
+        // حفظ في المعاينة
+        document.getElementById('txtPreviewContent').innerHTML = `<pre style="direction: ltr; text-align: left; font-family: monospace; margin: 0;">${escapeHtml(txtContent)}</pre>`;
+        
+        closeImportTxtModal();
+        showNotification(`✅ تم استيراد ${parsed.length} موزع بنجاح`, 'success');
+    }
+    
+    function copyTxtToClipboard() {
+        if (lastImportedTxt) {
+            navigator.clipboard.writeText(lastImportedTxt);
+            showNotification('📋 تم نسخ النص إلى الحافظة', 'success');
+        } else {
+            showNotification('⚠️ لا يوجد نص لنسخه', 'error');
+        }
+    }
+    
+    function importFromPreview() {
+        if (lastImportedTxt) {
+            const parsed = parseTxtToDistributors(lastImportedTxt);
+            if (parsed.length > 0) {
+                distributors = [...distributors, ...parsed];
+                displayTable();
+                showNotification(`✅ تم استيراد ${parsed.length} موزع من المعاينة`, 'success');
+            }
+        } else {
+            showNotification('⚠️ لا توجد بيانات للاستيراد', 'error');
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     function showNotification(msg, type) {
         const n = document.createElement('div');
         n.className = `notification ${type}`;
-        n.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i> ${msg}`;
+        n.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':'fa-info-circle'}"></i> ${msg}`;
         document.body.appendChild(n);
         setTimeout(() => n.remove(), 3500);
     }
     
     function openAddDistributor() { document.getElementById('addModal').classList.add('active'); }
     function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
-    function showUrlModal() { document.getElementById('urlModal').classList.add('active'); }
-    function closeUrlModal() { document.getElementById('urlModal').classList.remove('active'); }
     
     displayTable();
 </script>
