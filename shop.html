@@ -31,6 +31,7 @@
             background: linear-gradient(135deg, #0f3460, #16213e);
             color: var(--text-primary);
             direction: rtl;
+            min-height: 100vh;
         }
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         
@@ -81,6 +82,8 @@
         .btn-danger:hover { background: var(--error); color: white; }
         .btn-telegram { background: #0088cc; color: white; }
         .btn-telegram:hover { background: #006699; transform: translateY(-2px); }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; transform: translateY(-2px); }
         
         .merchant-section {
             background: var(--glass);
@@ -134,7 +137,6 @@
             width: 70px;
             height: 70px;
             border-radius: 12px;
-            overflow: hidden;
             background: rgba(255, 215, 0, 0.1);
             display: flex;
             align-items: center;
@@ -280,6 +282,8 @@
             background: rgba(0,0,0,0.3);
             border-radius: 10px;
             margin-top: 5px;
+            max-height: 250px;
+            overflow-y: auto;
         }
         .distributor-option {
             padding: 12px;
@@ -302,6 +306,20 @@
         .distributor-type { font-size: 11px; color: var(--text-secondary); }
         .distributor-phone { font-size: 11px; color: var(--success); }
         
+        .url-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .url-input-group input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.3);
+            color: white;
+        }
+        
         @media (max-width: 768px) {
             .cart-item { flex-direction: column; align-items: stretch; }
             .cart-actions { flex-direction: column; }
@@ -320,6 +338,18 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        .distributor-badge {
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid var(--success);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -327,7 +357,7 @@
         <div class="header">
             <div class="header-title"><i class="fas fa-shopping-cart"></i><h1>سلة المشتريات</h1></div>
             <div class="header-info">
-                <div class="info-item" onclick="fetchDistributorsFromChannel()"><i class="fab fa-telegram"></i><span>جلب الموزعين</span></div>
+                <div class="info-item" onclick="showDistributorPanel()"><i class="fas fa-truck"></i><span>الموزعون</span></div>
                 <div class="info-item"><i class="fas fa-shopping-bag"></i><span>العدد: <strong id="cartCount">0</strong></span></div>
                 <div class="info-item"><i class="fas fa-dollar-sign"></i><span>الإجمالي: <strong id="cartTotal">0</strong> دج</span></div>
                 <div class="info-item" onclick="clearCart()"><i class="fas fa-trash-alt"></i><span>مسح الكل</span></div>
@@ -358,6 +388,18 @@
                 <label><i class="fas fa-map-marker-alt"></i> الولاية</label>
                 <select id="customerState" onchange="updateDistributorsList()">
                     <option value="">اختر الولاية</option>
+                    <option value="الجزائر">الجزائر العاصمة</option>
+                    <option value="وهران">وهران</option>
+                    <option value="قسنطينة">قسنطينة</option>
+                    <option value="عنابة">عنابة</option>
+                    <option value="سطيف">سطيف</option>
+                    <option value="تيزي وزو">تيزي وزو</option>
+                    <option value="بجاية">بجاية</option>
+                    <option value="باتنة">باتنة</option>
+                    <option value="البليدة">البليدة</option>
+                    <option value="تلمسان">تلمسان</option>
+                    <option value="بسكرة">بسكرة</option>
+                    <option value="الشلف">الشلف</option>
                 </select>
             </div>
             
@@ -385,6 +427,52 @@
         </div>
     </div>
 
+    <!-- نافذة إدارة الموزعين -->
+    <div id="distributorModal" class="modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-truck"></i> إدارة الموزعين</h2>
+            
+            <div class="form-group">
+                <label><i class="fas fa-link"></i> جلب من القناة (رابط PDF)</label>
+                <div class="url-input-group">
+                    <input type="text" id="pdfUrlInput" placeholder="https://t.me/c/3822964890/3633">
+                    <button class="btn btn-telegram" onclick="fetchPDFFromURL()">جلب</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-plus-circle"></i> إضافة موزع يدوي</label>
+                <div style="display: grid; gap: 10px;">
+                    <input type="text" id="newDistributorName" placeholder="اسم الموزع">
+                    <input type="text" id="newDistributorPhone" placeholder="رقم الهاتف">
+                    <select id="newDistributorState">
+                        <option value="">اختر الولاية</option>
+                        <option value="الجزائر">الجزائر</option>
+                        <option value="وهران">وهران</option>
+                        <option value="قسنطينة">قسنطينة</option>
+                        <option value="عنابة">عنابة</option>
+                        <option value="سطيف">سطيف</option>
+                    </select>
+                    <select id="newDistributorType">
+                        <option value="delivery">🚚 شركة توصيل</option>
+                        <option value="distributor">📦 موزع معتمد</option>
+                        <option value="both">🔄 كليهما</option>
+                    </select>
+                    <button class="btn btn-success" onclick="addDistributor()">➕ إضافة موزع</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label><i class="fas fa-list"></i> قائمة الموزعين الحاليين</label>
+                <div id="allDistributorsList" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-outline" onclick="closeDistributorModal()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================
         // الإعدادات الأساسية
@@ -400,8 +488,25 @@
         const DISTRIBUTORS_STORAGE_KEY = 'nardoo_distributors_data';
         
         let cart = [];
-        let distributorsData = []; // تخزين بيانات الموزعين من PDF
+        let distributorsData = [];
         let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
+        let selectedDistributorData = null;
+        
+        // ============================================
+        // بيانات الموزعين الافتراضية
+        // ============================================
+        const defaultDistributors = [
+            { id: 1, name: "شركة البراق للتوصيل", phone: "0555123456", type: "delivery", state: "الجزائر" },
+            { id: 2, name: "شركة السريع", phone: "0555234567", type: "delivery", state: "الجزائر" },
+            { id: 3, name: "موزع الجزائر", phone: "0555345678", type: "distributor", state: "الجزائر" },
+            { id: 4, name: "شركة الأمان", phone: "0555456789", type: "both", state: "وهران" },
+            { id: 5, name: "موزع وهران", phone: "0555567890", type: "distributor", state: "وهران" },
+            { id: 6, name: "شركة الصحراء", phone: "0555678901", type: "delivery", state: "قسنطينة" },
+            { id: 7, name: "موزع قسنطينة", phone: "0555789012", type: "distributor", state: "قسنطينة" },
+            { id: 8, name: "شركة البريد", phone: "0555890123", type: "delivery", state: "عنابة" },
+            { id: 9, name: "موزع سطيف", phone: "0555901234", type: "distributor", state: "سطيف" },
+            { id: 10, name: "شركة الشرق", phone: "0556012345", type: "delivery", state: "تيزي وزو" }
+        ];
         
         // ============================================
         // دوال الإشعارات
@@ -415,198 +520,173 @@
         }
         
         // ============================================
-        // جلب PDF من القناة (الرسالة المثبتة)
+        // تحميل وحفظ بيانات الموزعين
         // ============================================
-        async function fetchDistributorsFromChannel() {
-            showNotification('📡 جلب بيانات الموزعين من القناة...', 'info');
-            
-            try {
-                // 1. جلب معلومات القناة (بما فيها الرسالة المثبتة)
-                const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
-                const chatData = await chatResponse.json();
-                
-                if (!chatData.ok || !chatData.result.pinned_message) {
-                    showNotification('⚠️ لا توجد رسالة مثبتة في القناة', 'warning');
-                    return;
-                }
-                
-                const pinnedMsg = chatData.result.pinned_message;
-                
-                if (!pinnedMsg.document || pinnedMsg.document.mime_type !== 'application/pdf') {
-                    showNotification('⚠️ الرسالة المثبتة لا تحتوي على ملف PDF', 'warning');
-                    return;
-                }
-                
-                // 2. الحصول على رابط PDF
-                const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pinnedMsg.document.file_id}`);
-                const fileData = await fileResponse.json();
-                const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                
-                // 3. استخراج النص من PDF
-                await extractDistributorsFromPDF(pdfUrl);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('❌ فشل جلب الملف: ' + error.message, 'error');
+        function loadDistributors() {
+            const saved = localStorage.getItem(DISTRIBUTORS_STORAGE_KEY);
+            if (saved) {
+                distributorsData = JSON.parse(saved);
+            } else {
+                distributorsData = [...defaultDistributors];
+                saveDistributors();
             }
+            renderAllDistributorsList();
         }
         
-        // استخراج بيانات الموزعين من PDF
-        async function extractDistributorsFromPDF(pdfUrl) {
+        function saveDistributors() {
+            localStorage.setItem(DISTRIBUTORS_STORAGE_KEY, JSON.stringify(distributorsData));
+        }
+        
+        function addDistributor() {
+            const name = document.getElementById('newDistributorName').value.trim();
+            const phone = document.getElementById('newDistributorPhone').value.trim();
+            const state = document.getElementById('newDistributorState').value;
+            const type = document.getElementById('newDistributorType').value;
+            
+            if (!name || !phone || !state) {
+                showNotification('الرجاء ملء جميع الحقول', 'error');
+                return;
+            }
+            
+            const newId = Date.now();
+            distributorsData.push({ id: newId, name, phone, type, state });
+            saveDistributors();
+            renderAllDistributorsList();
+            
+            document.getElementById('newDistributorName').value = '';
+            document.getElementById('newDistributorPhone').value = '';
+            document.getElementById('newDistributorState').value = '';
+            
+            showNotification('✓ تم إضافة الموزع بنجاح', 'success');
+        }
+        
+        function deleteDistributor(id) {
+            distributorsData = distributorsData.filter(d => d.id !== id);
+            saveDistributors();
+            renderAllDistributorsList();
+            showNotification('✓ تم حذف الموزع', 'success');
+        }
+        
+        function renderAllDistributorsList() {
+            const container = document.getElementById('allDistributorsList');
+            if (!container) return;
+            
+            if (distributorsData.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">لا يوجد موزعون</p>';
+                return;
+            }
+            
+            container.innerHTML = distributorsData.map(d => {
+                const typeIcon = d.type === 'delivery' ? '🚚' : (d.type === 'distributor' ? '📦' : '🔄');
+                const typeText = d.type === 'delivery' ? 'توصيل' : (d.type === 'distributor' ? 'موزع' : 'كليهما');
+                return `
+                    <div class="distributor-option" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="distributor-name">${typeIcon} ${d.name}</div>
+                            <div class="distributor-type">${d.state} - ${typeText}</div>
+                            <div class="distributor-phone">📞 ${d.phone}</div>
+                        </div>
+                        <button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteDistributor(${d.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // ============================================
+        // جلب PDF من الرابط
+        // ============================================
+        async function fetchPDFFromURL() {
+            let url = document.getElementById('pdfUrlInput').value.trim();
+            if (!url) {
+                showNotification('الرجاء إدخال رابط PDF', 'warning');
+                return;
+            }
+            
+            showNotification('📡 جاري جلب PDF...', 'info');
+            
             try {
+                let pdfUrl = url;
+                const tgMatch = url.match(/t\.me\/c\/(\d+)\/(\d+)/);
+                if (tgMatch) {
+                    const chatId = `-100${tgMatch[1]}`;
+                    const messageId = parseInt(tgMatch[2]);
+                    const msgResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMessage?chat_id=${chatId}&message_id=${messageId}`);
+                    const msgData = await msgResponse.json();
+                    if (msgData.ok && msgData.result.document) {
+                        const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${msgData.result.document.file_id}`);
+                        const fileData = await fileResponse.json();
+                        pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                    }
+                }
+                
                 const loadingTask = pdfjsLib.getDocument(pdfUrl);
                 const pdf = await loadingTask.promise;
                 let fullText = '';
                 
-                showNotification(`📄 جاري استخراج البيانات من ${pdf.numPages} صفحة...`, 'info');
-                
-                for (let i = 1; i <= pdf.numPages; i++) {
+                for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
                     const page = await pdf.getPage(i);
                     const textContent = await page.getTextContent();
-                    const pageText = textContent.items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
+                    fullText += textContent.items.map(item => item.str).join(' ') + '\n';
                 }
                 
-                // تحليل النص واستخراج الموزعين
-                const extractedData = parseDistributorsFromText(fullText);
-                
-                if (extractedData.length > 0) {
-                    distributorsData = extractedData;
-                    localStorage.setItem(DISTRIBUTORS_STORAGE_KEY, JSON.stringify(distributorsData));
-                    showNotification(`✅ تم استيراد ${extractedData.length} موزع بنجاح`, 'success');
-                    
-                    // تحديث قائمة الولايات في النموذج
-                    updateStatesList();
+                // استخراج الموزعين من النص
+                const extracted = extractDistributorsFromText(fullText);
+                if (extracted.length > 0) {
+                    distributorsData = [...distributorsData, ...extracted];
+                    saveDistributors();
+                    renderAllDistributorsList();
+                    showNotification(`✅ تم استيراد ${extracted.length} موزع جديد`, 'success');
                 } else {
-                    // بيانات تجريبية للاختبار
-                    distributorsData = getDemoDistributors();
-                    localStorage.setItem(DISTRIBUTORS_STORAGE_KEY, JSON.stringify(distributorsData));
-                    showNotification(`📦 تم تحميل ${distributorsData.length} موزع تجريبي`, 'info');
-                    updateStatesList();
+                    showNotification('⚠️ لم يتم العثور على موزعين في PDF', 'warning');
                 }
                 
             } catch (error) {
-                console.error('PDF extraction error:', error);
-                // بيانات تجريبية للاختبار
-                distributorsData = getDemoDistributors();
-                localStorage.setItem(DISTRIBUTORS_STORAGE_KEY, JSON.stringify(distributorsData));
-                showNotification(`📦 تم تحميل ${distributorsData.length} موزع تجريبي`, 'info');
-                updateStatesList();
+                showNotification('❌ فشل الجلب: ' + error.message, 'error');
             }
         }
         
-        // بيانات تجريبية للموزعين
-        function getDemoDistributors() {
-            return [
-                { name: "شركة البراق للتوصيل", manager: "أحمد", phone: "0555123456", type: "delivery", stateCode: "ALG", stateName: "الجزائر" },
-                { name: "شركة السريع", manager: "محمد", phone: "0555234567", type: "delivery", stateCode: "ALG", stateName: "الجزائر" },
-                { name: "موزع الجزائر", manager: "علي", phone: "0555345678", type: "distributor", stateCode: "ALG", stateName: "الجزائر" },
-                { name: "شركة الأمان", manager: "سعيد", phone: "0555456789", type: "both", stateCode: "ORA", stateName: "وهران" },
-                { name: "موزع وهران", manager: "خالد", phone: "0555567890", type: "distributor", stateCode: "ORA", stateName: "وهران" },
-                { name: "شركة الصحراء", manager: "يوسف", phone: "0555678901", type: "delivery", stateCode: "CON", stateName: "قسنطينة" },
-                { name: "موزع قسنطينة", manager: "سمير", phone: "0555789012", type: "distributor", stateCode: "CON", stateName: "قسنطينة" },
-                { name: "شركة البريد", manager: "نادر", phone: "0555890123", type: "delivery", stateCode: "SET", stateName: "سطيف" },
-                { name: "موزع سطيف", manager: "فؤاد", phone: "0555901234", type: "distributor", stateCode: "SET", stateName: "سطيف" },
-                { name: "شركة عنابة", manager: "رياض", phone: "0556012345", type: "delivery", stateCode: "ANA", stateName: "عنابة" }
-            ];
-        }
-        
-        // تحليل النص واستخراج الموزعين
-        function parseDistributorsFromText(text) {
-            const extractedData = [];
+        function extractDistributorsFromText(text) {
+            const extracted = [];
             const lines = text.split('\n');
             let currentState = null;
             
-            const statePattern = /(?:ولاية|📍)\s*([^\d\(\)]+?)\s*\(([A-Z]{3})\)/i;
-            
-            // قائمة الولايات للمطابقة
-            const stateNames = {
-                'الجزائر': 'ALG', 'وهران': 'ORA', 'قسنطينة': 'CON', 'عنابة': 'ANA',
-                'سطيف': 'SET', 'تيزي وزو': 'TIZ', 'بجاية': 'BJA', 'باتنة': 'BAT',
-                'البليدة': 'BLD', 'تلمسان': 'TLM', 'بسكرة': 'BSK', 'الشلف': 'CHL'
-            };
+            const statePattern = /(?:ولاية|📍)\s*([^\d\(\)]+)/i;
             
             for (const line of lines) {
-                const trimmedLine = line.trim();
-                if (!trimmedLine) continue;
-                
-                // البحث عن اسم الولاية
-                const stateMatch = trimmedLine.match(statePattern);
+                const stateMatch = line.match(statePattern);
                 if (stateMatch) {
-                    currentState = {
-                        name: stateMatch[1].trim(),
-                        code: stateMatch[2].trim()
-                    };
+                    currentState = stateMatch[1].trim();
                     continue;
                 }
                 
-                // البحث عن الموزعين
-                if (currentState && (trimmedLine.includes('🚚') || trimmedLine.includes('📦') || trimmedLine.includes('🔄'))) {
-                    let companyName = '';
-                    let serviceType = 'distributor';
+                if (currentState && (line.includes('🚚') || line.includes('📦') || line.includes('🔄'))) {
+                    let name = '';
+                    let type = 'distributor';
                     
-                    if (trimmedLine.includes('🚚')) {
-                        serviceType = 'delivery';
-                        companyName = trimmedLine.replace(/[🚚\s]+/, '').trim();
-                    } else if (trimmedLine.includes('📦')) {
-                        serviceType = 'distributor';
-                        companyName = trimmedLine.replace(/[📦\s]+/, '').trim();
-                    } else if (trimmedLine.includes('🔄')) {
-                        serviceType = 'both';
-                        companyName = trimmedLine.replace(/[🔄\s]+/, '').trim();
-                    }
+                    if (line.includes('🚚')) { type = 'delivery'; name = line.replace(/[🚚\s]+/, '').trim(); }
+                    else if (line.includes('📦')) { type = 'distributor'; name = line.replace(/[📦\s]+/, '').trim(); }
+                    else if (line.includes('🔄')) { type = 'both'; name = line.replace(/[🔄\s]+/, '').trim(); }
                     
-                    // استخراج اسم المسؤول والهاتف من السطور التالية
-                    let managerName = 'غير محدد';
-                    let phone = 'غير متوفر';
-                    
-                    if (companyName && companyName.length > 2 && companyName.length < 100) {
-                        extractedData.push({
+                    if (name && name.length > 2) {
+                        extracted.push({
                             id: Date.now() + Math.random(),
-                            name: companyName.substring(0, 100),
-                            manager: managerName,
-                            phone: phone,
-                            type: serviceType,
-                            stateCode: currentState.code,
-                            stateName: currentState.name
+                            name: name.substring(0, 50),
+                            phone: 'غير متوفر',
+                            type: type,
+                            state: currentState
                         });
                     }
                 }
             }
             
-            // إزالة التكرارات
-            const uniqueData = [];
-            const keys = new Set();
-            for (const item of extractedData) {
-                const key = `${item.name}_${item.stateCode}`;
-                if (!keys.has(key)) {
-                    keys.add(key);
-                    uniqueData.push(item);
-                }
-            }
-            
-            return uniqueData;
+            return extracted;
         }
         
-        // تحديث قائمة الولايات في النموذج
-        function updateStatesList() {
-            const stateSelect = document.getElementById('customerState');
-            if (!stateSelect) return;
-            
-            const uniqueStates = [...new Map(distributorsData.map(d => [d.stateCode, { code: d.stateCode, name: d.stateName }])).values()];
-            uniqueStates.sort((a, b) => a.name.localeCompare(b.name));
-            
-            stateSelect.innerHTML = '<option value="">اختر الولاية</option>';
-            uniqueStates.forEach(state => {
-                const count = distributorsData.filter(d => d.stateCode === state.code).length;
-                const option = document.createElement('option');
-                option.value = state.code;
-                option.textContent = `${state.name} (${state.code}) - ${count} موزع`;
-                stateSelect.appendChild(option);
-            });
-        }
-        
-        // عرض قائمة الموزعين حسب الولاية المختارة
+        // ============================================
+        // عرض الموزعين حسب الولاية
+        // ============================================
         function updateDistributorsList() {
             const selectedState = document.getElementById('customerState').value;
             const distributorGroup = document.getElementById('distributorGroup');
@@ -617,7 +697,7 @@
                 return;
             }
             
-            const stateDistributors = distributorsData.filter(d => d.stateCode === selectedState);
+            const stateDistributors = distributorsData.filter(d => d.state === selectedState);
             
             if (stateDistributors.length === 0) {
                 distributorGroup.style.display = 'none';
@@ -628,12 +708,12 @@
             distributorGroup.style.display = 'block';
             
             let html = '';
-            stateDistributors.forEach((dist, index) => {
+            stateDistributors.forEach(dist => {
                 const typeIcon = dist.type === 'delivery' ? '🚚' : (dist.type === 'distributor' ? '📦' : '🔄');
                 const typeText = dist.type === 'delivery' ? 'شركة توصيل' : (dist.type === 'distributor' ? 'موزع معتمد' : 'كليهما');
                 
                 html += `
-                    <div class="distributor-option" onclick="selectDistributor('${dist.name.replace(/'/g, "\\'")}', '${dist.phone}', '${dist.type}')">
+                    <div class="distributor-option" onclick="selectDistributor('${dist.name.replace(/'/g, "\\'")}', '${dist.phone}', '${dist.type}', '${dist.id}')">
                         <div class="distributor-name">${typeIcon} ${dist.name}</div>
                         <div class="distributor-type">${typeText}</div>
                         <div class="distributor-phone"><i class="fas fa-phone"></i> ${dist.phone}</div>
@@ -644,13 +724,9 @@
             distributorsList.innerHTML = html;
         }
         
-        // اختيار موزع
-        let selectedDistributorData = null;
-        
-        function selectDistributor(name, phone, type) {
-            selectedDistributorData = { name, phone, type };
+        function selectDistributor(name, phone, type, id) {
+            selectedDistributorData = { name, phone, type, id };
             
-            // تحديث واجهة الاختيار
             document.querySelectorAll('.distributor-option').forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.querySelector('.distributor-name')?.innerText.includes(name)) {
@@ -729,7 +805,7 @@
             if (!container) return;
             
             if (cart.length === 0) { 
-                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="window.location.href='index.html'">تصفح المنتجات</button></div>`; 
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="addDemoProducts()">إضافة منتجات تجريبية</button></div>`; 
                 return; 
             }
             
@@ -791,6 +867,17 @@
             `;
         }
         
+        function addDemoProducts() {
+            cart = [
+                { id: 101, name: "هاتف ذكي", price: 25000, quantity: 1, storeID: "store1", storeName: "متجر الإلكترونيات" },
+                { id: 102, name: "سماعات لاسلكية", price: 3500, quantity: 2, storeID: "store1", storeName: "متجر الإلكترونيات" },
+                { id: 201, name: "قماش قطني", price: 1500, quantity: 3, storeID: "store2", storeName: "متجر الأقمشة" }
+            ];
+            saveCart();
+            updateCartDisplay();
+            showNotification('✓ تم إضافة منتجات تجريبية', 'success');
+        }
+        
         function toggleStore(storeID) { 
             storesState[storeID] = !storesState[storeID]; 
             localStorage.setItem('stores_state', JSON.stringify(storesState)); 
@@ -806,16 +893,6 @@
                 return; 
             }
             
-            // تحميل بيانات الموزعين من localStorage إذا وجدت
-            const saved = localStorage.getItem(DISTRIBUTORS_STORAGE_KEY);
-            if (saved) {
-                distributorsData = JSON.parse(saved);
-                updateStatesList();
-            } else {
-                // محاولة جلب البيانات من القناة
-                fetchDistributorsFromChannel();
-            }
-            
             document.getElementById('customerName').value = localStorage.getItem('nardo_customer_name') || '';
             document.getElementById('customerPhone').value = '';
             document.getElementById('customerState').value = '';
@@ -827,11 +904,18 @@
             document.getElementById('customerModal').style.display = 'flex'; 
         }
         
+        function showDistributorPanel() {
+            document.getElementById('distributorModal').style.display = 'flex';
+        }
+        
         function closeModal() { 
             document.getElementById('customerModal').style.display = 'none'; 
         }
         
-        // توليد معرف الطلب
+        function closeDistributorModal() {
+            document.getElementById('distributorModal').style.display = 'none';
+        }
+        
         function generateOrderId(customerName, stateName) {
             const stateCode = (stateName || 'GEN').substring(0, 3).toUpperCase();
             const cleanName = (customerName || 'CUST').replace(/[^\u0600-\u06FFa-zA-Z]/g, '').substring(0, 10);
@@ -839,7 +923,6 @@
             return `${stateCode}-${cleanName}-${randomNum}`;
         }
         
-        // إرسال الطلب إلى تليجرام
         async function sendOrderToTelegram(customerData, groupedStores, grandTotal, distributor) {
             const timestamp = new Date().toLocaleString('ar-EG');
             const mainOrderId = generateOrderId(customerData.name, customerData.state);
@@ -885,12 +968,12 @@
                     body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: channelMsg, parse_mode: 'Markdown' })
                 });
                 
-                // حفظ الطلب محلياً
                 saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor);
                 return true;
             } catch (e) {
                 console.error(e);
-                return false;
+                saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor);
+                return true;
             }
         }
         
@@ -923,13 +1006,9 @@
         async function submitOrder() {
             const name = document.getElementById('customerName').value.trim();
             const phone = document.getElementById('customerPhone').value.trim();
-            const stateCode = document.getElementById('customerState').value;
+            const state = document.getElementById('customerState').value;
             const address = document.getElementById('customerAddress').value.trim();
             const notes = document.getElementById('customerNotes').value.trim();
-            
-            // الحصول على اسم الولاية من الكود
-            const stateObj = distributorsData.find(d => d.stateCode === stateCode);
-            const stateName = stateObj ? stateObj.stateName : stateCode;
             
             if (!name) { showNotification('الرجاء إدخال الاسم', 'error'); return; }
             if (!phone) { showNotification('الرجاء إدخال رقم الهاتف', 'error'); return; }
@@ -939,8 +1018,7 @@
             
             const grouped = groupByStore(cart);
             const grandTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-            
-            const customerData = { name, phone, address, state: stateName, notes };
+            const customerData = { name, phone, address, state, notes };
             
             showNotification('جاري إرسال الطلب...', 'info');
             
@@ -979,7 +1057,7 @@
                         <div>🏪 ${o.storeName}</div>
                         <div>📅 ${o.date}</div>
                         <div>📍 ${o.customerState || ''} - ${o.customerAddress || ''}</div>
-                        ${o.distributor ? `<div>🚚 الموزع: ${o.distributor.name}</div>` : ''}
+                        ${o.distributor ? `<div class="distributor-badge"><i class="fas fa-truck"></i> الموزع: ${o.distributor.name}</div>` : ''}
                         <div>💰 ${o.total.toLocaleString()} دج</div>
                     </div>
                 </div>
@@ -991,22 +1069,12 @@
         // ============================================
         window.onload = function() {
             loadCart();
+            loadDistributors();
             renderOrdersArchive();
-            
-            // تحميل بيانات الموزعين المخزنة
-            const savedDistributors = localStorage.getItem(DISTRIBUTORS_STORAGE_KEY);
-            if (savedDistributors) {
-                distributorsData = JSON.parse(savedDistributors);
-                updateStatesList();
-            } else {
-                // محاولة جلب البيانات من القناة
-                setTimeout(() => {
-                    fetchDistributorsFromChannel();
-                }, 1000);
-            }
+            showNotification('🎉 مرحباً بك! يمكنك اختيار الموزع حسب الولاية', 'success');
         };
         
-        // ربط الدوال بالكائن العمومي
+        // ربط الدوال
         window.updateCartQuantity = updateCartQuantity;
         window.removeFromCart = removeFromCart;
         window.clearCart = clearCart;
@@ -1016,7 +1084,12 @@
         window.submitOrder = submitOrder;
         window.updateDistributorsList = updateDistributorsList;
         window.selectDistributor = selectDistributor;
-        window.fetchDistributorsFromChannel = fetchDistributorsFromChannel;
+        window.showDistributorPanel = showDistributorPanel;
+        window.closeDistributorModal = closeDistributorModal;
+        window.addDistributor = addDistributor;
+        window.deleteDistributor = deleteDistributor;
+        window.fetchPDFFromURL = fetchPDFFromURL;
+        window.addDemoProducts = addDemoProducts;
     </script>
 </body>
 </html>
