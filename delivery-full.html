@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ناردو برو | نظام إدارة التوصيل والموزعين - الإصدار النهائي</title>
+    <title>ناردو برو | إدارة التوصيل والموزعين - الإصدار النهائي</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -213,6 +213,7 @@
             <button class="btn btn-telegram" onclick="sendDistributorsPDFToTelegram()"><i class="fab fa-telegram"></i> إرسال PDF للقناة</button>
             <button class="btn btn-info" onclick="fetchFromPinnedMessage()"><i class="fas fa-thumbtack"></i> جلب من المثبتة</button>
             <button class="btn btn-success" onclick="showURLModal()"><i class="fas fa-link"></i> جلب من رابط</button>
+            <button class="btn btn-outline" onclick="uploadLocalPDF()"><i class="fas fa-upload"></i> رفع PDF محلي</button>
             <button class="btn btn-outline" onclick="goBack()"><i class="fas fa-arrow-left"></i> رجوع</button>
         </div>
     </div>
@@ -234,7 +235,7 @@
     <div id="distributors" class="tab-content"><div id="distributorsContainer"></div></div>
     <div id="distributorsTable" class="tab-content"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">🗺️ جدول الموزعين</h2><div class="search-box"><input type="text" id="searchDistributor" placeholder="🔍 بحث..." onkeyup="filterDistributorsTable()"><button class="btn btn-gold" onclick="exportDistributorsTable()"><i class="fas fa-download"></i> تصدير Excel</button></div><div class="filter-buttons"><button class="filter-btn active" onclick="filterByType('all')">الكل</button><button class="filter-btn" onclick="filterByType('delivery')">🚚 توصيل</button><button class="filter-btn" onclick="filterByType('distributor')">📦 موزعون</button><button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button></div><div class="distributors-table-container"><table class="distributors-table"><thead><tr><th>#</th><th>الموزع</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولايات</th><th>العدد</th></tr></thead><tbody id="distributorsTableBody"></tbody></table></div></div></div>
     
-    <div id="importedData" class="tab-content"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">📄 بيانات PDF المستوردة</h2><div class="filter-row"><div class="form-group"><label>بحث</label><input type="text" id="searchImported" placeholder="اسم الموزع..." onkeyup="displayImportedData()"></div><div class="form-group"><label>الولاية</label><select id="stateFilter" onchange="displayImportedData()"><option value="all">جميع الولايات</option></select></div></div><div class="stats-summary"><div class="stat-item"><span id="totalImported">0</span> موزع</div><div class="stat-item"><span id="statesCount">0</span> ولاية</div></div><div class="distributors-table-container"><table class="distributors-table"><thead><tr><th>#</th><th>الموزع</th><th>النوع</th><th>الولاية</th></tr></thead><tbody id="importedTableBody"></tbody></table></div></div></div>
+    <div id="importedData" class="tab-content"><div class="card"><h2 style="color: var(--gold); margin-bottom: 20px;">📄 بيانات PDF المستوردة</h2><div class="filter-row"><div class="form-group"><label>بحث</label><input type="text" id="searchImported" placeholder="اسم الموزع..." onkeyup="displayImportedData()"></div><div class="form-group"><label>الولاية</label><select id="stateFilter" onchange="displayImportedData()"><option value="all">جميع الولايات</option></select></div></div><div class="stats-summary"><div class="stat-item"><span id="totalImported">0</span> موزع</div><div class="stat-item"><span id="statesCount">0</span> ولاية</div></div><div class="distributors-table-container"><table class="distributors-table"><thead><tr><th>#</th><th>الموزع</th><th>النوع</th><th>الولاية</th><tr></thead><tbody id="importedTableBody"></tbody></table></div></div></div>
     
     <div id="pending" class="tab-content"><div id="pendingContainer"></div></div>
     <div id="tracking" class="tab-content"><div class="card"><h2 style="color: var(--gold);">تتبع الطلب</h2><input type="text" id="trackingInput" placeholder="رقم الطلب"><button class="btn btn-gold" onclick="trackDelivery()">بحث</button><div id="trackingResult"></div></div></div>
@@ -265,7 +266,9 @@
     const algerianStates = [
         { code: "ALG", name: "الجزائر" }, { code: "ORA", name: "وهران" }, { code: "CON", name: "قسنطينة" },
         { code: "ANA", name: "عنابة" }, { code: "SET", name: "سطيف" }, { code: "TIZ", name: "تيزي وزو" },
-        { code: "BJA", name: "بجاية" }, { code: "BAT", name: "باتنة" }, { code: "BLA", name: "البليدة" }
+        { code: "BJA", name: "بجاية" }, { code: "BAT", name: "باتنة" }, { code: "BLA", name: "البليدة" },
+        { code: "TLE", name: "تلمسان" }, { code: "SKI", name: "سكيكدة" }, { code: "BMD", name: "بومرداس" },
+        { code: "TIP", name: "تيبازة" }, { code: "AIN", name: "عين الدفلى" }, { code: "NAA", name: "النعامة" }
     ];
 
     function showNotification(msg, type) {
@@ -295,8 +298,184 @@
     }
 
     // ============================================
-    // جلب PDF من الرسالة المثبتة
+    // استخراج البيانات من PDF وعرضها في الجدول
     // ============================================
+
+    async function extractDataFromPDF(pdfUrl) {
+        showNotification('📄 جاري استخراج البيانات من PDF...', 'info');
+        
+        try {
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const pdf = await loadingTask.promise;
+            let fullText = '';
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+            
+            const distributors = parseDistributorsFromText(fullText);
+            
+            if (distributors.length === 0) {
+                showNotification('⚠️ لم يتم العثور على بيانات موزعين في PDF', 'warning');
+                return [];
+            }
+            
+            importedDistributors = distributors;
+            localStorage.setItem(STORAGE_KEYS.IMPORTED_DATA, JSON.stringify(importedDistributors));
+            
+            updateStateFilter();
+            displayImportedData();
+            
+            showNotification(`✅ تم استخراج ${distributors.length} موزع بنجاح`, 'success');
+            return distributors;
+            
+        } catch (error) {
+            showNotification('❌ فشل استخراج البيانات: ' + error.message, 'error');
+            return [];
+        }
+    }
+
+    function parseDistributorsFromText(text) {
+        const distributors = [];
+        const lines = text.split('\n');
+        
+        // أنماط البحث المختلفة
+        const patterns = [
+            /([^\|\n]+)\s*\|\s*([^\|\n]+)\s*\|\s*([0-9]{10,})\s*\|\s*([^\|\n]+)/gi,
+            /الاسم[:\s]+([^\n]+).*?المسؤول[:\s]+([^\n]+).*?هاتف[:\s]+([0-9]+).*?الولاية[:\s]+([^\n]+)/gi,
+            /شركة[:\s]*([^\n]+).*?مدير[:\s]*([^\n]+).*?هاتف[:\s]*([0-9]+).*?ولاية[:\s]*([^\n]+)/gi
+        ];
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.length < 10) continue;
+            
+            let extracted = false;
+            
+            for (const pattern of patterns) {
+                let match;
+                while ((match = pattern.exec(trimmed)) !== null) {
+                    const companyName = match[1]?.trim();
+                    const managerName = match[2]?.trim();
+                    const phone = match[3]?.trim();
+                    let state = match[4]?.trim();
+                    
+                    if (companyName && companyName.length > 2 && phone && phone.length >= 9) {
+                        let serviceType = 'delivery';
+                        if (trimmed.includes('موزع') || trimmed.includes('توزيع')) serviceType = 'distributor';
+                        if (trimmed.includes('كليهما') || trimmed.includes('كلاهما')) serviceType = 'both';
+                        
+                        const stateInfo = getStateInfo(state);
+                        
+                        distributors.push({
+                            id: Date.now() + Math.random(),
+                            companyName: companyName,
+                            managerName: managerName || 'غير محدد',
+                            phone: phone,
+                            email: 'imported@example.com',
+                            serviceType: serviceType,
+                            stateCode: stateInfo.code,
+                            stateName: stateInfo.name,
+                            coverageArea: state,
+                            status: 'approved',
+                            importedAt: new Date().toISOString()
+                        });
+                        extracted = true;
+                    }
+                }
+            }
+            
+            // محاولة استخراج بيانات من سطور بسيطة
+            if (!extracted) {
+                const parts = trimmed.split(/\s{2,}/);
+                if (parts.length >= 3 && parts[2]?.match(/[0-9]{9,}/)) {
+                    const stateInfo = getStateInfo(parts[3] || '');
+                    distributors.push({
+                        id: Date.now() + Math.random(),
+                        companyName: parts[0],
+                        managerName: parts[1] || 'غير محدد',
+                        phone: parts[2],
+                        email: 'imported@example.com',
+                        serviceType: 'delivery',
+                        stateCode: stateInfo.code,
+                        stateName: stateInfo.name,
+                        coverageArea: parts[3] || 'غير محدد',
+                        status: 'approved',
+                        importedAt: new Date().toISOString()
+                    });
+                }
+            }
+        }
+        
+        return distributors;
+    }
+
+    function getStateInfo(stateName) {
+        if (!stateName) return { code: 'OTHER', name: 'غير محدد' };
+        
+        for (const state of algerianStates) {
+            if (stateName.includes(state.name) || state.name.includes(stateName)) {
+                return { code: state.code, name: state.name };
+            }
+        }
+        return { code: 'OTHER', name: stateName.substring(0, 20) };
+    }
+
+    function updateStateFilter() {
+        const stateFilter = document.getElementById('stateFilter');
+        if (!stateFilter) return;
+        
+        const states = new Set();
+        importedDistributors.forEach(d => {
+            if (d.stateCode) states.add(d.stateCode);
+        });
+        
+        let options = '<option value="all">جميع الولايات</option>';
+        for (const code of states) {
+            const state = algerianStates.find(s => s.code === code);
+            if (state) {
+                options += `<option value="${code}">${state.name}</option>`;
+            }
+        }
+        stateFilter.innerHTML = options;
+    }
+
+    function displayImportedData() {
+        const search = document.getElementById('searchImported')?.value.toLowerCase() || '';
+        const state = document.getElementById('stateFilter')?.value || 'all';
+        
+        let filtered = importedDistributors.filter(d => {
+            if (state !== 'all' && d.stateCode !== state) return false;
+            if (search && !d.companyName.toLowerCase().includes(search)) return false;
+            return true;
+        });
+        
+        document.getElementById('totalImported').innerText = filtered.length;
+        document.getElementById('statesCount').innerText = new Set(filtered.map(d => d.stateCode)).size;
+        
+        const tbody = document.getElementById('importedTableBody');
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">لا توجد بيانات</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = filtered.map((d, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${d.companyName}</td>
+                <td>${d.serviceType === 'delivery' ? '🚚 توصيل' : d.serviceType === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
+                <td>${d.stateName || d.coverageArea || 'غير محدد'}</td>
+            </tr>
+        `).join('');
+    }
+
+    // ============================================
+    // دوال الجلب المعدلة
+    // ============================================
+
     async function fetchFromPinnedMessage() {
         showNotification('📡 جلب PDF من الرسالة المثبتة...', 'info');
         try {
@@ -314,8 +493,9 @@
             const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${pinnedMsg.document.file_id}`);
             const fileData = await fileResponse.json();
             const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-            window.open(pdfUrl, '_blank');
-            showNotification('✅ تم فتح PDF من الرسالة المثبتة', 'success');
+            
+            await extractDataFromPDF(pdfUrl);
+            
         } catch (error) {
             showNotification('❌ فشل الجلب: ' + error.message, 'error');
         }
@@ -328,7 +508,8 @@
         let url = document.getElementById('pdfUrlInput').value.trim();
         if (!url) { showNotification('⚠️ أدخل الرابط', 'warning'); return; }
         closeURLModal();
-        showNotification('📡 جاري الجلب...', 'info');
+        showNotification('📡 جاري الجلب والتحليل...', 'info');
+        
         try {
             let pdfUrl = url;
             const tgMatch = url.match(/t\.me\/c\/(\d+)\/(\d+)/);
@@ -343,20 +524,36 @@
                     pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
                 }
             }
-            window.open(pdfUrl, '_blank');
-            showNotification('✅ تم فتح PDF', 'success');
+            
+            await extractDataFromPDF(pdfUrl);
+            
         } catch (error) {
             showNotification('❌ فشل: ' + error.message, 'error');
         }
     }
 
+    function uploadLocalPDF() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/pdf';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const url = URL.createObjectURL(file);
+            await extractDataFromPDF(url);
+            URL.revokeObjectURL(url);
+        };
+        input.click();
+    }
+
     // ============================================
-    // إنشاء وإرسال PDF
+    // دوال إرسال PDF
     // ============================================
+
     async function sendDistributorsPDFToTelegram() {
         const approved = distributors.filter(d => d.status === 'approved');
         if (approved.length === 0 && distributors.length === 0) {
-            // بيانات تجريبية
             distributors.push({ id: 1, companyName: "شركة البراق", managerName: "أحمد", phone: "0555123456", email: "test@test.com", serviceType: "delivery", coverageArea: "جميع الولايات", status: "approved" });
             distributors.push({ id: 2, companyName: "شركة السريع", managerName: "محمد", phone: "0555234567", email: "test2@test.com", serviceType: "delivery", coverageArea: "الجزائر - وهران", status: "approved" });
             localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors));
@@ -433,22 +630,8 @@
     }
 
     // ============================================
-    // الدوال الأساسية
+    // الدوال الأساسية الأخرى
     // ============================================
-    function displayImportedData() {
-        const search = document.getElementById('searchImported')?.value.toLowerCase() || '';
-        const state = document.getElementById('stateFilter')?.value || 'all';
-        let filtered = importedDistributors.filter(d => {
-            if (state !== 'all' && d.stateCode !== state) return false;
-            if (search && !d.companyName.toLowerCase().includes(search)) return false;
-            return true;
-        });
-        document.getElementById('totalImported').innerText = filtered.length;
-        document.getElementById('statesCount').innerText = new Set(filtered.map(d => d.stateCode)).size;
-        const tbody = document.getElementById('importedTableBody');
-        if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">لا توجد بيانات</td></tr>'; return; }
-        tbody.innerHTML = filtered.map((d, i) => `<tr><td>${i+1}</td><td>${d.companyName}</td><td>${d.serviceType === 'delivery' ? '🚚 توصيل' : '📦 موزع'}</td><td>${d.stateName}</td></tr>`).join('');
-    }
 
     function loadDistributorsTable() {
         const approved = distributors.filter(d => d.status === 'approved');
@@ -457,13 +640,29 @@
         if (currentSearch) filtered = filtered.filter(d => d.companyName.includes(currentSearch));
         const tbody = document.getElementById('distributorsTableBody');
         if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد نتائج</td></tr>'; return; }
-        tbody.innerHTML = filtered.map((d, i) => `<tr><td>${i+1}</td><td>${d.companyName}</td><td>${d.managerName}</td><td>${d.phone}</td><td>${d.serviceType === 'delivery' ? '🚚 توصيل' : d.serviceType === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td><td>${d.coverageArea}</td><td>${d.coverageArea.includes('جميع') ? 58 : d.coverageArea.split(',').length}</td></tr>`).join('');
+        tbody.innerHTML = filtered.map((d, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${d.companyName}</td>
+                <td>${d.managerName}</td>
+                <td>${d.phone}</td>
+                <td>${d.serviceType === 'delivery' ? '🚚 توصيل' : d.serviceType === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
+                <td>${d.coverageArea}</td>
+                <td>${d.coverageArea.includes('جميع') ? 58 : d.coverageArea.split(',').length}</td>
+            </tr>
+        `).join('');
     }
 
     function filterDistributorsTable() { currentSearch = document.getElementById('searchDistributor').value; loadDistributorsTable(); }
     function filterByType(type) { currentFilter = type; loadDistributorsTable(); }
     function exportDistributorsTable() { showNotification('جاري التصدير...', 'info'); }
-    function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.getElementById(tabName).classList.add('active'); if (tabName === 'importedData') displayImportedData(); if (tabName === 'distributorsTable') loadDistributorsTable(); updateStats(); }
+    function switchTab(tabName) { 
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); 
+        document.getElementById(tabName).classList.add('active'); 
+        if (tabName === 'importedData') displayImportedData(); 
+        if (tabName === 'distributorsTable') loadDistributorsTable(); 
+        updateStats(); 
+    }
     function openDeliveryModal() { document.getElementById('deliveryModal').classList.add('active'); }
     function closeDeliveryModal() { document.getElementById('deliveryModal').classList.remove('active'); }
     function openDistributorModal() { document.getElementById('distributorModal').classList.add('active'); }
@@ -480,6 +679,7 @@
     window.onload = function() {
         updateStats();
         loadDistributorsTable();
+        displayImportedData();
         showNotification('🎉 نظام ناردو برو جاهز للعمل!', 'success');
     };
 </script>
