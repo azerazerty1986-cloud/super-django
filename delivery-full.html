@@ -1,4 +1,4 @@
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو - النظام الاحترافي (الرسالة المثبتة)</title>
@@ -29,6 +29,11 @@
         .badge-delivery { background: #28a745; color: white; }
         .badge-distributor { background: #007bff; color: white; }
         .badge-both { background: #6f42c1; color: white; }
+        
+        /* مشغل الصوت المخصص */
+        .audio-player-card { display: none; margin-top: 15px; background: rgba(255, 215, 0, 0.05); border: 1px dashed var(--gold); padding: 15px; border-radius: 10px; text-align: center; }
+        .audio-player-card h3 { font-size: 16px; color: var(--gold); margin-bottom: 10px; }
+        audio { width: 100%; height: 40px; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -41,6 +46,12 @@
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
         </div>
         <div id="status" class="status-bar">جاهز للعمل</div>
+        
+        <!-- قسم المقطع الصوتي -->
+        <div id="audioPlayerCard" class="audio-player-card">
+            <h3><i class="fas fa-volume-up"></i> المقطع الصوتي المجلوب</h3>
+            <audio id="audioPlayer" controls></audio>
+        </div>
     </div>
 
     <div class="card">
@@ -160,6 +171,7 @@
         if (confirm('هل أنت متأكد من مسح جميع البيانات؟')) {
             distributors = [];
             updateTable();
+            document.getElementById('audioPlayerCard').style.display = 'none';
             showStatus('🗑️ تم مسح الكل');
         }
     }
@@ -195,24 +207,51 @@
     async function fetchPinnedFromChannel() {
         showStatus('⏳ جاري جلب الرسالة المثبتة...');
         try {
-            // الخطوة 1: جلب معلومات القناة للحصول على معرف الرسالة المثبتة
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
             
             if (chatData.ok && chatData.result.pinned_message) {
                 const pinnedMsg = chatData.result.pinned_message;
-                const text = pinnedMsg.text || pinnedMsg.caption;
-
+                
+                // 1. جلب النص (سواء كان رسالة نصية أو وصف لملف)
+                const text = pinnedMsg.text || pinnedMsg.caption || "";
                 if (text && text.includes(KEYWORD)) {
                     parseAndLoadData(text);
-                } else {
-                    showStatus('⚠️ الرسالة المثبتة لا تحمل المعرف المطلوب');
+                }
+
+                // 2. جلب المقطع الصوتي (Audio or Voice)
+                const audio = pinnedMsg.audio || pinnedMsg.voice;
+                if (audio) {
+                    await fetchAudioFile(audio.file_id);
+                } else if (!text.includes(KEYWORD)) {
+                    showStatus('⚠️ الرسالة المثبتة لا تحتوي على بيانات صالحة');
                 }
             } else {
                 showStatus('❌ لا توجد رسالة مثبتة في هذه القناة');
             }
         } catch (e) {
             showStatus('❌ خطأ في الاتصال بالتليجرام');
+        }
+    }
+
+    async function fetchAudioFile(fileId) {
+        try {
+            const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+            const fileData = await fileRes.json();
+            
+            if (fileData.ok) {
+                const filePath = fileData.result.file_path;
+                const audioUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
+                
+                const playerCard = document.getElementById('audioPlayerCard');
+                const player = document.getElementById('audioPlayer');
+                
+                player.src = audioUrl;
+                playerCard.style.display = 'block';
+                showStatus('✅ تم جلب المقطع الصوتي والبيانات');
+            }
+        } catch (e) {
+            console.error("Error fetching audio file:", e);
         }
     }
 
@@ -235,7 +274,7 @@
                     const phone = infoLine.includes('📞 ') ? infoLine.split('📞 ')[1] : '';
                     
                     newDistributors.push({ company, manager, phone, type, state: stateName });
-                    i++; // تخطي سطر المعلومات
+                    i++; 
                 }
             }
         });
@@ -243,9 +282,7 @@
         if (newDistributors.length > 0) {
             distributors = newDistributors;
             updateTable();
-            showStatus(`✅ تم جلب ${newDistributors.length} موزع من الرسالة المثبتة`);
-        } else {
-            showStatus('⚠️ لم يتم العثور على بيانات صالحة في الرسالة');
+            showStatus(`✅ تم جلب ${newDistributors.length} موزع`);
         }
     }
 
