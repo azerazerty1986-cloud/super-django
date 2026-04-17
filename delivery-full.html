@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - النسخة النهائية المصلحة</title>
+    <title>ناردو برو - النظام المتكامل</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- مكتبة Excel (SheetJS) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- مكتبة DOCX (mammoth.js) لقراءة ملفات Word -->
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
+    <!-- مكتبة إنشاء DOCX -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -47,11 +47,10 @@
         .btn-gold { background: #ffd700; color: #000; }
         .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
         .btn-telegram { background: #0088cc; color: white; }
-        .btn-excel { background: #1d6f42; color: white; }
+        .btn-txt { background: #6c757d; color: white; }
+        .btn-docx { background: #2b5797; color: white; }
         .btn-info { background: #17a2b8; color: white; }
         .btn-success { background: #28a745; color: white; }
-        .btn-docx { background: #2b5797; color: white; }
-        .btn-docx:hover { transform: translateY(-2px); background: #1e3c6f; }
         .card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.2);
@@ -237,10 +236,11 @@
         <h1><i class="fas fa-truck"></i> ناردو برو | النظام المتكامل</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
-            <button class="btn btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
-            <button class="btn btn-telegram" onclick="sendExcelToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button>
-            <button class="btn btn-info" onclick="fetchFromPinned()"><i class="fas fa-thumbtack"></i> جلب Excel</button>
-            <button class="btn btn-docx" onclick="fetchDocxFromPinned()"><i class="fas fa-file-word"></i> جلب DOCX</button>
+            <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-file-alt"></i> تصدير TXT</button>
+            <button class="btn btn-docx" onclick="exportToDocx()"><i class="fas fa-file-word"></i> تصدير DOCX</button>
+            <button class="btn btn-telegram" onclick="sendTxtToTelegram()"><i class="fab fa-telegram"></i> إرسال TXT للقناة</button>
+            <button class="btn btn-docx" onclick="sendDocxToTelegram()"><i class="fab fa-telegram"></i> إرسال DOCX للقناة</button>
+            <button class="btn btn-info" onclick="fetchDocxFromPinned()"><i class="fas fa-thumbtack"></i> جلب DOCX</button>
             <button class="btn btn-success" onclick="showUrlModal()"><i class="fas fa-link"></i> جلب من رابط</button>
         </div>
     </div>
@@ -305,7 +305,7 @@
     <div class="modal-content">
         <button class="close-btn" onclick="closeUrlModal()">&times;</button>
         <h2 style="color: #ffd700;">جلب بيانات من رابط</h2>
-        <input type="text" id="fileUrl" placeholder="رابط ملف Excel أو CSV أو DOCX">
+        <input type="text" id="fileUrl" placeholder="رابط ملف DOCX">
         <button class="btn btn-gold" onclick="fetchFromUrl()" style="width: 100%;">جلب وتحليل</button>
     </div>
 </div>
@@ -347,11 +347,9 @@
 
     // ==================== دوال التبويب ====================
     function switchTab(tab) {
-        // تبديل أزرار التبويب
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         event.target.classList.add('active');
         
-        // تبديل المحتوى
         document.getElementById('tableTab').classList.remove('active');
         document.getElementById('docxTab').classList.remove('active');
         
@@ -363,11 +361,15 @@
     }
 
     // ==================== دوال الجدول الأساسية ====================
-    function displayTable() {
+    function getFilteredData() {
         let filtered = distributors.filter(d => d.status === 'approved');
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
         if (currentSearch) filtered = filtered.filter(d => d.company.includes(currentSearch));
-        
+        return filtered;
+    }
+
+    function displayTable() {
+        const filtered = getFilteredData();
         const tbody = document.getElementById('tableBody');
         if (filtered.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">لا توجد بيانات</td></tr>';
@@ -427,27 +429,210 @@
         }
     }
 
-    // ==================== دوال معالجة DOCX ====================
+    // ==================== دوال تصدير TXT ====================
+    function generateTxtContent() {
+        const filtered = getFilteredData();
+        const date = new Date().toLocaleDateString('ar-SA');
+        
+        let content = `========================================\n`;
+        content += `        ناردو برو - قائمة الموزعين        \n`;
+        content += `========================================\n`;
+        content += `📅 التاريخ: ${date}\n`;
+        content += `📊 إجمالي الموزعين: ${filtered.length}\n`;
+        content += `========================================\n\n`;
+        
+        content += `| # | اسم الشركة | المسؤول | الهاتف | النوع | الولاية |\n`;
+        content += `--------------------------------------------------------\n`;
+        
+        filtered.forEach((d, i) => {
+            const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
+            content += `${i+1} | ${d.company} | ${d.manager} | ${d.phone} | ${typeText} | ${d.state}\n`;
+        });
+        
+        content += `\n========================================\n`;
+        content += `        نهاية القائمة        \n`;
+        content += `========================================\n`;
+        
+        return content;
+    }
+    
+    function exportToTxt() {
+        const content = generateTxtContent();
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = `nardo_pro_${Date.now()}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showNotification('✅ تم تصدير ملف TXT بنجاح', 'success');
+    }
+    
+    async function sendTxtToTelegram() {
+        showNotification('📤 جاري إرسال TXT للقناة...', 'info');
+        try {
+            const content = generateTxtContent();
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM.channelId);
+            formData.append('document', blob, `distributors_${Date.now()}.txt`);
+            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف نصي TXT`);
+
+            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
+            const result = await res.json();
+            if(result.ok) showNotification('✅ تم إرسال TXT بنجاح', 'success');
+            else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
+    }
+
+    // ==================== دوال تصدير DOCX ====================
+    async function exportToDocx() {
+        showNotification('📄 جاري إنشاء ملف DOCX...', 'info');
+        try {
+            const filtered = getFilteredData();
+            const date = new Date().toLocaleDateString('ar-SA');
+            
+            // إنشاء محتوى HTML للتنسيق
+            let htmlContent = `
+                <!DOCTYPE html>
+                <html dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>قائمة الموزعين</title>
+                    <style>
+                        body { font-family: 'Arial', sans-serif; margin: 40px; }
+                        h1 { color: #2b5797; text-align: center; }
+                        h2 { color: #2b5797; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th { background: #2b5797; color: white; padding: 12px; border: 1px solid #ddd; }
+                        td { padding: 10px; border: 1px solid #ddd; text-align: right; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>ناردو برو</h1>
+                        <h2>قائمة الموزعين</h2>
+                        <p>📅 التاريخ: ${date}</p>
+                        <p>📊 إجمالي الموزعين: ${filtered.length}</p>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم الشركة</th>
+                                <th>المسؤول</th>
+                                <th>رقم الهاتف</th>
+                                <th>النوع</th>
+                                <th>الولاية</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            filtered.forEach((d, i) => {
+                const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
+                htmlContent += `
+                    <tr>
+                        <td>${i+1}</td>
+                        <td>${d.company}</td>
+                        <td>${d.manager}</td>
+                        <td>${d.phone}</td>
+                        <td>${typeText}</td>
+                        <td>${d.state}</td>
+                    </tr>
+                `;
+            });
+            
+            htmlContent += `
+                        </tbody>
+                    </table>
+                    <div class="footer">
+                        <p>تم إنشاء هذا التقرير بواسطة نظام ناردو برو</p>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            // تحويل HTML إلى Blob وفتحه للتحميل
+            const blob = new Blob([htmlContent], { type: 'application/msword' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `nardo_pro_${Date.now()}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showNotification('✅ تم تصدير ملف DOCX بنجاح', 'success');
+        } catch (err) {
+            showNotification(`❌ فشل: ${err.message}`, 'error');
+        }
+    }
+    
+    async function sendDocxToTelegram() {
+        showNotification('📤 جاري إرسال DOCX للقناة...', 'info');
+        try {
+            const filtered = getFilteredData();
+            const date = new Date().toLocaleDateString('ar-SA');
+            
+            let htmlContent = `
+                <html dir="rtl">
+                <head><meta charset="UTF-8"><title>قائمة الموزعين</title>
+                <style>
+                    body { font-family: Arial; margin: 40px; }
+                    h1 { color: #2b5797; text-align: center; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th { background: #2b5797; color: white; padding: 12px; border: 1px solid #ddd; }
+                    td { padding: 10px; border: 1px solid #ddd; text-align: right; }
+                </style>
+                </head>
+                <body>
+                    <h1>ناردو برو - قائمة الموزعين</h1>
+                    <p>📅 التاريخ: ${date}</p>
+                    <p>📊 إجمالي الموزعين: ${filtered.length}</p>
+                    <table>
+                        <tr><th>#</th><th>اسم الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th></tr>
+            `;
+            
+            filtered.forEach((d, i) => {
+                const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
+                htmlContent += `<tr><td>${i+1}</td><td>${d.company}</td><td>${d.manager}</td><td>${d.phone}</td><td>${typeText}</td><td>${d.state}</td></tr>`;
+            });
+            
+            htmlContent += `</table></body></html>`;
+            
+            const blob = new Blob([htmlContent], { type: 'application/msword' });
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM.channelId);
+            formData.append('document', blob, `distributors_${Date.now()}.doc`);
+            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف DOCX`);
+
+            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
+            const result = await res.json();
+            if(result.ok) showNotification('✅ تم إرسال DOCX بنجاح', 'success');
+            else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
+    }
+
+    // ==================== دوال معالجة DOCX للجلب ====================
     async function processDocxFile(arrayBuffer, fileName = 'document.docx') {
         try {
             showNotification('📄 جاري معالجة ملف DOCX...', 'info');
-            
-            // استخدام mammoth لاستخراج النص من DOCX
             const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
             const htmlContent = result.value;
-            const messages = result.messages;
             
-            if (messages.length > 0) {
-                console.log('تحذيرات:', messages);
-            }
-            
-            // تخزين المحتوى وعرضه
             currentDocxContent = htmlContent;
             displayDocxContent(htmlContent);
             
             showNotification('✅ تم عرض محتوى DOCX بنجاح', 'success');
             
-            // التبديل تلقائياً إلى تبويب DOCX
             document.getElementById('docxTab').classList.add('active');
             document.getElementById('tableTab').classList.remove('active');
             document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -456,7 +641,6 @@
             });
             
         } catch (error) {
-            console.error(error);
             showNotification(`❌ فشل معالجة DOCX: ${error.message}`, 'error');
             displayDocxContent(`<p style="color: #ff6b6b;">❌ خطأ في معالجة الملف: ${error.message}</p>`);
         }
@@ -471,7 +655,6 @@
         }
     }
     
-    // جلب ملف DOCX من الرسالة المثبتة في التليجرام
     async function fetchDocxFromPinned() {
         showNotification('📡 جاري البحث عن ملف DOCX في الرسالة المثبتة...', 'info');
         try {
@@ -482,10 +665,9 @@
             const pinned = chatData.result.pinned_message;
             let fileId = null;
             
-            // التحقق من وجود ملف DOCX في الرسالة المثبتة
             if (pinned.document) {
                 const fileName = pinned.document.file_name || '';
-                if (fileName.toLowerCase().endsWith('.docx')) {
+                if (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')) {
                     fileId = pinned.document.file_id;
                 } else {
                     throw new Error("الملف المثبت ليس من نوع DOCX (الملف الحالي: " + fileName + ")");
@@ -494,7 +676,7 @@
                 throw new Error("الرسالة المثبتة لا تحتوي على ملف");
             }
             
-            if(!fileId) throw new Error("لم يتم العثور على ملف DOCX في الرسالة المثبتة");
+            if(!fileId) throw new Error("لم يتم العثور على ملف DOCX");
             
             const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
             const fileData = await fileRes.json();
@@ -510,11 +692,10 @@
         }
     }
     
-    // معالجة ملف DOCX محلي
     async function handleLocalDocx(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
-            if (!file.name.toLowerCase().endsWith('.docx')) {
+            if (!file.name.toLowerCase().endsWith('.docx') && !file.name.toLowerCase().endsWith('.doc')) {
                 showNotification('⚠️ الرجاء اختيار ملف DOCX صالح', 'error');
                 return;
             }
@@ -524,126 +705,8 @@
                 await processDocxFile(e.target.result, file.name);
             };
             reader.readAsArrayBuffer(file);
-            
-            // إعادة تعيين input للسماح برفع نفس الملف مرة أخرى
             input.value = '';
         }
-    }
-
-    // ==================== دوال Excel ====================
-    function exportToExcel() {
-        showNotification('📊 جاري إنشاء ملف Excel...', 'info');
-        const data = distributors.filter(d => d.status === 'approved').map((d, i) => ({
-            "#": i + 1,
-            "اسم الشركة": d.company,
-            "المسؤول": d.manager,
-            "رقم الهاتف": d.phone,
-            "النوع": d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
-            "الولاية": d.state
-        }));
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "الموزعون");
-        XLSX.writeFile(wb, `nardo_pro_${Date.now()}.xlsx`);
-    }
-
-    async function sendExcelToTelegram() {
-        showNotification('📤 جاري الإرسال للقناة...', 'info');
-        try {
-            const data = distributors.filter(d => d.status === 'approved').map((d, i) => ({
-                "#": i + 1,
-                "اسم الشركة": d.company,
-                "المسؤول": d.manager,
-                "رقم الهاتف": d.phone,
-                "النوع": d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
-                "الولاية": d.state
-            }));
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "الموزعون");
-            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([wbout], { type: "application/octet-stream" });
-            
-            const formData = new FormData();
-            formData.append('chat_id', TELEGRAM.channelId);
-            formData.append('document', blob, `distributors_${Date.now()}.xlsx`);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
-
-            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
-            const result = await res.json();
-            if(result.ok) showNotification('✅ تم الإرسال بنجاح', 'success');
-            else throw new Error(result.description);
-        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
-    }
-
-    // ==================== معالجة الملفات العامة ====================
-    async function processFile(arrayBuffer, fileName = '') {
-        // التحقق من نوع الملف
-        if (fileName.toLowerCase().endsWith('.docx')) {
-            await processDocxFile(arrayBuffer, fileName);
-            return;
-        }
-        
-        // معالجة Excel
-        try {
-            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rawData = XLSX.utils.sheet_to_json(sheet);
-            
-            if (!rawData.length) throw new Error("الملف فارغ");
-
-            const newDistributors = rawData.map(row => {
-                const findVal = (keys) => {
-                    const foundKey = Object.keys(row).find(k => keys.some(key => k.toLowerCase().includes(key.toLowerCase())));
-                    return foundKey ? row[foundKey] : "";
-                };
-
-                return {
-                    id: Math.random(),
-                    company: findVal(["شركة", "company", "الاسم", "name"]),
-                    manager: findVal(["مسؤول", "manager", "مدير"]),
-                    phone: findVal(["هاتف", "phone", "رقم", "tel", "mobile"]),
-                    type: findVal(["نوع", "type"]).toString().includes("موزع") ? "distributor" : 
-                          (findVal(["نوع", "type"]).toString().includes("كل") ? "both" : "delivery"),
-                    state: findVal(["ولاية", "state", "city", "مكان"]),
-                    status: 'approved'
-                };
-            }).filter(d => d.company && d.phone);
-
-            if (newDistributors.length > 0) {
-                distributors = newDistributors;
-                displayTable();
-                showNotification(`✅ تم جلب ${newDistributors.length} موزع بنجاح`, 'success');
-            } else {
-                throw new Error("لم يتم العثور على بيانات صالحة");
-            }
-        } catch (err) {
-            showNotification(`❌ فشل معالجة الملف: ${err.message}`, 'error');
-            console.error(err);
-        }
-    }
-
-    async function fetchFromPinned() {
-        showNotification('📡 جاري الجلب من تليجرام...', 'info');
-        try {
-            const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
-            const chatData = await chatRes.json();
-            if(!chatData.ok || !chatData.result.pinned_message) throw new Error("لا توجد رسالة مثبتة");
-            
-            const pinned = chatData.result.pinned_message;
-            const fileId = pinned.document ? pinned.document.file_id : null;
-            if(!fileId) throw new Error("الرسالة المثبتة لا تحتوي على ملف");
-            
-            const fileName = pinned.document.file_name || '';
-            
-            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
-            const fileData = await fileRes.json();
-            const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-            
-            const res = await fetch(fileUrl);
-            const buffer = await res.arrayBuffer();
-            await processFile(buffer, fileName);
-        } catch (err) { showNotification(`❌ خطأ: ${err.message}`, 'error'); }
     }
 
     async function fetchFromUrl() {
@@ -654,9 +717,13 @@
         try {
             const res = await fetch(url);
             const buffer = await res.arrayBuffer();
-            // استخراج اسم الملف من الرابط
             const fileName = url.split('/').pop() || 'file';
-            await processFile(buffer, fileName);
+            
+            if (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')) {
+                await processDocxFile(buffer, fileName);
+            } else {
+                showNotification('⚠️ الرجاء إدخال رابط ملف DOCX صالح', 'error');
+            }
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
