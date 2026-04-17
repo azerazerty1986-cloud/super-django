@@ -142,6 +142,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         .url-input-group input {
             flex: 1;
@@ -175,7 +176,7 @@
             max-width: 500px;
             width: 90%;
         }
-        .modal-content input, .modal-content select {
+        .modal-content input, .modal-content select, .modal-content textarea {
             width: 100%;
             padding: 12px;
             margin: 15px 0;
@@ -185,6 +186,10 @@
             color: white;
             font-family: 'Cairo', sans-serif;
         }
+        .modal-content textarea {
+            min-height: 200px;
+            font-family: monospace;
+        }
         .close-btn {
             float: left;
             font-size: 28px;
@@ -193,12 +198,17 @@
             background: none;
             border: none;
         }
-        .workflow-step {
+        .help-box {
             background: rgba(255,215,0,0.1);
-            border-right: 3px solid #ffd700;
             padding: 10px;
-            margin: 10px 0;
-            border-radius: 8px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .status-text {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -217,27 +227,27 @@
 
     <div class="stats" id="stats"></div>
 
-    <!-- قسم جلب الملفات عبر الرابط -->
+    <!-- قسم جلب الملفات -->
     <div class="card">
         <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-link"></i> جلب ملف عبر رابط التليجرام</h2>
-        <div class="workflow-step">
-            <small>📌 الخطوات:</small><br>
-            1. أرسل ملف TXT إلى قناتك<br>
-            2. انسخ رابط الملف (مثال: https://t.me/c/3822964890/3710)<br>
-            3. الصق الرابط أدناه واضغط "جلب"
+        <div class="help-box">
+            📌 <strong>الخطوات:</strong><br>
+            1️⃣ أرسل ملف TXT إلى قناتك<br>
+            2️⃣ اضغط على الملف في التليجرام ← انسخ الرابط<br>
+            3️⃣ الصق الرابط أدناه ← اضغط "جلب الملف"
         </div>
         <div class="url-input-group">
-            <input type="text" id="fileUrl" placeholder="https://t.me/c/3822964890/3710" dir="ltr">
+            <input type="text" id="fileUrl" placeholder="مثال: https://t.me/c/3822964890/3710" dir="ltr">
             <button class="btn btn-info" onclick="fetchFromUrl()"><i class="fas fa-download"></i> جلب الملف</button>
         </div>
-        <div id="fetchStatus" style="font-size: 12px; color: #aaa;"></div>
+        <div id="fetchStatus" class="status-text"></div>
     </div>
 
     <!-- جدول الموزعين -->
     <div class="card">
         <h2 style="color: #ffd700; margin-bottom: 20px;"><i class="fas fa-table"></i> جدول الموزعين</h2>
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 بحث..." onkeyup="filterTable()">
+            <input type="text" id="searchInput" placeholder="🔍 بحث باسم الموزع أو الولاية..." onkeyup="filterTable()">
         </div>
         <div class="filter-buttons">
             <button class="filter-btn active" onclick="filterByType('all')">الكل</button>
@@ -246,7 +256,7 @@
             <button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button>
         </div>
         <div style="overflow-x: auto;">
-            <table>
+            <table id="mainTable">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -268,10 +278,10 @@
 <div id="addModal" class="modal">
     <div class="modal-content">
         <button class="close-btn" onclick="closeAddModal()">&times;</button>
-        <h2 style="color:#ffd700;">إضافة موزع</h2>
+        <h2 style="color:#ffd700;">إضافة موزع جديد</h2>
         <input type="text" id="compName" placeholder="اسم الشركة">
-        <input type="text" id="mgrName" placeholder="المسؤول">
-        <input type="tel" id="phone" placeholder="الهاتف">
+        <input type="text" id="mgrName" placeholder="اسم المسؤول">
+        <input type="tel" id="phone" placeholder="رقم الهاتف">
         <select id="type">
             <option value="delivery">توصيل</option>
             <option value="distributor">موزع</option>
@@ -286,23 +296,25 @@
 <div id="importModal" class="modal">
     <div class="modal-content">
         <button class="close-btn" onclick="closeImportModal()">&times;</button>
-        <h2 style="color:#ffd700;">استيراد من TXT</h2>
-        <textarea id="txtContent" rows="10" placeholder="الصق محتوى ملف TXT هنا..." style="width:100%; padding:12px; margin:15px 0; border-radius:10px; background:rgba(0,0,0,0.3); color:white; font-family:monospace;"></textarea>
+        <h2 style="color:#ffd700;">استيراد من ملف TXT</h2>
+        <p style="font-size:12px;">الصق محتوى ملف TXT هنا:</p>
+        <textarea id="txtContent" rows="10" placeholder="الصق محتوى ملف TXT هنا..."></textarea>
         <button class="btn btn-success" onclick="importFromText()" style="width:100%">استيراد</button>
     </div>
 </div>
 
 <script>
-    // البيانات
+    // ==================== البيانات الأساسية ====================
     let distributors = [
         { id: 1, company: "شركة البراق", manager: "أحمد محمد", phone: "0555123456", type: "delivery", state: "الجزائر" },
-        { id: 2, company: "مؤسسة السريع", manager: "سعيد علي", phone: "0555234567", type: "distributor", state: "وهران" }
+        { id: 2, company: "مؤسسة السريع", manager: "سعيد علي", phone: "0555234567", type: "distributor", state: "وهران" },
+        { id: 3, company: "شركة الأمانة", manager: "خالد عمر", phone: "0555345678", type: "both", state: "قسنطينة" }
     ];
     
     let currentFilter = 'all';
     let currentSearch = '';
 
-    // عرض الجدول
+    // ==================== عرض الجدول ====================
     function displayTable() {
         let filtered = distributors;
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
@@ -322,20 +334,21 @@
                 <td>${d.phone}</td>
                 <td>${d.type === 'delivery' ? '🚚 توصيل' : d.type === 'distributor' ? '📦 موزع' : '🔄 كليهما'}</td>
                 <td>${d.state}</td>
-                <td><button class="btn btn-danger" style="padding:5px 10px" onclick="deleteDistributor(${d.id})">🗑️</button></td>
+                <td><button class="btn btn-danger" style="padding:5px 10px" onclick="deleteDistributor(${d.id})">🗑️ حذف</button></td>
             </tr>
         `).join('');
         
         document.getElementById('stats').innerHTML = `
-            <div class="stat-card"><div class="stat-number">${distributors.length}</div><div>الموزعون</div></div>
-            <div class="stat-card"><div class="stat-number">${distributors.filter(d => d.type === 'delivery' || d.type === 'both').length}</div><div>توصيل</div></div>
+            <div class="stat-card"><div class="stat-number">${distributors.length}</div><div>إجمالي الموزعين</div></div>
+            <div class="stat-card"><div class="stat-number">${distributors.filter(d => d.type === 'delivery' || d.type === 'both').length}</div><div>خدمة توصيل</div></div>
             <div class="stat-card"><div class="stat-number">${distributors.filter(d => d.type === 'distributor' || d.type === 'both').length}</div><div>موزعون</div></div>
+            <div class="stat-card"><div class="stat-number">${new Set(distributors.map(d => d.state)).size}</div><div>ولايات</div></div>
         `;
     }
 
     function filterTable() { currentSearch = document.getElementById('searchInput').value; displayTable(); }
     function filterByType(type) { currentFilter = type; displayTable(); }
-    function deleteDistributor(id) { distributors = distributors.filter(d => d.id !== id); displayTable(); showNotification('✅ تم الحذف', 'success'); }
+    function deleteDistributor(id) { distributors = distributors.filter(d => d.id !== id); displayTable(); showNotification('✅ تم حذف الموزع', 'success'); }
     
     function addDistributor() {
         const newDist = {
@@ -351,75 +364,87 @@
             displayTable();
             closeAddModal();
             showNotification(`✅ تم إضافة ${newDist.company}`, 'success');
+            document.getElementById('compName').value = '';
+            document.getElementById('mgrName').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('state').value = '';
         } else {
-            showNotification('⚠️ املأ الحقول المطلوبة', 'error');
+            showNotification('⚠️ الرجاء ملء الحقول الأساسية', 'error');
         }
     }
 
     function clearAll() {
-        if (confirm('مسح جميع البيانات؟')) {
+        if (confirm('⚠️ هل أنت متأكد من حذف جميع البيانات؟')) {
             distributors = [];
             displayTable();
-            showNotification('🗑️ تم مسح الكل', 'info');
+            showNotification('🗑️ تم مسح جميع البيانات', 'info');
         }
     }
 
-    // تصدير TXT
+    // ==================== تصدير TXT ====================
     function exportToTxt() {
         let content = `╔════════════════════════════════════════════════╗\n`;
         content += `║           ناردو برو - قائمة الموزعين           ║\n`;
         content += `╠════════════════════════════════════════════════╣\n`;
         content += `║ 📅 ${new Date().toLocaleDateString('ar-SA')}                     ║\n`;
-        content += `║ 📊 العدد: ${distributors.length}                                 ║\n`;
+        content += `║ 📊 إجمالي الموزعين: ${distributors.length}                         ║\n`;
         content += `╚════════════════════════════════════════════════╝\n\n`;
         content += `┌──┬──────────────────┬──────────────────┬──────────────┬────────────┬──────────────┐\n`;
-        content += `│# │ الشركة           │ المسؤول          │ الهاتف       │ النوع      │ الولاية      │\n`;
+        content += `│# │ اسم الشركة       │ المسؤول          │ الهاتف       │ النوع      │ الولاية      │\n`;
         content += `├──┼──────────────────┼──────────────────┼──────────────┼────────────┼──────────────┤\n`;
         
         distributors.forEach((d, i) => {
-            const typeText = d.type === 'delivery' ? 'توصيل' : 'موزع';
+            const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
             content += `│${String(i+1).padEnd(2)}│${d.company.padEnd(18)}│${d.manager.padEnd(18)}│${d.phone.padEnd(14)}│${typeText.padEnd(12)}│${d.state.padEnd(14)}│\n`;
         });
         content += `└──┴──────────────────┴──────────────────┴──────────────┴────────────┴──────────────┘\n`;
         
-        const blob = new Blob([content], { type: 'text/plain' });
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `nardo_${Date.now()}.txt`;
+        link.download = `nardo_pro_${Date.now()}.txt`;
         link.click();
-        showNotification('✅ تم التصدير', 'success');
+        URL.revokeObjectURL(link.href);
+        showNotification('✅ تم تصدير الملف بنجاح', 'success');
     }
 
-    // إرسال إلى التليجرام
+    // ==================== إرسال إلى تليجرام ====================
     async function sendToTelegram() {
         const BOT_TOKEN = '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA';
         const CHANNEL_ID = '-1003822964890';
         
-        let content = `ناردو برو - ${new Date().toLocaleDateString('ar-SA')}\n`;
-        content += `═══════════════════════════\n`;
+        showNotification('📤 جاري الإرسال إلى القناة...', 'info');
+        
+        let content = `📊 ناردو برو - تقرير الموزعين\n`;
+        content += `═══════════════════════════════\n`;
+        content += `📅 التاريخ: ${new Date().toLocaleDateString('ar-SA')}\n`;
+        content += `📊 العدد: ${distributors.length}\n`;
+        content += `═══════════════════════════════\n\n`;
+        
         distributors.forEach((d, i) => {
             content += `${i+1}. ${d.company} | ${d.phone} | ${d.state}\n`;
         });
         
-        const blob = new Blob([content], { type: 'text/plain' });
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const formData = new FormData();
         formData.append('chat_id', CHANNEL_ID);
         formData.append('document', blob, `distributors_${Date.now()}.txt`);
+        formData.append('caption', `📊 قائمة الموزعين - ${new Date().toLocaleDateString('ar-SA')}`);
         
         try {
             const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: formData });
             const result = await res.json();
             if (result.ok) {
-                showNotification('✅ تم الإرسال للقناة', 'success');
+                showNotification('✅ تم إرسال الملف إلى القناة', 'success');
             } else {
-                showNotification('❌ فشل الإرسال', 'error');
+                showNotification(`❌ فشل الإرسال: ${result.description}`, 'error');
             }
         } catch(err) {
-            showNotification('❌ خطأ في الإرسال', 'error');
+            showNotification(`❌ خطأ: ${err.message}`, 'error');
         }
     }
 
-    // ============ الطريقة الناجحة: جلب الملف عبر الرابط ============
+    // ==================== جلب الملف من الرابط ====================
     async function fetchFromUrl() {
         const url = document.getElementById('fileUrl').value.trim();
         if (!url) {
@@ -427,61 +452,51 @@
             return;
         }
         
-        document.getElementById('fetchStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري جلب الملف...';
+        const statusDiv = document.getElementById('fetchStatus');
+        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري جلب الملف...';
         showNotification('📥 جاري تحميل الملف...', 'info');
         
         try {
-            // تحويل رابط t.me إلى رابط مباشر للتحميل
-            let downloadUrl = url;
-            
-            // إذا كان الرابط من t.me، نحوله إلى رابط التنزيل المباشر
-            if (url.includes('t.me/c/')) {
-                // استخراج معرف القناة والرسالة
-                const parts = url.split('/');
-                const msgId = parts[parts.length - 1];
-                // رابط التنزيل المباشر
-                downloadUrl = `https://t.me/c/${CHANNEL_ID.replace('-100', '')}/${msgId}?single`;
-            }
-            
-            // محاولة جلب الملف
-            const response = await fetch(downloadUrl);
+            // استخدام خدمة CORS proxy لتجاوز المشكلة
+            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+            const response = await fetch(proxyUrl + url);
             const text = await response.text();
             
             // استخراج المحتوى النصي
             let content = text;
             
             // إذا كان الملف بصيغة HTML (صفحة التليجرام)، نستخرج النص
-            if (text.includes('</html>')) {
-                const preMatch = text.match(/<pre[^>]*>([\s\S]*?)<\/pre>/);
+            if (text.includes('</html>') || text.includes('</body>')) {
+                // محاولة استخراج المحتوى من علامات pre
+                const preMatch = text.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
                 if (preMatch) {
                     content = preMatch[1];
                 } else {
-                    const bodyMatch = text.match(/<body[^>]*>([\s\S]*?)<\/body>/);
-                    if (bodyMatch) {
-                        content = bodyMatch[1].replace(/<[^>]*>/g, '');
-                    }
+                    // إزالة علامات HTML
+                    content = text.replace(/<[^>]*>/g, '');
                 }
             }
             
             // تحليل المحتوى واستيراده
             const parsed = parseTxtContent(content);
+            
             if (parsed.length > 0) {
                 distributors = [...distributors, ...parsed];
                 displayTable();
-                document.getElementById('fetchStatus').innerHTML = `✅ تم استيراد ${parsed.length} موزع`;
+                statusDiv.innerHTML = `✅ تم استيراد ${parsed.length} موزع بنجاح`;
                 showNotification(`✅ تم استيراد ${parsed.length} موزع`, 'success');
             } else {
-                document.getElementById('fetchStatus').innerHTML = '⚠️ لم يتم العثور على بيانات صالحة';
-                showNotification('⚠️ لم يتم العثور على بيانات', 'error');
+                statusDiv.innerHTML = '⚠️ لم يتم العثور على بيانات صالحة في الملف';
+                showNotification('⚠️ لم يتم العثور على بيانات صالحة', 'error');
             }
             
         } catch(err) {
-            document.getElementById('fetchStatus').innerHTML = `❌ فشل: ${err.message}`;
+            statusDiv.innerHTML = `❌ فشل الجلب: ${err.message}`;
             showNotification(`❌ فشل الجلب: ${err.message}`, 'error');
         }
     }
 
-    // تحليل محتوى TXT
+    // ==================== تحليل محتوى TXT ====================
     function parseTxtContent(content) {
         const lines = content.split('\n');
         const list = [];
@@ -489,7 +504,7 @@
         for (const line of lines) {
             // تنسيق الجدول
             if (line.includes('│')) {
-                const parts = line.split('│').filter(p => p.trim());
+                const parts = line.split('│').filter(p => p.trim() !== '');
                 if (parts.length >= 6) {
                     const company = parts[1]?.trim();
                     const manager = parts[2]?.trim();
@@ -497,9 +512,10 @@
                     let type = parts[4]?.trim();
                     const state = parts[5]?.trim();
                     
-                    if (company && phone && !company.includes('الشركة') && !company.includes('─')) {
+                    if (company && phone && !company.includes('الشركة') && !company.includes('─') && company.length > 2) {
                         if (type.includes('توصيل')) type = 'delivery';
                         else if (type.includes('موزع')) type = 'distributor';
+                        else if (type.includes('كليهما')) type = 'both';
                         else type = 'delivery';
                         
                         list.push({
@@ -519,14 +535,14 @@
                 if (parts.length >= 3) {
                     const company = parts[0]?.trim();
                     const phone = parts[1]?.trim();
-                    if (company && phone && company.length > 2) {
+                    if (company && phone && company.length > 2 && phone.length > 5) {
                         list.push({
                             id: Date.now() + Math.random(),
                             company: company,
-                            manager: '',
+                            manager: parts[2]?.trim() || '',
                             phone: phone,
                             type: 'delivery',
-                            state: parts[2]?.trim() || ''
+                            state: parts[3]?.trim() || ''
                         });
                     }
                 }
@@ -536,7 +552,7 @@
         return list;
     }
 
-    // استيراد يدوي
+    // ==================== استيراد يدوي ====================
     function openImportModal() {
         document.getElementById('importModal').classList.add('active');
         document.getElementById('txtContent').value = '';
@@ -549,7 +565,7 @@
     function importFromText() {
         const content = document.getElementById('txtContent').value;
         if (!content.trim()) {
-            showNotification('⚠️ الرجاء إدخال محتوى', 'error');
+            showNotification('⚠️ الرجاء إدخال محتوى الملف', 'error');
             return;
         }
         
@@ -560,10 +576,11 @@
             closeImportModal();
             showNotification(`✅ تم استيراد ${parsed.length} موزع`, 'success');
         } else {
-            showNotification('⚠️ لم يتم العثور على بيانات', 'error');
+            showNotification('⚠️ لم يتم العثور على بيانات صالحة', 'error');
         }
     }
 
+    // ==================== الإشعارات ====================
     function showNotification(msg, type) {
         const n = document.createElement('div');
         n.className = `notification ${type}`;
@@ -575,6 +592,7 @@
     function openAddModal() { document.getElementById('addModal').classList.add('active'); }
     function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
 
+    // ==================== بدء التشغيل ====================
     displayTable();
 </script>
 </body>
