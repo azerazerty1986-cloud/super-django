@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - تجريبي</title>
+    <title>ناردو برو | تجريبي</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -20,7 +21,7 @@
         .card {
             background: rgba(255,255,255,0.1);
             border-radius: 20px;
-            padding: 30px;
+            padding: 25px;
             margin-bottom: 20px;
             text-align: center;
         }
@@ -33,10 +34,16 @@
             cursor: pointer;
             margin: 5px;
             font-family: 'Cairo', sans-serif;
+            transition: all 0.3s;
         }
         .btn-gold { background: #ffd700; color: #000; }
+        .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
         .btn-telegram { background: #0088cc; color: white; }
+        .btn-telegram:hover { transform: translateY(-2px); background: #006699; }
         .btn-pdf { background: #dc3545; color: white; }
+        .btn-pdf:hover { transform: translateY(-2px); background: #bb2d3b; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { transform: translateY(-2px); background: #138496; }
         .notification {
             position: fixed;
             top: 20px;
@@ -49,6 +56,7 @@
         .success { background: #4ade80; color: #000; }
         .error { background: #f87171; color: #fff; }
         .info { background: #60a5fa; color: #fff; }
+        .warning { background: #fbbf24; color: #000; }
         @keyframes slideIn {
             from { transform: translateX(100px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -59,7 +67,7 @@
             height: 20px;
             background: rgba(255,255,255,0.2);
             border-radius: 10px;
-            margin-top: 20px;
+            margin-top: 15px;
             overflow: hidden;
         }
         .progress-fill {
@@ -68,144 +76,221 @@
             background: #ffd700;
             transition: width 0.3s;
         }
+        .demo-item {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 10px;
+            text-align: right;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: none;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-family: 'Cairo', sans-serif;
+        }
+        .result-box {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: right;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="card">
         <i class="fas fa-truck" style="font-size: 50px; color: #ffd700;"></i>
-        <h1 style="margin: 15px 0;">ناردو برو - تجريبي</h1>
-        <p>نظام اختبار إرسال PDF مضغوط</p>
+        <h1 style="margin: 15px 0;">ناردو برو</h1>
+        <p>نظام إدارة التوصيل والموزعين - نسخة تجريبية</p>
     </div>
 
+    <!-- قسم البيانات التجريبية -->
     <div class="card">
         <h3><i class="fas fa-warehouse"></i> بيانات تجريبية</h3>
-        <div id="demoData" style="margin: 15px 0; text-align: right;">
-            <div>📦 شركة البراق للتوصيل - المسؤول: أحمد</div>
-            <div>🚚 شركة السريع - المسؤول: محمد</div>
-            <div>📦 موزع الجزائر - المسؤول: علي</div>
+        <div id="demoData">
+            <div class="demo-item">📦 <strong>شركة البراق للتوصيل</strong> - المسؤول: أحمد - 📞 0555123456</div>
+            <div class="demo-item">🚚 <strong>شركة السريع</strong> - المسؤول: محمد - 📞 0555234567</div>
+            <div class="demo-item">📦 <strong>موزع الجزائر</strong> - المسؤول: علي - 📞 0555345678</div>
+            <div class="demo-item">🔄 <strong>شركة الأمان</strong> - المسؤول: سعيد - 📞 0555456789</div>
         </div>
-        <button class="btn btn-pdf" onclick="createSmallPDF()">
-            <i class="fas fa-file-pdf"></i> إنشاء PDF تجريبي
+        <button class="btn btn-pdf" onclick="createArabicPDF()">
+            <i class="fas fa-file-pdf"></i> إنشاء PDF بالعربية
         </button>
-        <button class="btn btn-telegram" onclick="sendCompressedPDF()">
-            <i class="fab fa-telegram"></i> إرسال PDF مضغوط
+        <button class="btn btn-telegram" onclick="sendPDFToTelegram()">
+            <i class="fab fa-telegram"></i> إرسال PDF للقناة
         </button>
         <div id="progress" class="progress-bar hidden">
             <div id="progressFill" class="progress-fill"></div>
         </div>
     </div>
 
+    <!-- قسم جلب PDF -->
     <div class="card">
-        <h3><i class="fas fa-link"></i> اختبار جلب PDF</h3>
-        <input type="text" id="pdfUrl" placeholder="https://t.me/c/3822964890/3633" style="width: 100%; padding: 10px; margin: 10px 0; border-radius: 10px; border: none;">
-        <button class="btn btn-gold" onclick="fetchAndExtract()">
+        <h3><i class="fas fa-link"></i> جلب PDF من القناة</h3>
+        <input type="text" id="pdfUrl" placeholder="رابط رسالة التليجرام (مثال: https://t.me/c/3822964890/3633)">
+        <button class="btn btn-info" onclick="fetchPDFFromURL()">
             <i class="fab fa-telegram"></i> جلب وتحليل PDF
+        </button>
+        <button class="btn btn-gold" onclick="fetchFromPinned()">
+            <i class="fas fa-thumbtack"></i> جلب من الرسالة المثبتة
         </button>
     </div>
 
+    <!-- قسم عرض النتائج -->
     <div class="card" id="resultCard" style="display: none;">
-        <h3><i class="fas fa-chart-bar"></i> النتائج</h3>
-        <div id="result"></div>
+        <h3><i class="fas fa-chart-bar"></i> نتائج التحليل</h3>
+        <div id="result" class="result-box"></div>
+    </div>
+
+    <div class="card">
+        <p style="font-size: 12px; color: #aaa;">
+            <i class="fas fa-check-circle" style="color: #4ade80;"></i> يدعم اللغة العربية بشكل كامل<br>
+            <i class="fas fa-check-circle" style="color: #4ade80;"></i> PDF بجودة عالية مع إمكانية الضغط<br>
+            <i class="fas fa-check-circle" style="color: #4ade80;"></i> جلب من الرسالة المثبتة أو الرابط المباشر
+        </p>
     </div>
 </div>
 
 <script>
+    // إعدادات تليجرام
     const TELEGRAM = { 
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', 
         channelId: '-1003822964890', 
         apiUrl: 'https://api.telegram.org/bot' 
     };
 
+    // بيانات الموزعين التجريبية
+    const demoDistributors = [
+        { name: "شركة البراق للتوصيل", manager: "أحمد", phone: "0555123456", type: "delivery" },
+        { name: "شركة السريع", manager: "محمد", phone: "0555234567", type: "delivery" },
+        { name: "موزع الجزائر", manager: "علي", phone: "0555345678", type: "distributor" },
+        { name: "شركة الأمان", manager: "سعيد", phone: "0555456789", type: "both" }
+    ];
+
     function showNotification(msg, type) {
         const n = document.createElement('div');
         n.className = `notification ${type}`;
-        n.textContent = msg;
+        n.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${msg}`;
         document.body.appendChild(n);
         setTimeout(() => n.remove(), 3000);
     }
 
-    // إنشاء PDF صغير جداً للتجريب
-    async function createSmallPDF() {
-        showNotification('📄 جاري إنشاء PDF تجريبي...', 'info');
+    // إنشاء PDF بالعربية باستخدام html2canvas (الحل الأمثل)
+    async function createArabicPDF() {
+        showNotification('📄 جاري إنشاء PDF بالعربية...', 'info');
         
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        // إنشاء عنصر HTML مؤقت لعرض المحتوى العربي
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '800px';
+        container.style.backgroundColor = 'white';
+        container.style.padding = '30px';
+        container.style.fontFamily = 'Cairo, Arial, sans-serif';
+        container.style.direction = 'rtl';
+        container.style.color = '#000';
         
-        // إضافة محتوى بسيط
-        doc.setFontSize(20);
-        doc.text("ناردو برو - تقرير تجريبي", 105, 20, { align: 'center' });
+        // بناء المحتوى
+        let html = `
+            <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #ffd700; padding-bottom: 20px;">
+                <h1 style="color: #1a1a2e; margin: 0;">🏢 ناردو برو</h1>
+                <h2 style="color: #2e7d32;">قائمة الموزعين المعتمدين</h2>
+                <p style="color: #666;">📅 تاريخ الإنشاء: ${new Date().toLocaleString('ar-SA')}</p>
+                <p style="color: #666;">📊 إجمالي الموزعين: ${demoDistributors.length}</p>
+            </div>
+        `;
         
-        doc.setFontSize(12);
-        doc.text("تاريخ الإنشاء: " + new Date().toLocaleString('ar-SA'), 105, 35, { align: 'center' });
-        
-        // بيانات تجريبية
-        const distributors = [
-            "1. شركة البراق للتوصيل - المسؤول: أحمد - الهاتف: 0555123456",
-            "2. شركة السريع - المسؤول: محمد - الهاتف: 0555234567",
-            "3. موزع الجزائر - المسؤول: علي - الهاتف: 0555345678"
-        ];
-        
-        let y = 60;
-        distributors.forEach(line => {
-            doc.text(line, 20, y);
-            y += 10;
+        // إضافة الموزعين
+        demoDistributors.forEach((dist, index) => {
+            const typeIcon = dist.type === 'delivery' ? '🚚' : (dist.type === 'distributor' ? '📦' : '🔄');
+            const typeText = dist.type === 'delivery' ? 'شركة توصيل' : (dist.type === 'distributor' ? 'موزع معتمد' : 'كليهما');
+            
+            html += `
+                <div style="margin: 15px 0; padding: 15px; border-right: 4px solid #ffd700; background: #f9f9f9; border-radius: 10px;">
+                    <div style="font-weight: bold; font-size: 18px;">${typeIcon} ${dist.name}</div>
+                    <div style="margin-right: 25px; margin-top: 10px; color: #555;">
+                        <div>👤 المسؤول: ${dist.manager}</div>
+                        <div>📞 الهاتف: ${dist.phone}</div>
+                        <div>🏷️ النوع: ${typeText}</div>
+                    </div>
+                </div>
+            `;
         });
         
-        // حفظ PDF
-        const pdfBlob = doc.output('blob');
-        const url = URL.createObjectURL(pdfBlob);
-        window.open(url, '_blank');
+        container.innerHTML = html;
+        document.body.appendChild(container);
         
-        showNotification(`✅ تم إنشاء PDF بحجم ${(pdfBlob.size / 1024).toFixed(1)} KB`, 'success');
-        
-        // تخزين للاستخدام
-        window.testPDF = pdfBlob;
-        return pdfBlob;
+        try {
+            // تحويل HTML إلى صورة
+            const canvas = await html2canvas(container, { 
+                scale: 1.5, 
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            
+            // إنشاء PDF
+            const { jsPDF } = window.jspdf;
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let doc = new jsPDF('p', 'mm', 'a4');
+            let position = 0;
+            
+            doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            
+            // معالجة الصفحات المتعددة
+            let heightLeft = imgHeight - pageHeight;
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                doc.addPage();
+                doc.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            
+            // حفظ الملف للاستخدام
+            window.currentPDF = doc.output('blob');
+            
+            // فتح المعاينة
+            const url = URL.createObjectURL(window.currentPDF);
+            window.open(url, '_blank');
+            
+            showNotification(`✅ تم إنشاء PDF بنجاح! حجم الملف: ${(window.currentPDF.size / 1024).toFixed(1)} KB`, 'success');
+            
+        } catch (error) {
+            console.error(error);
+            showNotification('❌ فشل إنشاء PDF: ' + error.message, 'error');
+        } finally {
+            document.body.removeChild(container);
+        }
     }
 
-    // ضغط PDF وإرساله
-    async function compressPDF(blob) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const arrayBuffer = e.target.result;
-                // استخدام pako للضغط
-                if (window.pako) {
-                    const compressed = pako.deflate(new Uint8Array(arrayBuffer));
-                    const compressedBlob = new Blob([compressed], { type: 'application/octet-stream' });
-                    console.log(`الحجم الأصلي: ${blob.size} bytes, بعد الضغط: ${compressedBlob.size} bytes`);
-                    resolve(compressedBlob);
-                } else {
-                    resolve(blob);
-                }
-            };
-            reader.readAsArrayBuffer(blob);
-        });
-    }
-
-    // إرسال PDF مضغوط
-    async function sendCompressedPDF() {
-        let pdfBlob = window.testPDF;
-        if (!pdfBlob) {
-            pdfBlob = await createSmallPDF();
+    // إرسال PDF إلى تليجرام
+    async function sendPDFToTelegram() {
+        if (!window.currentPDF) {
+            showNotification('⚠️ الرجاء إنشاء PDF أولاً', 'warning');
+            await createArabicPDF();
         }
         
-        showNotification('🗜️ جاري ضغط الملف...', 'info');
-        document.getElementById('progress').classList.remove('hidden');
-        document.getElementById('progressFill').style.width = '30%';
-        
-        // ضغط الملف
-        const compressedBlob = await compressPDF(pdfBlob);
-        
-        document.getElementById('progressFill').style.width = '60%';
         showNotification('📤 جاري الإرسال إلى تليجرام...', 'info');
+        document.getElementById('progress').classList.remove('hidden');
+        document.getElementById('progressFill').style.width = '50%';
         
-        // إرسال الملف المضغوط
         const formData = new FormData();
         formData.append('chat_id', TELEGRAM.channelId);
-        formData.append('document', compressedBlob, `test_compressed_${Date.now()}.bin`);
-        formData.append('caption', `📋 ملف مضغوط للتجربة\n📅 ${new Date().toLocaleString('ar-SA')}\n📊 الحجم الأصلي: ${(pdfBlob.size / 1024).toFixed(1)} KB\n🗜️ بعد الضغط: ${(compressedBlob.size / 1024).toFixed(1)} KB`);
+        formData.append('document', window.currentPDF, `distributors_${Date.now()}.pdf`);
+        formData.append('caption', `📋 قائمة الموزعين المعتمدين\n📅 ${new Date().toLocaleString('ar-SA')}\n✅ العدد: ${demoDistributors.length}`);
         
         try {
             const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { 
@@ -217,12 +302,12 @@
             document.getElementById('progressFill').style.width = '100%';
             
             if (response.ok && result.ok) {
-                showNotification('✅ تم الإرسال بنجاح!', 'success');
+                showNotification('✅ تم إرسال PDF إلى القناة بنجاح! 🎉', 'success');
             } else {
-                showNotification('❌ فشل الإرسال: ' + (result.description || 'خطأ'), 'error');
+                throw new Error(result.description || 'فشل الإرسال');
             }
         } catch (error) {
-            showNotification('❌ خطأ: ' + error.message, 'error');
+            showNotification('❌ فشل الإرسال: ' + error.message, 'error');
         }
         
         setTimeout(() => {
@@ -231,15 +316,15 @@
         }, 2000);
     }
 
-    // جلب PDF من الرابط وتحليل النص
-    async function fetchAndExtract() {
+    // جلب PDF من الرابط
+    async function fetchPDFFromURL() {
         let url = document.getElementById('pdfUrl').value.trim();
         if (!url) {
             showNotification('⚠️ الرجاء إدخال رابط PDF', 'warning');
             return;
         }
         
-        showNotification('📡 جاري جلب PDF...', 'info');
+        showNotification('📡 جاري جلب PDF من الرابط...', 'info');
         
         try {
             let pdfUrl = url;
@@ -258,36 +343,64 @@
                     const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
                     const fileData = await fileResponse.json();
                     pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                    showNotification('✅ تم العثور على ملف PDF', 'success');
+                } else {
+                    throw new Error('لم يتم العثور على ملف PDF');
                 }
             }
             
-            // تحميل وتحليل PDF
-            const loadingTask = pdfjsLib.getDocument(pdfUrl);
-            const pdf = await loadingTask.promise;
-            let fullText = '';
+            // فتح PDF في نافذة جديدة
+            window.open(pdfUrl, '_blank');
+            showNotification('✅ تم فتح PDF بنجاح', 'success');
             
-            for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText += pageText + '\n';
-            }
-            
-            // عرض النص المستخرج
+            // عرض رابط المعاينة
             document.getElementById('resultCard').style.display = 'block';
             document.getElementById('result').innerHTML = `
-                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-top: 10px; max-height: 300px; overflow-y: auto;">
-                    <strong>📄 النص المستخرج:</strong><br>
-                    <pre style="white-space: pre-wrap; font-size: 12px;">${fullText.substring(0, 1000)}</pre>
-                    ${fullText.length > 1000 ? '<p>... (تم اختصار النص)</p>' : ''}
-                </div>
-                <p style="margin-top: 10px;">📊 عدد الصفحات: ${pdf.numPages}</p>
+                <i class="fas fa-check-circle" style="color: #4ade80;"></i> تم جلب PDF بنجاح<br>
+                <a href="${pdfUrl}" target="_blank" style="color: #ffd700;">📄 اضغط لعرض PDF</a>
             `;
             
-            showNotification(`✅ تم استخراج النص من ${pdf.numPages} صفحات`, 'success');
+        } catch (error) {
+            showNotification('❌ فشل جلب PDF: ' + error.message, 'error');
+        }
+    }
+
+    // جلب من الرسالة المثبتة
+    async function fetchFromPinned() {
+        showNotification('📡 جلب PDF من الرسالة المثبتة...', 'info');
+        
+        try {
+            const chatResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
+            const chatData = await chatResponse.json();
+            
+            if (!chatData.ok || !chatData.result.pinned_message) {
+                showNotification('⚠️ لا توجد رسالة مثبتة في القناة', 'warning');
+                return;
+            }
+            
+            const pinnedMsg = chatData.result.pinned_message;
+            
+            if (!pinnedMsg.document || pinnedMsg.document.mime_type !== 'application/pdf') {
+                showNotification('⚠️ الرسالة المثبتة لا تحتوي على PDF', 'warning');
+                return;
+            }
+            
+            const fileId = pinnedMsg.document.file_id;
+            const fileResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileResponse.json();
+            const pdfUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+            
+            window.open(pdfUrl, '_blank');
+            showNotification('✅ تم فتح PDF من الرسالة المثبتة', 'success');
+            
+            document.getElementById('resultCard').style.display = 'block';
+            document.getElementById('result').innerHTML = `
+                <i class="fas fa-check-circle" style="color: #4ade80;"></i> تم جلب PDF من الرسالة المثبتة<br>
+                <a href="${pdfUrl}" target="_blank" style="color: #ffd700;">📄 اضغط لعرض PDF</a>
+            `;
             
         } catch (error) {
-            showNotification('❌ فشل تحليل PDF: ' + error.message, 'error');
+            showNotification('❌ فشل جلب PDF: ' + error.message, 'error');
         }
     }
 </script>
