@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - نظام TXT المتكامل</title>
+    <title>ناردو برو - جلب مباشر من القناة</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -47,7 +47,6 @@
         .btn-info { background: #17a2b8; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
-        .btn-primary { background: #4a6fa5; color: white; }
         .card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,215,0,0.2);
@@ -200,6 +199,30 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+        .channel-info {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .live-badge {
+            background: #dc3545;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
         .modal {
             display: none;
             position: fixed;
@@ -247,54 +270,17 @@
             background: none;
             border: none;
         }
-        .help-text {
-            background: rgba(255,215,0,0.1);
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            font-size: 13px;
-        }
-        .channel-info {
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            font-size: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .step-guide {
-            background: rgba(40,167,69,0.1);
-            border-right: 3px solid #28a745;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 10px;
-        }
-        .step-guide h4 {
-            color: #28a745;
-            margin-bottom: 10px;
-        }
-        .step-guide ol {
-            margin-right: 20px;
-        }
-        .step-guide li {
-            margin: 8px 0;
-        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1><i class="fas fa-file-alt"></i> ناردو برو | نظام TXT المتكامل</h1>
+        <h1><i class="fas fa-file-alt"></i> ناردو برو | جلب مباشر من القناة</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
             <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-download"></i> تصدير TXT</button>
             <button class="btn btn-telegram" onclick="sendTxtToTelegram()"><i class="fab fa-telegram"></i> إرسال TXT للقناة</button>
-            <button class="btn btn-primary" onclick="forwardOldFiles()"><i class="fas fa-forward"></i> إعادة توجيه الملفات القديمة</button>
-            <button class="btn btn-info" onclick="fetchAllTxtFromChannel()"><i class="fab fa-telegram"></i> جلب TXT من القناة</button>
+            <button class="btn btn-info" onclick="startLiveFetching()"><i class="fas fa-play"></i> بدء الجلب المباشر</button>
             <button class="btn btn-success" onclick="openImportTxtModal()"><i class="fas fa-upload"></i> استيراد TXT</button>
             <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
@@ -302,29 +288,31 @@
 
     <div class="stats" id="stats"></div>
 
-    <!-- دليل المساعدة -->
-    <div class="card" id="helpSection">
-        <div class="step-guide">
-            <h4><i class="fas fa-info-circle"></i> 📌 كيفية جلب الملفات من القناة الخاصة:</h4>
-            <ol>
-                <li>✅ البوت مشرف على القناة (تم التأكد)</li>
-                <li>📁 <strong>لجلب الملفات القديمة:</strong> اضغط على زر <strong>"إعادة توجيه الملفات القديمة"</strong></li>
-                <li>📤 قم بتوجيه (Forward) أي ملف TXT قديم إلى البوت مباشرة</li>
-                <li>🔄 بعد التوجيه، اضغط على <strong>"جلب TXT من القناة"</strong> لتحديث القائمة</li>
-                <li>📥 سيتم حفظ الملفات وعرضها تلقائياً</li>
-            </ol>
+    <!-- حالة الاتصال المباشر -->
+    <div class="card" id="liveStatusCard">
+        <div class="section-title">
+            <i class="fab fa-telegram"></i>
+            <span>📡 جلب مباشر من قناة التليجرام</span>
+            <span id="liveIndicator" class="live-badge">⚡ جاري الاستماع...</span>
+        </div>
+        <div id="liveInfo" class="channel-info">
+            <span><i class="fas fa-spinner fa-spin"></i> جاري الاتصال...</span>
         </div>
     </div>
 
-    <!-- قائمة ملفات TXT من القناة -->
-    <div class="card" id="channelFilesSection" style="display: none;">
+    <!-- قائمة الملفات المستلمة -->
+    <div class="card">
         <div class="section-title">
-            <i class="fab fa-telegram"></i>
-            <span>📁 ملفات TXT من قناة التليجرام</span>
-            <button class="btn btn-info" onclick="fetchAllTxtFromChannel()" style="padding: 5px 15px; margin-right: auto;"><i class="fas fa-sync-alt"></i> تحديث</button>
+            <i class="fas fa-folder-open"></i>
+            <span>📁 الملفات المستلمة من القناة</span>
+            <button class="btn btn-info" onclick="refreshFilesList()" style="padding: 5px 15px;"><i class="fas fa-sync-alt"></i> تحديث</button>
         </div>
-        <div id="channelInfo" class="channel-info"></div>
-        <div id="channelFilesList" class="files-grid"></div>
+        <div id="filesList" class="files-grid">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner"></i>
+                <p>انتظار استلام ملفات من القناة...</p>
+            </div>
+        </div>
     </div>
 
     <!-- جدول الموزعين -->
@@ -358,27 +346,6 @@
     </div>
 </div>
 
-<!-- نافذة إعادة توجيه الملفات -->
-<div id="forwardModal" class="modal">
-    <div class="modal-content">
-        <button class="close-btn" onclick="closeForwardModal()">&times;</button>
-        <h2 style="color: #ffd700;"><i class="fas fa-forward"></i> إعادة توجيه الملفات القديمة</h2>
-        <div class="help-text">
-            <p><strong>📌 خطوات إعادة توجيه الملفات:</strong></p>
-            <ol style="margin-right: 20px; margin-top: 10px;">
-                <li>افتح قناة التليجرام</li>
-                <li>ابحث عن أي ملف TXT قديم موجود في القناة</li>
-                <li>اضغط على الملف ثم اختر "توجيه" (Forward)</li>
-                <li>أرسله إلى البوت: <strong id="botUsername">جار التحميل...</strong></li>
-                <li>بعد الإرسال، اضغط على "تم الإرسال"</li>
-            </ol>
-        </div>
-        <div id="forwardStatus" class="channel-info" style="display: none;"></div>
-        <button class="btn btn-success" onclick="checkForwardedMessages()" style="width: 100%; margin-top: 10px;">✅ تم الإرسال - تحقق الآن</button>
-        <button class="btn btn-info" onclick="closeForwardModal()" style="width: 100%; margin-top: 10px;">إغلاق</button>
-    </div>
-</div>
-
 <!-- نافذة إضافة موزع -->
 <div id="addModal" class="modal">
     <div class="modal-content">
@@ -406,13 +373,13 @@
         <input type="file" id="txtFileInput" accept=".txt" onchange="handleTxtFileUpload(this)">
         <textarea id="txtRawContent" rows="10" placeholder="الصق هنا محتوى ملف TXT..."></textarea>
         <button class="btn btn-info" onclick="previewTxtData()">معاينة البيانات</button>
-        <div id="importPreviewArea" class="help-text" style="display: none;"></div>
+        <div id="importPreviewArea" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; margin-top: 10px; display: none;"></div>
         <button class="btn btn-success" onclick="importTxtToTable()" style="width: 100%; margin-top: 10px;">استيراد للجدول</button>
     </div>
 </div>
 
 <script>
-    // ==================== الإعدادات الأساسية ====================
+    // ==================== الإعدادات ====================
     const TELEGRAM = {
         botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
         channelId: '-1003822964890',
@@ -427,8 +394,11 @@
     
     let currentFilter = 'all';
     let currentSearch = '';
+    let receivedFiles = [];
+    let lastUpdateId = 0;
+    let isListening = false;
 
-    // ==================== دوال الجدول الأساسية ====================
+    // ==================== دوال الجدول ====================
     function getFilteredData() {
         let filtered = distributors.filter(d => d.status === 'approved');
         if (currentFilter !== 'all') filtered = filtered.filter(d => d.type === currentFilter);
@@ -513,14 +483,14 @@
     }
     
     function clearAllData() {
-        if (confirm('⚠️ هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع!')){
+        if (confirm('⚠️ هل أنت متأكد من حذف جميع البيانات؟')) {
             distributors = [];
             displayTable();
             showNotification('🗑️ تم حذف جميع البيانات', 'info');
         }
     }
 
-    // ==================== دوال تصدير TXT ====================
+    // ==================== دوال TXT ====================
     function generateTxtContent() {
         const filtered = getFilteredData();
         const date = new Date().toLocaleDateString('ar-SA');
@@ -581,143 +551,142 @@
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, `distributors_${Date.now()}.txt`);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف TXT`);
+            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
 
             const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await res.json();
             if(result.ok) {
                 showNotification('✅ تم إرسال TXT بنجاح', 'success');
-                // حفظ الملف المرسل تلقائياً
-                saveFileToStorage(`distributors_${Date.now()}.txt`, content);
             } else throw new Error(result.description);
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
 
-    // ==================== حفظ الملفات في التخزين المحلي ====================
-    function saveFileToStorage(fileName, fileContent) {
-        let storedFiles = localStorage.getItem('telegram_channel_files');
-        let files = storedFiles ? JSON.parse(storedFiles) : [];
-        
-        // التحقق من عدم وجود الملف مسبقاً
-        const exists = files.some(f => f.file_name === fileName);
-        if (!exists) {
-            const newFile = {
-                id: Date.now(),
-                file_name: fileName,
-                content: fileContent,
-                date: new Date().toLocaleString('ar-SA'),
-                file_size: new Blob([fileContent]).size
-            };
-            
-            files.push(newFile);
-            localStorage.setItem('telegram_channel_files', JSON.stringify(files));
-            return newFile;
-        }
-        return null;
-    }
-    
-    // ==================== جلب الملفات المخزنة ====================
-    async function fetchAllTxtFromChannel() {
-        const section = document.getElementById('channelFilesSection');
-        const container = document.getElementById('channelFilesList');
-        const infoDiv = document.getElementById('channelInfo');
-        
-        section.style.display = 'block';
-        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner"></i><p>جاري جلب الملفات المخزنة...</p></div>';
-        
-        try {
-            // جلب معلومات البوت
-            const botTest = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMe`);
-            const botInfo = await botTest.json();
-            
-            if (!botInfo.ok) throw new Error('البوت غير صالح');
-            
-            // جلب معلومات القناة
-            const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
-            const chatData = await chatRes.json();
-            
-            let channelName = TELEGRAM.channelId;
-            if (chatData.ok) {
-                channelName = chatData.result.title || TELEGRAM.channelId;
-            }
-            
-            // جلب الملفات المخزنة
-            const savedFiles = localStorage.getItem('telegram_channel_files');
-            let files = savedFiles ? JSON.parse(savedFiles) : [];
-            
-            infoDiv.innerHTML = `
-                <div><i class="fas fa-check-circle" style="color: #28a745;"></i> ✅ البوت: @${botInfo.result.username}</div>
-                <div><i class="fas fa-check-circle" style="color: #28a745;"></i> ✅ القناة: ${channelName}</div>
-                <div><i class="fas fa-database"></i> 📁 الملفات المخزنة: ${files.length}</div>
-            `;
-            
-            if (files.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
-                        <i class="fas fa-info-circle" style="font-size: 48px; margin-bottom: 15px;"></i>
-                        <p>📂 لا توجد ملفات TXT مخزنة حالياً</p>
-                        <p style="font-size: 12px; color: #aaa; margin-top: 10px;">
-                            ✅ البوت متصل بنجاح<br>
-                            ✅ القناة: ${channelName}<br>
-                            📌 <strong>لجلب الملفات القديمة:</strong> اضغط على زر "إعادة توجيه الملفات القديمة"<br>
-                            📌 أو قم بإرسال ملف TXT جديد إلى القناة
-                        </p>
-                    </div>
-                `;
-                showNotification('ℹ️ لا توجد ملفات مخزنة. استخدم زر "إعادة توجيه الملفات القديمة"', 'info');
-            } else {
-                displayFileList(files);
-                showNotification(`✅ تم العثور على ${files.length} ملف TXT مخزن`, 'success');
-            }
-            
-        } catch (err) {
-            console.error('Error:', err);
-            container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ff9800; margin-bottom: 15px;"></i>
-                    <p style="color: #ff6b6b;">❌ خطأ: ${err.message}</p>
-                </div>
-            `;
-            showNotification(`❌ فشل: ${err.message}`, 'error');
-        }
-    }
-    
-    function displayFileList(files) {
-        const container = document.getElementById('channelFilesList');
-        
-        if (files.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #aaa;">لا توجد ملفات</p>';
+    // ==================== الجلب المباشر من القناة ====================
+    async function startLiveFetching() {
+        if (isListening) {
+            showNotification('⚠️ الجلب المباشر يعمل بالفعل', 'info');
             return;
         }
         
-        container.innerHTML = files.map((file, index) => `
+        isListening = true;
+        document.getElementById('liveIndicator').innerHTML = '🟢 جاري الاستماع...';
+        document.getElementById('liveInfo').innerHTML = '<i class="fas fa-check-circle" style="color: #28a745;"></i> ✅ متصل بالقناة - في انتظار الملفات الجديدة';
+        
+        showNotification('📡 بدء الجلب المباشر من القناة...', 'info');
+        
+        // بدء الاستماع للملفات الجديدة
+        listenForNewFiles();
+    }
+    
+    async function listenForNewFiles() {
+        while (isListening) {
+            try {
+                // جلب آخر التحديثات من القناة
+                const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${lastUpdateId + 1}&timeout=30`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.ok && data.result) {
+                    for (const update of data.result) {
+                        lastUpdateId = update.update_id;
+                        
+                        // البحث عن الرسائل من القناة
+                        const message = update.channel_post || update.message;
+                        
+                        if (message && message.chat && message.chat.id.toString() === TELEGRAM.channelId) {
+                            // التحقق من وجود ملف
+                            if (message.document) {
+                                const fileName = message.document.file_name || '';
+                                if (fileName.toLowerCase().endsWith('.txt')) {
+                                    await processNewFile(message);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (err) {
+                console.error('Listen error:', err);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    }
+    
+    async function processNewFile(message) {
+        const fileName = message.document.file_name;
+        const fileId = message.document.file_id;
+        
+        showNotification(`📥 تم استلام ملف جديد من القناة: ${fileName}`, 'info');
+        
+        try {
+            // جلب محتوى الملف
+            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${fileId}`);
+            const fileData = await fileRes.json();
+            
+            if (fileData.ok) {
+                const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
+                const contentRes = await fetch(fileUrl);
+                const content = await contentRes.text();
+                
+                // حفظ الملف
+                const newFile = {
+                    id: Date.now(),
+                    file_name: fileName,
+                    content: content,
+                    date: new Date().toLocaleString('ar-SA'),
+                    file_size: message.document.file_size,
+                    from_channel: true
+                };
+                
+                receivedFiles.unshift(newFile);
+                displayFilesList();
+                
+                showNotification(`✅ تم حفظ الملف: ${fileName}`, 'success');
+            }
+        } catch (err) {
+            showNotification(`❌ فشل معالجة الملف: ${err.message}`, 'error');
+        }
+    }
+    
+    function displayFilesList() {
+        const container = document.getElementById('filesList');
+        
+        if (receivedFiles.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+                    <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px;"></i>
+                    <p>📂 لم يتم استلام أي ملفات بعد</p>
+                    <p style="font-size: 12px; color: #aaa;">قم بإرسال ملف TXT إلى القناة وسيظهر هنا تلقائياً</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = receivedFiles.map((file, index) => `
             <div class="file-card">
                 <div class="file-name">
                     <i class="fas fa-file-alt"></i> ${file.file_name}
+                    <span style="background: #28a745; padding: 2px 8px; border-radius: 20px; font-size: 10px; margin-right: 8px;">من القناة</span>
                 </div>
                 <div class="file-date">
-                    <i class="far fa-calendar-alt"></i> ${file.date || 'غير محدد'}
+                    <i class="far fa-calendar-alt"></i> ${file.date}
                     <span style="margin-right: 10px;">📦 ${(file.file_size / 1024).toFixed(2)} KB</span>
                 </div>
                 <div class="file-actions">
-                    <button class="btn btn-info" onclick="viewTxtFileFromContent(${index})">
+                    <button class="btn btn-info" onclick="viewFile(${index})">
                         <i class="fas fa-eye"></i> معاينة
                     </button>
-                    <button class="btn btn-success" onclick="importTxtFileFromContent(${index})">
-                        <i class="fas fa-download"></i> استيراد
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteStoredFile(${index})">
-                        <i class="fas fa-trash"></i> حذف
+                    <button class="btn btn-success" onclick="importFile(${index})">
+                        <i class="fas fa-download"></i> استيراد للجدول
                     </button>
                 </div>
             </div>
         `).join('');
     }
     
-    function viewTxtFileFromContent(index) {
-        const files = JSON.parse(localStorage.getItem('telegram_channel_files') || '[]');
-        const file = files[index];
-        
+    function viewFile(index) {
+        const file = receivedFiles[index];
         if (file && file.content) {
             const win = window.open();
             win.document.write(`
@@ -749,113 +718,26 @@
                 </body>
                 </html>
             `);
-            showNotification(`✅ تم فتح ${file.file_name}`, 'success');
-        } else {
-            showNotification('❌ الملف غير موجود', 'error');
         }
     }
     
-    function importTxtFileFromContent(index) {
-        const files = JSON.parse(localStorage.getItem('telegram_channel_files') || '[]');
-        const file = files[index];
-        
+    function importFile(index) {
+        const file = receivedFiles[index];
         if (file && file.content) {
             const parsed = parseTxtToDistributors(file.content);
-            
             if (parsed.length > 0) {
                 distributors = [...distributors, ...parsed];
                 displayTable();
                 showNotification(`✅ تم استيراد ${parsed.length} موزع من ${file.file_name}`, 'success');
             } else {
-                showNotification(`⚠️ لم يتم العثور على بيانات صالحة في ${file.file_name}`, 'error');
+                showNotification(`⚠️ لم يتم العثور على بيانات صالحة`, 'error');
             }
-        } else {
-            showNotification('❌ الملف غير موجود', 'error');
         }
     }
     
-    function deleteStoredFile(index) {
-        if (confirm('هل أنت متأكد من حذف هذا الملف؟')) {
-            let files = JSON.parse(localStorage.getItem('telegram_channel_files') || '[]');
-            files.splice(index, 1);
-            localStorage.setItem('telegram_channel_files', JSON.stringify(files));
-            displayFileList(files);
-            showNotification('✅ تم حذف الملف', 'success');
-        }
-    }
-    
-    // ==================== إعادة توجيه الملفات القديمة ====================
-    async function forwardOldFiles() {
-        document.getElementById('forwardModal').style.display = 'flex';
-        document.getElementById('forwardStatus').style.display = 'none';
-        
-        // جلب اسم البوت
-        try {
-            const botTest = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getMe`);
-            const botInfo = await botTest.json();
-            if (botInfo.ok) {
-                document.getElementById('botUsername').innerText = `@${botInfo.result.username}`;
-            }
-        } catch(e) {
-            document.getElementById('botUsername').innerText = 'البوت';
-        }
-    }
-    
-    function closeForwardModal() {
-        document.getElementById('forwardModal').style.display = 'none';
-    }
-    
-    async function checkForwardedMessages() {
-        const statusDiv = document.getElementById('forwardStatus');
-        statusDiv.style.display = 'block';
-        statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق من الرسائل المُعادة توجيهها...';
-        
-        try {
-            // جلب آخر التحديثات
-            const updatesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-20`);
-            const updatesData = await updatesRes.json();
-            
-            let foundFiles = 0;
-            
-            if (updatesData.ok && updatesData.result) {
-                for (const update of updatesData.result) {
-                    const message = update.message;
-                    if (message && message.document) {
-                        const fileName = message.document.file_name || '';
-                        if (fileName.toLowerCase().endsWith('.txt')) {
-                            // جلب محتوى الملف
-                            const fileRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getFile?file_id=${message.document.file_id}`);
-                            const fileData = await fileRes.json();
-                            
-                            if (fileData.ok) {
-                                const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM.botToken}/${fileData.result.file_path}`;
-                                const contentRes = await fetch(fileUrl);
-                                const content = await contentRes.text();
-                                
-                                // حفظ الملف
-                                const saved = saveFileToStorage(fileName, content);
-                                if (saved) {
-                                    foundFiles++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (foundFiles > 0) {
-                statusDiv.innerHTML = `<i class="fas fa-check-circle" style="color: #28a745;"></i> ✅ تم العثور على ${foundFiles} ملف وحفظه!`;
-                showNotification(`✅ تم حفظ ${foundFiles} ملف بنجاح`, 'success');
-                // تحديث القائمة
-                fetchAllTxtFromChannel();
-                setTimeout(() => closeForwardModal(), 2000);
-            } else {
-                statusDiv.innerHTML = `<i class="fas fa-info-circle"></i> ℹ️ لم يتم العثور على ملفات جديدة. تأكد من توجيه الملف إلى البوت: ${document.getElementById('botUsername').innerText}`;
-            }
-            
-        } catch (err) {
-            statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i> ❌ خطأ: ${err.message}`;
-        }
+    function refreshFilesList() {
+        displayFilesList();
+        showNotification('🔄 تم تحديث القائمة', 'info');
     }
     
     function parseTxtToDistributors(txtContent) {
@@ -901,7 +783,7 @@
         return div.innerHTML;
     }
     
-    // ==================== دوال استيراد TXT المحلي ====================
+    // ==================== استيراد TXT يدوي ====================
     function openImportTxtModal() {
         document.getElementById('importTxtModal').style.display = 'flex';
         document.getElementById('txtRawContent').value = '';
@@ -916,14 +798,9 @@
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                const content = e.target.result;
-                document.getElementById('txtRawContent').value = content;
+                document.getElementById('txtRawContent').value = e.target.result;
                 showNotification('📁 تم تحميل الملف بنجاح', 'success');
                 previewTxtData();
-                
-                // حفظ الملف تلقائياً في التخزين المحلي
-                saveFileToStorage(input.files[0].name, content);
-                fetchAllTxtFromChannel();
             };
             reader.readAsText(input.files[0], 'UTF-8');
             input.value = '';
@@ -941,15 +818,12 @@
         const previewArea = document.getElementById('importPreviewArea');
         
         if (parsed.length === 0) {
-            previewArea.innerHTML = '<p style="color: #ff6b6b;">❌ لم يتم العثور على بيانات صالحة في الملف</p>';
+            previewArea.innerHTML = '<p style="color: #ff6b6b;">❌ لم يتم العثور على بيانات صالحة</p>';
             previewArea.style.display = 'block';
         } else {
             previewArea.innerHTML = `
                 <p style="color: #ffd700;">✅ تم العثور على ${parsed.length} موزع:</p>
-                <ul style="margin-top: 10px;">
-                    ${parsed.slice(0, 5).map(d => `<li>📌 ${d.company} - ${d.phone} - ${d.state}</li>`).join('')}
-                    ${parsed.length > 5 ? `<li>... و ${parsed.length - 5} آخرين</li>` : ''}
-                </ul>
+                <ul>${parsed.slice(0, 5).map(d => `<li>📌 ${d.company} - ${d.phone}</li>`).join('')}</ul>
             `;
             previewArea.style.display = 'block';
         }
@@ -963,16 +837,14 @@
         }
         
         const parsed = parseTxtToDistributors(txtContent);
-        
-        if (parsed.length === 0) {
-            showNotification('❌ لم يتم العثور على بيانات صالحة للاستيراد', 'error');
-            return;
+        if (parsed.length > 0) {
+            distributors = [...distributors, ...parsed];
+            displayTable();
+            closeImportTxtModal();
+            showNotification(`✅ تم استيراد ${parsed.length} موزع بنجاح`, 'success');
+        } else {
+            showNotification('❌ لم يتم العثور على بيانات صالحة', 'error');
         }
-        
-        distributors = [...distributors, ...parsed];
-        displayTable();
-        closeImportTxtModal();
-        showNotification(`✅ تم استيراد ${parsed.length} موزع بنجاح`, 'success');
     }
     
     function showNotification(msg, type) {
@@ -986,11 +858,8 @@
     function openAddDistributor() { document.getElementById('addModal').style.display = 'flex'; }
     function closeAddModal() { document.getElementById('addModal').style.display = 'none'; }
     
-    // تحميل الملفات المخزنة عند فتح الصفحة
-    setTimeout(() => {
-        fetchAllTxtFromChannel();
-    }, 1000);
-    
+    // بدء الجلب التلقائي عند تحميل الصفحة
+    startLiveFetching();
     displayTable();
 </script>
 </body>
