@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو | جلب الفهرس والملفات (v6)</title>
+    <title>ناردو برو | جلب الموزعين من ملفات TXT (v6.1 Final)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -41,15 +39,15 @@
 <body>
 <div class="container">
     <div class="card">
-        <h1><i class="fas fa-shuttle-van"></i> ناردو برو | جلب الفهرس والملفات</h1>
+        <h1><i class="fas fa-shuttle-van"></i> ناردو برو | جلب الموزعين من ملفات TXT</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
             <button class="btn btn-gold" onclick="exportToTelegram()"><i class="fab fa-telegram-plane"></i> تصدير للقناة</button>
-            <button class="btn btn-purple" onclick="fetchAllFromIndex()"><i class="fas fa-layer-group"></i> جلب الفهرس + كل الرسائل</button>
+            <button class="btn btn-purple" onclick="fetchAllFromIndex()"><i class="fas fa-layer-group"></i> جلب الفهرس + ملفات TXT</button>
             <button class="btn btn-info" onclick="fetchPinnedOnly()"><i class="fas fa-thumbtack"></i> جلب الفهرس فقط</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
             <button class="btn btn-info" style="background: #444;" onclick="toggleDebug()"><i class="fas fa-bug"></i> سجل العمليات</button>
         </div>
-        <div id="status" class="status-bar">✓ جاهز للعمل | البوت @azer1986_bot يجب أن يكون مشرفاً</div>
+        <div id="status" class="status-bar">✓ جاهز للعمل | جلب البيانات من ملفات الـ TXT المرفقة بالروابط</div>
         <div id="debugPanel" class="debug-panel"></div>
     </div>
 
@@ -197,7 +195,7 @@
         }
     }
     
-    // ========== 1. الدالة الرئيسية: تجلب الفهرس + كل الرسائل ==========
+    // ========== 1. الدالة الرئيسية: تجلب الفهرس + الملفات المرفقة ==========
     async function fetchAllFromIndex() {
         showStatus('⏳ الخطوة 1: جلب رسالة الفهرس المثبتة...');
         try {
@@ -209,8 +207,7 @@
                 return;
             }
 
-            const indexMessageText = chatData.result.pinned_message.text || '';
-            logDebug(`محتوى الفهرس: ${indexMessageText.substring(0, 100)}...`);
+            const indexMessageText = chatData.result.pinned_message.text || chatData.result.pinned_message.caption || '';
             showStatus('✅ تم جلب الفهرس. الخطوة 2: استخراج الروابط...');
 
             const extracted = extractMessageIds(indexMessageText);
@@ -220,28 +217,28 @@
                 return;
             }
             
-            showStatus(`⏳ تم العثور على ${extracted.length} رابط. جاري جلب البيانات...`);
+            showStatus(`⏳ تم العثور على ${extracted.length} رابط. جاري جلب ملفات الـ TXT...`);
             
             let totalLoaded = 0;
             for (let i = 0; i < extracted.length; i++) {
-                showStatus(`⏳ جلب الرسالة ${i+1}/${extracted.length}...`);
-                logDebug(`محاولة جلب الرابط: ${extracted[i].fullUrl}`);
-                const content = await fetchMessageContentAsBot(extracted[i].chatId, extracted[i].messageId);
+                showStatus(`⏳ جلب ملف الرسالة ${i+1}/${extracted.length}...`);
+                logDebug(`محاولة جلب الملف من الرابط: ${extracted[i].fullUrl}`);
+                const content = await fetchFileContentAsBot(extracted[i].chatId, extracted[i].messageId);
                 
                 if (content) {
-                    logDebug(`تم جلب المحتوى بنجاح (${content.length} حرف)`);
+                    logDebug(`تم جلب محتوى الملف بنجاح (${content.length} حرف)`);
                     const count = parseDistributorsFromText(content);
                     totalLoaded += count;
                 } else {
-                    logDebug(`فشل جلب المحتوى للرابط: ${extracted[i].fullUrl}`);
+                    logDebug(`فشل جلب ملف للرابط: ${extracted[i].fullUrl}`);
                 }
             }
             
             if (totalLoaded > 0) {
-                showStatus(`✅ تم جلب ${totalLoaded} موزع بنجاح`);
+                showStatus(`✅ تم جلب ${totalLoaded} موزع من ملفات TXT بنجاح`);
                 updateTable();
             } else {
-                showStatus('⚠️ لم يتم العثور على بيانات موزعين في الروابط');
+                showStatus('⚠️ لم يتم العثور على بيانات في ملفات TXT المرفقة');
             }
             
         } catch (error) {
@@ -282,14 +279,13 @@
             linksDiv.appendChild(linkDiv);
         }
         
-        logDebug(`تم استخراج ${extractedLinksArray.length} رابط من النص`);
+        logDebug(`تم استخراج ${extractedLinksArray.length} رابط من الفهرس`);
         return extractedLinksArray;
     }
     
-    // ========== 3. جلب محتوى رسالة (v6: يدعم الملفات النصية) ==========
-    async function fetchMessageContentAsBot(chatId, messageId) {
+    // ========== 3. جلب محتوى ملف (v6.1 Final: جلب حصري لملفات TXT) ==========
+    async function fetchFileContentAsBot(chatId, messageId) {
         try {
-            // التوجيه للقناة لقراءة المحتوى
             const forwardResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -304,25 +300,24 @@
             const forwardData = await forwardResponse.json();
 
             if (forwardData.ok) {
-                let text = forwardData.result.text || forwardData.result.caption || '';
+                let fileText = null;
                 
-                // v6: التحقق إذا كانت الرسالة تحتوي على ملف (Document)
+                // التأكد من أن الرسالة تحتوي على ملف (Document)
                 if (forwardData.result.document) {
                     const doc = forwardData.result.document;
                     logDebug(`تم العثور على ملف: ${doc.file_name}`);
                     
-                    if (doc.file_name.endsWith('.txt')) {
+                    if (doc.file_name.toLowerCase().endsWith('.txt')) {
                         showStatus(`⏳ جاري تحميل الملف: ${doc.file_name}...`);
-                        const fileContent = await downloadTelegramFile(doc.file_id);
-                        if (fileContent) {
-                            text = fileContent;
-                        }
+                        fileText = await downloadTelegramFile(doc.file_id);
                     } else {
-                        logDebug(`تنبيه: الملف المرفق ليس بصيغة .txt`);
+                        logDebug(`تنبيه: الملف المرفق ليس بصيغة .txt (الملف: ${doc.file_name})`);
                     }
+                } else {
+                    logDebug(`تنبيه: الرسالة لا تحتوي على ملف مرفق (TXT)`);
                 }
                 
-                // حذف الرسالة الموجهة
+                // حذف الرسالة الموجهة فوراً
                 fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -332,18 +327,18 @@
                     })
                 });
                 
-                return text;
+                return fileText;
             } else {
                 logDebug(`فشل التوجيه من ${chatId}: ${forwardData.description}`);
                 return null;
             }
         } catch (error) {
-            logDebug(`خطأ في fetchMessageContentAsBot: ${error.message}`);
+            logDebug(`خطأ في fetchFileContentAsBot: ${error.message}`);
             return null;
         }
     }
 
-    // v6: دالة تحميل الملف من تليجرام
+    // دالة تحميل الملف المباشرة
     async function downloadTelegramFile(fileId) {
         try {
             const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
@@ -352,38 +347,43 @@
             if (fileData.ok) {
                 const filePath = fileData.result.file_path;
                 const downloadUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
+                
+                // ملاحظة: التحميل المباشر قد يتأثر بسياسة CORS في بعض المتصفحات
                 const contentRes = await fetch(downloadUrl);
-                const content = await contentRes.text();
-                return content;
+                if (!contentRes.ok) throw new Error(`فشل تحميل الملف: ${contentRes.status}`);
+                
+                return await contentRes.text();
             }
             return null;
         } catch (e) {
-            logDebug(`خطأ في تحميل الملف: ${e.message}`);
+            logDebug(`خطأ في downloadTelegramFile: ${e.message}`);
             return null;
         }
     }
     
-    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن) ==========
+    // ========== 4. تحويل النص من ملف TXT إلى بيانات موزعين ==========
     function parseDistributorsFromText(text) {
         const newDistributors = [];
-        const lines = text.split('\n');
+        const lines = text.split(/\r?\n/);
         let currentState = '';
         
-        logDebug(`بدء تحليل نص بطول ${text.length} حرف`);
+        logDebug(`تحليل محتوى الملف...`);
         
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (!line) continue;
             
+            // تحديد الولاية (تبدأ بـ 📍)
             if (line.includes('📍')) {
                 let stateMatch = line.match(/📍\s*ولاية\s+(.+?)(?:\s+-|$)/) || line.match(/📍\s*(.+?)(?:\s+-|$)/);
                 if (stateMatch) {
                     currentState = stateMatch[1].replace(/\s*-\s*العدد.*$/, '').trim();
-                    logDebug(`تم تحديد الولاية: ${currentState}`);
+                    logDebug(`الولاية الحالية: ${currentState}`);
                 }
                 continue;
             }
             
+            // تحديد الموزع (يبدأ بـ •)
             if (line.startsWith('•')) {
                 const companyMatch = line.match(/•\s+(.+?)\s*\((.+?)\)/) || line.match(/•\s+(.+)/);
                 if (companyMatch && currentState) {
@@ -393,32 +393,33 @@
                     let manager = 'غير محدد';
                     let phone = 'غير محدد';
                     
-                    for (let j = 1; j <= 2; j++) {
+                    // جلب التفاصيل من الأسطر التالية (👤 و 📞)
+                    for (let j = 1; j <= 3; j++) {
                         if (i + j < lines.length) {
                             const nextLine = lines[i + j].trim();
                             if (nextLine.startsWith('•') || nextLine.includes('📍')) break;
                             
                             let mMatch = nextLine.match(/👤\s*(.+?)(?:\s*\||$)/);
-                            let pMatch = nextLine.match(/📞\s*(.+)/);
+                            let pMatch = nextLine.match(/📞\s*([\d\s+-]+)/);
                             
                             if (mMatch) manager = mMatch[1].trim();
                             if (pMatch) phone = pMatch[1].trim();
                         }
                     }
                     
-                    logDebug(`تم العثور على موزع: ${company} في ${currentState}`);
                     newDistributors.push({ company, manager, phone, type, state: currentState });
                 }
             }
         }
         
+        // إضافة الموزعين الجدد دون تكرار
         if (newDistributors.length > 0) {
             for (const newDist of newDistributors) {
                 const exists = distributors.some(d => d.company === newDist.company && d.state === newDist.state);
                 if (!exists) distributors.push(newDist);
             }
             updateTable();
-            logDebug(`تمت إضافة ${newDistributors.length} موزع للجدول`);
+            logDebug(`تمت إضافة ${newDistributors.length} موزع جديد`);
         }
         return newDistributors.length;
     }
@@ -430,7 +431,7 @@
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
             if (chatData.ok && chatData.result.pinned_message) {
-                const indexText = chatData.result.pinned_message.text || '';
+                const indexText = chatData.result.pinned_message.text || chatData.result.pinned_message.caption || '';
                 showStatus('✓ تم جلب الفهرس');
                 extractMessageIds(indexText);
             } else {
@@ -467,7 +468,9 @@
     }
 
     updateTable();
-    showStatus('✓ النظام جاهز | اضغط على "جلب الفهرس + كل الرسائل"');
+    showStatus('✓ النظام جاهز | جلب البيانات من ملفات الـ TXT المرفقة بالروابط');
 </script>
 </body>
 </html>
+
+
