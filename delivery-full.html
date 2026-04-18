@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو | جلب الفهرس وجميع الرسائل</title>
@@ -207,8 +205,7 @@
             let totalLoaded = 0;
             for (let i = 0; i < extracted.length; i++) {
                 showStatus(`⏳ جلب الرسالة ${i+1}/${extracted.length}...`);
-                const targetChatId = '-100' + extracted[i].channelNum;
-                const content = await fetchMessageContentAsBot(targetChatId, extracted[i].messageId);
+                const content = await fetchMessageContentAsBot(extracted[i].chatId, extracted[i].messageId);
                 
                 if (content) {
                     const count = parseDistributorsFromText(content);
@@ -218,7 +215,7 @@
             
             if (totalLoaded > 0) {
                 showStatus(`✅ تم جلب ${totalLoaded} موزع بنجاح`);
-                updateTable(); // تأكد من تحديث الجدول في النهاية
+                updateTable();
             } else {
                 showStatus('⚠️ لم يتم العثور على بيانات موزعين');
             }
@@ -229,23 +226,41 @@
         }
     }
     
-    // ========== 2. استخراج المعرفات من النص ==========
+    // ========== 2. استخراج المعرفات من النص (يدعم الروابط العامة والخاصة) ==========
     function extractMessageIds(text) {
         extractedLinksArray = [];
-        const regex = /https?:\/\/t\.me\/c\/(\d+)\/(\d+)/g;
-        let match;
+        // Regex 1: الروابط الخاصة t.me/c/123456/789
+        const privateRegex = /https?:\/\/t\.me\/c\/(\d+)\/(\d+)/g;
+        // Regex 2: الروابط العامة t.me/username/789
+        const publicRegex = /https?:\/\/t\.me\/([a-zA-Z0-9_]+)\/(\d+)/g;
         
+        let match;
         const linksDiv = document.getElementById('extractedLinks');
         linksDiv.innerHTML = '';
         
-        while ((match = regex.exec(text)) !== null) {
-            const channelNum = match[1];
+        // استخراج الروابط الخاصة
+        while ((match = privateRegex.exec(text)) !== null) {
+            const chatId = '-100' + match[1];
             const messageId = parseInt(match[2]);
-            extractedLinksArray.push({ channelNum, messageId, fullUrl: match[0] });
+            extractedLinksArray.push({ chatId, messageId, fullUrl: match[0] });
+            addLinkToUI(match[0]);
+        }
+        
+        // استخراج الروابط العامة
+        while ((match = publicRegex.exec(text)) !== null) {
+            // إذا كان الجزء الأول رقماً، فقد تم التقاطه بواسطة الـ regex الخاص، لذا نتخطاه
+            if (!isNaN(match[1])) continue;
             
+            const chatId = '@' + match[1];
+            const messageId = parseInt(match[2]);
+            extractedLinksArray.push({ chatId, messageId, fullUrl: match[0] });
+            addLinkToUI(match[0]);
+        }
+        
+        function addLinkToUI(url) {
             const linkDiv = document.createElement('div');
             linkDiv.className = 'link-item';
-            linkDiv.innerHTML = `🔗 ${match[0]}`;
+            linkDiv.innerHTML = `🔗 ${url}`;
             linksDiv.appendChild(linkDiv);
         }
         
@@ -291,102 +306,56 @@
         }
     }
     
-    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن وأكثر مرونة) ==========
+    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن) ==========
     function parseDistributorsFromText(text) {
         const newDistributors = [];
         const lines = text.split('\n');
         let currentState = '';
         
-        console.log("بدء تحليل النص");
-        console.log("محتوى النص الكامل:", text);
-        
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-            
-            // تخطي الأسطر الفارغة
             if (!line) continue;
             
-            // البحث عن اسم الولاية (تبدأ بـ 📍)
             if (line.includes('📍')) {
-                // محاولة استخراج اسم الولاية بطرق متعددة
-                let stateMatch = line.match(/📍\s*ولاية\s+(.+?)(?:\s+-|$)/);
-                if (!stateMatch) {
-                    stateMatch = line.match(/📍\s*(.+?)(?:\s+-|$)/);
-                }
+                let stateMatch = line.match(/📍\s*ولاية\s+(.+?)(?:\s+-|$)/) || line.match(/📍\s*(.+?)(?:\s+-|$)/);
                 if (stateMatch) {
-                    currentState = stateMatch[1].trim();
-                    // تنظيف اسم الولاية من الأرقام والعدد
-                    currentState = currentState.replace(/\s*-\s*العدد.*$/, '').trim();
-                    console.log("تم العثور على ولاية:", currentState);
+                    currentState = stateMatch[1].replace(/\s*-\s*العدد.*$/, '').trim();
                 }
                 continue;
             }
             
-            // البحث عن بيانات الموزع (تبدأ بـ •)
             if (line.startsWith('•')) {
-                // استخراج اسم الشركة والنوع
                 const companyMatch = line.match(/•\s+(.+?)\s*\((.+?)\)/);
                 if (companyMatch && currentState) {
                     const company = companyMatch[1].trim();
                     const type = companyMatch[2].trim().toLowerCase();
                     
-                    let manager = '';
-                    let phone = '';
+                    let manager = 'غير محدد';
+                    let phone = 'غير محدد';
                     
-                    // البحث عن سطر المعلومات التالي
                     if (i + 1 < lines.length) {
                         const infoLine = lines[i + 1].trim();
-                        
-                        // محاولة استخراج اسم المدير والهاتف بطرق متعددة
-                        let managerMatch = infoLine.match(/👤\s+(.+?)\s*\|/);
-                        let phoneMatch = infoLine.match(/📞\s+(.+?)(?:\s*$|\s+)/);
-                        
-                        // إذا لم تنجح الطريقة الأولى، حاول طرقاً أخرى
-                        if (!managerMatch) {
-                            managerMatch = infoLine.match(/👤\s+(.+)/);
-                        }
-                        if (!phoneMatch) {
-                            phoneMatch = infoLine.match(/📞\s+(.+)/);
-                        }
+                        let managerMatch = infoLine.match(/👤\s+(.+?)\s*\|/) || infoLine.match(/👤\s+(.+)/);
+                        let phoneMatch = infoLine.match(/📞\s+(.+?)(?:\s*$|\s+)/) || infoLine.match(/📞\s+(.+)/);
                         
                         if (managerMatch) manager = managerMatch[1].trim();
                         if (phoneMatch) phone = phoneMatch[1].trim();
-                        
-                        // تخطي سطر المعلومات فقط إذا كان يحتوي على بيانات
-                        if (manager || phone) {
-                            i++;
-                        }
+                        if (managerMatch || phoneMatch) i++;
                     }
                     
-                    console.log(`إضافة: ${company} (${type}) - ${manager} - ${phone} - ${currentState}`);
-                    
-                    newDistributors.push({
-                        company: company,
-                        manager: manager || 'غير محدد',
-                        phone: phone || 'غير محدد',
-                        type: type,
-                        state: currentState
-                    });
+                    newDistributors.push({ company, manager, phone, type, state: currentState });
                 }
             }
         }
         
-        // إضافة الموزعين الجدد
         if (newDistributors.length > 0) {
             for (const newDist of newDistributors) {
                 const exists = distributors.some(d => d.company === newDist.company && d.state === newDist.state);
-                if (!exists) {
-                    distributors.push(newDist);
-                    console.log("تم إضافة موزع جديد:", newDist);
-                }
+                if (!exists) distributors.push(newDist);
             }
-            updateTable(); // تأكد من تحديث الجدول
+            updateTable();
             showStatus(`✅ تم إضافة ${newDistributors.length} موزع`);
-        } else {
-            console.log("لم يتم العثور على بيانات موزعين في النص");
-            showStatus('⚠️ لم يتم العثور على بيانات موزعين في النص');
         }
-        
         return newDistributors.length;
     }
     
@@ -396,7 +365,6 @@
         try {
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
-            
             if (chatData.ok && chatData.result.pinned_message) {
                 const indexText = chatData.result.pinned_message.text || '';
                 showStatus('✓ تم جلب الفهرس');
@@ -411,26 +379,18 @@
     
     // ========== تصدير البيانات ==========
     async function exportToTelegram() {
-        if (distributors.length === 0) {
-            alert('لا توجد بيانات للتصدير');
-            return;
-        }
-        
+        if (distributors.length === 0) { alert('لا توجد بيانات للتصدير'); return; }
         showStatus('⏳ جاري التصدير...');
-        
         let text = `${KEYWORD}\n━━━━━━━━━━━━━━━━━━\n`;
         const states = [...new Set(distributors.map(d => d.state))];
-        
         states.forEach(state => {
             const items = distributors.filter(d => d.state === state);
             text += `📍 ولاية ${state} - العدد: ${items.length}\n`;
             items.forEach(d => {
-                text += `• ${d.company} (${d.type})\n`;
-                text += `  👤 ${d.manager} | 📞 ${d.phone}\n`;
+                text += `• ${d.company} (${d.type})\n  👤 ${d.manager} | 📞 ${d.phone}\n`;
             });
             text += `\n`;
         });
-        
         try {
             const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
@@ -438,17 +398,10 @@
                 body: JSON.stringify({ chat_id: CHANNEL_ID, text: text })
             });
             const data = await res.json();
-            if (data.ok) {
-                showStatus('✅ تم الإرسال بنجاح');
-            } else {
-                showStatus('❌ فشل الإرسال');
-            }
-        } catch(e) { 
-            showStatus('❌ خطأ في الاتصال'); 
-        }
+            showStatus(data.ok ? '✅ تم الإرسال بنجاح' : '❌ فشل الإرسال');
+        } catch(e) { showStatus('❌ خطأ في الاتصال'); }
     }
 
-    // تهيئة
     updateTable();
     showStatus('✓ النظام جاهز | اضغط على "جلب الفهرس + كل الرسائل"');
 </script>
