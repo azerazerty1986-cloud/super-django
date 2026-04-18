@@ -18,7 +18,6 @@
         .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4); }
         .btn-info { background: #17a2b8; color: white; }
         .btn-danger { background: #dc3545; color: white; }
-        .btn-success { background: #28a745; color: white; }
         .btn-purple { background: #6f42c1; color: white; }
         .input-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         input, select, textarea { padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 215, 0, 0.3); background: rgba(0,0,0,0.2); color: white; font-family: 'Cairo'; width: 100%; }
@@ -48,7 +47,7 @@
             <button class="btn btn-info" onclick="fetchPinnedOnly()"><i class="fas fa-thumbtack"></i> جلب الفهرس فقط</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
         </div>
-        <div id="status" class="status-bar">✓ جاهز للعمل | البوت @azer1986_bot يجب أن يكون مشرفاً في القناة</div>
+        <div id="status" class="status-bar">✓ جاهز للعمل | البوت @azer1986_bot يجب أن يكون مشرفاً</div>
     </div>
 
     <div class="card">
@@ -83,9 +82,7 @@
         </div>
         <div style="overflow-x: auto;">
             <table>
-                <thead>
-                    <tr><th>#</th><th>الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th><th>حذف</th></tr>
-                </thead>
+                <thead><tr><th>#</th><th>الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th><th>حذف</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
@@ -101,20 +98,17 @@
     let distributors = [];
     let extractedLinksArray = [];
 
-    // ========== دالة عرض الحالة ==========
     function showStatus(msg) {
         const statusDiv = document.getElementById('status');
         statusDiv.innerHTML = msg;
         console.log(msg);
     }
 
-    // ========== دالة الهروب من HTML ==========
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
     }
 
-    // ========== تحديث الجدول ==========
     function updateTable() {
         const tbody = document.getElementById('tableBody');
         const filter = document.getElementById('stateFilter').value;
@@ -142,7 +136,6 @@
         updateFilterOptions();
     }
     
-    // ========== تحديث خيارات الفلتر ==========
     function updateFilterOptions() {
         const filterSelect = document.getElementById('stateFilter');
         const currentVal = filterSelect.value;
@@ -151,7 +144,6 @@
             states.map(s => `<option value="${escapeHtml(s)}" ${s === currentVal ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
     }
     
-    // ========== إضافة موزع ==========
     function addDistributor() {
         const company = document.getElementById('compName').value.trim();
         const manager = document.getElementById('mgrName').value.trim();
@@ -172,14 +164,12 @@
         }
     }
     
-    // ========== حذف موزع ==========
     function deleteItem(index) {
         distributors.splice(index, 1);
         updateTable();
         showStatus('✓ تم حذف الموزع');
     }
     
-    // ========== مسح الكل ==========
     function clearAll() {
         if (confirm('⚠️ هل أنت متأكد من مسح جميع البيانات؟')) {
             distributors = [];
@@ -192,28 +182,27 @@
     
     // ========== 1. الدالة الرئيسية: تجلب الفهرس + كل الرسائل ==========
     async function fetchAllFromIndex() {
-        showStatus('⏳ الخطوة 1: جلب رسالة الفهرس المثبتة من القناة...');
+        showStatus('⏳ الخطوة 1: جلب رسالة الفهرس المثبتة...');
         try {
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
 
             if (!chatData.ok || !chatData.result.pinned_message) {
-                showStatus('❌ لا توجد رسالة مثبتة في القناة.');
+                showStatus('❌ لا توجد رسالة مثبتة في القناة');
                 return;
             }
 
             const indexMessageText = chatData.result.pinned_message.text || '';
-            showStatus('✅ تم جلب رسالة الفهرس. الخطوة 2: استخراج الروابط...');
+            showStatus('✅ تم جلب الفهرس. الخطوة 2: استخراج الروابط...');
 
-            // استخراج الروابط من النص
             const extracted = extractMessageIds(indexMessageText);
             
             if (extracted.length === 0) {
-                showStatus('⚠️ لم يتم العثور على روابط في رسالة الفهرس');
+                showStatus('⚠️ لم يتم العثور على روابط في الفهرس');
                 return;
             }
             
-            showStatus(`⏳ تم العثور على ${extracted.length} رابط. الخطوة 3: جلب البيانات من كل رابط...`);
+            showStatus(`⏳ تم العثور على ${extracted.length} رابط. جاري جلب البيانات...`);
             
             let totalLoaded = 0;
             for (let i = 0; i < extracted.length; i++) {
@@ -228,9 +217,9 @@
             }
             
             if (totalLoaded > 0) {
-                showStatus(`✅ تم بنجاح جلب ${totalLoaded} موزع من ${extracted.length} رسالة`);
+                showStatus(`✅ تم جلب ${totalLoaded} موزع بنجاح`);
             } else {
-                showStatus('⚠️ تم جلب الروابط ولكن لم يتم العثور على بيانات موزعين');
+                showStatus('⚠️ لم يتم العثور على بيانات موزعين');
             }
             
         } catch (error) {
@@ -268,15 +257,13 @@
         return extractedLinksArray;
     }
     
-    // ========== 3. جلب محتوى رسالة باستخدام البوت (الطريقة الصحيحة) ==========
+    // ========== 3. جلب محتوى رسالة باستخدام البوت ==========
     async function fetchMessageContentAsBot(chatId, messageId) {
         try {
-            // جلب معرف البوت الخاص
             const botInfoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
             const botInfo = await botInfoRes.json();
             const botPrivateChatId = botInfo.result.id;
 
-            // توجيه الرسالة إلى البوت نفسه
             const forwardResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -294,29 +281,32 @@
                 const text = forwardData.result.text || forwardData.result.caption || '';
                 return text;
             } else {
-                console.error('فشل توجيه الرسالة:', forwardData);
+                console.error('فشل التوجيه:', forwardData);
                 return null;
             }
         } catch (error) {
-            console.error('خطأ في جلب محتوى الرسالة:', error);
+            console.error('خطأ:', error);
             return null;
         }
     }
     
-    // ========== 4. تحويل النص إلى بيانات موزعين ==========
+    // ========== 4. تحويل النص إلى بيانات موزعين (بالتنسيق الصحيح) ==========
     function parseDistributorsFromText(text) {
         const newDistributors = [];
         const lines = text.split('\n');
         let currentState = '';
         
+        console.log("بدء تحليل النص");
+        
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             
-            // البحث عن اسم الولاية
+            // البحث عن اسم الولاية (تبدأ بـ 📍)
             if (line.includes('📍') && line.includes('ولاية')) {
-                const stateMatch = line.match(/ولاية\s+(.+?)(?:\s+-|$)/);
+                const stateMatch = line.match(/📍\s*ولاية\s+(.+?)(?:\s+-|$)/);
                 if (stateMatch) {
                     currentState = stateMatch[1].trim();
+                    console.log("تم العثور على ولاية:", currentState);
                 }
                 continue;
             }
@@ -328,70 +318,78 @@
                     const company = companyMatch[1].trim();
                     const type = companyMatch[2].trim();
                     
-                    let nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
                     let manager = '';
                     let phone = '';
                     
-                    if (nextLine.includes('👤') && nextLine.includes('📞')) {
-                        const managerMatch = nextLine.match(/👤\s+(.+?)\s*\|/);
-                        const phoneMatch = nextLine.match(/📞\s+(.+)$/);
+                    // البحث عن سطر المعلومات التالي
+                    if (i + 1 < lines.length) {
+                        const infoLine = lines[i + 1].trim();
+                        // تنسيق: 👤 أحمد الارزاق | 📞 0555123456
+                        const managerMatch = infoLine.match(/👤\s+(.+?)\s*\|/);
+                        const phoneMatch = infoLine.match(/📞\s+(.+)$/);
                         
                         if (managerMatch) manager = managerMatch[1].trim();
                         if (phoneMatch) phone = phoneMatch[1].trim();
-                        i++;
+                        i++; // تخطي سطر المعلومات
                     }
                     
-                    // تجنب التكرار
-                    const exists = distributors.some(d => d.company === company && d.state === currentState);
-                    if (!exists) {
-                        newDistributors.push({
-                            company: company,
-                            manager: manager,
-                            phone: phone,
-                            type: type,
-                            state: currentState
-                        });
-                    }
+                    console.log(`إضافة: ${company} (${type}) - ${manager} - ${phone} - ${currentState}`);
+                    
+                    newDistributors.push({
+                        company: company,
+                        manager: manager,
+                        phone: phone,
+                        type: type,
+                        state: currentState
+                    });
                 }
             }
         }
         
+        // إضافة الموزعين الجدد
         if (newDistributors.length > 0) {
-            distributors.push(...newDistributors);
+            for (const newDist of newDistributors) {
+                const exists = distributors.some(d => d.company === newDist.company && d.state === newDist.state);
+                if (!exists) {
+                    distributors.push(newDist);
+                }
+            }
             updateTable();
+            showStatus(`✅ تم إضافة ${newDistributors.length} موزع`);
+        } else {
+            showStatus('⚠️ لم يتم العثور على بيانات موزعين في النص');
         }
         
         return newDistributors.length;
     }
     
-    // ========== 5. جلب الفهرس فقط (بدون متابعة الروابط) ==========
+    // ========== 5. جلب الفهرس فقط ==========
     async function fetchPinnedOnly() {
-        showStatus('⏳ جلب رسالة الفهرس المثبتة...');
+        showStatus('⏳ جلب رسالة الفهرس...');
         try {
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
             
             if (chatData.ok && chatData.result.pinned_message) {
                 const indexText = chatData.result.pinned_message.text || '';
-                showStatus('✓ تم جلب الفهرس، جاري استخراج الروابط...');
-                const links = extractMessageIds(indexText);
-                showStatus(`✅ تم العثور على ${links.length} رابط في الفهرس`);
+                showStatus('✓ تم جلب الفهرس');
+                extractMessageIds(indexText);
             } else {
-                showStatus('❌ لا توجد رسالة مثبتة في القناة');
+                showStatus('❌ لا توجد رسالة مثبتة');
             }
         } catch (error) {
             showStatus(`❌ خطأ: ${error.message}`);
         }
     }
     
-    // ========== تصدير البيانات إلى التليجرام ==========
+    // ========== تصدير البيانات ==========
     async function exportToTelegram() {
         if (distributors.length === 0) {
             alert('لا توجد بيانات للتصدير');
             return;
         }
         
-        showStatus('⏳ جاري التصدير إلى التليجرام...');
+        showStatus('⏳ جاري التصدير...');
         
         let text = `${KEYWORD}\n━━━━━━━━━━━━━━━━━━\n`;
         const states = [...new Set(distributors.map(d => d.state))];
@@ -414,18 +412,18 @@
             });
             const data = await res.json();
             if (data.ok) {
-                showStatus('✅ تم إرسال البيانات بنجاح إلى القناة');
+                showStatus('✅ تم الإرسال بنجاح');
             } else {
-                showStatus('❌ فشل الإرسال: ' + (data.description || 'خطأ غير معروف'));
+                showStatus('❌ فشل الإرسال');
             }
         } catch(e) { 
             showStatus('❌ خطأ في الاتصال'); 
         }
     }
 
-    // ========== تهيئة الصفحة ==========
+    // تهيئة
     updateTable();
-    showStatus('✓ النظام جاهز | تأكد من أن البوت @azer1986_bot مشرف في القناة');
+    showStatus('✓ النظام جاهز | اضغط على "جلب الفهرس + كل الرسائل"');
 </script>
 </body>
 </html>
