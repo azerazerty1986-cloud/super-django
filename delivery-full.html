@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو - نظام إدارة الموزعين مع Telegram</title>
@@ -8,7 +6,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -50,8 +48,6 @@
         .btn-txt { background: #6c757d; color: white; }
         .btn-excel { background: #217346; color: white; }
         .btn-pdf { background: #dc3545; color: white; }
-        .btn-info { background: #17a2b8; color: white; }
-        .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .card {
             background: rgba(255,255,255,0.05);
@@ -168,16 +164,6 @@
             max-height: 80vh;
             overflow-y: auto;
         }
-        .modal-content input, .modal-content select, .modal-content textarea {
-            width: 100%;
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 10px;
-            border: 1px solid rgba(255,215,0,0.3);
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-family: 'Cairo', sans-serif;
-        }
         .close-btn {
             float: left;
             font-size: 28px;
@@ -220,6 +206,16 @@
         .send-option p {
             font-size: 12px;
             color: #aaa;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid rgba(255,215,0,0.3);
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-family: 'Cairo', sans-serif;
         }
         @media (max-width: 768px) {
             .send-options { grid-template-columns: 1fr; }
@@ -510,25 +506,18 @@
     async function exportToPDF() {
         try {
             showNotification('📄 جاري إنشاء ملف PDF...', 'info');
-            
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            
             const filtered = getFilteredData();
             const date = new Date().toLocaleDateString('ar-SA');
             const time = new Date().toLocaleTimeString('ar-SA');
-            
-            // العنوان
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(18);
             doc.setTextColor(255, 215, 0);
             doc.text('ناردو برو - قائمة الموزعين', doc.internal.pageSize.width / 2, 15, { align: 'center' });
-            
             doc.setFontSize(10);
             doc.setTextColor(200, 200, 200);
             doc.text(`التاريخ: ${date}  |  الوقت: ${time}  |  إجمالي الموزعين: ${filtered.length}`, doc.internal.pageSize.width / 2, 25, { align: 'center' });
-            
-            // إعداد الجدول
             const tableData = filtered.map((d, i) => [
                 (i + 1).toString(),
                 d.company,
@@ -537,9 +526,7 @@
                 d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
                 d.state
             ]);
-            
             const headers = [['#', 'اسم الشركة', 'المسؤول', 'الهاتف', 'النوع', 'الولاية']];
-            
             doc.autoTable({
                 head: headers,
                 body: tableData,
@@ -549,182 +536,84 @@
                 bodyStyles: { textColor: [255, 255, 255], lineColor: [255, 215, 0], lineWidth: 0.1 },
                 alternateRowStyles: { fillColor: [30, 30, 60] },
                 margin: { top: 35, right: 10, left: 10, bottom: 20 },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 50 },
-                    2: { cellWidth: 40 },
-                    3: { cellWidth: 35 },
-                    4: { cellWidth: 30 },
-                    5: { cellWidth: 40 }
-                }
+                columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 50 }, 2: { cellWidth: 40 }, 3: { cellWidth: 35 }, 4: { cellWidth: 30 }, 5: { cellWidth: 40 } }
             });
-            
             doc.save(`nardo_pro_${Date.now()}.pdf`);
             showNotification('✅ تم تصدير ملف PDF بنجاح', 'success');
         } catch (err) {
-            console.error('PDF error:', err);
             showNotification(`❌ فشل تصدير PDF: ${err.message}`, 'error');
         }
     }
 
     // ==================== دوال الإرسال إلى التلغرام ====================
-    function openSendModal() {
-        document.getElementById('sendModal').classList.add('active');
-    }
+    function openSendModal() { document.getElementById('sendModal').classList.add('active'); }
+    function closeSendModal() { document.getElementById('sendModal').classList.remove('active'); }
 
-    function closeSendModal() {
-        document.getElementById('sendModal').classList.remove('active');
-    }
-    
     async function sendTxtToTelegram() {
         closeSendModal();
-        showNotification('📤 جاري إرسال ملف TXT إلى قناة التلغرام...', 'info');
-        
+        showNotification('📤 جاري إرسال ملف TXT...', 'info');
         try {
             const content = generateTxtContent();
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const fileName = `distributors_${Date.now()}.txt`;
-            
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, fileName);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n⏰ ${new Date().toLocaleTimeString('ar-SA')}\n📁 ${fileName}`);
-
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { 
-                method: 'POST', 
-                body: formData 
-            });
-            
+            formData.append('caption', `📊 قائمة الموزعين (TXT)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await response.json();
-            
-            if (result.ok) {
-                showNotification('✅ تم إرسال ملف TXT إلى القناة بنجاح', 'success');
-            } else {
-                throw new Error(result.description || 'فشل الإرسال');
-            }
-        } catch (err) {
-            console.error('خطأ في الإرسال:', err);
-            showNotification(`❌ فشل الإرسال: ${err.message}`, 'error');
-        }
+            if (result.ok) showNotification('✅ تم إرسال ملف TXT بنجاح', 'success');
+            else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل الإرسال: ${err.message}`, 'error'); }
     }
 
     async function sendExcelToTelegram() {
         closeSendModal();
-        showNotification('📤 جاري إرسال ملف Excel إلى قناة التلغرام...', 'info');
-        
+        showNotification('📤 جاري إرسال ملف Excel...', 'info');
         try {
             const data = generateExcelData();
             const worksheet = XLSX.utils.json_to_sheet(data);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الموزعين");
-            
             const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
             const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const fileName = `distributors_${Date.now()}.xlsx`;
-            
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, fileName);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n⏰ ${new Date().toLocaleTimeString('ar-SA')}\n📁 ${fileName}`);
-
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { 
-                method: 'POST', 
-                body: formData 
-            });
-            
+            formData.append('caption', `📊 قائمة الموزعين (Excel)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await response.json();
-            
-            if (result.ok) {
-                showNotification('✅ تم إرسال ملف Excel إلى القناة بنجاح', 'success');
-            } else {
-                throw new Error(result.description || 'فشل الإرسال');
-            }
-        } catch (err) {
-            console.error('خطأ في الإرسال:', err);
-            showNotification(`❌ فشل الإرسال: ${err.message}`, 'error');
-        }
+            if (result.ok) showNotification('✅ تم إرسال ملف Excel بنجاح', 'success');
+            else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل الإرسال: ${err.message}`, 'error'); }
     }
 
     async function sendPDFToTelegram() {
         closeSendModal();
-        showNotification('📤 جاري إنشاء وإرسال ملف PDF إلى قناة التلغرام...', 'info');
-        
+        showNotification('📤 جاري إرسال ملف PDF...', 'info');
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-            
             const filtered = getFilteredData();
             const date = new Date().toLocaleDateString('ar-SA');
-            const time = new Date().toLocaleTimeString('ar-SA');
-            
-            // العنوان
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.setTextColor(255, 215, 0);
             doc.text('ناردو برو - قائمة الموزعين', doc.internal.pageSize.width / 2, 15, { align: 'center' });
-            
-            doc.setFontSize(10);
-            doc.setTextColor(200, 200, 200);
-            doc.text(`التاريخ: ${date}  |  الوقت: ${time}  |  إجمالي الموزعين: ${filtered.length}`, doc.internal.pageSize.width / 2, 25, { align: 'center' });
-            
-            // إعداد الجدول
-            const tableData = filtered.map((d, i) => [
-                (i + 1).toString(),
-                d.company,
-                d.manager,
-                d.phone,
-                d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
-                d.state
-            ]);
-            
-            const headers = [['#', 'اسم الشركة', 'المسؤول', 'الهاتف', 'النوع', 'الولاية']];
-            
-            doc.autoTable({
-                head: headers,
-                body: tableData,
-                startY: 35,
-                theme: 'dark',
-                headStyles: { fillColor: [255, 215, 0], textColor: [0, 0, 0], fontStyle: 'bold' },
-                bodyStyles: { textColor: [255, 255, 255], lineColor: [255, 215, 0], lineWidth: 0.1 },
-                alternateRowStyles: { fillColor: [30, 30, 60] },
-                margin: { top: 35, right: 10, left: 10, bottom: 20 },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 50 },
-                    2: { cellWidth: 40 },
-                    3: { cellWidth: 35 },
-                    4: { cellWidth: 30 },
-                    5: { cellWidth: 40 }
-                }
-            });
-            
+            const tableData = filtered.map((d, i) => [(i + 1).toString(), d.company, d.manager, d.phone, d.type, d.state]);
+            doc.autoTable({ head: [['#', 'اسم الشركة', 'المسؤول', 'الهاتف', 'النوع', 'الولاية']], body: tableData, startY: 25 });
             const pdfBlob = doc.output('blob');
             const fileName = `distributors_${Date.now()}.pdf`;
-            
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', pdfBlob, fileName);
-            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${date}\n⏰ ${time}\n📁 ${fileName}`);
-
-            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { 
-                method: 'POST', 
-                body: formData 
-            });
-            
+            formData.append('caption', `📊 قائمة الموزعين (PDF)\n📅 ${date}`);
+            const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await response.json();
-            
-            if (result.ok) {
-                showNotification('✅ تم إرسال ملف PDF إلى القناة بنجاح', 'success');
-            } else {
-                throw new Error(result.description || 'فشل الإرسال');
-            }
-        } catch (err) {
-            console.error('خطأ في الإرسال:', err);
-            showNotification(`❌ فشل الإرسال: ${err.message}`, 'error');
-        }
+            if (result.ok) showNotification('✅ تم إرسال ملف PDF بنجاح', 'success');
+            else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل الإرسال: ${err.message}`, 'error'); }
     }
 
-    // ==================== دوال مساعدة ====================
     function showNotification(msg, type) {
         const n = document.createElement('div');
         n.className = `notification ${type}`;
@@ -732,23 +621,9 @@
         document.body.appendChild(n);
         setTimeout(() => n.remove(), 3500);
     }
-    
-    function openAddDistributor() { 
-        document.getElementById('addModal').classList.add('active'); 
-    }
-    
-    function closeAddModal() { 
-        document.getElementById('addModal').classList.remove('active'); 
-    }
-    
-    // تحميل مكتبة autoTable لـ jsPDF
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
-    document.head.appendChild(script);
-    
-    // ==================== تشغيل التطبيق ====================
+    function openAddDistributor() { document.getElementById('addModal').classList.add('active'); }
+    function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
     displayTable();
 </script>
 </body>
 </html>
-
