@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو - نظام إدارة الموزعين مع Telegram</title>
@@ -302,8 +300,8 @@
             </div>
             <div class="send-option" onclick="sendExcelToTelegram()">
                 <i class="fas fa-file-excel"></i>
-                <h3>ملف Excel (XLS)</h3>
-                <p>إرسال قائمة الموزعين بصيغة XLS المتوافقة</p>
+                <h3>ملف Excel (CSV)</h3>
+                <p>إرسال قائمة الموزعين بصيغة CSV المتوافقة مع الإكسل</p>
             </div>
             <div class="send-option" onclick="sendPDFToTelegram()">
                 <i class="fas fa-file-pdf"></i>
@@ -477,28 +475,33 @@
         showNotification('✅ تم تصدير ملف TXT بنجاح', 'success');
     }
 
-    // ==================== إنشاء بيانات Excel ====================
-    function generateExcelData() {
+    // ==================== إنشاء بيانات Excel (CSV) ====================
+    function generateCSVContent() {
         const filtered = getFilteredData();
-        const data = filtered.map((d, i) => ({
-            '#': i + 1,
-            'اسم الشركة': d.company,
-            'المسؤول': d.manager,
-            'الهاتف': d.phone,
-            'النوع': d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
-            'الولاية': d.state
-        }));
-        return data;
+        // إضافة BOM لدعم اللغة العربية في الإكسل
+        let csv = '\uFEFF';
+        csv += '#,اسم الشركة,المسؤول,الهاتف,النوع,الولاية\n';
+        
+        filtered.forEach((d, i) => {
+            const typeText = d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما';
+            csv += `${i+1},"${d.company}","${d.manager}","${d.phone}","${typeText}","${d.state}"\n`;
+        });
+        return csv;
     }
 
     function exportToExcel() {
         try {
-            const data = generateExcelData();
-            const worksheet = XLSX.utils.json_to_sheet(data);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "الموزعين");
-            XLSX.writeFile(workbook, `nardo_pro_${Date.now()}.xlsx`);
-            showNotification('✅ تم تصدير ملف Excel بنجاح', 'success');
+            const csvContent = generateCSVContent();
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `nardo_pro_${Date.now()}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showNotification('✅ تم تصدير ملف CSV بنجاح', 'success');
         } catch (err) {
             showNotification(`❌ فشل التصدير: ${err.message}`, 'error');
         }
@@ -512,34 +515,10 @@
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             const filtered = getFilteredData();
             const date = new Date().toLocaleDateString('ar-SA');
-            const time = new Date().toLocaleTimeString('ar-SA');
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.setTextColor(255, 215, 0);
             doc.text('ناردو برو - قائمة الموزعين', doc.internal.pageSize.width / 2, 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(200, 200, 200);
-            doc.text(`التاريخ: ${date}  |  الوقت: ${time}  |  إجمالي الموزعين: ${filtered.length}`, doc.internal.pageSize.width / 2, 25, { align: 'center' });
-            const tableData = filtered.map((d, i) => [
-                (i + 1).toString(),
-                d.company,
-                d.manager,
-                d.phone,
-                d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
-                d.state
-            ]);
-            const headers = [['#', 'اسم الشركة', 'المسؤول', 'الهاتف', 'النوع', 'الولاية']];
-            doc.autoTable({
-                head: headers,
-                body: tableData,
-                startY: 35,
-                theme: 'dark',
-                headStyles: { fillColor: [255, 215, 0], textColor: [0, 0, 0], fontStyle: 'bold' },
-                bodyStyles: { textColor: [255, 255, 255], lineColor: [255, 215, 0], lineWidth: 0.1 },
-                alternateRowStyles: { fillColor: [30, 30, 60] },
-                margin: { top: 35, right: 10, left: 10, bottom: 20 },
-                columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 50 }, 2: { cellWidth: 40 }, 3: { cellWidth: 35 }, 4: { cellWidth: 30 }, 5: { cellWidth: 40 } }
-            });
+            const tableData = filtered.map((d, i) => [(i + 1).toString(), d.company, d.manager, d.phone, d.type, d.state]);
+            doc.autoTable({ head: [['#', 'اسم الشركة', 'المسؤول', 'الهاتف', 'النوع', 'الولاية']], body: tableData, startY: 25 });
             doc.save(`nardo_pro_${Date.now()}.pdf`);
             showNotification('✅ تم تصدير ملف PDF بنجاح', 'success');
         } catch (err) {
@@ -571,26 +550,20 @@
 
     async function sendExcelToTelegram() {
         closeSendModal();
-        showNotification('📤 جاري إرسال ملف Excel (XLS)...', 'info');
+        showNotification('📤 جاري إرسال ملف Excel (CSV)...', 'info');
         try {
-            const data = generateExcelData();
-            const worksheet = XLSX.utils.json_to_sheet(data);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "الموزعين");
-            
-            // استخدام صيغة biff8 لإنتاج ملف .xls حقيقي
-            const wbout = XLSX.write(workbook, { bookType: 'biff8', type: 'array' });
-            const blob = new Blob([wbout], { type: 'application/vnd.ms-excel' });
-            const fileName = `distributors_${Date.now()}.xls`;
+            const csvContent = generateCSVContent();
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+            const fileName = `distributors_${Date.now()}.csv`;
             
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, fileName);
-            formData.append('caption', `📊 قائمة الموزعين (Excel XLS)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
+            formData.append('caption', `📊 قائمة الموزعين (Excel CSV)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
             
             const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await response.json();
-            if (result.ok) showNotification('✅ تم إرسال ملف Excel (XLS) بنجاح', 'success');
+            if (result.ok) showNotification('✅ تم إرسال ملف Excel بنجاح', 'success');
             else throw new Error(result.description);
         } catch (err) { showNotification(`❌ فشل الإرسال: ${err.message}`, 'error'); }
     }
