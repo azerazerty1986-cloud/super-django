@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - جلب الفهرس وجميع الرسائل</title>
+    <title>ناردو برو | جلب الفهرس وجميع الرسائل</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -35,6 +35,7 @@
         .badge-both { background: #6f42c1; color: white; }
         .links-list { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; margin-top: 10px; }
         .link-item { padding: 5px; border-bottom: 1px solid rgba(255,215,0,0.2); font-family: monospace; font-size: 12px; }
+        .gold { color: var(--gold); }
     </style>
 </head>
 <body>
@@ -47,7 +48,7 @@
             <button class="btn btn-info" onclick="fetchPinnedOnly()"><i class="fas fa-thumbtack"></i> جلب الفهرس فقط</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
         </div>
-        <div id="status" class="status-bar">✓ جاهز للعمل</div>
+        <div id="status" class="status-bar">✓ جاهز للعمل | البوت @azer1986_bot يجب أن يكون مشرفاً في القناة</div>
     </div>
 
     <div class="card">
@@ -82,7 +83,9 @@
         </div>
         <div style="overflow-x: auto;">
             <table>
-                <thead><tr><th>#</th><th>الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th><th>حذف</th></tr></thead>
+                <thead>
+                    <tr><th>#</th><th>الشركة</th><th>المسؤول</th><th>الهاتف</th><th>النوع</th><th>الولاية</th><th>حذف</th></tr>
+                </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
@@ -90,61 +93,155 @@
 </div>
 
 <script>
-    // ========== الإعدادات ==========
+    // ========== الإعدادات الثابتة ==========
     const BOT_TOKEN = '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA';
     const CHANNEL_ID = '-1003822964890';
     const KEYWORD = '📋 قائمة الموزعين حسب كل ولاية';
     
     let distributors = [];
-    let allLinks = [];
+    let extractedLinksArray = [];
 
+    // ========== دالة عرض الحالة ==========
+    function showStatus(msg) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = msg;
+        console.log(msg);
+    }
+
+    // ========== دالة الهروب من HTML ==========
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+    }
+
+    // ========== تحديث الجدول ==========
+    function updateTable() {
+        const tbody = document.getElementById('tableBody');
+        const filter = document.getElementById('stateFilter').value;
+        const filtered = filter === 'all' ? distributors : distributors.filter(d => d.state === filter);
+        
+        document.getElementById('countDisplay').innerHTML = `📊 العدد: ${filtered.length}`;
+        
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = filtered.map((d, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${escapeHtml(d.company)}</td>
+                <td>${escapeHtml(d.manager)}</td>
+                <td>${escapeHtml(d.phone)}</td>
+                <td><span class="badge badge-${d.type}">${d.type}</span></td>
+                <td>${escapeHtml(d.state)}</td>
+                <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${distributors.indexOf(d)})"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `).join('');
+        
+        updateFilterOptions();
+    }
+    
+    // ========== تحديث خيارات الفلتر ==========
+    function updateFilterOptions() {
+        const filterSelect = document.getElementById('stateFilter');
+        const currentVal = filterSelect.value;
+        const states = [...new Set(distributors.map(d => d.state))];
+        filterSelect.innerHTML = '<option value="all">كل الولايات</option>' + 
+            states.map(s => `<option value="${escapeHtml(s)}" ${s === currentVal ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+    }
+    
+    // ========== إضافة موزع ==========
+    function addDistributor() {
+        const company = document.getElementById('compName').value.trim();
+        const manager = document.getElementById('mgrName').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const type = document.getElementById('type').value;
+        const state = document.getElementById('state').value.trim();
+        
+        if (company && state) {
+            distributors.push({ company, manager, phone, type, state });
+            updateTable();
+            document.getElementById('compName').value = '';
+            document.getElementById('mgrName').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('state').value = '';
+            showStatus('✓ تم إضافة الموزع بنجاح');
+        } else {
+            alert('يرجى إدخال اسم الشركة والولاية');
+        }
+    }
+    
+    // ========== حذف موزع ==========
+    function deleteItem(index) {
+        distributors.splice(index, 1);
+        updateTable();
+        showStatus('✓ تم حذف الموزع');
+    }
+    
+    // ========== مسح الكل ==========
+    function clearAll() {
+        if (confirm('⚠️ هل أنت متأكد من مسح جميع البيانات؟')) {
+            distributors = [];
+            extractedLinksArray = [];
+            updateTable();
+            document.getElementById('extractedLinks').innerHTML = '<div class="link-item">لا توجد روابط بعد</div>';
+            showStatus('✓ تم مسح الكل');
+        }
+    }
+    
     // ========== 1. الدالة الرئيسية: تجلب الفهرس + كل الرسائل ==========
     async function fetchAllFromIndex() {
-        showStatus('⏳ جاري جلب رسالة الفهرس...');
-        allLinks = [];
-        
+        showStatus('⏳ الخطوة 1: جلب رسالة الفهرس المثبتة من القناة...');
         try {
-            // جلب الرسالة المثبتة (الفهرس)
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
-            
+
             if (!chatData.ok || !chatData.result.pinned_message) {
-                showStatus('❌ لا توجد رسالة مثبتة');
+                showStatus('❌ لا توجد رسالة مثبتة في القناة.');
+                return;
+            }
+
+            const indexMessageText = chatData.result.pinned_message.text || '';
+            showStatus('✅ تم جلب رسالة الفهرس. الخطوة 2: استخراج الروابط...');
+
+            // استخراج الروابط من النص
+            const extracted = extractMessageIds(indexMessageText);
+            
+            if (extracted.length === 0) {
+                showStatus('⚠️ لم يتم العثور على روابط في رسالة الفهرس');
                 return;
             }
             
-            const indexText = chatData.result.pinned_message.text || '';
-            showStatus('⏳ استخراج الروابط من الفهرس...');
+            showStatus(`⏳ تم العثور على ${extracted.length} رابط. الخطوة 3: جلب البيانات من كل رابط...`);
             
-            // استخراج المعرفات من النص
-            const messageIds = extractMessageIds(indexText);
-            showStatus(`⏳ تم العثور على ${messageIds.length} رابط، جاري الجلب...`);
-            
-            // جلب كل رسالة على حدة
             let totalLoaded = 0;
-            for (let i = 0; i < messageIds.length; i++) {
-                showStatus(`⏳ جلب الرسالة ${i+1}/${messageIds.length}...`);
-                const content = await fetchFromLink(messageIds[i].channelNum, messageIds[i].messageId);
-                if (content && content.includes(KEYWORD)) {
+            for (let i = 0; i < extracted.length; i++) {
+                showStatus(`⏳ جلب الرسالة ${i+1}/${extracted.length}...`);
+                const targetChatId = '-100' + extracted[i].channelNum;
+                const content = await fetchMessageContentAsBot(targetChatId, extracted[i].messageId);
+                
+                if (content) {
                     const count = parseDistributorsFromText(content);
                     totalLoaded += count;
                 }
             }
             
             if (totalLoaded > 0) {
-                showStatus(`✅ تم جلب ${totalLoaded} موزع من ${messageIds.length} رسالة`);
+                showStatus(`✅ تم بنجاح جلب ${totalLoaded} موزع من ${extracted.length} رسالة`);
             } else {
-                showStatus('⚠️ لم يتم العثور على بيانات');
+                showStatus('⚠️ تم جلب الروابط ولكن لم يتم العثور على بيانات موزعين');
             }
             
         } catch (error) {
-            showStatus('❌ خطأ: ' + error.message);
+            console.error(error);
+            showStatus(`❌ خطأ: ${error.message}`);
         }
     }
     
     // ========== 2. استخراج المعرفات من النص ==========
     function extractMessageIds(text) {
-        const ids = [];
+        extractedLinksArray = [];
         const regex = /https?:\/\/t\.me\/c\/(\d+)\/(\d+)/g;
         let match;
         
@@ -154,65 +251,55 @@
         while ((match = regex.exec(text)) !== null) {
             const channelNum = match[1];
             const messageId = parseInt(match[2]);
-            ids.push({ channelNum, messageId, fullUrl: match[0] });
+            extractedLinksArray.push({ channelNum, messageId, fullUrl: match[0] });
             
-            // عرض الرابط في الواجهة
             const linkDiv = document.createElement('div');
             linkDiv.className = 'link-item';
-            linkDiv.innerHTML = `📎 ${match[0]}`;
+            linkDiv.innerHTML = `🔗 ${match[0]}`;
             linksDiv.appendChild(linkDiv);
         }
         
-        if (ids.length === 0) {
+        if (extractedLinksArray.length === 0) {
             linksDiv.innerHTML = '<div class="link-item">⚠️ لم يتم العثور على روابط</div>';
         } else {
-            linksDiv.innerHTML = `<div class="link-item" style="color: var(--gold);">✓ تم العثور على ${ids.length} رابط</div>` + linksDiv.innerHTML;
+            linksDiv.innerHTML = `<div class="link-item" style="color: var(--gold);">✓ تم العثور على ${extractedLinksArray.length} رابط</div>` + linksDiv.innerHTML;
         }
         
-        return ids;
+        return extractedLinksArray;
     }
     
-    // ========== 3. جلب من رابط محدد ==========
-    async function fetchFromLink(channelNum, messageId) {
+    // ========== 3. جلب محتوى رسالة باستخدام البوت (الطريقة الصحيحة) ==========
+    async function fetchMessageContentAsBot(chatId, messageId) {
         try {
-            // استخدام forwardMessage (البوت يحتاج صلاحية)
-            const targetChatId = '-100' + channelNum;
-            
-            const botRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
-            const botInfo = await botRes.json();
-            const botId = botInfo.result.id;
-            
-            const forwardRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
+            // جلب معرف البوت الخاص
+            const botInfoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
+            const botInfo = await botInfoRes.json();
+            const botPrivateChatId = botInfo.result.id;
+
+            // توجيه الرسالة إلى البوت نفسه
+            const forwardResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: botId,
-                    from_chat_id: targetChatId,
-                    message_id: messageId
+                    chat_id: botPrivateChatId,
+                    from_chat_id: chatId,
+                    message_id: messageId,
+                    disable_notification: true
                 })
             });
-            
-            const forwardData = await forwardRes.json();
-            
+
+            const forwardData = await forwardResponse.json();
+
             if (forwardData.ok) {
-                return forwardData.result.text || forwardData.result.caption || '';
+                const text = forwardData.result.text || forwardData.result.caption || '';
+                return text;
+            } else {
+                console.error('فشل توجيه الرسالة:', forwardData);
+                return null;
             }
-            
-            // طريقة بديلة: جلب مباشر
-            const webUrl = `https://t.me/c/${channelNum}/${messageId}?embed=1`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(webUrl)}`;
-            const response = await fetch(proxyUrl);
-            const html = await response.text();
-            
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const messageDiv = doc.querySelector('.tgme_widget_message_text');
-            
-            return messageDiv ? messageDiv.innerText : '';
-            
         } catch (error) {
-            console.error('fetchFromLink error:', error);
-            return '';
+            console.error('خطأ في جلب محتوى الرسالة:', error);
+            return null;
         }
     }
     
@@ -234,7 +321,7 @@
                 continue;
             }
             
-            // البحث عن بيانات الموزع
+            // البحث عن بيانات الموزع (تبدأ بـ •)
             if (line.startsWith('•')) {
                 const companyMatch = line.match(/•\s+(.+?)\s*\((.+?)\)/);
                 if (companyMatch && currentState) {
@@ -279,7 +366,7 @@
     
     // ========== 5. جلب الفهرس فقط (بدون متابعة الروابط) ==========
     async function fetchPinnedOnly() {
-        showStatus('⏳ جلب رسالة الفهرس...');
+        showStatus('⏳ جلب رسالة الفهرس المثبتة...');
         try {
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
@@ -287,96 +374,24 @@
             if (chatData.ok && chatData.result.pinned_message) {
                 const indexText = chatData.result.pinned_message.text || '';
                 showStatus('✓ تم جلب الفهرس، جاري استخراج الروابط...');
-                extractMessageIds(indexText);
-                showStatus(`✅ تم العثور على ${allLinks.length} رابط في الفهرس`);
+                const links = extractMessageIds(indexText);
+                showStatus(`✅ تم العثور على ${links.length} رابط في الفهرس`);
             } else {
-                showStatus('❌ لا توجد رسالة مثبتة');
+                showStatus('❌ لا توجد رسالة مثبتة في القناة');
             }
         } catch (error) {
-            showStatus('❌ خطأ: ' + error.message);
+            showStatus(`❌ خطأ: ${error.message}`);
         }
     }
     
-    // ========== دوال عرض الجدول ==========
-    function updateTable() {
-        const tbody = document.getElementById('tableBody');
-        const filter = document.getElementById('stateFilter').value;
-        const filtered = filter === 'all' ? distributors : distributors.filter(d => d.state === filter);
-        
-        document.getElementById('countDisplay').innerHTML = `📊 العدد: ${filtered.length}`;
-        
-        if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات</td></tr>';
+    // ========== تصدير البيانات إلى التليجرام ==========
+    async function exportToTelegram() {
+        if (distributors.length === 0) {
+            alert('لا توجد بيانات للتصدير');
             return;
         }
         
-        tbody.innerHTML = filtered.map((d, i) => `
-            <tr>
-                <td>${i+1}</td>
-                <td>${escapeHtml(d.company)}</td>
-                <td>${escapeHtml(d.manager)}</td>
-                <td>${escapeHtml(d.phone)}</td>
-                <td><span class="badge badge-${d.type}">${d.type}</span></td>
-                <td>${escapeHtml(d.state)}</td>
-                <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${distributors.indexOf(d)})"><i class="fas fa-trash"></i></button></td>
-            </tr>
-        `).join('');
-        
-        updateFilterOptions();
-    }
-    
-    function updateFilterOptions() {
-        const filterSelect = document.getElementById('stateFilter');
-        const currentVal = filterSelect.value;
-        const states = [...new Set(distributors.map(d => d.state))];
-        filterSelect.innerHTML = '<option value="all">كل الولايات</option>' + 
-            states.map(s => `<option value="${escapeHtml(s)}" ${s === currentVal ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
-    }
-    
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-    }
-    
-    function addDistributor() {
-        const company = document.getElementById('compName').value.trim();
-        const manager = document.getElementById('mgrName').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const type = document.getElementById('type').value;
-        const state = document.getElementById('state').value.trim();
-        
-        if (company && state) {
-            distributors.push({ company, manager, phone, type, state });
-            updateTable();
-            document.getElementById('compName').value = '';
-            document.getElementById('mgrName').value = '';
-            document.getElementById('phone').value = '';
-            document.getElementById('state').value = '';
-            showStatus('✓ تم الإضافة');
-        } else {
-            alert('يرجى إدخال اسم الشركة والولاية');
-        }
-    }
-    
-    function deleteItem(index) {
-        distributors.splice(index, 1);
-        updateTable();
-        showStatus('✓ تم الحذف');
-    }
-    
-    function clearAll() {
-        if (confirm('مسح جميع البيانات؟')) {
-            distributors = [];
-            allLinks = [];
-            updateTable();
-            document.getElementById('extractedLinks').innerHTML = '<div class="link-item">لا توجد روابط بعد</div>';
-            showStatus('✓ تم مسح الكل');
-        }
-    }
-    
-    async function exportToTelegram() {
-        if (distributors.length === 0) return alert('لا توجد بيانات');
-        showStatus('⏳ جاري التصدير...');
+        showStatus('⏳ جاري التصدير إلى التليجرام...');
         
         let text = `${KEYWORD}\n━━━━━━━━━━━━━━━━━━\n`;
         const states = [...new Set(distributors.map(d => d.state))];
@@ -385,7 +400,8 @@
             const items = distributors.filter(d => d.state === state);
             text += `📍 ولاية ${state} - العدد: ${items.length}\n`;
             items.forEach(d => {
-                text += `• ${d.company} (${d.type})\n  👤 ${d.manager || 'غير محدد'} | 📞 ${d.phone || 'غير محدد'}\n`;
+                text += `• ${d.company} (${d.type})\n`;
+                text += `  👤 ${d.manager || 'غير محدد'} | 📞 ${d.phone || 'غير محدد'}\n`;
             });
             text += `\n`;
         });
@@ -397,17 +413,19 @@
                 body: JSON.stringify({ chat_id: CHANNEL_ID, text: text })
             });
             const data = await res.json();
-            if (data.ok) showStatus('✅ تم الإرسال');
-            else showStatus('❌ فشل الإرسال');
-        } catch(e) { showStatus('❌ خطأ'); }
+            if (data.ok) {
+                showStatus('✅ تم إرسال البيانات بنجاح إلى القناة');
+            } else {
+                showStatus('❌ فشل الإرسال: ' + (data.description || 'خطأ غير معروف'));
+            }
+        } catch(e) { 
+            showStatus('❌ خطأ في الاتصال'); 
+        }
     }
-    
-    function showStatus(msg) {
-        document.getElementById('status').innerHTML = msg;
-    }
-    
-    // تهيئة
+
+    // ========== تهيئة الصفحة ==========
     updateTable();
+    showStatus('✓ النظام جاهز | تأكد من أن البوت @azer1986_bot مشرف في القناة');
 </script>
 </body>
 </html>
