@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو - نظام إدارة الموزعين مع Telegram</title>
@@ -302,8 +300,8 @@
             </div>
             <div class="send-option" onclick="sendExcelToTelegram()">
                 <i class="fas fa-file-excel"></i>
-                <h3>ملف Excel</h3>
-                <p>إرسال قائمة الموزعين بصيغة جدول إكسل</p>
+                <h3>ملف Excel (XLS)</h3>
+                <p>إرسال قائمة الموزعين بصيغة XLS المتوافقة</p>
             </div>
             <div class="send-option" onclick="sendPDFToTelegram()">
                 <i class="fas fa-file-pdf"></i>
@@ -571,22 +569,26 @@
 
     async function sendExcelToTelegram() {
         closeSendModal();
-        showNotification('📤 جاري إرسال ملف Excel...', 'info');
+        showNotification('📤 جاري إرسال ملف Excel (XLS)...', 'info');
         try {
             const data = generateExcelData();
             const worksheet = XLSX.utils.json_to_sheet(data);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الموزعين");
-            const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const fileName = `distributors_${Date.now()}.xlsx`;
+            
+            // استخدام صيغة biff8 لإنتاج ملف .xls حقيقي
+            const wbout = XLSX.write(workbook, { bookType: 'biff8', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/vnd.ms-excel' });
+            const fileName = `distributors_${Date.now()}.xls`;
+            
             const formData = new FormData();
             formData.append('chat_id', TELEGRAM.channelId);
             formData.append('document', blob, fileName);
-            formData.append('caption', `📊 قائمة الموزعين (Excel)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
+            formData.append('caption', `📊 قائمة الموزعين (Excel XLS)\n📅 ${new Date().toLocaleDateString('ar-SA')}`);
+            
             const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await response.json();
-            if (result.ok) showNotification('✅ تم إرسال ملف Excel بنجاح', 'success');
+            if (result.ok) showNotification('✅ تم إرسال ملف Excel (XLS) بنجاح', 'success');
             else throw new Error(result.description);
         } catch (err) { showNotification(`❌ فشل الإرسال: ${err.message}`, 'error'); }
     }
@@ -629,3 +631,5 @@
 </script>
 </body>
 </html>
+
+
