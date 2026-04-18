@@ -1,7 +1,9 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - نظام الفهرس</title>
+    <title>ناردو برو - نظام إدارة الموزعين</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -30,28 +32,44 @@
         .badge-delivery { background: #28a745; color: white; }
         .badge-distributor { background: #007bff; color: white; }
         .badge-both { background: #6f42c1; color: white; }
-        .link-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; margin: 10px 0; direction: ltr; text-align: left; font-family: monospace; }
+        .link-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; margin: 10px 0; direction: ltr; text-align: left; font-family: monospace; font-size: 12px; word-break: break-all; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="card">
-        <h1><i class="fas fa-shuttle-van"></i> ناردو برو | نظام الفهرس</h1>
+        <h1><i class="fas fa-shuttle-van"></i> ناردو برو | نظام إدارة الموزعين</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-            <button class="btn btn-gold" onclick="fetchNorth()"><i class="fas fa-arrow-up"></i> جلب الشمال</button>
+            <button class="btn btn-gold" onclick="fetchDistributors()"><i class="fas fa-download"></i> جلب البيانات</button>
             <button class="btn btn-info" onclick="testConnection()"><i class="fas fa-vial"></i> اختبار الاتصال</button>
+            <button class="btn btn-success" onclick="exportData()"><i class="fas fa-upload"></i> تصدير للقناة</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
         </div>
-        <div id="status" class="status-bar">جاهز للعمل</div>
+        <div id="status" class="status-bar">✅ النظام جاهز - اضغط "جلب البيانات"</div>
     </div>
 
     <div class="card">
-        <h2><i class="fas fa-link"></i> رابط الفهرس</h2>
+        <h2><i class="fas fa-info-circle"></i> معلومات الاتصال</h2>
         <div class="link-box">
-            🔼 الشمال: https://t.me/c/3822964890/3619
+            <i class="fas fa-key"></i> التوكن: 8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA<br>
+            <i class="fas fa-hashtag"></i> معرف القناة: -1003822964890<br>
+            <i class="fas fa-link"></i> رابط الرسالة: https://t.me/c/3822964890/3619
         </div>
-        <div style="margin-top: 10px; padding: 10px; background: rgba(255,0,0,0.2); border-radius: 10px;">
-            <i class="fas fa-info-circle"></i> تأكد من أن البوت مشرف في القناة مع صلاحية "قراءة الرسائل"
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-plus-circle"></i> إضافة موزع جديد</h2>
+        <div class="input-group">
+            <input type="text" id="compName" placeholder="اسم الموزع">
+            <input type="text" id="mgrName" placeholder="اسم المسؤول">
+            <input type="text" id="phone" placeholder="رقم الهاتف">
+            <select id="type">
+                <option value="delivery">توصيل</option>
+                <option value="distributor">موزع</option>
+                <option value="both">كليهما</option>
+            </select>
+            <input type="text" id="state" placeholder="الولاية">
+            <button class="btn btn-gold" onclick="addDistributor()">إضافة للجدول</button>
         </div>
     </div>
 
@@ -63,6 +81,7 @@
                 <option value="all">كل الولايات</option>
             </select>
             <span id="countDisplay" style="margin-right: auto; color: var(--gold);">العدد: 0</span>
+            <button class="btn btn-info" onclick="exportToExcel()" style="padding: 5px 10px;"><i class="fas fa-file-excel"></i> تصدير Excel</button>
         </div>
         <div style="overflow-x: auto;">
             <table>
@@ -77,141 +96,131 @@
                         <th>إجراء</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody"></tbody>
+                <tbody id="tableBody">
+                    <tr><td colspan="7" style="text-align: center;">لا توجد بيانات - اضغط "جلب البيانات"</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
 
 <script>
+    // ========== إعدادات تليجرام ==========
     const BOT_TOKEN = '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA';
+    const CHANNEL_ID = '-1003822964890';
+    const MESSAGE_ID = 3619;
+    const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
     
-    // الرابط الجديد للشمال
-    const NORTH_LINK = {
-        url: 'https://t.me/c/3822964890/3619',
-        chatId: '-1003822964890',  // أضفنا -100 قبل المعرف
-        messageId: 3619
-    };
-    
+    // ========== المتغيرات العامة ==========
     let distributors = [];
+    
+    // ========== الدوال الرئيسية ==========
     
     // اختبار الاتصال بالقناة
     async function testConnection() {
-        showStatus('⏳ جاري اختبار الاتصال...');
+        showStatus('⏳ جاري اختبار الاتصال...', 'info');
         
         try {
-            // اختبار 1: جلب معلومات القناة
-            const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${NORTH_LINK.chatId}`);
+            // اختبار جلب معلومات القناة
+            const chatRes = await fetch(`${API_URL}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
             
             if (chatData.ok) {
                 console.log('✅ القناة:', chatData.result.title);
-                showStatus(`✅ القناة: ${chatData.result.title}`);
+                showStatus(`✅ القناة: ${chatData.result.title}`, 'success');
             } else {
-                console.log('❌ خطأ في القناة:', chatData.description);
-                showStatus(`❌ خطأ في القناة: ${chatData.description}`);
+                showStatus(`❌ خطأ في القناة: ${chatData.description}`, 'error');
                 return;
             }
             
-            // اختبار 2: جلب الرسالة
-            const msgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMessage?chat_id=${NORTH_LINK.chatId}&message_id=${NORTH_LINK.messageId}`);
+            // اختبار جلب الرسالة
+            const msgRes = await fetch(`${API_URL}/getMessage?chat_id=${CHANNEL_ID}&message_id=${MESSAGE_ID}`);
             const msgData = await msgRes.json();
             
             if (msgData.ok) {
-                console.log('✅ الرسالة موجودة');
-                console.log('المحتوى:', msgData.result.text);
-                showStatus(`✅ تم العثور على الرسالة - طول النص: ${msgData.result.text.length} حرف`);
+                const text = msgData.result.text;
+                console.log('✅ محتوى الرسالة:', text);
+                showStatus(`✅ تم العثور على الرسالة - طول النص: ${text.length} حرف`, 'success');
                 
-                // عرض أول 200 حرف من الرسالة
-                const preview = msgData.result.text.substring(0, 200);
+                // معاينة أول 100 حرف
+                const preview = text.substring(0, 100);
                 document.getElementById('status').innerHTML += `<br>📄 معاينة: ${preview}...`;
             } else {
-                console.log('❌ خطأ في الرسالة:', msgData.description);
-                showStatus(`❌ خطأ في الرسالة: ${msgData.description}`);
+                showStatus(`❌ خطأ في الرسالة: ${msgData.description}`, 'error');
             }
             
         } catch (e) {
-            showStatus(`❌ خطأ: ${e.message}`);
+            showStatus(`❌ خطأ: ${e.message}`, 'error');
         }
     }
     
-    // جلب موزعين الشمال
-    async function fetchNorth() {
-        showStatus('⏳ جاري جلب موزعين الشمال...');
+    // جلب البيانات من القناة
+    async function fetchDistributors() {
+        showStatus('⏳ جاري جلب البيانات من القناة...', 'info');
         
         try {
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/getMessage?chat_id=${NORTH_LINK.chatId}&message_id=${NORTH_LINK.messageId}`;
+            const url = `${API_URL}/getMessage?chat_id=${CHANNEL_ID}&message_id=${MESSAGE_ID}`;
             const res = await fetch(url);
             const data = await res.json();
             
-            if (data.ok && data.result.text) {
-                const text = data.result.text;
-                console.log('نص الرسالة:', text);
-                
-                const newDistributors = parseDistributorsFromText(text);
-                
-                if (newDistributors.length > 0) {
-                    distributors = newDistributors;
-                    updateTable();
-                    showStatus(`✅ تم جلب ${newDistributors.length} موزع من الشمال`);
-                } else {
-                    showStatus(`⚠️ لم يتم العثور على بيانات في الرسالة`);
-                    showStatus(`📄 نص الرسالة: ${text.substring(0, 100)}...`);
-                }
-            } else {
-                showStatus(`❌ فشل جلب الرسالة: ${data.description || 'خطأ غير معروف'}`);
+            if (!data.ok) {
+                showStatus(`❌ فشل جلب البيانات: ${data.description}`, 'error');
+                return;
             }
+            
+            const text = data.result.text;
+            console.log('نص الرسالة:', text);
+            
+            // تحليل النص
+            const newDistributors = parseDistributors(text);
+            
+            if (newDistributors.length > 0) {
+                distributors = newDistributors;
+                updateTable();
+                showStatus(`✅ تم جلب ${newDistributors.length} موزع بنجاح`, 'success');
+            } else {
+                showStatus(`⚠️ لم يتم العثور على بيانات في الرسالة`, 'warning');
+                showStatus(`📄 تأكد من تنسيق البيانات بالشكل: الولاية|الاسم|الهاتف|النوع`, 'info');
+            }
+            
         } catch (e) {
-            showStatus(`❌ خطأ: ${e.message}`);
+            showStatus(`❌ خطأ: ${e.message}`, 'error');
         }
     }
     
-    // تحويل النص إلى مصفوفة موزعين
-    function parseDistributorsFromText(text) {
+    // تحليل النص إلى بيانات
+    function parseDistributors(text) {
         const result = [];
         const lines = text.split('\n');
         
         for (let line of lines) {
+            line = line.trim();
+            
             // تخطي السطور الفارغة والعناوين
-            if (line.startsWith('📋') || line.startsWith('━━') || line.startsWith('📍') || line.startsWith('طلبات') || line.trim() === '') {
+            if (line === '' || line.startsWith('📋') || line.startsWith('━━') || line.startsWith('قائمة') || line.startsWith('طلبات')) {
                 continue;
             }
             
-            // التنسيق: اسم|مسؤول|هاتف|نوع|ولاية
+            // التنسيق المطلوب: الولاية|الاسم|الهاتف|النوع
             if (line.includes('|')) {
                 const parts = line.split('|');
-                if (parts.length >= 3) {
+                if (parts.length >= 4) {
                     result.push({
-                        company: parts[0]?.trim() || '',
-                        manager: parts[1]?.trim() || '',
+                        state: parts[0].trim(),
+                        company: parts[1].trim(),
+                        manager: parts[2]?.trim() || '',
                         phone: parts[2]?.trim() || '',
-                        type: parts[3]?.trim() || 'موزع',
-                        state: parts[4]?.trim() || 'الشمال'
+                        type: parts[3]?.trim() || 'delivery'
                     });
-                }
-            }
-            // التنسيق: اسم - هاتف - ولاية
-            else if (line.includes('-')) {
-                const parts = line.split('-');
-                if (parts.length >= 2) {
+                } else if (parts.length >= 3) {
                     result.push({
-                        company: parts[0]?.trim() || '',
+                        state: parts[0].trim(),
+                        company: parts[1].trim(),
                         manager: '',
-                        phone: parts[1]?.trim() || '',
-                        type: 'موزع',
-                        state: parts[2]?.trim() || 'الشمال'
+                        phone: parts[2]?.trim() || '',
+                        type: 'delivery'
                     });
                 }
-            }
-            // إذا كان السطر يحتوي على نص فقط
-            else if (line.trim().length > 0 && !line.includes('http')) {
-                result.push({
-                    company: line.trim(),
-                    manager: '',
-                    phone: '',
-                    type: 'موزع',
-                    state: 'الشمال'
-                });
             }
         }
         
@@ -228,56 +237,172 @@
         document.getElementById('countDisplay').innerText = `العدد: ${filtered.length}`;
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات حالياً</td><tr>';
+            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات - اضغط "جلب البيانات"</td></tr>';
             return;
         }
         
         tbody.innerHTML = filtered.map((d, i) => `
             <tr>
                 <td>${i+1}</td>
-                <td>${d.company || '-'}</td>
-                <td>${d.manager || '-'}</td>
-                <td>${d.phone || '-'}</td>
-                <td><span class="badge badge-${d.type === 'موزع' ? 'distributor' : (d.type === 'توصيل' ? 'delivery' : 'both')}">${d.type || 'موزع'}</span></td>
-                <td>${d.state || '-'}</td>
-                <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${i})"><i class="fas fa-trash"></i></button></td>
+                <td>${escapeHtml(d.company) || '-'}</td>
+                <td>${escapeHtml(d.manager) || '-'}</td>
+                <td>${escapeHtml(d.phone) || '-'}</td>
+                <td><span class="badge badge-${d.type === 'delivery' ? 'delivery' : (d.type === 'distributor' ? 'distributor' : 'both')}">${d.type === 'delivery' ? 'توصيل' : (d.type === 'distributor' ? 'موزع' : 'كليهما')}</span></td>
+                <td>${escapeHtml(d.state) || '-'}</td>
+                <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${distributors.indexOf(d)})"><i class="fas fa-trash"></i></button></td>
             </tr>
         `).join('');
         
         updateFilterOptions();
     }
     
+    // تحديث خيارات الفلتر
     function updateFilterOptions() {
         const filterSelect = document.getElementById('stateFilter');
         const currentVal = filterSelect.value;
         const states = [...new Set(distributors.map(d => d.state))];
         
         filterSelect.innerHTML = '<option value="all">كل الولايات</option>' + 
-            states.map(s => `<option value="${s}" ${s === currentVal ? 'selected' : ''}>${s}</option>`).join('');
+            states.map(s => `<option value="${s}" ${s === currentVal ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
     }
     
+    // إضافة موزع
+    function addDistributor() {
+        const company = document.getElementById('compName').value;
+        const manager = document.getElementById('mgrName').value;
+        const phone = document.getElementById('phone').value;
+        const type = document.getElementById('type').value;
+        const state = document.getElementById('state').value;
+        
+        if (company && state && phone) {
+            distributors.push({ company, manager, phone, type, state });
+            updateTable();
+            
+            // تفريغ الحقول
+            document.getElementById('compName').value = '';
+            document.getElementById('mgrName').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('state').value = '';
+            
+            showStatus('✅ تم إضافة الموزع بنجاح', 'success');
+        } else {
+            showStatus('⚠️ يرجى إدخال اسم الموزع والولاية والهاتف', 'warning');
+        }
+    }
+    
+    // حذف موزع
     function deleteItem(index) {
         distributors.splice(index, 1);
         updateTable();
-        showStatus('🗑️ تم حذف الموزع');
+        showStatus('🗑️ تم حذف الموزع', 'success');
     }
     
+    // مسح الكل
     function clearAll() {
         if (confirm('هل أنت متأكد من مسح جميع البيانات؟')) {
             distributors = [];
             updateTable();
-            showStatus('🗑️ تم مسح الكل');
+            showStatus('🗑️ تم مسح جميع البيانات', 'success');
         }
     }
     
-    function showStatus(msg) {
-        document.getElementById('status').innerHTML = msg;
-        console.log(msg);
+    // تصدير البيانات إلى القناة
+    async function exportData() {
+        if (distributors.length === 0) {
+            showStatus('⚠️ لا توجد بيانات للتصدير', 'warning');
+            return;
+        }
+        
+        showStatus('⏳ جاري تصدير البيانات...', 'info');
+        
+        // تجميع البيانات حسب الولاية
+        const grouped = {};
+        distributors.forEach(d => {
+            if (!grouped[d.state]) grouped[d.state] = [];
+            grouped[d.state].push(d);
+        });
+        
+        // إنشاء نص منسق
+        let message = `📋 قائمة الموزعين حسب الولاية\n━━━━━━━━━━━━━━━━━━\n\n`;
+        
+        for (const [state, items] of Object.entries(grouped)) {
+            message += `📍 ولاية ${state} - العدد: ${items.length}\n`;
+            items.forEach(item => {
+                message += `• ${item.company} | ${item.type} | ${item.phone}\n`;
+            });
+            message += `\n`;
+        }
+        
+        message += `📌 آخر تحديث: ${new Date().toLocaleString()}`;
+        
+        try {
+            // إرسال الرسالة
+            const res = await fetch(`${API_URL}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHANNEL_ID,
+                    text: message
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.ok) {
+                showStatus('✅ تم تصدير البيانات إلى القناة بنجاح', 'success');
+            } else {
+                showStatus(`❌ فشل التصدير: ${data.description}`, 'error');
+            }
+        } catch (e) {
+            showStatus(`❌ خطأ: ${e.message}`, 'error');
+        }
     }
     
-    updateTable();
-    showStatus('✅ النظام جاهز - اضغط "اختبار الاتصال" أولاً');
+    // تصدير إلى Excel
+    function exportToExcel() {
+        if (distributors.length === 0) {
+            showStatus('⚠️ لا توجد بيانات للتصدير', 'warning');
+            return;
+        }
+        
+        let csv = "الاسم,المسؤول,الهاتف,النوع,الولاية\n";
+        distributors.forEach(d => {
+            csv += `"${d.company}","${d.manager}","${d.phone}","${d.type}","${d.state}"\n`;
+        });
+        
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute("download", "distributors.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        showStatus('✅ تم تصدير البيانات إلى ملف Excel', 'success');
+    }
+    
+    // عرض الحالة
+    function showStatus(msg, type = 'info') {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = msg;
+        console.log(`[${type}] ${msg}`);
+    }
+    
+    // ترميز النص
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ========== تشغيل أولي ==========
+    console.log('✅ النظام جاهز');
+    console.log('التوكن:', BOT_TOKEN);
+    console.log('معرف القناة:', CHANNEL_ID);
+    console.log('معرف الرسالة:', MESSAGE_ID);
 </script>
 </body>
 </html>
-
