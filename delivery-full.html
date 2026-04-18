@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو | جلب الفهرس وجميع الرسائل (v4)</title>
+    <title>ناردو برو | جلب الفهرس وجميع الرسائل (v5 - خاص)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -253,13 +251,16 @@
     // ========== 2. استخراج المعرفات من النص (يدعم الروابط العامة والخاصة) ==========
     function extractMessageIds(text) {
         extractedLinksArray = [];
+        // Regex 1: الروابط الخاصة t.me/c/123456/789
         const privateRegex = /https?:\/\/t\.me\/c\/(\d+)\/(\d+)/g;
+        // Regex 2: الروابط العامة t.me/username/789
         const publicRegex = /https?:\/\/t\.me\/([a-zA-Z0-9_]+)\/(\d+)/g;
         
         let match;
         const linksDiv = document.getElementById('extractedLinks');
         linksDiv.innerHTML = '';
         
+        // استخراج الروابط الخاصة
         while ((match = privateRegex.exec(text)) !== null) {
             const chatId = '-100' + match[1];
             const messageId = parseInt(match[2]);
@@ -267,6 +268,7 @@
             addLinkToUI(match[0]);
         }
         
+        // استخراج الروابط العامة
         while ((match = publicRegex.exec(text)) !== null) {
             if (!isNaN(match[1])) continue;
             const chatId = '@' + match[1];
@@ -286,11 +288,10 @@
         return extractedLinksArray;
     }
     
-    // ========== 3. جلب محتوى رسالة باستخدام البوت (v4: التوجيه للقناة) ==========
+    // ========== 3. جلب محتوى رسالة باستخدام البوت (v5: التوجيه للقناة الخاصة) ==========
     async function fetchMessageContentAsBot(chatId, messageId) {
         try {
-            // v4: التوجيه إلى القناة نفسها (CHANNEL_ID) بدلاً من البوت
-            // هذا يحل مشكلة "bots can't send messages to bots"
+            // v5: التوجيه إلى القناة الخاصة (CHANNEL_ID)
             const forwardResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -307,7 +308,7 @@
             if (forwardData.ok) {
                 const text = forwardData.result.text || forwardData.result.caption || '';
                 
-                // حذف الرسالة الموجهة فوراً للحفاظ على نظافة القناة
+                // حذف الرسالة الموجهة فوراً
                 fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
