@@ -1,9 +1,7 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو | جلب الفهرس وجميع الرسائل (v3)</title>
+    <title>ناردو برو | جلب الفهرس وجميع الرسائل (v4)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -253,16 +251,13 @@
     // ========== 2. استخراج المعرفات من النص (يدعم الروابط العامة والخاصة) ==========
     function extractMessageIds(text) {
         extractedLinksArray = [];
-        // Regex 1: الروابط الخاصة t.me/c/123456/789
         const privateRegex = /https?:\/\/t\.me\/c\/(\d+)\/(\d+)/g;
-        // Regex 2: الروابط العامة t.me/username/789
         const publicRegex = /https?:\/\/t\.me\/([a-zA-Z0-9_]+)\/(\d+)/g;
         
         let match;
         const linksDiv = document.getElementById('extractedLinks');
         linksDiv.innerHTML = '';
         
-        // استخراج الروابط الخاصة
         while ((match = privateRegex.exec(text)) !== null) {
             const chatId = '-100' + match[1];
             const messageId = parseInt(match[2]);
@@ -270,10 +265,8 @@
             addLinkToUI(match[0]);
         }
         
-        // استخراج الروابط العامة
         while ((match = publicRegex.exec(text)) !== null) {
-            if (!isNaN(match[1])) continue; // تخطي إذا كان رقماً (تم التقاطه بالخاص)
-            
+            if (!isNaN(match[1])) continue;
             const chatId = '@' + match[1];
             const messageId = parseInt(match[2]);
             extractedLinksArray.push({ chatId, messageId, fullUrl: match[0] });
@@ -291,24 +284,16 @@
         return extractedLinksArray;
     }
     
-    // ========== 3. جلب محتوى رسالة باستخدام البوت (محسّن) ==========
+    // ========== 3. جلب محتوى رسالة باستخدام البوت (v4: التوجيه للقناة) ==========
     async function fetchMessageContentAsBot(chatId, messageId) {
         try {
-            // محاولة جلب معلومات البوت أولاً للتأكد من الاتصال
-            const botInfoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
-            const botInfo = await botInfoRes.json();
-            if (!botInfo.ok) {
-                logDebug("خطأ: توكن البوت غير صحيح");
-                return null;
-            }
-            const botPrivateChatId = botInfo.result.id;
-
-            // استخدام forwardMessage لجلب المحتوى
+            // v4: التوجيه إلى القناة نفسها (CHANNEL_ID) بدلاً من البوت
+            // هذا يحل مشكلة "bots can't send messages to bots"
             const forwardResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: botPrivateChatId,
+                    chat_id: CHANNEL_ID,
                     from_chat_id: chatId,
                     message_id: messageId,
                     disable_notification: true
@@ -319,25 +304,20 @@
 
             if (forwardData.ok) {
                 const text = forwardData.result.text || forwardData.result.caption || '';
-                return text;
-            } else {
-                logDebug(`فشل التوجيه من ${chatId}: ${forwardData.description}`);
-                // محاولة بديلة لروابط القنوات العامة: copyMessage
-                const copyResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/copyMessage`, {
+                
+                // حذف الرسالة الموجهة فوراً للحفاظ على نظافة القناة
+                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/deleteMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        chat_id: botPrivateChatId,
-                        from_chat_id: chatId,
-                        message_id: messageId
+                        chat_id: CHANNEL_ID,
+                        message_id: forwardData.result.message_id
                     })
                 });
-                const copyData = await copyResponse.json();
-                if (copyData.ok) {
-                    // في حال copyMessage، نحتاج لجلب الرسالة الأخيرة من البوت (صعب برمجياً هنا)
-                    // لذا نكتفي بـ forwardMessage كطريقة أساسية
-                    logDebug("تم نسخ الرسالة بنجاح ولكن لا يمكن قراءة النص مباشرة من copyMessage");
-                }
+                
+                return text;
+            } else {
+                logDebug(`فشل التوجيه من ${chatId}: ${forwardData.description}`);
                 return null;
             }
         } catch (error) {
@@ -346,7 +326,7 @@
         }
     }
     
-    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن جداً) ==========
+    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن) ==========
     function parseDistributorsFromText(text) {
         const newDistributors = [];
         const lines = text.split('\n');
@@ -358,7 +338,6 @@
             let line = lines[i].trim();
             if (!line) continue;
             
-            // البحث عن الولاية
             if (line.includes('📍')) {
                 let stateMatch = line.match(/📍\s*ولاية\s+(.+?)(?:\s+-|$)/) || line.match(/📍\s*(.+?)(?:\s+-|$)/);
                 if (stateMatch) {
@@ -368,9 +347,7 @@
                 continue;
             }
             
-            // البحث عن الموزع
             if (line.startsWith('•')) {
-                // استخراج اسم الشركة والنوع: • شركة الأمان (delivery)
                 const companyMatch = line.match(/•\s+(.+?)\s*\((.+?)\)/) || line.match(/•\s+(.+)/);
                 if (companyMatch && currentState) {
                     const company = companyMatch[1].trim();
@@ -379,22 +356,16 @@
                     let manager = 'غير محدد';
                     let phone = 'غير محدد';
                     
-                    // فحص الأسطر التالية للبحث عن المدير والهاتف
                     for (let j = 1; j <= 2; j++) {
                         if (i + j < lines.length) {
                             const nextLine = lines[i + j].trim();
-                            if (nextLine.startsWith('•') || nextLine.includes('📍')) break; // وصلنا لموزع آخر أو ولاية أخرى
+                            if (nextLine.startsWith('•') || nextLine.includes('📍')) break;
                             
                             let mMatch = nextLine.match(/👤\s*(.+?)(?:\s*\||$)/);
                             let pMatch = nextLine.match(/📞\s*(.+)/);
                             
                             if (mMatch) manager = mMatch[1].trim();
                             if (pMatch) phone = pMatch[1].trim();
-                            
-                            // إذا وجدنا أي منهما، نعتبر السطر قد استهلك
-                            if (mMatch || pMatch) {
-                                // لا نزيد i هنا مباشرة لتجنب مشاكل التكرار، سنعتمد على j
-                            }
                         }
                     }
                     
@@ -411,8 +382,6 @@
             }
             updateTable();
             logDebug(`تمت إضافة ${newDistributors.length} موزع للجدول`);
-        } else {
-            logDebug("لم يتم العثور على أي موزع يطابق التنسيق في هذا النص");
         }
         return newDistributors.length;
     }
