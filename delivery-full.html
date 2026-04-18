@@ -1,7 +1,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو - نظام الفهرس الاحترافي</title>
+    <title>ناردو برو - نظام الجهات والفهرس</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -17,6 +17,7 @@
         .btn-info { background: #17a2b8; color: white; }
         .btn-danger { background: #dc3545; color: white; }
         .btn-success { background: #28a745; color: white; }
+        .btn-primary { background: #007bff; color: white; }
         .input-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         input, select { padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 215, 0, 0.3); background: rgba(0,0,0,0.2); color: white; font-family: 'Cairo'; width: 100%; }
         input:focus { border-color: var(--gold); outline: none; }
@@ -30,20 +31,34 @@
         .badge-delivery { background: #28a745; color: white; }
         .badge-distributor { background: #007bff; color: white; }
         .badge-both { background: #6f42c1; color: white; }
-        .id-badge { background: rgba(255,215,0,0.2); padding: 5px 10px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; }
+        .region-btn { background: rgba(255,215,0,0.2); border: 1px solid var(--gold); padding: 8px 15px; border-radius: 20px; cursor: pointer; transition: 0.3s; }
+        .region-btn:hover { background: var(--gold); color: #000; }
+        .region-btn.active { background: var(--gold); color: #000; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="card">
-        <h1><i class="fas fa-shuttle-van"></i> ناردو برو | نظام الفهرس الاحترافي</h1>
+        <h1><i class="fas fa-shuttle-van"></i> ناردو برو | نظام الجهات والفهرس</h1>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
             <button class="btn btn-gold" onclick="exportToTelegram()"><i class="fab fa-telegram-plane"></i> تصدير للقناة</button>
             <button class="btn btn-info" onclick="fetchAllFromIndex()"><i class="fas fa-thumbtack"></i> جلب الكل عبر الفهرس</button>
             <button class="btn btn-success" onclick="createIndexMessage()"><i class="fas fa-plus"></i> إنشاء فهرس جديد</button>
+            <button class="btn btn-primary" onclick="fetchByRegion()"><i class="fas fa-map-marker-alt"></i> جلب حسب الجهة</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
         </div>
         <div id="status" class="status-bar">جاهز للعمل</div>
+    </div>
+
+    <div class="card">
+        <h2><i class="fas fa-map"></i> اختر الجهة</h2>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+            <button class="region-btn" onclick="filterByRegion('north')">🔼 الشمال</button>
+            <button class="region-btn" onclick="filterByRegion('south')">🔽 الجنوب</button>
+            <button class="region-btn" onclick="filterByRegion('east')">▶️ الشرق</button>
+            <button class="region-btn" onclick="filterByRegion('west')">◀️ الغرب</button>
+            <button class="region-btn" onclick="filterByRegion('all')">🌍 الكل</button>
+        </div>
     </div>
 
     <div class="card">
@@ -57,7 +72,13 @@
                 <option value="distributor">موزع</option>
                 <option value="both">كليهما</option>
             </select>
-            <input type="text" id="state" placeholder="الولاية (3 حروف: Alg, Oran...)">
+            <input type="text" id="state" placeholder="الولاية (Alg, Oran...)">
+            <select id="region">
+                <option value="north">الشمال</option>
+                <option value="south">الجنوب</option>
+                <option value="east">الشرق</option>
+                <option value="west">الغرب</option>
+            </select>
             <button class="btn btn-gold" onclick="addDistributor()" style="grid-column: span 1;">إضافة للجدول</button>
         </div>
     </div>
@@ -81,6 +102,7 @@
                         <th>الهاتف</th>
                         <th>النوع</th>
                         <th>الولاية</th>
+                        <th>الجهة</th>
                         <th>إجراء</th>
                     </tr>
                 </thead>
@@ -93,22 +115,34 @@
 <script>
     const BOT_TOKEN = '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA';
     const CHANNEL_ID = '-1003822964890';
-    const KEYWORD = '📋 فهرس الموزعين';
+    const KEYWORD = '📋 فهرس الموزعين حسب الجهات';
     
     let distributors = [];
-    let indexMessageId = null;
-
+    let currentRegion = 'all';
+    
+    // تصنيف الولايات حسب الجهات
+    const regionStates = {
+        north: ['Alg', 'Tip', 'Bli', 'Bou', 'Tiz', 'Bba'],
+        south: ['Ora', 'Adr', 'Ill', 'Tam', 'Gha', 'ElO'],
+        east: ['Con', 'Ann', 'Set', 'Bat', 'Jij', 'Skik'],
+        west: ['Tle', 'Msc', 'Sbl', 'Rel', 'Mgh', 'Tiss']
+    };
+    
     // تحديث الجدول
     function updateTable() {
         const tbody = document.getElementById('tableBody');
         const filter = document.getElementById('stateFilter').value;
         
-        const filtered = filter === 'all' ? distributors : distributors.filter(d => d.state === filter);
+        let filtered = filter === 'all' ? distributors : distributors.filter(d => d.state === filter);
+        
+        if (currentRegion !== 'all') {
+            filtered = filtered.filter(d => d.region === currentRegion);
+        }
         
         document.getElementById('countDisplay').innerText = `العدد: ${filtered.length}`;
 
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">لا توجد بيانات حالياً</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">لا توجد بيانات حالياً</td></tr>';
             return;
         }
 
@@ -120,21 +154,23 @@
                 <td>${d.phone}</td>
                 <td><span class="badge badge-${d.type}">${d.type}</span></td>
                 <td>${d.state}</td>
-                <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${getOriginalIndex(d, filter)})"><i class="fas fa-trash"></i></button></td>
+                <td>${getRegionName(d.region)}</td>
+                <td><button class="btn btn-danger" style="padding: 5px 10px;" onclick="deleteItem(${getOriginalIndex(d)})"><i class="fas fa-trash"></i></button></td>
             </tr>
         `).join('');
         
         updateFilterOptions();
     }
-
-    function getOriginalIndex(item, filter) {
-        if (filter === 'all') {
-            return distributors.indexOf(item);
-        } else {
-            return distributors.findIndex(d => d.company === item.company && d.phone === item.phone);
-        }
+    
+    function getRegionName(region) {
+        const names = { north: 'الشمال', south: 'الجنوب', east: 'الشرق', west: 'الغرب' };
+        return names[region] || region;
     }
-
+    
+    function getOriginalIndex(item) {
+        return distributors.findIndex(d => d.company === item.company && d.phone === item.phone);
+    }
+    
     function updateFilterOptions() {
         const filterSelect = document.getElementById('stateFilter');
         const currentVal = filterSelect.value;
@@ -143,16 +179,30 @@
         filterSelect.innerHTML = '<option value="all">كل الولايات</option>' + 
             states.map(s => `<option value="${s}" ${s === currentVal ? 'selected' : ''}>${s}</option>`).join('');
     }
-
+    
+    function filterByRegion(region) {
+        currentRegion = region;
+        
+        // تحديث الشكل النشط للأزرار
+        document.querySelectorAll('.region-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        updateTable();
+        showStatus(`📌 عرض: ${getRegionName(region)}`);
+    }
+    
     function addDistributor() {
         const company = document.getElementById('compName').value;
         const manager = document.getElementById('mgrName').value;
         const phone = document.getElementById('phone').value;
         const type = document.getElementById('type').value;
         const state = document.getElementById('state').value;
-
+        const region = document.getElementById('region').value;
+        
         if (company && state) {
-            distributors.push({ company, manager, phone, type, state });
+            distributors.push({ company, manager, phone, type, state, region });
             updateTable();
             document.getElementById('compName').value = '';
             document.getElementById('mgrName').value = '';
@@ -163,13 +213,13 @@
             alert('يرجى إدخال اسم الموزع والولاية');
         }
     }
-
+    
     function deleteItem(index) {
         distributors.splice(index, 1);
         updateTable();
         showStatus('🗑️ تم حذف الموزع');
     }
-
+    
     function clearAll() {
         if (confirm('هل أنت متأكد من مسح جميع البيانات؟')) {
             distributors = [];
@@ -177,36 +227,34 @@
             showStatus('🗑️ تم مسح الكل');
         }
     }
-
-    // إنشاء رسالة الفهرس
+    
+    // إنشاء رسالة الفهرس حسب الجهات
     async function createIndexMessage() {
         if (distributors.length === 0) {
             alert('لا توجد بيانات لإنشاء الفهرس');
             return;
         }
         
-        showStatus('⏳ جاري إنشاء رسالة الفهرس...');
+        showStatus('⏳ جاري إنشاء فهرس الجهات...');
         
-        // تجميع الموزعين حسب الولايات (كل 200 موزع في رسالة)
-        const batches = [];
-        let currentBatch = [];
+        // تجميع الموزعين حسب الجهة
+        const regionsData = {
+            north: distributors.filter(d => d.region === 'north'),
+            south: distributors.filter(d => d.region === 'south'),
+            east: distributors.filter(d => d.region === 'east'),
+            west: distributors.filter(d => d.region === 'west')
+        };
         
-        for (let d of distributors) {
-            currentBatch.push(d);
-            if (currentBatch.length >= 200) {
-                batches.push([...currentBatch]);
-                currentBatch = [];
-            }
-        }
-        if (currentBatch.length > 0) batches.push(currentBatch);
+        const messageIds = {};
         
-        // إنشاء رسائل الموزعين
-        const messageIds = [];
-        for (let i = 0; i < batches.length; i++) {
-            const batch = batches[i];
-            let content = `📋 قائمة الموزعين - الجزء ${i+1}\n━━━━━━━━━━━━━━━━━━\n`;
+        // إنشاء رسالة لكل جهة
+        for (let [region, data] of Object.entries(regionsData)) {
+            if (data.length === 0) continue;
             
-            batch.forEach(d => {
+            let content = `📋 موزعين ${getRegionName(region)}\n━━━━━━━━━━━━━━━━━━\n`;
+            content += `📊 العدد: ${data.length}\n\n`;
+            
+            data.forEach(d => {
                 content += `${d.state}|${d.company}|${d.manager}|${d.phone}|${d.type}\n`;
             });
             
@@ -216,10 +264,10 @@
                 body: JSON.stringify({ chat_id: CHANNEL_ID, text: content })
             });
             
-            const data = await response.json();
-            if (data.ok) {
-                messageIds.push(data.result.message_id);
-                showStatus(`✅ تم إنشاء الجزء ${i+1} (${batch.length} موزع)`);
+            const result = await response.json();
+            if (result.ok) {
+                messageIds[region] = result.result.message_id;
+                showStatus(`✅ تم إنشاء رسالة ${getRegionName(region)} (${data.length} موزع)`);
             }
         }
         
@@ -227,11 +275,11 @@
         let indexContent = `${KEYWORD}\n━━━━━━━━━━━━━━━━━━\n\n`;
         indexContent += `📌 آخر تحديث: ${new Date().toLocaleString()}\n`;
         indexContent += `📊 إجمالي الموزعين: ${distributors.length}\n\n`;
-        indexContent += `📍 أجزاء البيانات:\n`;
-        
-        messageIds.forEach((id, i) => {
-            indexContent += `الجزء ${i+1} → رسالة رقم: ${id}\n`;
-        });
+        indexContent += `📍 فهرس الجهات:\n`;
+        indexContent += `🔼 الشمال → رسالة رقم: ${messageIds.north || 'لا يوجد'}\n`;
+        indexContent += `🔽 الجنوب → رسالة رقم: ${messageIds.south || 'لا يوجد'}\n`;
+        indexContent += `▶️ الشرق → رسالة رقم: ${messageIds.east || 'لا يوجد'}\n`;
+        indexContent += `◀️ الغرب → رسالة رقم: ${messageIds.west || 'لا يوجد'}\n`;
         
         const indexResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
             method: 'POST',
@@ -242,25 +290,22 @@
         const indexData = await indexResponse.json();
         
         if (indexData.ok) {
-            // تثبيت رسالة الفهرس
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/pinChatMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chat_id: CHANNEL_ID, message_id: indexData.result.message_id })
             });
             
-            indexMessageId = indexData.result.message_id;
-            localStorage.setItem('indexMessageId', indexMessageId);
-            showStatus(`✅ تم إنشاء وتثبيت رسالة الفهرس (${messageIds.length} أجزاء)`);
+            localStorage.setItem('indexMessageId', indexData.result.message_id);
+            showStatus(`✅ تم إنشاء وتثبيت فهرس الجهات`);
         }
     }
-
+    
     // جلب كل البيانات من الفهرس
     async function fetchAllFromIndex() {
-        showStatus('⏳ جاري جلب البيانات من الفهرس...');
+        showStatus('⏳ جاري جلب البيانات من فهرس الجهات...');
         
         try {
-            // جلب رسالة الفهرس المثبتة
             const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
             const chatData = await chatRes.json();
             
@@ -271,7 +316,6 @@
             
             const pinnedMsgId = chatData.result.pinned_message.message_id;
             
-            // جلب محتوى رسالة الفهرس
             const msgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMessage?chat_id=${CHANNEL_ID}&message_id=${pinnedMsgId}`);
             const msgData = await msgRes.json();
             
@@ -280,22 +324,31 @@
                 return;
             }
             
-            // استخراج المعرفات من النص
+            // استخراج معرفات الرسائل من الفهرس
             const text = msgData.result.text;
-            const messageIds = [];
+            const messageIds = {};
             const lines = text.split('\n');
             
             for (let line of lines) {
-                const match = line.match(/→ رسالة رقم:\s*(\d+)/);
-                if (match) {
-                    messageIds.push(parseInt(match[1]));
-                }
+                let match = line.match(/الشمال → رسالة رقم:\s*(\d+)/);
+                if (match) messageIds.north = parseInt(match[1]);
+                
+                match = line.match(/الجنوب → رسالة رقم:\s*(\d+)/);
+                if (match) messageIds.south = parseInt(match[1]);
+                
+                match = line.match(/الشرق → رسالة رقم:\s*(\d+)/);
+                if (match) messageIds.east = parseInt(match[1]);
+                
+                match = line.match(/الغرب → رسالة رقم:\s*(\d+)/);
+                if (match) messageIds.west = parseInt(match[1]);
             }
             
-            // جلب كل رسائل الموزعين
+            // جلب كل رسائل الجهات
             let allDistributors = [];
             
-            for (let id of messageIds) {
+            for (let [region, id] of Object.entries(messageIds)) {
+                if (!id) continue;
+                
                 const distRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMessage?chat_id=${CHANNEL_ID}&message_id=${id}`);
                 const distData = await distRes.json();
                 
@@ -304,7 +357,7 @@
                     const lines2 = content.split('\n');
                     
                     for (let line of lines2) {
-                        if (line.includes('|') && !line.startsWith('📋') && !line.startsWith('━━')) {
+                        if (line.includes('|') && !line.startsWith('📋') && !line.startsWith('━━') && !line.startsWith('📊')) {
                             const parts = line.split('|');
                             if (parts.length >= 5) {
                                 allDistributors.push({
@@ -312,19 +365,20 @@
                                     company: parts[1],
                                     manager: parts[2],
                                     phone: parts[3],
-                                    type: parts[4]
+                                    type: parts[4],
+                                    region: region
                                 });
                             }
                         }
                     }
-                    showStatus(`✅ جلب ${allDistributors.length} موزع حتى الآن`);
+                    showStatus(`✅ جلب ${getRegionName(region)}: ${allDistributors.length} موزع حتى الآن`);
                 }
             }
             
             if (allDistributors.length > 0) {
                 distributors = allDistributors;
                 updateTable();
-                showStatus(`✅ تم جلب ${allDistributors.length} موزع من ${messageIds.length} رسالة`);
+                showStatus(`✅ تم جلب ${allDistributors.length} موزع من جميع الجهات`);
             } else {
                 showStatus('⚠️ لم يتم العثور على بيانات');
             }
@@ -333,18 +387,88 @@
             showStatus('❌ خطأ في الاتصال: ' + e.message);
         }
     }
-
-    // تصدير البيانات للقناة
-    async function exportToTelegram() {
-        if (distributors.length === 0) {
-            alert('لا توجد بيانات للتصدير');
+    
+    // جلب حسب جهة محددة فقط
+    async function fetchByRegion() {
+        const region = prompt('أدخل اسم الجهة (north, south, east, west):');
+        if (!region || !['north', 'south', 'east', 'west'].includes(region)) {
+            alert('جهة غير صحيحة');
             return;
         }
         
-        showStatus('⏳ جاري التصدير...');
-        await createIndexMessage();
+        showStatus(`⏳ جاري جلب موزعين ${getRegionName(region)}...`);
+        
+        try {
+            const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=${CHANNEL_ID}`);
+            const chatData = await chatRes.json();
+            
+            if (!chatData.ok || !chatData.result.pinned_message) {
+                showStatus('❌ لا توجد رسالة فهرس');
+                return;
+            }
+            
+            const msgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMessage?chat_id=${CHANNEL_ID}&message_id=${chatData.result.pinned_message.message_id}`);
+            const msgData = await msgRes.json();
+            
+            const text = msgData.result.text;
+            let messageId = null;
+            
+            if (region === 'north') {
+                const match = text.match(/الشمال → رسالة رقم:\s*(\d+)/);
+                messageId = match ? parseInt(match[1]) : null;
+            } else if (region === 'south') {
+                const match = text.match(/الجنوب → رسالة رقم:\s*(\d+)/);
+                messageId = match ? parseInt(match[1]) : null;
+            } else if (region === 'east') {
+                const match = text.match(/الشرق → رسالة رقم:\s*(\d+)/);
+                messageId = match ? parseInt(match[1]) : null;
+            } else if (region === 'west') {
+                const match = text.match(/الغرب → رسالة رقم:\s*(\d+)/);
+                messageId = match ? parseInt(match[1]) : null;
+            }
+            
+            if (!messageId) {
+                showStatus(`❌ لا توجد بيانات لجهة ${getRegionName(region)}`);
+                return;
+            }
+            
+            const distRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMessage?chat_id=${CHANNEL_ID}&message_id=${messageId}`);
+            const distData = await distRes.json();
+            
+            if (distData.ok && distData.result.text) {
+                const content = distData.result.text;
+                const lines = content.split('\n');
+                const regionDistributors = [];
+                
+                for (let line of lines) {
+                    if (line.includes('|') && !line.startsWith('📋') && !line.startsWith('━━') && !line.startsWith('📊')) {
+                        const parts = line.split('|');
+                        if (parts.length >= 5) {
+                            regionDistributors.push({
+                                state: parts[0],
+                                company: parts[1],
+                                manager: parts[2],
+                                phone: parts[3],
+                                type: parts[4],
+                                region: region
+                            });
+                        }
+                    }
+                }
+                
+                if (regionDistributors.length > 0) {
+                    distributors = regionDistributors;
+                    currentRegion = region;
+                    updateTable();
+                    showStatus(`✅ تم جلب ${regionDistributors.length} موزع من ${getRegionName(region)}`);
+                }
+            }
+            
+        } catch (e) {
+            showStatus('❌ خطأ في الاتصال');
+        }
     }
-
+    
     function showStatus(msg) { 
         document.getElementById('status').innerText = msg; 
         setTimeout(() => {
@@ -353,15 +477,17 @@
             }
         }, 3000);
     }
-
-    // تحميل البيانات المحفوظة
-    const savedIndexId = localStorage.getItem('indexMessageId');
-    if (savedIndexId) {
-        indexMessageId = parseInt(savedIndexId);
+    
+    async function exportToTelegram() {
+        if (distributors.length === 0) {
+            alert('لا توجد بيانات للتصدير');
+            return;
+        }
+        await createIndexMessage();
     }
     
     updateTable();
-    showStatus('✅ النظام جاهز - استخدم "جلب الكل عبر الفهرس" لعرض البيانات');
+    showStatus('✅ النظام جاهز - اختر جهة أو اضغط "جلب الكل عبر الفهرس"');
 </script>
 </body>
 </html>
