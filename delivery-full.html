@@ -1,10 +1,7 @@
-
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناردو برو | جلب الفهرس وجميع الرسائل</title>
+    <title>ناردو برو | جلب الفهرس وجميع الرسائل (v3)</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -36,6 +33,7 @@
         .links-list { max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; margin-top: 10px; }
         .link-item { padding: 5px; border-bottom: 1px solid rgba(255,215,0,0.2); font-family: monospace; font-size: 12px; }
         .gold { color: var(--gold); }
+        .debug-panel { background: #000; color: #0f0; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 12px; margin-top: 20px; max-height: 300px; overflow-y: auto; display: none; }
     </style>
 </head>
 <body>
@@ -47,8 +45,10 @@
             <button class="btn btn-purple" onclick="fetchAllFromIndex()"><i class="fas fa-layer-group"></i> جلب الفهرس + كل الرسائل</button>
             <button class="btn btn-info" onclick="fetchPinnedOnly()"><i class="fas fa-thumbtack"></i> جلب الفهرس فقط</button>
             <button class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> مسح الكل</button>
+            <button class="btn btn-info" style="background: #444;" onclick="toggleDebug()"><i class="fas fa-bug"></i> سجل العمليات</button>
         </div>
         <div id="status" class="status-bar">✓ جاهز للعمل | البوت @azer1986_bot يجب أن يكون مشرفاً</div>
+        <div id="debugPanel" class="debug-panel"></div>
     </div>
 
     <div class="card">
@@ -102,7 +102,20 @@
     function showStatus(msg) {
         const statusDiv = document.getElementById('status');
         statusDiv.innerHTML = msg;
+        logDebug(`[STATUS] ${msg}`);
+    }
+
+    function logDebug(msg) {
+        const panel = document.getElementById('debugPanel');
+        const time = new Date().toLocaleTimeString();
+        panel.innerHTML += `<div>[${time}] ${msg}</div>`;
+        panel.scrollTop = panel.scrollHeight;
         console.log(msg);
+    }
+
+    function toggleDebug() {
+        const panel = document.getElementById('debugPanel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
 
     function escapeHtml(str) {
@@ -177,6 +190,7 @@
             extractedLinksArray = [];
             updateTable();
             document.getElementById('extractedLinks').innerHTML = '<div class="link-item">لا توجد روابط بعد</div>';
+            document.getElementById('debugPanel').innerHTML = '';
             showStatus('✓ تم مسح الكل');
         }
     }
@@ -194,6 +208,7 @@
             }
 
             const indexMessageText = chatData.result.pinned_message.text || '';
+            logDebug(`محتوى الفهرس: ${indexMessageText.substring(0, 100)}...`);
             showStatus('✅ تم جلب الفهرس. الخطوة 2: استخراج الروابط...');
 
             const extracted = extractMessageIds(indexMessageText);
@@ -208,11 +223,15 @@
             let totalLoaded = 0;
             for (let i = 0; i < extracted.length; i++) {
                 showStatus(`⏳ جلب الرسالة ${i+1}/${extracted.length}...`);
+                logDebug(`محاولة جلب الرابط: ${extracted[i].fullUrl}`);
                 const content = await fetchMessageContentAsBot(extracted[i].chatId, extracted[i].messageId);
                 
                 if (content) {
+                    logDebug(`تم جلب المحتوى بنجاح (${content.length} حرف)`);
                     const count = parseDistributorsFromText(content);
                     totalLoaded += count;
+                } else {
+                    logDebug(`فشل جلب المحتوى للرابط: ${extracted[i].fullUrl}`);
                 }
             }
             
@@ -220,7 +239,7 @@
                 showStatus(`✅ تم جلب ${totalLoaded} موزع بنجاح`);
                 updateTable();
             } else {
-                showStatus('⚠️ لم يتم العثور على بيانات موزعين');
+                showStatus('⚠️ لم يتم العثور على بيانات موزعين في الروابط');
             }
             
         } catch (error) {
@@ -251,8 +270,7 @@
         
         // استخراج الروابط العامة
         while ((match = publicRegex.exec(text)) !== null) {
-            // إذا كان الجزء الأول رقماً، فقد تم التقاطه بواسطة الـ regex الخاص، لذا نتخطاه
-            if (!isNaN(match[1])) continue;
+            if (!isNaN(match[1])) continue; // تخطي إذا كان رقماً (تم التقاطه بالخاص)
             
             const chatId = '@' + match[1];
             const messageId = parseInt(match[2]);
@@ -267,22 +285,23 @@
             linksDiv.appendChild(linkDiv);
         }
         
-        if (extractedLinksArray.length === 0) {
-            linksDiv.innerHTML = '<div class="link-item">⚠️ لم يتم العثور على روابط</div>';
-        } else {
-            linksDiv.innerHTML = `<div class="link-item" style="color: var(--gold);">✓ تم العثور على ${extractedLinksArray.length} رابط</div>` + linksDiv.innerHTML;
-        }
-        
+        logDebug(`تم استخراج ${extractedLinksArray.length} رابط من النص`);
         return extractedLinksArray;
     }
     
-    // ========== 3. جلب محتوى رسالة باستخدام البوت ==========
+    // ========== 3. جلب محتوى رسالة باستخدام البوت (محسّن) ==========
     async function fetchMessageContentAsBot(chatId, messageId) {
         try {
+            // محاولة جلب معلومات البوت أولاً للتأكد من الاتصال
             const botInfoRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getMe`);
             const botInfo = await botInfoRes.json();
+            if (!botInfo.ok) {
+                logDebug("خطأ: توكن البوت غير صحيح");
+                return null;
+            }
             const botPrivateChatId = botInfo.result.id;
 
+            // استخدام forwardMessage لجلب المحتوى
             const forwardResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/forwardMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -300,52 +319,84 @@
                 const text = forwardData.result.text || forwardData.result.caption || '';
                 return text;
             } else {
-                console.error('فشل التوجيه:', forwardData);
+                logDebug(`فشل التوجيه من ${chatId}: ${forwardData.description}`);
+                // محاولة بديلة لروابط القنوات العامة: copyMessage
+                const copyResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/copyMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: botPrivateChatId,
+                        from_chat_id: chatId,
+                        message_id: messageId
+                    })
+                });
+                const copyData = await copyResponse.json();
+                if (copyData.ok) {
+                    // في حال copyMessage، نحتاج لجلب الرسالة الأخيرة من البوت (صعب برمجياً هنا)
+                    // لذا نكتفي بـ forwardMessage كطريقة أساسية
+                    logDebug("تم نسخ الرسالة بنجاح ولكن لا يمكن قراءة النص مباشرة من copyMessage");
+                }
                 return null;
             }
         } catch (error) {
-            console.error('خطأ:', error);
+            logDebug(`خطأ في fetchMessageContentAsBot: ${error.message}`);
             return null;
         }
     }
     
-    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن) ==========
+    // ========== 4. تحويل النص إلى بيانات موزعين (محسّن جداً) ==========
     function parseDistributorsFromText(text) {
         const newDistributors = [];
         const lines = text.split('\n');
         let currentState = '';
         
+        logDebug(`بدء تحليل نص بطول ${text.length} حرف`);
+        
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (!line) continue;
             
+            // البحث عن الولاية
             if (line.includes('📍')) {
                 let stateMatch = line.match(/📍\s*ولاية\s+(.+?)(?:\s+-|$)/) || line.match(/📍\s*(.+?)(?:\s+-|$)/);
                 if (stateMatch) {
                     currentState = stateMatch[1].replace(/\s*-\s*العدد.*$/, '').trim();
+                    logDebug(`تم تحديد الولاية: ${currentState}`);
                 }
                 continue;
             }
             
+            // البحث عن الموزع
             if (line.startsWith('•')) {
-                const companyMatch = line.match(/•\s+(.+?)\s*\((.+?)\)/);
+                // استخراج اسم الشركة والنوع: • شركة الأمان (delivery)
+                const companyMatch = line.match(/•\s+(.+?)\s*\((.+?)\)/) || line.match(/•\s+(.+)/);
                 if (companyMatch && currentState) {
                     const company = companyMatch[1].trim();
-                    const type = companyMatch[2].trim().toLowerCase();
+                    const type = companyMatch[2] ? companyMatch[2].trim().toLowerCase() : 'delivery';
                     
                     let manager = 'غير محدد';
                     let phone = 'غير محدد';
                     
-                    if (i + 1 < lines.length) {
-                        const infoLine = lines[i + 1].trim();
-                        let managerMatch = infoLine.match(/👤\s+(.+?)\s*\|/) || infoLine.match(/👤\s+(.+)/);
-                        let phoneMatch = infoLine.match(/📞\s+(.+?)(?:\s*$|\s+)/) || infoLine.match(/📞\s+(.+)/);
-                        
-                        if (managerMatch) manager = managerMatch[1].trim();
-                        if (phoneMatch) phone = phoneMatch[1].trim();
-                        if (managerMatch || phoneMatch) i++;
+                    // فحص الأسطر التالية للبحث عن المدير والهاتف
+                    for (let j = 1; j <= 2; j++) {
+                        if (i + j < lines.length) {
+                            const nextLine = lines[i + j].trim();
+                            if (nextLine.startsWith('•') || nextLine.includes('📍')) break; // وصلنا لموزع آخر أو ولاية أخرى
+                            
+                            let mMatch = nextLine.match(/👤\s*(.+?)(?:\s*\||$)/);
+                            let pMatch = nextLine.match(/📞\s*(.+)/);
+                            
+                            if (mMatch) manager = mMatch[1].trim();
+                            if (pMatch) phone = pMatch[1].trim();
+                            
+                            // إذا وجدنا أي منهما، نعتبر السطر قد استهلك
+                            if (mMatch || pMatch) {
+                                // لا نزيد i هنا مباشرة لتجنب مشاكل التكرار، سنعتمد على j
+                            }
+                        }
                     }
                     
+                    logDebug(`تم العثور على موزع: ${company} في ${currentState}`);
                     newDistributors.push({ company, manager, phone, type, state: currentState });
                 }
             }
@@ -357,7 +408,9 @@
                 if (!exists) distributors.push(newDist);
             }
             updateTable();
-            showStatus(`✅ تم إضافة ${newDistributors.length} موزع`);
+            logDebug(`تمت إضافة ${newDistributors.length} موزع للجدول`);
+        } else {
+            logDebug("لم يتم العثور على أي موزع يطابق التنسيق في هذا النص");
         }
         return newDistributors.length;
     }
