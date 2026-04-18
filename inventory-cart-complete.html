@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ناردو برو - نظام TXT المتكامل</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -44,6 +43,7 @@
         .btn-gold:hover { transform: translateY(-2px); background: #ffed4e; }
         .btn-telegram { background: #0088cc; color: white; }
         .btn-txt { background: #6c757d; color: white; }
+        .btn-excel { background: #217346; color: white; }
         .btn-info { background: #17a2b8; color: white; }
         .btn-success { background: #28a745; color: white; }
         .btn-danger { background: #dc3545; color: white; }
@@ -280,6 +280,30 @@
             margin-bottom: 20px;
             justify-content: flex-end;
         }
+        .send-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .send-option {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .send-option:hover {
+            background: rgba(255,215,0,0.1);
+            transform: translateY(-2px);
+        }
+        .send-option i {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
     </style>
 </head>
 <body>
@@ -289,9 +313,10 @@
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-gold" onclick="openAddDistributor()"><i class="fas fa-plus"></i> إضافة موزع</button>
             <button class="btn btn-txt" onclick="exportToTxt()"><i class="fas fa-download"></i> تصدير TXT</button>
-            <button class="btn btn-telegram" onclick="sendTxtToTelegram()"><i class="fab fa-telegram"></i> إرسال TXT للقناة</button>
-            <button class="btn btn-info" onclick="openFetchAllTxtModal()"><i class="fas fa-folder-open"></i> جلب كل TXT من القناة</button>
-            <button class="btn btn-success" onclick="openImportTxtModal()"><i class="fas fa-upload"></i> استيراد TXT</button>
+            <button class="btn btn-excel" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+            <button class="btn btn-telegram" onclick="openSendModal()"><i class="fab fa-telegram"></i> إرسال للقناة</button>
+            <button class="btn btn-info" onclick="openFetchAllTxtModal()"><i class="fas fa-folder-open"></i> جلب من القناة</button>
+            <button class="btn btn-success" onclick="openImportTxtModal()"><i class="fas fa-upload"></i> استيراد</button>
             <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> مسح الكل</button>
         </div>
     </div>
@@ -369,6 +394,31 @@
     </div>
 </div>
 
+<!-- نافذة الإرسال للقناة -->
+<div id="sendModal" class="modal">
+    <div class="modal-content">
+        <button class="close-btn" onclick="closeSendModal()">&times;</button>
+        <h2 style="color: #ffd700;"><i class="fab fa-telegram"></i> إرسال البيانات للقناة</h2>
+        <p style="margin: 15px 0; color: #aaa;">اختر نوع الملف الذي تريد إرساله إلى قناة Telegram:</p>
+        <div class="send-options">
+            <div class="send-option" onclick="sendTxtToTelegram()">
+                <i class="fas fa-file-alt"></i>
+                <div style="margin-top: 10px;">
+                    <strong>ملف TXT</strong>
+                    <p style="font-size: 12px; color: #aaa; margin-top: 5px;">إرسال قائمة الموزعين بصيغة نصية</p>
+                </div>
+            </div>
+            <div class="send-option" onclick="sendExcelToTelegram()">
+                <i class="fas fa-file-excel"></i>
+                <div style="margin-top: 10px;">
+                    <strong>ملف Excel</strong>
+                    <p style="font-size: 12px; color: #aaa; margin-top: 5px;">إرسال قائمة الموزعين بصيغة جدول</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- نافذة جلب كل ملفات TXT من القناة -->
 <div id="fetchAllTxtModal" class="modal">
     <div class="modal-content">
@@ -419,7 +469,7 @@
     let currentFilter = 'all';
     let currentSearch = '';
     let lastImportedTxt = '';
-    let txtFilesList = []; // تخزين قائمة الملفات
+    let txtFilesList = [];
 
     // ==================== دوال التبويب ====================
     function switchTab(tab) {
@@ -579,9 +629,46 @@
         URL.revokeObjectURL(url);
         showNotification('✅ تم تصدير ملف TXT بنجاح', 'success');
     }
+
+    // ==================== دوال تصدير Excel ====================
+    function generateExcelData() {
+        const filtered = getFilteredData();
+        const data = filtered.map((d, i) => ({
+            '#': i + 1,
+            'اسم الشركة': d.company,
+            'المسؤول': d.manager,
+            'الهاتف': d.phone,
+            'النوع': d.type === 'delivery' ? 'توصيل' : d.type === 'distributor' ? 'موزع' : 'كليهما',
+            'الولاية': d.state
+        }));
+        return data;
+    }
+
+    function exportToExcel() {
+        try {
+            const data = generateExcelData();
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "الموزعين");
+            XLSX.writeFile(workbook, `nardo_pro_${Date.now()}.xlsx`);
+            showNotification('✅ تم تصدير ملف Excel بنجاح', 'success');
+        } catch (err) {
+            showNotification(`❌ فشل التصدير: ${err.message}`, 'error');
+        }
+    }
+
+    // ==================== دوال الإرسال للقناة ====================
+    function openSendModal() {
+        document.getElementById('sendModal').classList.add('active');
+    }
+
+    function closeSendModal() {
+        document.getElementById('sendModal').classList.remove('active');
+    }
     
     async function sendTxtToTelegram() {
-        showNotification('📤 جاري إرسال TXT للقناة...', 'info');
+        closeSendModal();
+        showNotification('📤 جاري إرسال ملف TXT للقناة...', 'info');
         try {
             const content = generateTxtContent();
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -594,7 +681,32 @@
             const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
             const result = await res.json();
             if(result.ok) {
-                showNotification('✅ تم إرسال TXT بنجاح', 'success');
+                showNotification('✅ تم إرسال ملف TXT بنجاح', 'success');
+            } else throw new Error(result.description);
+        } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
+    }
+
+    async function sendExcelToTelegram() {
+        closeSendModal();
+        showNotification('📤 جاري إرسال ملف Excel للقناة...', 'info');
+        try {
+            const data = generateExcelData();
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "الموزعين");
+            
+            const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            
+            const formData = new FormData();
+            formData.append('chat_id', TELEGRAM.channelId);
+            formData.append('document', blob, `distributors_${Date.now()}.xlsx`);
+            formData.append('caption', `📊 قائمة الموزعين المحدثة\n📅 ${new Date().toLocaleDateString('ar-SA')}\n📁 ملف Excel`);
+
+            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendDocument`, { method: 'POST', body: formData });
+            const result = await res.json();
+            if(result.ok) {
+                showNotification('✅ تم إرسال ملف Excel بنجاح', 'success');
             } else throw new Error(result.description);
         } catch (err) { showNotification(`❌ فشل: ${err.message}`, 'error'); }
     }
@@ -619,7 +731,6 @@
             let offset = 0;
             let hasMore = true;
             
-            // جلب جميع الرسائل من القناة (حتى 100 رسالة)
             while (hasMore && offset < 200) {
                 const url = `${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${offset}&limit=100`;
                 const res = await fetch(url);
@@ -633,21 +744,18 @@
                 }
             }
             
-            // بدلاً من getUpdates، نجلب من channel_id مباشرة
             const chatRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getChat?chat_id=${TELEGRAM.channelId}`);
             const chatData = await chatRes.json();
             
-            // نجلب آخر 100 رسالة من القناة
             const messagesRes = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100`);
             const messagesData = await messagesRes.json();
             
-            // تصفية الرسائل التي تحتوي على ملفات TXT
             if (messagesData.ok && messagesData.result) {
                 for (const update of messagesData.result) {
                     const message = update.message || update.channel_post;
                     if (message && message.document) {
                         const fileName = message.document.file_name || '';
-                        if (fileName.toLowerCase().endsWith('.txt')) {
+                        if (fileName.toLowerCase().endsWith('.txt') || fileName.toLowerCase().endsWith('.xlsx')) {
                             txtFilesList.push({
                                 file_id: message.document.file_id,
                                 file_name: fileName,
@@ -660,7 +768,6 @@
                 }
             }
             
-            // عرض القائمة
             displayFilesList();
             
         } catch (err) {
@@ -676,7 +783,7 @@
         filesCount.textContent = txtFilesList.length;
         
         if (txtFilesList.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #aaa;">📂 لا توجد ملفات TXT في القناة</p>';
+            container.innerHTML = '<p style="text-align: center; color: #aaa;">📂 لا توجد ملفات في القناة</p>';
             return;
         }
         
@@ -713,7 +820,6 @@
             document.getElementById('txtPreviewContent').innerHTML = `<pre style="direction: ltr; text-align: left; font-family: monospace; margin: 0;">${escapeHtml(text)}</pre>`;
             showNotification(`✅ تم تحميل ${file.file_name} بنجاح`, 'success');
             
-            // التبديل إلى تبويب المعاينة
             document.getElementById('previewTab').classList.add('active');
             document.getElementById('tableTab').classList.remove('active');
             document.querySelectorAll('.tab-btn').forEach(btn => {
