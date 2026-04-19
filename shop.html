@@ -491,10 +491,12 @@
     </div>
 
     <script>
-        // الإعدادات
+        // ============================================
+        // الإعدادات الأساسية
+        // ============================================
         const TELEGRAM = {
-            botToken: '7542153545:AAH-u_p0-v_uW_6-v_uW_6-v_uW_6',
-            channelId: '-1002435532556',
+            botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA',
+            channelId: '-1003822964890',
             apiUrl: 'https://api.telegram.org/bot'
         };
         const CART_STORAGE_KEY = 'nardo_cart';
@@ -508,7 +510,160 @@
         let selectedDistributor = null;
 
         // ============================================
-        // وظائف السلة الأساسية
+        // 1. دوال تحويل الولايات
+        // ============================================
+        function getStateCode(stateName) {
+            const stateCodes = {
+                'الجزائر': 'ALG', 'أدرار': 'ADE', 'الشلف': 'ASH', 'الأغواط': 'LGH',
+                'أم البواقي': 'OEB', 'باتنة': 'BAT', 'بجاية': 'BJA', 'بسكرة': 'BSK',
+                'بشار': 'BSH', 'البليدة': 'BLA', 'البويرة': 'BUI', 'تمنراست': 'TAM',
+                'تبسة': 'TEB', 'تلمسان': 'TLE', 'تيارت': 'TIA', 'تيزي وزو': 'TIZ',
+                'الجلفة': 'DJF', 'جيجل': 'JIJ', 'سطيف': 'SET', 'سعيدة': 'SAI',
+                'سكيكدة': 'SKI', 'سيدي بلعباس': 'SBI', 'عنابة': 'ANA', 'قالمة': 'GUE',
+                'قسنطينة': 'CON', 'المدية': 'MED', 'ميلة': 'MIL', 'معسكر': 'MOS',
+                'المسيلة': 'MSC', 'مستغانم': 'MGH', 'النعامة': 'NAA', 'وهران': 'ORA',
+                'الوادي': 'OUA', 'برج بوعريريج': 'BBA', 'بومرداس': 'BMD', 'الطارف': 'TAR',
+                'تندوف': 'TIN', 'تيسمسيلت': 'TSS', 'خنشلة': 'KHE', 'سوق أهراس': 'SOU',
+                'تيبازة': 'TIP', 'عين الدفلى': 'AYD', 'عين تموشنت': 'AIN', 'غرداية': 'GHA', 'غليزان': 'REL'
+            };
+            return stateCodes[stateName] || stateName.substring(0, 3).toUpperCase();
+        }
+
+        // ============================================
+        // 2. دوال جلب البيانات من التلغرام
+        // ============================================
+        async function fetchDistributorsFromTelegram() {
+            try {
+                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100`);
+                const data = await response.json();
+                if (!data.ok || !data.result) return false;
+                
+                let distributorsMessage = null;
+                const reversedUpdates = [...data.result].reverse();
+                for (const update of reversedUpdates) {
+                    const message = update.channel_post || update.message;
+                    if (message && message.text && message.text.includes('قائمة الموزعين وشركات التوصيل حسب كل ولاية')) {
+                        distributorsMessage = message.text;
+                        break;
+                    }
+                }
+                
+                if (distributorsMessage) {
+                    parseDistributorsMessage(distributorsMessage);
+                    localStorage.setItem('nardo_distributors_data', JSON.stringify(distributorsData));
+                    return true;
+                }
+                return false;
+            } catch (e) { return false; }
+        }
+
+        // ============================================
+        // 3. دوال تحليل رسالة التلغرام
+        // ============================================
+        function parseDistributorsMessage(text) {
+            distributorsData = {};
+            const sections = text.split('📍 ولاية ');
+            sections.forEach((section, index) => {
+                if (index === 0) return;
+                const lines = section.split('\n');
+                const stateMatch = lines[0].match(/(.+?)\s*\(([A-Z]{3})\)/);
+                if (stateMatch) {
+                    const stateCode = stateMatch[2];
+                    distributorsData[stateCode] = [];
+                    const distributorBlocks = section.split('\n• ');
+                    distributorBlocks.forEach((block, bIndex) => {
+                        if (bIndex === 0) return;
+                        const blockLines = block.split('\n');
+                        const nameMatch = blockLines[0].match(/\*\*(.+?)\*\*\s*\((.+?)\)/);
+                        if (nameMatch) {
+                            const d = {
+                                name: nameMatch[1],
+                                typeText: nameMatch[2],
+                                type: nameMatch[2].includes('🚚') ? 'delivery' : 'distributor',
+                                customId: null, manager: null, phone: null
+                            };
+                            blockLines.forEach(l => {
+                                if (l.includes('🆔 المعرف:')) {
+                                    const idMatch = l.match(/🆔 المعرف:\s*`(.+?)`/);
+                                    if (idMatch) d.customId = idMatch[1];
+                                }
+                                if (l.includes('👤')) {
+                                    const contactMatch = l.match(/👤\s*(.+?)\s*\|\s*📞\s*(.+)$/);
+                                    if (contactMatch) {
+                                        d.manager = contactMatch[1].trim();
+                                        d.phone = contactMatch[2].trim();
+                                    }
+                                }
+                            });
+                            distributorsData[stateCode].push(d);
+                        }
+                    });
+                }
+            });
+        }
+
+        // ============================================
+        // 4. دوال تحميل وعرض الموزعين
+        // ============================================
+        async function loadDistributorsFromTelegram() {
+            const stateName = document.getElementById('customerState').value;
+            const container = document.getElementById('distributorsList');
+            const loading = document.getElementById('distributorsLoading');
+            if (!stateName) { container.innerHTML = ''; return; }
+            
+            loading.style.display = 'block';
+            container.innerHTML = '';
+            
+            if (Object.keys(distributorsData).length === 0) {
+                await fetchDistributorsFromTelegram();
+            }
+            
+            loading.style.display = 'none';
+            const stateCode = getStateCode(stateName);
+            const list = distributorsData[stateCode] || [];
+            
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="no-distributors">
+                        لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${stateName}</strong> حالياً
+                        <button class="btn btn-refresh" style="margin-top: 15px;" onclick="fetchDistributorsFromTelegram(); loadDistributorsFromTelegram();">
+                            <i class="fas fa-sync-alt"></i> تحديث البيانات من التلغرام
+                        </button>
+                    </div>`;
+                return;
+            }
+            
+            let html = `<div class="distributors-section"><h3><i class="fas fa-warehouse"></i> اختر شركة التوصيل أو الموزع في ${stateName}</h3>`;
+            list.forEach((d, index) => {
+                const serviceIcon = d.type === 'delivery' ? '🚚' : '📦';
+                const typeClass = d.type === 'delivery' ? 'type-delivery' : 'type-distributor';
+                html += `
+                    <div class="distributor-item ${selectedDistributor?.customId === d.customId ? 'selected' : ''}" onclick="selectDistributor('${stateCode}', ${index})">
+                        <div class="distributor-name">${serviceIcon} ${d.name}</div>
+                        <div class="distributor-type ${typeClass}">${d.typeText}</div>
+                        <div class="distributor-info">
+                            👤 <strong>${d.manager || 'غير محدد'}</strong> | 📞 ${d.phone || 'غير محدد'}
+                        </div>
+                        <div class="distributor-info">
+                            🆔 المعرف: <span class="distributor-id">${d.customId || '---'}</span>
+                        </div>
+                    </div>`;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // 5. دوال اختيار الموزع
+        // ============================================
+        function selectDistributor(stateCode, index) {
+            selectedDistributor = distributorsData[stateCode][index];
+            loadDistributorsFromTelegram();
+            showNotification(`تم اختيار: ${selectedDistributor.name}`);
+        }
+
+        // ============================================
+        // 6. دوال السلة الأساسية
         // ============================================
         function getStoreColor(storeID) {
             if (!storeColors[storeID]) {
@@ -611,145 +766,7 @@
         }
 
         // ============================================
-        // نظام الموزعين (النسخة المصححة والكاملة)
-        // ============================================
-        function getStateCode(stateName) {
-            const stateCodes = {
-                'الجزائر': 'ALG', 'أدرار': 'ADE', 'الشلف': 'ASH', 'الأغواط': 'LGH',
-                'أم البواقي': 'OEB', 'باتنة': 'BAT', 'بجاية': 'BJA', 'بسكرة': 'BSK',
-                'بشار': 'BSH', 'البليدة': 'BLA', 'البويرة': 'BUI', 'تمنراست': 'TAM',
-                'تبسة': 'TEB', 'تلمسان': 'TLE', 'تيارت': 'TIA', 'تيزي وزو': 'TIZ',
-                'الجلفة': 'DJF', 'جيجل': 'JIJ', 'سطيف': 'SET', 'سعيدة': 'SAI',
-                'سكيكدة': 'SKI', 'سيدي بلعباس': 'SBI', 'عنابة': 'ANA', 'قالمة': 'GUE',
-                'قسنطينة': 'CON', 'المدية': 'MED', 'ميلة': 'MIL', 'معسكر': 'MOS',
-                'المسيلة': 'MSC', 'مستغانم': 'MGH', 'النعامة': 'NAA', 'وهران': 'ORA',
-                'الوادي': 'OUA', 'برج بوعريريج': 'BBA', 'بومرداس': 'BMD', 'الطارف': 'TAR',
-                'تندوف': 'TIN', 'تيسمسيلت': 'TSS', 'خنشلة': 'KHE', 'سوق أهراس': 'SOU',
-                'تيبازة': 'TIP', 'عين الدفلى': 'AYD', 'عين تموشنت': 'AIN', 'غرداية': 'GHA', 'غليزان': 'REL'
-            };
-            return stateCodes[stateName] || stateName.substring(0, 3).toUpperCase();
-        }
-
-        async function fetchDistributorsFromTelegram() {
-            try {
-                const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-100`);
-                const data = await response.json();
-                if (!data.ok || !data.result) return false;
-                
-                let distributorsMessage = null;
-                const reversedUpdates = [...data.result].reverse();
-                for (const update of reversedUpdates) {
-                    const message = update.channel_post || update.message;
-                    if (message && message.text && message.text.includes('قائمة الموزعين وشركات التوصيل حسب كل ولاية')) {
-                        distributorsMessage = message.text;
-                        break;
-                    }
-                }
-                
-                if (distributorsMessage) {
-                    parseDistributorsMessage(distributorsMessage);
-                    localStorage.setItem('nardo_distributors_data', JSON.stringify(distributorsData));
-                    return true;
-                }
-                return false;
-            } catch (e) { return false; }
-        }
-
-        function parseDistributorsMessage(text) {
-            distributorsData = {};
-            const sections = text.split('📍 ولاية ');
-            sections.forEach((section, index) => {
-                if (index === 0) return;
-                const lines = section.split('\n');
-                const stateMatch = lines[0].match(/(.+?)\s*\(([A-Z]{3})\)/);
-                if (stateMatch) {
-                    const stateCode = stateMatch[2];
-                    distributorsData[stateCode] = [];
-                    const distributorBlocks = section.split('\n• ');
-                    distributorBlocks.forEach((block, bIndex) => {
-                        if (bIndex === 0) return;
-                        const blockLines = block.split('\n');
-                        const nameMatch = blockLines[0].match(/\*\*(.+?)\*\*\s*\((.+?)\)/);
-                        if (nameMatch) {
-                            const d = {
-                                name: nameMatch[1],
-                                typeText: nameMatch[2],
-                                type: nameMatch[2].includes('🚚') ? 'delivery' : 'distributor',
-                                customId: null, manager: null, phone: null
-                            };
-                            blockLines.forEach(l => {
-                                if (l.includes('🆔 المعرف:')) {
-                                    const idMatch = l.match(/🆔 المعرف:\s*`(.+?)`/);
-                                    if (idMatch) d.customId = idMatch[1];
-                                }
-                                if (l.includes('👤')) {
-                                    const contactMatch = l.match(/👤\s*(.+?)\s*\|\s*📞\s*(.+)$/);
-                                    if (contactMatch) {
-                                        d.manager = contactMatch[1].trim();
-                                        d.phone = contactMatch[2].trim();
-                                    }
-                                }
-                            });
-                            distributorsData[stateCode].push(d);
-                        }
-                    });
-                }
-            });
-        }
-
-        async function loadDistributorsFromTelegram() {
-            const stateName = document.getElementById('customerState').value;
-            const container = document.getElementById('distributorsList');
-            const loading = document.getElementById('distributorsLoading');
-            if (!stateName) { container.innerHTML = ''; return; }
-            
-            loading.style.display = 'block';
-            container.innerHTML = '';
-            
-            if (Object.keys(distributorsData).length === 0) await fetchDistributorsFromTelegram();
-            
-            loading.style.display = 'none';
-            const stateCode = getStateCode(stateName);
-            const list = distributorsData[stateCode] || [];
-            
-            if (list.length === 0) {
-                container.innerHTML = `
-                    <div class="no-distributors">
-                        لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${stateName}</strong> حالياً
-                        <button class="btn btn-refresh" style="margin-top: 15px;" onclick="fetchDistributorsFromTelegram(); loadDistributorsFromTelegram();">
-                            <i class="fas fa-sync-alt"></i> تحديث البيانات من التلغرام
-                        </button>
-                    </div>`;
-                return;
-            }
-            
-            let html = `<h3><i class="fas fa-warehouse"></i> اختر شركة التوصيل أو الموزع في ${stateName}</h3>`;
-            list.forEach((d, index) => {
-                const serviceIcon = d.type === 'delivery' ? '🚚' : '📦';
-                const typeClass = d.type === 'delivery' ? 'type-delivery' : 'type-distributor';
-                html += `
-                    <div class="distributor-item ${selectedDistributor?.customId === d.customId ? 'selected' : ''}" onclick="selectDistributor('${stateCode}', ${index})">
-                        <div class="distributor-name">${serviceIcon} ${d.name}</div>
-                        <div class="distributor-type ${typeClass}">${d.typeText}</div>
-                        <div class="distributor-info">
-                            👤 <strong>${d.manager || 'غير محدد'}</strong> | 📞 ${d.phone || 'غير محدد'}
-                        </div>
-                        <div class="distributor-info">
-                            🆔 المعرف: <span class="distributor-id">${d.customId || '---'}</span>
-                        </div>
-                    </div>`;
-            });
-            container.innerHTML = html;
-        }
-
-        function selectDistributor(stateCode, index) {
-            selectedDistributor = distributorsData[stateCode][index];
-            loadDistributorsFromTelegram();
-            showNotification(`تم اختيار: ${selectedDistributor.name}`);
-        }
-
-        // ============================================
-        // دوال إرسال الطلب
+        // 7. دوال إرسال الطلب
         // ============================================
         function formatProductVertical(item) {
             let productMsg = "";
@@ -817,7 +834,7 @@
                 channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
                 channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
                 
-                const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                     method:'POST', 
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({
@@ -827,7 +844,6 @@
                     })
                 });
                 
-                // إرسال رسالة لكل متجر
                 for (const [storeID, storeData] of Object.entries(groupedStores)) {
                     let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
                     merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -869,20 +885,17 @@
                     });
                 }
 
-                // حفظ في الأرشيف
                 saveOrderToArchive({
                     id: mainOrderId,
-                    storeName: 'طلب مجمع',
                     date: timestamp,
                     customerState: customerData.state,
                     customerAddressDetail: customerData.addressDetail,
-                    items: cart,
                     total: grandTotal,
                     distributor: distributor ? distributor.name : null,
                     status: 'pending'
                 });
 
-                return res.ok;
+                return true;
             } catch (e) { return false; }
         }
 
@@ -910,7 +923,7 @@
                     <div class="order-details">
                         <div>📅 ${o.date}</div>
                         <div>📍 ${o.customerState ? `${o.customerState} - ` : ''}${o.customerAddressDetail || ''}</div>
-                        <div>💰 ${o.total.toLocaleString()} دج</div>
+                        <div>💰 ${o.total?.toLocaleString() || 0} دج</div>
                         ${o.distributor ? `<div>🚚 ${o.distributor}</div>` : ''}
                     </div>
                 </div>
@@ -918,7 +931,7 @@
         }
 
         // ============================================
-        // دوال النافذة المنبثقة
+        // 8. دوال النافذة المنبثقة
         // ============================================
         let pendingGroupedStores = null, pendingGrandTotal = null;
         
@@ -1008,7 +1021,7 @@
         }
 
         // ============================================
-        // التهيئة
+        // 9. التهيئة عند تحميل الصفحة
         // ============================================
         window.addEventListener('load', function() {
             loadCart();
@@ -1017,9 +1030,8 @@
             if (cached) {
                 try { distributorsData = JSON.parse(cached); } catch(e) {}
             }
+            console.log('✅ نظام السلة جاهز - يتم جلب الموزعين من التلغرام');
         });
     </script>
 </body>
 </html>
-
-
