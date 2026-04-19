@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
+head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ناردو برو - سلتي | نظام طلبات متكامل</title>
@@ -261,7 +259,76 @@
             font-size: 13px;
         }
         
-        /* 1.11 - أنماط الحالات الفارغة والإشعارات */
+        /* 1.11 - أنماط قائمة الموزعين والشركات */
+        .distributors-section {
+            background: rgba(255, 215, 0, 0.05);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .distributors-section h3 {
+            color: var(--gold);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .distributor-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-right: 4px solid var(--gold);
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .distributor-item:hover {
+            background: rgba(255, 215, 0, 0.1);
+            transform: translateX(-5px);
+        }
+        .distributor-name {
+            font-weight: bold;
+            color: var(--gold);
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .distributor-type {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .type-delivery {
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--success);
+        }
+        .type-distributor {
+            background: rgba(96, 165, 250, 0.2);
+            color: var(--info);
+        }
+        .distributor-info {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        .distributor-id {
+            font-family: monospace;
+            background: rgba(255, 215, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--gold);
+        }
+        .no-distributors {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+            font-style: italic;
+        }
+        
+        /* 1.12 - أنماط الحالات الفارغة والإشعارات */
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
         .empty-state i { font-size: 70px; color: var(--gold); }
         .notification {
@@ -287,7 +354,7 @@
             to { transform: translateY(0); opacity: 1; }
         }
         
-        /* 1.12 - أنماط أرشيف الطلبات */
+        /* 1.13 - أنماط أرشيف الطلبات */
         .order-archive { margin-top: 40px; border-top: 2px dashed rgba(255, 215, 0, 0.2); padding-top: 30px; }
         .order-archive h2 { margin-bottom: 20px; font-size: 24px; color: var(--gold); }
         .order-card {
@@ -305,7 +372,7 @@
         .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
         .order-details div { margin-bottom: 8px; font-size: 14px; }
         
-        /* 1.13 - استعلامات الوسائط للاستجابة */
+        /* 1.14 - استعلامات الوسائط للاستجابة */
         @media (max-width: 768px) {
             .cart-item { flex-direction: column; align-items: stretch; }
             .cart-actions { flex-direction: column; }
@@ -356,8 +423,9 @@
             <!-- العنوان مع قائمة منسدلة للولايات -->
             <div class="form-group">
                 <label><i class="fas fa-map-marker-alt"></i> الولاية</label>
-                <select id="customerState" onchange="updateFullAddress()">
+                <select id="customerState" onchange="updateFullAddress(); loadDistributorsByState()">
                     <option value="">اختر الولاية</option>
+                    <option value="الجزائر">الجزائر العاصمة</option>
                     <option value="أدرار">أدرار</option>
                     <option value="الشلف">الشلف</option>
                     <option value="الأغواط">الأغواط</option>
@@ -373,7 +441,6 @@
                     <option value="تلمسان">تلمسان</option>
                     <option value="تيارت">تيارت</option>
                     <option value="تيزي وزو">تيزي وزو</option>
-                    <option value="الجزائر">الجزائر العاصمة</option>
                     <option value="الجلفة">الجلفة</option>
                     <option value="جيجل">جيجل</option>
                     <option value="سطيف">سطيف</option>
@@ -406,6 +473,9 @@
                     <option value="غليزان">غليزان</option>
                 </select>
             </div>
+            
+            <!-- قائمة الموزعين والشركات بناءً على الولاية -->
+            <div id="distributorsContainer"></div>
             
             <!-- العنوان التفصيلي مع أيقونة الخريطة -->
             <div class="form-group">
@@ -448,12 +518,119 @@
         const TELEGRAM = { botToken: '8576673096:AAGvSMjzwVWj6wJ47JdqiDwcObXjBDcyiLA', channelId: '-1003822964890', apiUrl: 'https://api.telegram.org/bot' };
         const CART_STORAGE_KEY = 'nardoo_cart';
         const ORDERS_STORAGE_KEY = 'nardo_orders';
+        const DISTRIBUTORS_STORAGE_KEY = 'nardo_distributors';
         let cart = [];
         let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
         let storeColors = {};
+        let distributors = [];
 
         // ============================================
-        // 3.2 - دوال الألوان وحالة المتاجر
+        // 3.2 - دوال تحميل الموزعين من localStorage
+        // ============================================
+        function loadDistributors() {
+            const saved = localStorage.getItem(DISTRIBUTORS_STORAGE_KEY);
+            if (saved) {
+                try {
+                    distributors = JSON.parse(saved);
+                } catch (e) {
+                    console.error('خطأ في تحميل الموزعين:', e);
+                    distributors = [];
+                }
+            }
+        }
+
+        // تحويل اسم الولاية إلى رمز
+        function getStateCode(stateName) {
+            const stateCodes = {
+                'أدرار': 'ADE', 'الشلف': 'ASH', 'الأغواط': 'LGH', 'أم البواقي': 'OEB',
+                'باتنة': 'BAT', 'بجاية': 'BJA', 'بسكرة': 'BSK', 'بشار': 'BSH',
+                'البليدة': 'BLA', 'البويرة': 'BUI', 'تمنراست': 'TAM', 'تبسة': 'TEB',
+                'تلمسان': 'TLE', 'تيارت': 'TIA', 'تيزي وزو': 'TIZ', 'الجزائر': 'ALG',
+                'الجلفة': 'DJF', 'جيجل': 'JIJ', 'سطيف': 'SET', 'سعيدة': 'SAI',
+                'سكيكدة': 'SKI', 'سيدي بلعباس': 'SBI', 'عنابة': 'ANA', 'قالمة': 'GUE',
+                'قسنطينة': 'CON', 'المدية': 'MED', 'ميلة': 'MIL', 'معسكر': 'MOS',
+                'المسيلة': 'MSC', 'مستغانم': 'MGH', 'النعامة': 'NAA', 'وهران': 'ORA',
+                'الوادي': 'OUA', 'برج بوعريريج': 'BBA', 'بومرداس': 'BMD', 'الطارف': 'TAR',
+                'تندوف': 'TIN', 'تيسمسيلت': 'TSS', 'خنشلة': 'KHE', 'سوق أهراس': 'SOU',
+                'تيبازة': 'TIP', 'عين الدفلى': 'AYD', 'النعامة': 'NAA', 'عين تموشنت': 'AIN',
+                'غرداية': 'GHA', 'غليزان': 'REL'
+            };
+            return stateCodes[stateName] || stateName.substring(0, 3).toUpperCase();
+        }
+
+        // استخراج رموز الولايات من نص التغطية
+        function extractStateCodes(coverageAreaText) {
+            const codes = [];
+            const parts = coverageAreaText.split(',');
+            for (const part of parts) {
+                const match = part.trim().match(/^([A-Z]{3})/);
+                if (match) codes.push(match[1]);
+            }
+            return codes;
+        }
+
+        // تحميل الموزعين والشركات بناءً على الولاية المختارة
+        function loadDistributorsByState() {
+            const selectedState = document.getElementById('customerState').value;
+            const container = document.getElementById('distributorsContainer');
+            
+            if (!selectedState) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const stateCode = getStateCode(selectedState);
+            const filteredDistributors = distributors.filter(d => {
+                if (d.status !== 'approved') return false;
+                const stateCodes = extractStateCodes(d.coverageArea);
+                return stateCodes.includes(stateCode);
+            });
+
+            if (filteredDistributors.length === 0) {
+                container.innerHTML = `
+                    <div class="distributors-section">
+                        <h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة</h3>
+                        <div class="no-distributors">
+                            <i class="fas fa-inbox" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>
+                            لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${selectedState}</strong> حالياً
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="distributors-section">
+                    <h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة في ${selectedState}</h3>
+            `;
+
+            filteredDistributors.forEach(distributor => {
+                const serviceIcon = distributor.serviceType === 'delivery' ? '🚚' : '📦';
+                const serviceLabel = distributor.serviceType === 'delivery' ? 'شركة توصيل' : 'موزع معتمد';
+                const typeClass = distributor.serviceType === 'delivery' ? 'type-delivery' : 'type-distributor';
+
+                html += `
+                    <div class="distributor-item">
+                        <div class="distributor-name">${serviceIcon} ${distributor.companyName}</div>
+                        <div>
+                            <span class="distributor-type ${typeClass}">${serviceLabel}</span>
+                        </div>
+                        <div class="distributor-info">
+                            👤 <strong>${distributor.managerName}</strong> | 📞 ${distributor.phone}
+                        </div>
+                        <div class="distributor-info">
+                            🆔 المعرف: <span class="distributor-id">${distributor.customId || '---'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ============================================
+        // 3.3 - دوال الألوان وحالة المتاجر
         // ============================================
         function getStoreColor(storeID) { 
             if (!storeColors[storeID]) { 
@@ -468,7 +645,7 @@
         function toggleStore(storeID) { storesState[storeID] = !storesState[storeID]; saveStoresState(); updateCartDisplay(); }
         
         // ============================================
-        // 3.3 - دوال إدارة السلة (حفظ، تحميل، عدادات)
+        // 3.4 - دوال إدارة السلة (حفظ، تحميل، عدادات)
         // ============================================
         function saveCart() { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); updateCartCounters(); }
         
@@ -487,7 +664,7 @@
         }
         
         // ============================================
-        // 3.4 - دوال الإشعارات
+        // 3.5 - دوال الإشعارات
         // ============================================
         function showNotification(m, type='success') { 
             const n = document.createElement('div'); 
@@ -498,7 +675,30 @@
         }
         
         // ============================================
-        // 3.5 - دوال تحديث الكمية والحذف من السلة
+        // 3.6 - دوال عرض السلة
+        // ============================================
+        function updateCartDisplay() { 
+            const container = document.getElementById('cartContainer'); 
+            if(cart.length===0){ 
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-cart"></i><h3>السلة فارغة</h3><p>لم تقم بإضافة أي منتجات بعد</p></div>`; 
+                return; 
+            } 
+            const grouped = groupByStore(cart); 
+            let html = ''; 
+            for(const [storeID, storeData] of Object.entries(grouped)){ 
+                const isCollapsed = storesState[storeID]; 
+                html += `<div class="merchant-section ${getStoreColor(storeID)}"><div class="merchant-header" onclick="toggleStore('${storeID}')"><div class="merchant-info"><div class="merchant-avatar"><i class="fas fa-store"></i></div><div><div class="merchant-name">${storeData.storeName}</div><div class="merchant-id">${storeID}</div></div></div><div class="merchant-stats"><span>${storeData.count}</span> منتج<span>${storeData.total.toLocaleString('ar-EG')}</span> دج</div><div class="merchant-toggle ${isCollapsed?'collapsed':''}"><i class="fas fa-chevron-down"></i></div></div><div class="merchant-products ${isCollapsed?'collapsed':''}">`; 
+                storeData.items.forEach(item=>{ 
+                    html += `<div class="cart-item"><div class="product-thumbnail">${item.imageData?`<img src="${item.imageData}">`:' <i class="fas fa-image"></i>'}</div><div class="product-details"><div class="product-name">${item.name}</div><div class="product-price">${item.price.toLocaleString('ar-EG')} دج</div><div class="product-id">معرف: ${item.productCompositeID||item.id||'---'}</div></div><div class="cart-item-quantity"><button onclick="updateCartQuantity('${item.id}',-1)">−</button><span>${item.quantity}</span><button onclick="updateCartQuantity('${item.id}',1)">+</button></div><div class="cart-item-total">${(item.price*item.quantity).toLocaleString('ar-EG')} دج</div><button class="cart-item-remove" onclick="removeFromCart('${item.id}')"><i class="fas fa-trash"></i></button></div>`; 
+                }); 
+                html += `</div></div>`; 
+            } 
+            html += `<div class="cart-summary"><div class="summary-row"><span class="summary-label">الإجمالي الفرعي:</span><span class="summary-value">${cart.reduce((s,i)=>s+(i.price*i.quantity),0).toLocaleString('ar-EG')} دج</span></div><div class="summary-row"><span class="summary-label">الرسوم:</span><span class="summary-value">مجاني</span></div><div class="summary-row" style="border: none;"><span class="summary-label" style="font-size: 18px;">المجموع:</span><span class="summary-total">${cart.reduce((s,i)=>s+(i.price*i.quantity),0).toLocaleString('ar-EG')} دج</span></div><div class="cart-actions"><button class="btn btn-gold" onclick="openCustomerModal()"><i class="fas fa-credit-card"></i> الدفع والتوصيل</button><button class="btn btn-outline" onclick="clearCart()"><i class="fas fa-trash-alt"></i> مسح السلة</button></div></div>`; 
+            container.innerHTML = html; 
+        }
+        
+        // ============================================
+        // 3.7 - دوال إدارة عناصر السلة
         // ============================================
         function updateCartQuantity(productId, change) { 
             const idx = cart.findIndex(i=>i.id===productId); 
@@ -534,7 +734,7 @@
         }
         
         // ============================================
-        // 3.6 - دوال التجميع حسب المتجر
+        // 3.8 - دوال التجميع حسب المتجر
         // ============================================
         function groupByStore(items) { 
             const g={}; 
@@ -550,7 +750,7 @@
         }
 
         // ============================================
-        // 3.7 - دوال تنسيق المنتجات للرسائل
+        // 3.9 - دوال تنسيق المنتجات للرسائل
         // ============================================
         function formatProductVertical(item) {
             let productMsg = "";
@@ -566,46 +766,18 @@
         }
 
         // ============================================
-        // 3.8 - دوال توليد معرف الطلب الجديد
+        // 3.10 - دوال توليد معرف الطلب الجديد
         // ============================================
         
-        // تحويل اسم الولاية إلى رمز مختصر
-        function getStateCode(stateName) {
-            const stateCodes = {
-                'أدرار': 'ADR', 'الشلف': 'CHL', 'الأغواط': 'LGH', 'أم البواقي': 'UMB',
-                'باتنة': 'BAT', 'بجاية': 'BJA', 'بسكرة': 'BSK', 'بشار': 'BSH',
-                'البليدة': 'BLD', 'البويرة': 'BOU', 'تمنراست': 'TAM', 'تبسة': 'TEB',
-                'تلمسان': 'TLM', 'تيارت': 'TIA', 'تيزي وزو': 'TIZ', 'الجزائر': 'ALG',
-                'الجزائر العاصمة': 'ALG', 'الجلفة': 'DJF', 'جيجل': 'JIJ', 'سطيف': 'SET',
-                'سعيدة': 'SAI', 'سكيكدة': 'SKI', 'سيدي بلعباس': 'SBA', 'عنابة': 'ANA',
-                'قالمة': 'GUE', 'قسنطينة': 'CON', 'المدية': 'MED', 'مستغانم': 'MGT',
-                'المسيلة': 'MSL', 'معسكر': 'MSC', 'ورقلة': 'OUA', 'وهران': 'WAH',
-                'برج بوعريريج': 'BBA', 'بومرداس': 'BMD', 'الطارف': 'ELF', 'تندوف': 'TIN',
-                'تيسمسيلت': 'TIS', 'الوادي': 'ELO', 'خنشلة': 'KHE', 'سوق أهراس': 'SUK',
-                'تيبازة': 'TIP', 'ميلة': 'MIL', 'عين الدفلى': 'AIND', 'النعامة': 'NAA',
-                'عين تموشنت': 'AINT', 'غرداية': 'GHA', 'غليزان': 'REL'
-            };
-            
-            for (const [key, code] of Object.entries(stateCodes)) {
-                if (stateName.includes(key) || key.includes(stateName)) return code;
-            }
-            
-            const cleanName = stateName.replace(/[^\u0600-\u06FFa-zA-Z]/g, '');
-            return cleanName.substring(0, 3).toUpperCase() || 'GEN';
-        }
-        
-        // تنظيف اسم المشتري
         function cleanCustomerName(name) {
             let clean = name.replace(/[^\u0600-\u06FFa-zA-Z]/g, '');
             return clean.substring(0, 15) || 'CUST';
         }
         
-        // توليد 6 أرقام عشوائية
         function generateRandomNumbers() {
             return Math.floor(Math.random() * 900000 + 100000).toString();
         }
         
-        // توليد معرف الطلب الجديد
         function generateOrderId(customerName, stateName) {
             const stateCode = getStateCode(stateName || 'الجزائر');
             const cleanName = cleanCustomerName(customerName);
@@ -614,7 +786,7 @@
         }
         
         // ============================================
-        // 3.9 - دوال إرسال الطلب إلى تلغرام
+        // 3.11 - دوال إرسال الطلب إلى تلغرام
         // ============================================
         async function sendOrderToTelegram(customerData, groupedStores, grandTotal) {
             const timestamp = new Date().toLocaleString('ar-EG');
@@ -697,7 +869,7 @@
                         if(customerData.notes) merchantMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
                         merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                         merchantMsg += `✅ *حالة الطلب:* قيد المراجعة\n`;
-                        merchantMsg += `🔗 *ناردو برو - نظام التسوق الذكي*`;
+                        merchantMsg += `🔗 *ناردو برو* - نظام طلبات متكامل\n`;
                         
                         await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                             method:'POST', 
@@ -731,7 +903,7 @@
         }
 
         // ============================================
-        // 3.10 - دوال حفظ الطلب محلياً
+        // 3.12 - دوال حفظ الطلب محلياً
         // ============================================
         function saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp) {
             let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
@@ -760,7 +932,7 @@
         }
         
         // ============================================
-        // 3.11 - دوال عرض وإدارة أرشيف الطلبات
+        // 3.13 - دوال عرض وإدارة أرشيف الطلبات
         // ============================================
         function renderOrdersArchive() {
             const container = document.getElementById('ordersArchiveContainer');
@@ -821,7 +993,7 @@
         }
         
         // ============================================
-        // 3.12 - دوال النافذة المنبثقة والطلب
+        // 3.14 - دوال النافذة المنبثقة والطلب
         // ============================================
         let pendingGroupedStores = null, pendingGrandTotal = null;
         
@@ -869,6 +1041,7 @@
             document.getElementById('customerAddress').value = '';
             document.getElementById('fullAddress').value = '';
             document.getElementById('customerNotes').value = '';
+            document.getElementById('distributorsContainer').innerHTML = '';
             
             document.getElementById('customerModal').style.display = 'flex'; 
         }
@@ -943,106 +1116,16 @@
         }
         
         // ============================================
-        // 3.13 - دوال عرض السلة الأساسية
+        // 3.15 - دوال التهيئة
         // ============================================
-        function updateCartDisplay() {
-            const container = document.getElementById('cartContainer');
-            if(!container) return;
-            
-            if(cart.length === 0){ 
-                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-basket"></i><h3>السلة فارغة</h3><button class="btn btn-gold" onclick="window.location.href='index.html'">تصفح المنتجات</button></div>`; 
-                return; 
-            }
-            
-            const grouped = groupByStore(cart);
-            let grandTotal = 0, grandCount = 0, storesHtml = '';
-            
-            for(const [sid, sd] of Object.entries(grouped)){ 
-                grandTotal += sd.total; 
-                grandCount += sd.count; 
-                const isCollapsed = storesState[sid] === true; 
-                const colorClass = getStoreColor(sid);
-                let itemsHtml = '';
-                
-                sd.items.forEach(it => { 
-                    const thumbnailHtml = it.imageData ? `<img src="${it.imageData}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-box\\'></i>'">` : '<i class="fas fa-box"></i>';
-                    itemsHtml += `
-                        <div class="cart-item">
-                            <div class="product-thumbnail">${thumbnailHtml}</div>
-                            <div class="product-details">
-                                <div class="product-name">${it.name}</div>
-                                <div class="product-price">${it.price.toLocaleString()} دج</div>
-                                <div class="product-id">🆔 ${it.productCompositeID || it.id || '---'}</div>
-                            </div>
-                            <div class="cart-item-quantity">
-                                <button onclick="updateCartQuantity(${it.id},-1)">−</button>
-                                <span>${it.quantity}</span>
-                                <button onclick="updateCartQuantity(${it.id},1)">+</button>
-                            </div>
-                            <div class="cart-item-total">${(it.price * it.quantity).toLocaleString()} دج</div>
-                            <button class="cart-item-remove" onclick="removeFromCart(${it.id})"><i class="fas fa-trash-alt"></i> حذف</button>
-                        </div>
-                    `;
-                });
-                
-                storesHtml += `
-                    <div class="merchant-section ${colorClass}">
-                        <div class="merchant-header" onclick="toggleStore('${sid.replace(/'/g, "\\'")}')">
-                            <div class="merchant-info">
-                                <div class="merchant-avatar"><i class="fas fa-store"></i></div>
-                                <div>
-                                    <div class="merchant-name">${sd.storeName}</div>
-                                    <div class="merchant-id">🆔 ${sid}</div>
-                                    <div class="merchant-stats"><span>📦 ${sd.count}</span><span>💰 ${sd.total.toLocaleString()} دج</span></div>
-                                </div>
-                            </div>
-                            <div class="merchant-toggle ${isCollapsed ? 'collapsed' : ''}"><i class="fas fa-chevron-down"></i></div>
-                        </div>
-                        <div class="merchant-products ${isCollapsed ? 'collapsed' : ''}">${itemsHtml}</div>
-                    </div>
-                `;
-            }
-            
-            container.innerHTML = storesHtml + `
-                <div class="cart-summary">
-                    <div class="summary-row"><span class="summary-label">عدد العناصر:</span><span class="summary-value">${grandCount}</span></div>
-                    <div class="summary-row"><span class="summary-label">عدد المتاجر:</span><span class="summary-value">${Object.keys(grouped).length}</span></div>
-                    <div class="summary-row"><span class="summary-label">الإجمالي النهائي:</span><span class="summary-value summary-total">${grandTotal.toLocaleString()} دج</span></div>
-                    <div class="cart-actions">
-                        <button class="btn btn-success" onclick="openCustomerModal()">إتمام الطلب</button>
-                        <button class="btn btn-outline" onclick="clearCart()">إفراغ السلة</button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // ============================================
-        // 3.14 - مستمعات الأحداث والتهيئة الأولية
-        // ============================================
-        window.addEventListener('storage', e => { 
-            if(e.key === CART_STORAGE_KEY){ 
-                cart = e.newValue ? JSON.parse(e.newValue) : []; 
-                updateCartDisplay(); 
-                updateCartCounters(); 
-            } 
+        window.addEventListener('load', function() {
+            loadCart();
+            loadDistributors();
+            renderOrdersArchive();
+            console.log('✅ نظام السلة جاهز');
         });
-        
-        loadCart(); 
-        renderOrdersArchive();
-        
-        // ربط الدوال بالكائن العمومي window
-        window.updateCartQuantity = updateCartQuantity; 
-        window.removeFromCart = removeFromCart; 
-        window.clearCart = clearCart; 
-        window.toggleStore = toggleStore; 
-        window.openCustomerModal = openCustomerModal; 
-        window.closeModal = closeModal; 
-        window.submitOrder = submitOrder; 
-        window.updateOrderStatus = updateOrderStatus; 
-        window.deleteOrderArchive = deleteOrderArchive;
-        window.updateFullAddress = updateFullAddress;
-        window.openMapLocation = openMapLocation;
     </script>
 </body>
 </html>
+
 
