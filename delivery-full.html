@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -238,9 +237,10 @@
         .empty-state i { font-size: 60px; color: var(--gold); margin-bottom: 20px; }
         .empty-state h3 { font-size: 24px; margin-bottom: 10px; color: var(--text-primary); }
 
-        .footer { text-align: center; padding: 30px; color: var(--text-secondary); border-top: 1px solid rgba(255, 215, 0, 0.2); margin-top: 50px; }
         .info-note { background: rgba(96, 165, 250, 0.1); border-right: 3px solid var(--info); padding: 10px; margin-top: 10px; border-radius: 8px; font-size: 12px; color: var(--info); }
         .export-btn { background: var(--success); color: #000; margin-right: 10px; }
+
+        .id-preview { background: rgba(255, 215, 0, 0.1); border: 1px dashed var(--gold); padding: 10px; border-radius: 8px; margin-top: 5px; font-family: monospace; font-weight: bold; color: var(--gold); font-size: 16px; display: flex; align-items: center; gap: 10px; }
 
         @media (max-width: 768px) {
             .form-row { grid-template-columns: 1fr; }
@@ -284,7 +284,7 @@
                 <h2 style="color: var(--gold); margin-bottom: 20px;">🗺️ جدول الموزعين والولايات</h2>
                 <div class="search-box"><input type="text" id="searchDistributor" placeholder="🔍 بحث عن موزع..." onkeyup="filterDistributorsTable()"><button class="btn btn-gold" onclick="exportDistributorsTable()"><i class="fas fa-download"></i> تصدير Excel</button><button class="btn btn-telegram" onclick="sendDistributorsTableToTelegram()"><i class="fab fa-telegram"></i> إرسال للقناة</button></div>
                 <div class="filter-buttons"><button class="filter-btn active" onclick="filterByType('all')">الكل</button><button class="filter-btn" onclick="filterByType('delivery')">🚚 شركات التوصيل</button><button class="filter-btn" onclick="filterByType('distributor')">📦 موزعون معتمدون</button><button class="filter-btn" onclick="filterByType('both')">🔄 كليهما</button></div>
-                <div class="distributors-table-container"><table class="distributors-table" id="distributorsTableContent"><thead><tr><th>#</th><th>🏢 اسم الموزع</th><th>👤 المسؤول</th><th>📞 الهاتف</th><th>🏷️ النوع</th><th>🌍 الولايات (الرمز)</th><th>📍 الولايات (الاسم)</th><th>📊 عدد الولايات</th></tr></thead><tbody id="distributorsTableBody"></tbody></table></div>
+                <div class="distributors-table-container"><table class="distributors-table" id="distributorsTableContent"><thead><tr><th>#</th><th>🏢 اسم الموزع</th><th>👤 المسؤول</th><th>📞 الهاتف</th><th>🏷️ النوع</th><th>🌍 الولايات (الرمز)</th><th>📍 الولايات (الاسم)</th><th>📊 عدد الولايات</th><th>🆔 المعرف</th></tr></thead><tbody id="distributorsTableBody"></tbody></table></div>
             </div>
         </div>
         <div id="pending" class="tab-content"><div id="pendingContainer"></div></div>
@@ -293,7 +293,7 @@
 
     <div id="deliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-plus-circle"></i> طلب توصيل جديد</h2><button class="close-btn" onclick="closeDeliveryModal()">&times;</button></div><form onsubmit="event.preventDefault(); submitDelivery();"><div class="form-group"><label>📦 رقم الطلب</label><input type="text" id="deliveryOrderId" required placeholder="مثال: ORD-001"></div><div class="form-group"><label>👤 اسم الزبون</label><input type="text" id="deliveryCustomer" required placeholder="أحمد محمد"></div><div class="form-group"><label>📍 عنوان التوصيل</label><textarea id="deliveryAddress" required placeholder="الشارع، المدينة، الولاية" rows="3"></textarea></div><div class="form-group"><label>📞 رقم الهاتف</label><input type="tel" id="deliveryPhone" required placeholder="05XXXXXXXX"></div><div class="form-group"><label>🏪 الموزع المسؤول</label><select id="deliveryDistributor" required><option value="">اختر موزع</option></select></div><div class="form-group"><label>💰 قيمة الطلب</label><input type="number" id="deliveryAmount" required placeholder="1000"></div><div class="form-group"><label>📝 ملاحظات</label><textarea id="deliveryNotes" placeholder="ملاحظات إضافية..." rows="2"></textarea></div><button type="submit" class="btn btn-gold" style="width: 100%;"><i class="fas fa-check"></i> إنشاء الطلب</button></form></div></div>
 
-    <div id="distributorModal" class="modal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-warehouse"></i> تسجيل موزع جديد</h2><button class="close-btn" onclick="closeDistributorModal()">&times;</button></div><form onsubmit="event.preventDefault(); submitDistributor();"><div class="form-group"><label>🏢 اسم الشركة</label><input type="text" id="companyName" required placeholder="شركة التوصيل السريع"></div><div class="form-group"><label>👤 اسم المسؤول</label><input type="text" id="managerName" required placeholder="محمد علي"></div><div class="form-group"><label>📧 البريد الإلكتروني</label><input type="email" id="distributorEmail" required placeholder="info@company.com"></div><div class="form-group"><label>📞 رقم الهاتف</label><input type="tel" id="distributorPhone" required placeholder="05XXXXXXXX"></div><div class="form-group"><label>🏷️ نوع الخدمة</label><select id="serviceType" required onchange="handleServiceTypeChange()"><option value="">اختر نوع الخدمة</option><option value="delivery">شركة توصيل (تغطية كل الولايات)</option><option value="distributor">موزع معتمد (يختار الولايات)</option><option value="both">كليهما</option></select></div><div class="form-group" id="coverageAreaGroup"><label>🌍 مناطق التغطية</label><select id="coverageArea" multiple size="8"></select><div id="selectedStatesContainer" class="selected-states"></div><div id="coverageNote" class="info-note"></div><small style="color: var(--text-secondary); font-size: 11px;">💡 يمكنك اختيار عدة ولايات بالضغط مع زر Ctrl</small></div><div class="form-group"><label>📝 وصف الخدمة</label><textarea id="serviceDescription" required placeholder="وصف خدماتك..." rows="2"></textarea></div><button type="submit" class="btn btn-gold" style="width: 100%;"><i class="fas fa-paper-plane"></i> إرسال الطلب</button></form></div></div>
+    <div id="distributorModal" class="modal"><div class="modal-content"><div class="modal-header"><h2><i class="fas fa-warehouse"></i> تسجيل موزع جديد</h2><button class="close-btn" onclick="closeDistributorModal()">&times;</button></div><form onsubmit="event.preventDefault(); submitDistributor();"><div class="form-group"><label>🏢 اسم الشركة</label><input type="text" id="companyName" required placeholder="شركة التوصيل السريع" oninput="updateGeneratedId()"></div><div class="form-group"><label>👤 اسم المسؤول</label><input type="text" id="managerName" required placeholder="محمد علي" oninput="updateGeneratedId()"></div><div class="form-group"><label>📧 البريد الإلكتروني</label><input type="email" id="distributorEmail" required placeholder="info@company.com"></div><div class="form-group"><label>📞 رقم الهاتف</label><input type="tel" id="distributorPhone" required placeholder="05XXXXXXXX"></div><div class="form-group"><label>🏷️ نوع الخدمة</label><select id="serviceType" required onchange="handleServiceTypeChange(); updateGeneratedId();"><option value="">اختر نوع الخدمة</option><option value="delivery">شركة توصيل (تغطية كل الولايات)</option><option value="distributor">موزع معتمد (يختار الولايات)</option><option value="both">كليهما</option></select></div><div class="form-group" id="coverageAreaGroup"><label>🌍 مناطق التغطية</label><select id="coverageArea" multiple size="8" onchange="updateSelectedStatesDisplay(); updateGeneratedId();"></select><div id="selectedStatesContainer" class="selected-states"></div><div id="coverageNote" class="info-note"></div><small style="color: var(--text-secondary); font-size: 11px;">💡 يمكنك اختيار عدة ولايات بالضغط مع زر Ctrl</small></div><div class="form-group"><label>🆔 المعرف الخاص (توليد تلقائي)</label><div id="generatedIdPreview" class="id-preview">بانتظار البيانات...</div><input type="hidden" id="generatedId" name="generatedId"></div><div class="form-group"><label>📝 وصف الخدمة</label><textarea id="serviceDescription" required placeholder="وصف خدماتك..." rows="2"></textarea></div><button type="submit" class="btn btn-gold" style="width: 100%;"><i class="fas fa-paper-plane"></i> إرسال الطلب</button></form></div></div>
 
     <div class="footer"><p>© 2026 ناردو برو - نظام إدارة التوصيل والموزعين | جميع الحقوق محفوظة</p></div>
 
@@ -314,11 +314,10 @@
             if (!select) return;
             select.innerHTML = '';
             algerianStates.forEach(state => { const option = document.createElement('option'); option.value = `${state.code} - ${state.name}`; option.textContent = `${state.code} | ${state.name}`; select.appendChild(option); });
-            select.addEventListener('change', updateSelectedStatesDisplay);
         }
+
         function handleServiceTypeChange() {
             const serviceType = document.getElementById('serviceType').value;
-            const coverageAreaGroup = document.getElementById('coverageAreaGroup');
             const select = document.getElementById('coverageArea');
             const note = document.getElementById('coverageNote');
             if (serviceType === 'delivery') { if (select) { for (let i = 0; i < select.options.length; i++) select.options[i].selected = true; updateSelectedStatesDisplay(); select.disabled = true; } note.innerHTML = '✅ شركة توصيل - تغطية جميع الولايات الجزائرية (58 ولاية) تلقائياً'; note.style.color = 'var(--success)'; }
@@ -326,8 +325,64 @@
             else if (serviceType === 'both') { if (select) { for (let i = 0; i < select.options.length; i++) select.options[i].selected = false; updateSelectedStatesDisplay(); select.disabled = false; } note.innerHTML = '📌 كليهما - يرجى اختيار الولايات التي تغطيها (كشركة توصيل وموزع)'; note.style.color = 'var(--info)'; }
             else { if (select) select.disabled = false; note.innerHTML = ''; }
         }
-        function updateSelectedStatesDisplay() { const select = document.getElementById('coverageArea'); const container = document.getElementById('selectedStatesContainer'); if (!select || !container) return; const selectedValues = Array.from(select.selectedOptions).map(opt => opt.value); if (selectedValues.length === 0) { container.innerHTML = ''; return; } container.innerHTML = selectedValues.map(value => `<span class="selected-state-tag">${value}<i class="fas fa-times-circle" onclick="removeState('${value.replace(/'/g, "\\'")}')"></i></span>`).join(''); }
-        function removeState(value) { const select = document.getElementById('coverageArea'); if (!select) return; for (let i = 0; i < select.options.length; i++) { if (select.options[i].value === value) { select.options[i].selected = false; break; } } updateSelectedStatesDisplay(); }
+
+        function updateSelectedStatesDisplay() { 
+            const select = document.getElementById('coverageArea'); 
+            const container = document.getElementById('selectedStatesContainer'); 
+            if (!select || !container) return; 
+            const selectedValues = Array.from(select.selectedOptions).map(opt => opt.value); 
+            if (selectedValues.length === 0) { container.innerHTML = ''; return; } 
+            container.innerHTML = selectedValues.map(value => `<span class="selected-state-tag">${value}<i class="fas fa-times-circle" onclick="removeState('${value.replace(/'/g, "\\'")}')"></i></span>`).join('');
+        }
+
+        function removeState(value) { const select = document.getElementById('coverageArea'); for (let i = 0; i < select.options.length; i++) { if (select.options[i].value === value) select.options[i].selected = false; } updateSelectedStatesDisplay(); updateGeneratedId(); }
+
+        // ===== دالة توليد المعرف الجديد =====
+        function updateGeneratedId() {
+            const serviceType = document.getElementById('serviceType').value;
+            const companyName = document.getElementById('companyName').value.trim();
+            const managerName = document.getElementById('managerName').value.trim();
+            const select = document.getElementById('coverageArea');
+            const preview = document.getElementById('generatedIdPreview');
+            const hiddenInput = document.getElementById('generatedId');
+            
+            let generatedId = "";
+
+            if (!serviceType) {
+                preview.textContent = "يرجى اختيار نوع الخدمة...";
+                return;
+            }
+
+            if (serviceType === 'delivery') {
+                // شركة توصيل: اسم الشركة + 6 أرقام
+                if (!companyName) {
+                    preview.textContent = "يرجى إدخال اسم الشركة...";
+                    return;
+                }
+                // توليد 6 أرقام عشوائية (ثابتة لنفس الجلسة أو توليد جديد)
+                const randomNum = Math.floor(100000 + Math.random() * 900000);
+                generatedId = `${companyName}-${randomNum}`;
+            } else {
+                // موزع أو كلاهما: 3 أحرف من الولاية + م + اسم المسؤول
+                const selectedOptions = Array.from(select.selectedOptions);
+                if (selectedOptions.length === 0) {
+                    preview.textContent = "يرجى اختيار ولاية واحدة على الأقل...";
+                    return;
+                }
+                if (!managerName) {
+                    preview.textContent = "يرجى إدخال اسم المسؤول...";
+                    return;
+                }
+                
+                // نأخذ أول ولاية مختارة
+                const firstStateCode = selectedOptions[0].value.substring(0, 3);
+                generatedId = `${firstStateCode}م${managerName}`;
+            }
+
+            preview.textContent = generatedId;
+            hiddenInput.value = generatedId;
+        }
+
         function getCoverageAreaText() { const serviceType = document.getElementById('serviceType').value; if (serviceType === 'delivery') return 'جميع الولايات الجزائرية (58 ولاية)'; else { const select = document.getElementById('coverageArea'); const selected = Array.from(select.selectedOptions).map(opt => opt.value); if (selected.length === 0) return 'غير محدد'; return selected.join(', '); } }
         function extractStateCodes(coverageAreaText) { if (coverageAreaText.includes('جميع الولايات')) return algerianStates.map(s => s.code); const codes = []; const parts = coverageAreaText.split(','); for (const part of parts) { const match = part.trim().match(/^([A-Z]{3})/); if (match) codes.push(match[1]); } return codes; }
         function extractStateNames(coverageAreaText) { if (coverageAreaText.includes('جميع الولايات')) return algerianStates.map(s => s.name); const names = []; const parts = coverageAreaText.split(','); for (const part of parts) { const match = part.trim().match(/[A-Z]{3} - (.+)$/); if (match) names.push(match[1]); } return names; }
@@ -336,123 +391,142 @@
             const approved = distributors.filter(d => d.status === 'approved');
             let filtered = approved;
             if (currentFilter !== 'all') filtered = approved.filter(d => d.serviceType === currentFilter);
-            if (currentSearch) filtered = filtered.filter(d => d.companyName.toLowerCase().includes(currentSearch.toLowerCase()) || d.managerName.toLowerCase().includes(currentSearch.toLowerCase()) || d.phone.includes(currentSearch));
+            if (currentSearch) filtered = filtered.filter(d => d.companyName.toLowerCase().includes(currentSearch.toLowerCase()) || d.managerName.toLowerCase().includes(currentSearch.toLowerCase()) || d.phone.includes(currentSearch) || (d.customId && d.customId.includes(currentSearch)));
             const tbody = document.getElementById('distributorsTableBody');
-            if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 60px;"><i class="fas fa-search" style="font-size: 48px; color: var(--gold); margin-bottom: 10px; display: block;"></i><h3>لا توجد نتائج</h3><p style="color: var(--text-secondary);">لم يتم العثور على موزعين مطابقين للبحث</p></td></tr>`; return; }
-            tbody.innerHTML = filtered.map((distributor, index) => { const stateCodes = extractStateCodes(distributor.coverageArea); const stateNames = extractStateNames(distributor.coverageArea); const isAllStates = distributor.coverageArea.includes('جميع الولايات'); const serviceTypeText = distributor.serviceType === 'delivery' ? '🚚 شركة توصيل' : distributor.serviceType === 'distributor' ? '📦 موزع معتمد' : '🔄 كليهما'; return `<tr><td>${index + 1}</td><td><strong>${distributor.companyName}</strong></td><td>${distributor.managerName}</td><td>${distributor.phone}</td><td>${serviceTypeText}</td><td>${isAllStates ? '<span class="badge-all-states">🌍 جميع الولايات (58)</span>' : stateCodes.map(code => `<span class="state-code">${code}</span>`).join('')}</td><td>${isAllStates ? '<span style="color: var(--success);">الجزائر - أدرار - الشلف ... (جميع الولايات)</span>' : stateNames.map(name => `<span class="state-name">${name}</span>`).join('')}</td><td style="text-align: center;"><span class="status-badge status-approved" style="background: rgba(96, 165, 250, 0.2);">${isAllStates ? 58 : stateCodes.length}</span></td></tr>`; }).join('');
+            if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 60px;"><i class="fas fa-search" style="font-size: 48px; color: var(--gold); margin-bottom: 10px; display: block;"></i><h3>لا توجد نتائج</h3><p style="color: var(--text-secondary);">لم يتم العثور على موزعين مطابقين للبحث</p></td></tr>`; return; }
+            tbody.innerHTML = filtered.map((distributor, index) => { const stateCodes = extractStateCodes(distributor.coverageArea); const stateNames = extractStateNames(distributor.coverageArea); const isAllStates = distributor.coverageArea.includes('جميع الولايات'); const serviceTypeText = distributor.serviceType === 'delivery' ? '🚚 شركة توصيل' : distributor.serviceType === 'distributor' ? '📦 موزع معتمد' : '🔄 كليهما'; return `<tr><td>${index + 1}</td><td><strong>${distributor.companyName}</strong></td><td>${distributor.managerName}</td><td>${distributor.phone}</td><td>${serviceTypeText}</td><td>${isAllStates ? '<span class="badge-all-states">🌍 جميع الولايات (58)</span>' : stateCodes.map(code => `<span class="state-code">${code}</span>`).join('')}</td><td>${isAllStates ? '<span style="color: var(--success);">الجزائر - أدرار - الشلف ... (جميع الولايات)</span>' : stateNames.map(name => `<span class="state-name">${name}</span>`).join('')}</td><td style="text-align: center;"><span class="status-badge status-approved" style="background: rgba(96, 165, 250, 0.2);">${isAllStates ? 58 : stateCodes.length}</span></td><td><span class="state-code" style="background: rgba(255,215,0,0.1); border-color: var(--gold);">${distributor.customId || '---'}</span></td></tr>`; }).join('');
         }
         function filterDistributorsTable() { currentSearch = document.getElementById('searchDistributor').value; loadDistributorsTable(); }
         function filterByType(type) { currentFilter = type; document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active')); event.target.classList.add('active'); loadDistributorsTable(); }
-        function exportDistributorsTable() { const approved = distributors.filter(d => d.status === 'approved'); let filtered = approved; if (currentFilter !== 'all') filtered = filtered.filter(d => d.serviceType === currentFilter); if (currentSearch) filtered = filtered.filter(d => d.companyName.toLowerCase().includes(currentSearch.toLowerCase()) || d.managerName.toLowerCase().includes(currentSearch.toLowerCase()) || d.phone.includes(currentSearch)); let csvContent = "الرقم,اسم الموزع,المسؤول,الهاتف,نوع الخدمة,الولايات (الرمز),الولايات (الاسم),عدد الولايات\n"; filtered.forEach((distributor, index) => { const stateCodes = extractStateCodes(distributor.coverageArea); const stateNames = extractStateNames(distributor.coverageArea); const isAllStates = distributor.coverageArea.includes('جميع الولايات'); const serviceTypeText = distributor.serviceType === 'delivery' ? 'شركة توصيل' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'; const codesText = isAllStates ? 'جميع الولايات' : stateCodes.join(' - '); const namesText = isAllStates ? 'جميع الولايات الجزائرية' : stateNames.join(' - '); csvContent += `${index + 1},${distributor.companyName},${distributor.managerName},${distributor.phone},${serviceTypeText},${codesText},${namesText},${isAllStates ? 58 : stateCodes.length}\n`; }); const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" }); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.href = url; link.setAttribute("download", "الموزعون_والولابات.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); showNotification('✅ تم تصدير الجدول بنجاح', 'success'); }
+        function exportDistributorsTable() { const approved = distributors.filter(d => d.status === 'approved'); let filtered = approved; if (currentFilter !== 'all') filtered = filtered.filter(d => d.serviceType === currentFilter); if (currentSearch) filtered = filtered.filter(d => d.companyName.toLowerCase().includes(currentSearch.toLowerCase()) || d.managerName.toLowerCase().includes(currentSearch.toLowerCase()) || d.phone.includes(currentSearch)); let csvContent = "الرقم,اسم الموزع,المسؤول,الهاتف,نوع الخدمة,الولايات (الرمز),الولايات (الاسم),عدد الولايات,المعرف الخاص\n"; filtered.forEach((distributor, index) => { const stateCodes = extractStateCodes(distributor.coverageArea); const stateNames = extractStateNames(distributor.coverageArea); const isAllStates = distributor.coverageArea.includes('جميع الولايات'); const serviceTypeText = distributor.serviceType === 'delivery' ? 'شركة توصيل' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'; const codesText = isAllStates ? 'جميع الولايات' : stateCodes.join(' - '); const namesText = isAllStates ? 'جميع الولايات الجزائرية' : stateNames.join(' - '); csvContent += `${index + 1},${distributor.companyName},${distributor.managerName},${distributor.phone},${serviceTypeText},${codesText},${namesText},${isAllStates ? 58 : stateCodes.length},${distributor.customId || ''}\n`; }); const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" }); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.href = url; link.setAttribute("download", "الموزعون_والولايات.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); showNotification('✅ تم تصدير الجدول بنجاح', 'success'); }
 
-        // ===== إرسال جدول الموزعين والشركات إلى التلغرام مع فلترة كل ولاية =====
         async function sendDistributorsTableToTelegram() {
             const approved = distributors.filter(d => d.status === 'approved');
             if (approved.length === 0) { showNotification('⚠️ لا يوجد موزعون معتمدون لإرسالهم', 'warning'); return; }
-            
             showNotification('📤 جاري إعداد وتقسيم البيانات حسب الولايات...', 'info');
-            
-            // بناء خريطة لكل ولاية وقائمة الموزعين الذين يغطونها
-            const stateMap = new Map(); // key: code_name, value: { code, name, distributors: [] }
-            
-            // تهيئة الخريطة بجميع الولايات
-            algerianStates.forEach(state => {
-                stateMap.set(state.code, { code: state.code, name: state.name, distributors: [] });
-            });
-            
-            // توزيع الموزعين على الولايات
+            const stateMap = new Map();
+            algerianStates.forEach(state => { stateMap.set(state.code, { code: state.code, name: state.name, distributors: [] }); });
             approved.forEach(distributor => {
                 const stateCodes = extractStateCodes(distributor.coverageArea);
                 const isAllStates = distributor.coverageArea.includes('جميع الولايات');
                 const serviceTypeText = distributor.serviceType === 'delivery' ? '🚚 شركة توصيل' : distributor.serviceType === 'distributor' ? '📦 موزع معتمد' : '🔄 كليهما';
-                
-                const distributorInfo = `• **${distributor.companyName}** (${serviceTypeText})\n  👤 ${distributor.managerName} | 📞 ${distributor.phone}`;
-                
-                if (isAllStates) {
-                    // إذا كان يغطي جميع الولايات، أضفه لكل ولاية
-                    stateMap.forEach((value, key) => {
-                        value.distributors.push(distributorInfo);
-                    });
-                } else {
-                    // أضفه فقط للولايات المحددة
-                    stateCodes.forEach(code => {
-                        if (stateMap.has(code)) {
-                            stateMap.get(code).distributors.push(distributorInfo);
-                        }
-                    });
-                }
+                const distributorInfo = `• **${distributor.companyName}** (${serviceTypeText})\n  🆔 المعرف: \`${distributor.customId || '---'}\`\n  👤 ${distributor.managerName} | 📞 ${distributor.phone}`;
+                if (isAllStates) { stateMap.forEach((value, key) => { value.distributors.push(distributorInfo); }); } 
+                else { stateCodes.forEach(code => { if (stateMap.has(code)) { stateMap.get(code).distributors.push(distributorInfo); } }); }
             });
-            
-            // تجميع الرسائل (كل رسالة تحتوي على عدة ولايات مع موزعيها)
             let messages = [];
             let currentMessage = "📋 *قائمة الموزعين وشركات التوصيل حسب كل ولاية*\n━━━━━━━━━━━━━━━━━━━━━━\n📅 " + new Date().toLocaleString('ar-EG') + "\n━━━━━━━━━━━━━━━━━━━━━━\n\n";
             let messageLength = currentMessage.length;
-            
             for (let [code, stateData] of stateMap) {
                 if (stateData.distributors.length === 0) continue;
-                
                 const stateHeader = `📍 *ولاية ${stateData.name} (${code})* - عدد الموزعين: ${stateData.distributors.length}\n${'─'.repeat(30)}\n`;
                 const distributorsText = stateData.distributors.join('\n\n');
                 const stateBlock = `${stateHeader}${distributorsText}\n\n${'═'.repeat(40)}\n\n`;
-                
-                // إذا تجاوزت الحد الأقصى (4000 حرف) أرسل رسالة جديدة
-                if (messageLength + stateBlock.length > 3900) {
-                    messages.push(currentMessage);
-                    currentMessage = "📋 *قائمة الموزعين وشركات التوصيل حسب كل ولاية* (تابع)\n━━━━━━━━━━━━━━━━━━━━━━\n\n";
-                    messageLength = currentMessage.length;
-                }
-                currentMessage += stateBlock;
-                messageLength += stateBlock.length;
+                if (messageLength + stateBlock.length > 3900) { messages.push(currentMessage); currentMessage = "📋 *قائمة الموزعين وشركات التوصيل حسب كل ولاية* (تابع)\n━━━━━━━━━━━━━━━━━━━━━━\n\n"; messageLength = currentMessage.length; }
+                currentMessage += stateBlock; messageLength += stateBlock.length;
             }
-            
-            if (currentMessage !== "📋 *قائمة الموزعين وشركات التوصيل حسب كل ولاية*\n━━━━━━━━━━━━━━━━━━━━━━\n📅 " + new Date().toLocaleString('ar-EG') + "\n━━━━━━━━━━━━━━━━━━━━━━\n\n") {
-                messages.push(currentMessage);
-            }
-            
-            // إرسال الرسائل إلى التلغرام
+            if (currentMessage.length > 100) messages.push(currentMessage);
             let successCount = 0;
             for (let i = 0; i < messages.length; i++) {
                 try {
-                    const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: messages[i], parse_mode: 'Markdown' })
-                    });
+                    const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: messages[i], parse_mode: 'Markdown' }) });
                     if (response.ok) successCount++;
                     await new Promise(resolve => setTimeout(resolve, 500));
                 } catch(e) { console.error(e); }
             }
-            
-            if (successCount > 0) showNotification(`✅ تم إرسال ${successCount} رسالة تحتوي على جميع الموزعين حسب كل ولاية`, 'success');
+            if (successCount > 0) showNotification(`✅ تم إرسال ${successCount} رسالة للتلغرام`, 'success');
             else showNotification('❌ فشل إرسال البيانات إلى التلغرام', 'error');
         }
 
         function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(tabName).classList.add('active'); event.target.classList.add('active'); if (tabName === 'deliveries') loadDeliveries(); else if (tabName === 'distributors') loadDistributors(); else if (tabName === 'distributorsTable') loadDistributorsTable(); else if (tabName === 'pending') loadPendingRequests(); }
         function openDeliveryModal() { if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'delivery_company' && currentUser.role !== 'store_owner')) { showNotification('غير مصرح بإنشاء طلبات توصيل', 'error'); return; } document.getElementById('deliveryModal').classList.add('active'); loadDistributorsSelect(); }
         function closeDeliveryModal() { document.getElementById('deliveryModal').classList.remove('active'); }
-        function openDistributorModal() { document.getElementById('distributorModal').classList.add('active'); loadStatesSelect(); document.getElementById('serviceType').value = ''; const select = document.getElementById('coverageArea'); if (select) select.disabled = false; handleServiceTypeChange(); }
+        function openDistributorModal() { document.getElementById('distributorModal').classList.add('active'); loadStatesSelect(); document.getElementById('serviceType').value = ''; const select = document.getElementById('coverageArea'); if (select) select.disabled = false; handleServiceTypeChange(); updateGeneratedId(); }
         function closeDistributorModal() { document.getElementById('distributorModal').classList.remove('active'); }
-        function loadDistributorsSelect() { const select = document.getElementById('deliveryDistributor'); const approved = distributors.filter(d => d.status === 'approved'); select.innerHTML = '<option value="">اختر موزع</option>'; approved.forEach(distributor => { const option = document.createElement('option'); option.value = distributor.id; option.textContent = `${distributor.companyName} (${distributor.coverageArea.substring(0, 30)}...)`; select.appendChild(option); }); }
-        function loadDeliveries() { const container = document.getElementById('deliveriesContainer'); const filtered = deliveries.filter(d => { if (currentUser?.role === 'admin') return true; if (currentUser?.role === 'store_owner') return d.storeID === currentUser.storeID; return d.distributorId == currentUser?.id; }); if (filtered.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><h3>لا توجد طلبات توصيل</h3><p>ابدأ بإنشاء طلب توصيل جديد</p></div>`; return; } container.innerHTML = filtered.map(delivery => { const distributor = distributors.find(d => d.id == delivery.distributorId); return `<div class="card"><div class="card-header"><div><div class="card-title">📦 ${delivery.orderId}</div><div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">👤 ${delivery.customer}</div></div><span class="status-badge status-${delivery.status}">${delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : delivery.status === 'completed' ? '✅ مكتمل' : '❌ ملغى'}</span></div><div style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.05); border-radius: 10px;"><div><strong>📍 العنوان:</strong> ${delivery.address}</div><div><strong>📞 الهاتف:</strong> ${delivery.phone}</div><div><strong>💰 المبلغ:</strong> ${delivery.amount.toLocaleString()} دج</div><div><strong>🏪 الموزع:</strong> ${distributor?.companyName || 'غير محدد'}</div><div><strong>🌍 مناطق التغطية:</strong> ${distributor?.coverageArea || 'غير محدد'}</div></div><div style="display: flex; gap: 10px;"><button class="btn btn-gold" onclick="updateDeliveryStatus(${delivery.id}, 'in_transit')" style="flex: 1;">🚚 قيد التوصيل</button><button class="btn btn-outline" onclick="updateDeliveryStatus(${delivery.id}, 'completed')" style="flex: 1;">✅ مكتمل</button></div></div>`; }).join(''); }
-        function loadDistributors() { const container = document.getElementById('distributorsContainer'); const approved = distributors.filter(d => d.status === 'approved'); if (approved.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-warehouse"></i><h3>لا توجد موزعون معتمدون</h3><p>سيظهر الموزعون المعتمدون هنا</p></div>`; return; } container.innerHTML = approved.map(distributor => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${distributor.companyName}</div><div style="color: var(--text-secondary); font-size: 12px;">👤 ${distributor.managerName}</div></div><span class="status-badge status-approved">✅ معتمد</span></div><div style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.05); border-radius: 10px;"><div><strong>📧 البريد:</strong> ${distributor.email}</div><div><strong>📞 الهاتف:</strong> ${distributor.phone}</div><div><strong>🌍 المناطق:</strong> ${distributor.coverageArea}</div><div><strong>📝 الخدمة:</strong> ${distributor.serviceType === 'delivery' ? 'شركة توصيل (جميع الولايات)' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'}</div></div></div>`).join(''); }
-        function loadPendingRequests() { const container = document.getElementById('pendingContainer'); const pending = distributors.filter(d => d.status === 'pending'); if (currentUser?.role !== 'admin') { container.innerHTML = `<div class="empty-state"><i class="fas fa-lock"></i><h3>غير مصرح</h3><p>فقط المدير يمكنه إدارة الطلبات</p></div>`; return; } if (pending.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-check-circle"></i><h3>لا توجد طلبات قيد الانتظار</h3><p>جميع الطلبات تمت معالجتها</p></div>`; return; } container.innerHTML = pending.map(distributor => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${distributor.companyName}</div><div style="color: var(--text-secondary); font-size: 12px;">👤 ${distributor.managerName}</div></div><span class="status-badge status-pending">⏳ قيد الانتظار</span></div><div style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.05); border-radius: 10px;"><div><strong>📧 البريد:</strong> ${distributor.email}</div><div><strong>📞 الهاتف:</strong> ${distributor.phone}</div><div><strong>🌍 المناطق:</strong> ${distributor.coverageArea}</div><div><strong>📝 الخدمة:</strong> ${distributor.serviceType === 'delivery' ? 'شركة توصيل (جميع الولايات)' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'}</div></div><div style="display: flex; gap: 10px;"><button class="btn btn-gold" onclick="approveDistributor(${distributor.id})" style="flex: 1;">✅ موافقة</button><button class="btn btn-outline" onclick="rejectDistributor(${distributor.id})" style="flex: 1;">❌ رفض</button></div></div>`).join(''); }
+        function loadDistributorsSelect() { const select = document.getElementById('deliveryDistributor'); const approved = distributors.filter(d => d.status === 'approved'); select.innerHTML = '<option value="">اختر موزع</option>'; approved.forEach(distributor => { const option = document.createElement('option'); option.value = distributor.id; option.textContent = `${distributor.companyName} (${distributor.customId || 'بدون معرف'})`; select.appendChild(option); }); }
         
+        function loadDeliveries() { 
+            const container = document.getElementById('deliveriesContainer'); 
+            const filtered = deliveries.filter(d => { if (currentUser?.role === 'admin') return true; if (currentUser?.role === 'store_owner') return d.storeID === currentUser.storeID; return d.distributorId == currentUser?.id; }); 
+            if (filtered.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-box-open"></i><h3>لا توجد طلبات توصيل</h3><p>ابدأ بإنشاء طلب توصيل جديد</p></div>`; return; } 
+            container.innerHTML = filtered.map(delivery => { 
+                const distributor = distributors.find(d => d.id == delivery.distributorId); 
+                return `<div class="card"><div class="card-header"><div><div class="card-title">📦 ${delivery.orderId}</div><div style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">👤 ${delivery.customer}</div></div><span class="status-badge status-${delivery.status}">${delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : delivery.status === 'completed' ? '✅ مكتمل' : '❌ ملغى'}</span></div><div style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.05); border-radius: 10px;"><div><strong>📍 العنوان:</strong> ${delivery.address}</div><div><strong>📞 الهاتف:</strong> ${delivery.phone}</div><div><strong>💰 المبلغ:</strong> ${delivery.amount.toLocaleString()} دج</div><div><strong>🏪 الموزع:</strong> ${distributor?.companyName || 'غير محدد'} (${distributor?.customId || ''})</div></div><div style="display: flex; gap: 10px;"><button class="btn btn-gold" onclick="updateDeliveryStatus(${delivery.id}, 'in_transit')" style="flex: 1;">🚚 قيد التوصيل</button><button class="btn btn-outline" onclick="updateDeliveryStatus(${delivery.id}, 'completed')" style="flex: 1;">✅ مكتمل</button></div></div>`; 
+            }).join(''); 
+        }
+
+        function loadDistributors() { 
+            const container = document.getElementById('distributorsContainer'); 
+            const approved = distributors.filter(d => d.status === 'approved'); 
+            if (approved.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-warehouse"></i><h3>لا توجد موزعون معتمدون</h3><p>سيظهر الموزعون المعتمدون هنا</p></div>`; return; } 
+            container.innerHTML = approved.map(distributor => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${distributor.companyName}</div><div style="color: var(--text-secondary); font-size: 12px;">👤 ${distributor.managerName} | 🆔 ${distributor.customId || '---'}</div></div><span class="status-badge status-approved">✅ معتمد</span></div><div style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.05); border-radius: 10px;"><div><strong>📧 البريد:</strong> ${distributor.email}</div><div><strong>📞 الهاتف:</strong> ${distributor.phone}</div><div><strong>🌍 التغطية:</strong> ${distributor.coverageArea}</div></div></div>`).join(''); 
+        }
+
+        function loadPendingRequests() {
+            const container = document.getElementById('pendingContainer');
+            const pending = distributors.filter(d => d.status === 'pending');
+            if (pending.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-hourglass-half"></i><h3>لا توجد طلبات معلقة</h3><p>طلبات التسجيل الجديدة ستظهر هنا</p></div>`; return; }
+            container.innerHTML = pending.map(d => `<div class="card"><div class="card-header"><div><div class="card-title">🏢 ${d.companyName}</div><div style="color: var(--text-secondary); font-size: 12px;">👤 ${d.managerName} | 🆔 ${d.customId || '---'}</div></div><span class="status-badge status-pending">⏳ قيد المراجعة</span></div><div style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.05); border-radius: 10px;"><div><strong>🌍 التغطية:</strong> ${d.coverageArea}</div><div><strong>📞 الهاتف:</strong> ${d.phone}</div></div><div style="display: flex; gap: 10px;"><button class="btn btn-gold" onclick="approveDistributor(${d.id})" style="flex: 1;">✅ موافقة</button><button class="btn btn-outline" onclick="rejectDistributor(${d.id})" style="flex: 1; border-color: var(--error); color: var(--error);">❌ رفض</button></div></div>`).join('');
+        }
+
         async function submitDelivery() { const delivery = { id: Date.now(), orderId: document.getElementById('deliveryOrderId').value, customer: document.getElementById('deliveryCustomer').value, address: document.getElementById('deliveryAddress').value, phone: document.getElementById('deliveryPhone').value, distributorId: parseInt(document.getElementById('deliveryDistributor').value), amount: parseInt(document.getElementById('deliveryAmount').value), notes: document.getElementById('deliveryNotes').value, status: 'pending', createdAt: new Date().toISOString(), createdBy: currentUser?.name || 'نظام' }; deliveries.push(delivery); localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(deliveries)); await sendDeliveryToTelegram(delivery); showNotification('✅ تم إنشاء طلب التوصيل بنجاح', 'success'); closeDeliveryModal(); document.getElementById('deliveryModal').querySelector('form').reset(); updateStats(); loadDeliveries(); }
-        async function submitDistributor() { const distributor = { id: Date.now(), companyName: document.getElementById('companyName').value, managerName: document.getElementById('managerName').value, email: document.getElementById('distributorEmail').value, phone: document.getElementById('distributorPhone').value, serviceType: document.getElementById('serviceType').value, coverageArea: getCoverageAreaText(), serviceDescription: document.getElementById('serviceDescription').value, status: 'pending', createdAt: new Date().toISOString() }; distributors.push(distributor); localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); await sendDistributorRequestToTelegram(distributor); showNotification('✅ تم إرسال طلب التسجيل بنجاح', 'success'); closeDistributorModal(); document.getElementById('distributorModal').querySelector('form').reset(); updateStats(); }
+        
+        async function submitDistributor() { 
+            const distributor = { 
+                id: Date.now(), 
+                companyName: document.getElementById('companyName').value, 
+                managerName: document.getElementById('managerName').value, 
+                email: document.getElementById('distributorEmail').value, 
+                phone: document.getElementById('distributorPhone').value, 
+                serviceType: document.getElementById('serviceType').value, 
+                coverageArea: getCoverageAreaText(), 
+                serviceDescription: document.getElementById('serviceDescription').value, 
+                customId: document.getElementById('generatedId').value,
+                status: 'pending', 
+                createdAt: new Date().toISOString() 
+            }; 
+            distributors.push(distributor); 
+            localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); 
+            await sendDistributorRequestToTelegram(distributor); 
+            showNotification('✅ تم إرسال طلب التسجيل بنجاح', 'success'); 
+            closeDistributorModal(); 
+            document.getElementById('distributorModal').querySelector('form').reset(); 
+            updateStats(); 
+        }
+
         async function approveDistributor(id) { const distributor = distributors.find(d => d.id == id); if (distributor) { distributor.status = 'approved'; distributor.approvedAt = new Date().toISOString(); distributor.approvedBy = currentUser?.name || 'مدير'; localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); await sendApprovalNotification(distributor, 'approved'); showNotification('✅ تمت الموافقة على الموزع', 'success'); loadPendingRequests(); loadDistributors(); loadDistributorsTable(); updateStats(); } }
         async function rejectDistributor(id) { const distributor = distributors.find(d => d.id == id); if (distributor) { distributor.status = 'rejected'; distributor.rejectedAt = new Date().toISOString(); distributor.rejectedBy = currentUser?.name || 'مدير'; localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(distributors)); await sendApprovalNotification(distributor, 'rejected'); showNotification('❌ تم رفض طلب الموزع', 'info'); loadPendingRequests(); updateStats(); } }
         async function updateDeliveryStatus(id, status) { const delivery = deliveries.find(d => d.id == id); if (delivery) { delivery.status = status; delivery.updatedAt = new Date().toISOString(); localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(deliveries)); await sendDeliveryStatusUpdate(delivery); showNotification('✅ تم تحديث حالة الطلب', 'success'); loadDeliveries(); updateStats(); } }
-        function trackDelivery() { const trackingId = document.getElementById('trackingInput').value; const delivery = deliveries.find(d => d.orderId === trackingId || d.id == trackingId); const resultDiv = document.getElementById('trackingResult'); if (!delivery) { resultDiv.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><h3>لم يتم العثور على الطلب</h3><p>تأكد من رقم الطلب وحاول مجدداً</p></div>`; return; } const distributor = distributors.find(d => d.id == delivery.distributorId); const statusSteps = [{ status: 'pending', label: 'قيد الانتظار', icon: '⏳' }, { status: 'in_transit', label: 'قيد التوصيل', icon: '🚚' }, { status: 'completed', label: 'مكتمل', icon: '✅' }]; const currentStepIndex = statusSteps.findIndex(s => s.status === delivery.status); resultDiv.innerHTML = `<div class="card" style="margin-top: 20px;"><h3 style="color: var(--gold); margin-bottom: 20px;">📦 تفاصيل الطلب</h3><div style="margin-bottom: 20px;"><div><strong>رقم الطلب:</strong> ${delivery.orderId}</div><div><strong>الزبون:</strong> ${delivery.customer}</div><div><strong>العنوان:</strong> ${delivery.address}</div><div><strong>الموزع:</strong> ${distributor?.companyName || 'غير محدد'}</div><div><strong>مناطق تغطية الموزع:</strong> ${distributor?.coverageArea || 'غير متوفر'}</div><div><strong>هاتف الموزع:</strong> ${distributor?.phone || 'غير متوفر'}</div></div><h4 style="color: var(--gold); margin-bottom: 15px;">📍 حالة التوصيل</h4><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">${statusSteps.map((step, index) => `<div style="text-align: center; flex: 1;"><div style="font-size: 32px; opacity: ${index <= currentStepIndex ? '1' : '0.3'};">${step.icon}</div><div style="font-size: 12px; color: ${index <= currentStepIndex ? 'var(--gold)' : 'var(--text-secondary)'};">${step.label}</div></div>${index < statusSteps.length - 1 ? `<div style="height: 2px; flex: 1; background: ${index < currentStepIndex ? 'var(--gold)' : 'rgba(255,215,0,0.2)'};"></div>` : ''}`).join('')}</div><div style="background: rgba(255, 215, 0, 0.05); padding: 15px; border-radius: 10px;"><strong>آخر تحديث:</strong> ${new Date(delivery.updatedAt || delivery.createdAt).toLocaleString('ar-EG')}</div></div>`; }
+        
+        function trackDelivery() { 
+            const trackingId = document.getElementById('trackingInput').value; 
+            const delivery = deliveries.find(d => d.orderId === trackingId || d.id == trackingId); 
+            const resultDiv = document.getElementById('trackingResult'); 
+            if (!delivery) { resultDiv.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><h3>لم يتم العثور على الطلب</h3><p>تأكد من رقم الطلب وحاول مجدداً</p></div>`; return; } 
+            const distributor = distributors.find(d => d.id == delivery.distributorId); 
+            const statusSteps = [{ status: 'pending', label: 'قيد الانتظار', icon: '⏳' }, { status: 'in_transit', label: 'قيد التوصيل', icon: '🚚' }, { status: 'completed', label: 'مكتمل', icon: '✅' }]; 
+            const currentStepIndex = statusSteps.findIndex(s => s.status === delivery.status); 
+            resultDiv.innerHTML = `<div class="card" style="margin-top: 20px;"><h3 style="color: var(--gold); margin-bottom: 20px;">📦 تفاصيل الطلب</h3><div style="margin-bottom: 20px;"><div><strong>رقم الطلب:</strong> ${delivery.orderId}</div><div><strong>الزبون:</strong> ${delivery.customer}</div><div><strong>العنوان:</strong> ${delivery.address}</div><div><strong>الموزع:</strong> ${distributor?.companyName || 'غير محدد'} (${distributor?.customId || ''})</div></div><h4 style="color: var(--gold); margin-bottom: 15px;">📍 حالة التوصيل</h4><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">${statusSteps.map((step, index) => `<div style="text-align: center; flex: 1;"><div style="font-size: 32px; opacity: ${index <= currentStepIndex ? '1' : '0.3'};">${step.icon}</div><div style="font-size: 12px; color: ${index <= currentStepIndex ? 'var(--gold)' : 'var(--text-secondary)'};">${step.label}</div></div>${index < statusSteps.length - 1 ? `<div style="height: 2px; flex: 1; background: ${index < currentStepIndex ? 'var(--gold)' : 'rgba(255,215,0,0.2)'};"></div>` : ''}`).join('')}</div><div style="background: rgba(255, 215, 0, 0.05); padding: 15px; border-radius: 10px;"><strong>آخر تحديث:</strong> ${new Date(delivery.updatedAt || delivery.createdAt).toLocaleString('ar-EG')}</div></div>`; 
+        }
+
         function updateStats() { const approvedDistributors = distributors.filter(d => d.status === 'approved').length; const completedDeliveries = deliveries.filter(d => d.status === 'completed').length; const pendingDeliveries = deliveries.filter(d => d.status === 'pending' || d.status === 'in_transit').length; document.getElementById('totalDeliveries').textContent = deliveries.length; document.getElementById('completedDeliveries').textContent = completedDeliveries; document.getElementById('pendingDeliveries').textContent = pendingDeliveries; document.getElementById('totalDistributors').textContent = approvedDistributors; }
-        async function sendDeliveryToTelegram(delivery) { const distributor = distributors.find(d => d.id == delivery.distributorId); const message = `🚚 *طلب توصيل جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *العنوان:* ${delivery.address}\n📞 *الهاتف:* ${delivery.phone}\n💰 *المبلغ:* ${delivery.amount} دج\n🏪 *الموزع:* ${distributor?.companyName || 'غير محدد'}\n🌍 *مناطق تغطية الموزع:* ${distributor?.coverageArea || 'غير محدد'}\n📝 *الملاحظات:* ${delivery.notes || 'بدون ملاحظات'}\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
-        async function sendDistributorRequestToTelegram(distributor) { const message = `🏢 *طلب تسجيل موزع جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n👤 *المسؤول:* ${distributor.managerName}\n📧 *البريد:* ${distributor.email}\n📞 *الهاتف:* ${distributor.phone}\n🌍 *المناطق:* ${distributor.coverageArea}\n📝 *الخدمة:* ${distributor.serviceType === 'delivery' ? 'شركة توصيل (جميع الولايات)' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'}\n📝 *الوصف:* ${distributor.serviceDescription}\n🕐 ${new Date().toLocaleString('ar-EG')}\n⚠️ *بانتظار موافقة المدير*`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
-        async function sendApprovalNotification(distributor, action) { const message = `${action === 'approved' ? '✅ *تمت الموافقة على موزع*' : '❌ *تم رفض طلب موزع*'}\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n👤 *المسؤول:* ${distributor.managerName}\n📧 *البريد:* ${distributor.email}\n📞 *الهاتف:* ${distributor.phone}\n🌍 *المناطق:* ${distributor.coverageArea}\n👨‍💼 ${action === 'approved' ? `*وافق عليه:* ${distributor.approvedBy}` : `*رفضه:* ${distributor.rejectedBy}`}\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        
+        async function sendDeliveryToTelegram(delivery) { const distributor = distributors.find(d => d.id == delivery.distributorId); const message = `🚚 *طلب توصيل جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *العنوان:* ${delivery.address}\n📞 *الهاتف:* ${delivery.phone}\n💰 *المبلغ:* ${delivery.amount} دج\n🏪 *الموزع:* ${distributor?.companyName || 'غير محدد'} (${distributor?.customId || ''})\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        
+        async function sendDistributorRequestToTelegram(distributor) { const message = `🏢 *طلب تسجيل موزع جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n🆔 *المعرف:* \`${distributor.customId}\`\n👤 *المسؤول:* ${distributor.managerName}\n📧 *البريد:* ${distributor.email}\n📞 *الهاتف:* ${distributor.phone}\n🌍 *المناطق:* ${distributor.coverageArea}\n📝 *الخدمة:* ${distributor.serviceType === 'delivery' ? 'شركة توصيل (جميع الولايات)' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'}\n🕐 ${new Date().toLocaleString('ar-EG')}\n⚠️ *بانتظار موافقة المدير*`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        
+        async function sendApprovalNotification(distributor, action) { const message = `${action === 'approved' ? '✅ *تمت الموافقة على موزع*' : '❌ *تم رفض طلب موزع*'}\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n🆔 *المعرف:* \`${distributor.customId}\`\n👤 *المسؤول:* ${distributor.managerName}\n👨‍💼 ${action === 'approved' ? `*وافق عليه:* ${distributor.approvedBy}` : `*رفضه:* ${distributor.rejectedBy}`}\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        
         async function sendDeliveryStatusUpdate(delivery) { const statusText = delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : '✅ مكتمل'; const message = `📦 *تحديث حالة الطلب*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *الحالة:* ${statusText}\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        
         function showNotification(message, type = 'info') { const notification = document.createElement('div'); notification.className = `notification ${type}`; notification.textContent = message; document.body.appendChild(notification); setTimeout(() => notification.remove(), 3000); }
         function goBack() { window.history.back(); }
+        
         function checkPendingDelivery() { const pending = localStorage.getItem('nardo_pending_delivery'); if (pending) { const data = JSON.parse(pending); openDeliveryModal(); setTimeout(() => { if (document.getElementById('deliveryOrderId')) document.getElementById('deliveryOrderId').value = data.orderId || ''; if (document.getElementById('deliveryCustomer')) document.getElementById('deliveryCustomer').value = data.customer || ''; if (document.getElementById('deliveryPhone')) document.getElementById('deliveryPhone').value = data.phone || ''; if (document.getElementById('deliveryAmount')) document.getElementById('deliveryAmount').value = data.amount || ''; if (document.getElementById('deliveryAddress')) document.getElementById('deliveryAddress').value = data.address || ''; if (document.getElementById('deliveryNotes')) { let itemsText = ""; if (Array.isArray(data.items)) itemsText = data.items.map(it => `${it.name} (${it.quantity}) [${it.productCompositeID || '---'}]`).join(' - '); else itemsText = data.items || ""; document.getElementById('deliveryNotes').value = `المنتجات: ${itemsText}`; } localStorage.removeItem('nardo_pending_delivery'); showNotification('📦 تم استيراد بيانات الطلب تلقائياً', 'success'); }, 500); } }
+        
         window.onload = function() { updateStats(); checkPendingDelivery(); loadDistributorsTable(); console.log('✅ نظام إدارة التوصيل والموزعين جاهز'); };
     </script>
 </body>
 </html>
+
 
