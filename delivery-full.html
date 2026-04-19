@@ -337,7 +337,7 @@
 
         function removeState(value) { const select = document.getElementById('coverageArea'); for (let i = 0; i < select.options.length; i++) { if (select.options[i].value === value) select.options[i].selected = false; } updateSelectedStatesDisplay(); updateGeneratedId(); }
 
-        // ===== دالة توليد المعرف الجديد =====
+        // ===== دالة توليد المعرف الجديد بالصيغة المحدثة =====
         function updateGeneratedId() {
             const serviceType = document.getElementById('serviceType').value;
             const companyName = document.getElementById('companyName').value.trim();
@@ -354,16 +354,16 @@
             }
 
             if (serviceType === 'delivery') {
-                // شركة توصيل: اسم الشركة + 6 أرقام
+                // شركة: Soc-اسم الشركة-6 أرقام
                 if (!companyName) {
                     preview.textContent = "يرجى إدخال اسم الشركة...";
                     return;
                 }
-                // توليد 6 أرقام عشوائية (ثابتة لنفس الجلسة أو توليد جديد)
-                const randomNum = Math.floor(100000 + Math.random() * 900000);
-                generatedId = `${companyName}-${randomNum}`;
+                // توليد 6 أرقام عشوائية
+                if (!window._lastRandomSoc) window._lastRandomSoc = Math.floor(100000 + Math.random() * 900000);
+                generatedId = `Soc-${companyName}-${window._lastRandomSoc}`;
             } else {
-                // موزع أو كلاهما: 3 أحرف من الولاية + م + اسم المسؤول
+                // موزع: 3 أحرف ولاية-Dis-الاسم
                 const selectedOptions = Array.from(select.selectedOptions);
                 if (selectedOptions.length === 0) {
                     preview.textContent = "يرجى اختيار ولاية واحدة على الأقل...";
@@ -374,9 +374,8 @@
                     return;
                 }
                 
-                // نأخذ أول ولاية مختارة
                 const firstStateCode = selectedOptions[0].value.substring(0, 3);
-                generatedId = `${firstStateCode}م${managerName}`;
+                generatedId = `${firstStateCode}-Dis-${managerName}`;
             }
 
             preview.textContent = generatedId;
@@ -441,7 +440,7 @@
         function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(tabName).classList.add('active'); event.target.classList.add('active'); if (tabName === 'deliveries') loadDeliveries(); else if (tabName === 'distributors') loadDistributors(); else if (tabName === 'distributorsTable') loadDistributorsTable(); else if (tabName === 'pending') loadPendingRequests(); }
         function openDeliveryModal() { if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'delivery_company' && currentUser.role !== 'store_owner')) { showNotification('غير مصرح بإنشاء طلبات توصيل', 'error'); return; } document.getElementById('deliveryModal').classList.add('active'); loadDistributorsSelect(); }
         function closeDeliveryModal() { document.getElementById('deliveryModal').classList.remove('active'); }
-        function openDistributorModal() { document.getElementById('distributorModal').classList.add('active'); loadStatesSelect(); document.getElementById('serviceType').value = ''; const select = document.getElementById('coverageArea'); if (select) select.disabled = false; handleServiceTypeChange(); updateGeneratedId(); }
+        function openDistributorModal() { document.getElementById('distributorModal').classList.add('active'); loadStatesSelect(); document.getElementById('serviceType').value = ''; const select = document.getElementById('coverageArea'); if (select) select.disabled = false; handleServiceTypeChange(); window._lastRandomSoc = null; updateGeneratedId(); }
         function closeDistributorModal() { document.getElementById('distributorModal').classList.remove('active'); }
         function loadDistributorsSelect() { const select = document.getElementById('deliveryDistributor'); const approved = distributors.filter(d => d.status === 'approved'); select.innerHTML = '<option value="">اختر موزع</option>'; approved.forEach(distributor => { const option = document.createElement('option'); option.value = distributor.id; option.textContent = `${distributor.companyName} (${distributor.customId || 'بدون معرف'})`; select.appendChild(option); }); }
         
