@@ -453,7 +453,7 @@
             <div id="distributorsContainer">
                 <div class="loading-spinner" id="distributorsLoading" style="display: none;">
                     <i class="fas fa-spinner"></i>
-                    <p>جاري تحميل الموزعين من التلغرام...</p>
+                    <p>جاري البحث في القناة عن قائمة الموزعين...</p>
                 </div>
                 <div id="distributorsList"></div>
             </div>
@@ -495,17 +495,18 @@
             apiUrl: 'https://api.telegram.org/bot' 
         };
         
+        const SEARCH_TITLE = "📋 قائمة الموزعين وشركات التوصيل حسب كل ولاية";
         const CART_STORAGE_KEY = 'nardoo_cart';
         const ORDERS_STORAGE_KEY = 'nardo_orders';
         
         let cart = [];
         let storesState = JSON.parse(localStorage.getItem('stores_state') || '{}');
         let storeColors = {};
-        let distributorsData = {}; // { stateCode: [distributors] }
+        let distributorsData = {};
         let selectedDistributor = null;
         
         // ============================================
-        // دوال جلب البيانات من التلغرام (الإصدار المُحسّن)
+        // دوال مساعدة
         // ============================================
         
         function showNotification(m, type='success') { 
@@ -516,7 +517,6 @@
             setTimeout(()=>n.remove(),3000); 
         }
         
-        // تحويل اسم الولاية إلى الرمز
         function getStateCode(stateName) {
             const stateCodes = {
                 'الجزائر': 'ALG', 'أدرار': 'ADR', 'الشلف': 'CHL', 'الأغواط': 'LGH',
@@ -535,90 +535,156 @@
             return stateCodes[stateName] || stateName.substring(0, 3).toUpperCase();
         }
         
-        // جلب بيانات الموزعين من التلغرام باستخدام forwardMessage
-        async function fetchDistributorsFromTelegram() {
-            const loading = document.getElementById('distributorsLoading');
-            if (loading) loading.style.display = 'block';
-            
+        // ============================================
+        // البحث في القناة عن قائمة الموزعين
+        // ============================================
+        
+        async function findDistributorsMessage() {
             try {
-                showNotification('📡 جاري جلب بيانات الموزعين من التلغرام...', 'info');
+                showNotification('🔍 جاري البحث في القناة عن قائمة الموزعين...', 'info');
                 
-                // محاولة جلب من localStorage أولاً (cache لمدة ساعة)
-                const cached = localStorage.getItem('nardo_distributors_data');
-                const cacheTime = localStorage.getItem('nardo_distributors_cache_time');
-                const now = Date.now();
+                let offset = 0;
+                let hasMore = true;
+                let foundMessage = null;
+                let messagesChecked = 0;
                 
-                if (cached && cacheTime && (now - parseInt(cacheTime)) < 3600000) {
-                    distributorsData = JSON.parse(cached);
-                    const total = Object.values(distributorsData).reduce((sum, arr) => sum + arr.length, 0);
-                    showNotification(`✅ تم تحميل ${total} موزع/شركة (من cache)`, 'success');
-                    if (loading) loading.style.display = 'none';
-                    return true;
-                }
-                
-                // إرسال طلب للحصول على آخر رسالة تحتوي على قائمة الموزعين
-                // نستخدم sendMessage لطلب البيانات من البوت
-                const requestMsg = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: TELEGRAM.channelId,
-                        text: '/get_distributors_list',
-                        parse_mode: 'HTML'
-                    })
-                });
-                
-                const requestResult = await requestMsg.json();
-                
-                if (requestResult.ok) {
-                    // انتظار رد البوت (البوت سيرد بنفسه)
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                while (hasMore) {
+                    const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${offset}&limit=100`);
+                    const data = await response.json();
                     
-                    // جلب آخر التحديثات للحصول على رد البوت
-                    const updatesResponse = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=-10&limit=10`);
-                    const updatesData = await updatesResponse.json();
+                    if (!data.ok) {
+                        console.error('خطأ في API:', data);
+                        break;
+                    }
                     
-                    if (updatesData.ok && updatesData.result) {
-                        // البحث عن أحدث رسالة تحتوي على قائمة الموزعين
-                        for (let i = updatesData.result.length - 1; i >= 0; i--) {
-                            const update = updatesData.result[i];
-                            const message = update.message || update.channel_post;
+                    if (!data.result || data.result.length === 0) {
+                        hasMore = false;
+                        break;
+                    }
+                    
+                    for (const update of data.result) {
+                        const message = update.channel_post || update.message;
+                        
+                        if (message && message.chat.id.toString() === TELEGRAM.channelId) {
+                            messagesChecked++;
                             
-                            if (message && message.text && message.text.includes('قائمة الموزعين')) {
-                                parseDistributorsMessage(message.text);
+                            if (message.text && message.text.includes(SEARCH_TITLE)) {
+                                foundMessage = {
+                                    message_id: message.message_id,
+                                    text: message.text,
+                                    date: new Date(message.date * 1000).toLocaleString('ar-EG'),
+                                    date_raw: message.date
+                                };
+                                
+                                console.log('✅ تم العثور على الرسالة المطلوبة!');
+                                console.log(`   المعرف: ${message.message_id}`);
+                                
+                                localStorage.setItem('nardo_distributors_message_id', message.message_id);
+                                localStorage.setItem('nardo_distributors_date', message.date);
+                                
+                                hasMore = false;
                                 break;
                             }
                         }
+                        
+                        offset = update.update_id + 1;
                     }
-                }
-                
-                // إذا لم يتم العثور على بيانات، استخدم البيانات الافتراضية
-                if (Object.keys(distributorsData).length === 0) {
-                    useDefaultDistributors();
-                }
-                
-                // حفظ في localStorage
-                if (Object.keys(distributorsData).length > 0) {
-                    localStorage.setItem('nardo_distributors_data', JSON.stringify(distributorsData));
-                    localStorage.setItem('nardo_distributors_cache_time', Date.now().toString());
                     
-                    const total = Object.values(distributorsData).reduce((sum, arr) => sum + arr.length, 0);
-                    showNotification(`✅ تم تحميل ${total} موزع/شركة في ${Object.keys(distributorsData).length} ولاية`, 'success');
+                    if (foundMessage) break;
+                    if (data.result.length < 100) hasMore = false;
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
                 
-                if (loading) loading.style.display = 'none';
-                return true;
+                console.log(`📊 تم فحص ${messagesChecked} رسالة في القناة`);
+                
+                if (!foundMessage) {
+                    showNotification('⚠️ لم يتم العثور على رسالة تحتوي على قائمة الموزعين', 'warning');
+                    return null;
+                }
+                
+                return foundMessage;
                 
             } catch (error) {
-                console.error('خطأ في جلب البيانات:', error);
-                useDefaultDistributors();
-                if (loading) loading.style.display = 'none';
-                showNotification('⚠️ تم استخدام البيانات المحلية للموزعين', 'warning');
-                return false;
+                console.error('خطأ في البحث:', error);
+                showNotification('❌ فشل البحث في القناة', 'error');
+                return null;
             }
         }
         
-        // استخدام البيانات الافتراضية
+        function parseDistributorsMessage(messageText) {
+            distributorsData = {};
+            const lines = messageText.split('\n');
+            let currentState = null;
+            let currentStateCode = null;
+            let currentDistributor = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                
+                if (line.includes(SEARCH_TITLE)) continue;
+                if (line.includes('════════════════════════════════════════')) continue;
+                if (line.includes('──────────────────────────────')) continue;
+                
+                const stateMatch = line.match(/📍\s*ولاية\s*(.+?)\s*\(([A-Z]{3})\)/);
+                if (stateMatch) {
+                    if (currentDistributor && currentDistributor.name && currentStateCode) {
+                        distributorsData[currentStateCode].push({ ...currentDistributor });
+                    }
+                    currentState = stateMatch[1];
+                    currentStateCode = stateMatch[2];
+                    if (!distributorsData[currentStateCode]) {
+                        distributorsData[currentStateCode] = [];
+                    }
+                    currentDistributor = null;
+                    continue;
+                }
+                
+                const distributorMatch = line.match(/[•\-]\s*(.+?)\s*\((.+?)\)/);
+                if (distributorMatch && currentStateCode) {
+                    if (currentDistributor && currentDistributor.name && currentStateCode) {
+                        distributorsData[currentStateCode].push({ ...currentDistributor });
+                    }
+                    currentDistributor = {
+                        name: distributorMatch[1].trim(),
+                        typeText: distributorMatch[2].trim(),
+                        type: distributorMatch[2].includes('🚚') ? 'delivery' : 
+                               distributorMatch[2].includes('📦') ? 'distributor' : 'other',
+                        customId: null,
+                        manager: null,
+                        phone: null
+                    };
+                    continue;
+                }
+                
+                if (currentDistributor && line.includes('🆔')) {
+                    const idMatch = line.match(/🆔\s*المعرف:\s*(.+)$/);
+                    if (idMatch) {
+                        let id = idMatch[1].trim();
+                        if (id !== '---') currentDistributor.customId = id;
+                    }
+                    continue;
+                }
+                
+                if (currentDistributor && line.includes('👤')) {
+                    const contactMatch = line.match(/👤\s*(.+?)\s*[|│]\s*📞\s*(.+)$/);
+                    if (contactMatch) {
+                        currentDistributor.manager = contactMatch[1].trim();
+                        currentDistributor.phone = contactMatch[2].trim();
+                        distributorsData[currentStateCode].push({ ...currentDistributor });
+                        currentDistributor = null;
+                    }
+                    continue;
+                }
+            }
+            
+            if (currentDistributor && currentDistributor.name && currentStateCode) {
+                distributorsData[currentStateCode].push({ ...currentDistributor });
+            }
+            
+            console.log('✅ تم تحليل البيانات بنجاح');
+        }
+        
         function useDefaultDistributors() {
             distributorsData = {
                 'ALG': [
@@ -630,86 +696,98 @@
                 ],
                 'CON': [
                     { name: 'قسنطينة ديليفري', type: 'delivery', typeText: '🚚 شركة توصيل', customId: 'CON-DEL-CONST', manager: 'علي', phone: '0557678901' }
-                ],
-                'SET': [
-                    { name: 'موزع سطيف', type: 'distributor', typeText: '📦 موزع معتمد', customId: 'SET-DIS-SAR', manager: 'رابح', phone: '0558901234' }
                 ]
             };
         }
         
-        // تحليل رسالة التلغرام
-        function parseDistributorsMessage(messageText) {
-            distributorsData = {};
-            const lines = messageText.split('\n');
-            let currentState = null;
-            let currentStateCode = null;
+        async function fetchDistributorsFromChannel() {
+            const loading = document.getElementById('distributorsLoading');
+            if (loading) loading.style.display = 'block';
             
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
+            try {
+                const cached = localStorage.getItem('nardo_distributors_data');
+                const cacheTime = localStorage.getItem('nardo_distributors_cache_time');
+                const now = Date.now();
                 
-                // البحث عن ولاية جديدة
-                const stateMatch = line.match(/📍 ولاية (.+?)\s*\(([A-Z]{3})\)/);
-                if (stateMatch) {
-                    currentState = stateMatch[1];
-                    currentStateCode = stateMatch[2];
-                    if (!distributorsData[currentStateCode]) {
-                        distributorsData[currentStateCode] = [];
-                    }
-                    continue;
+                if (cached && cacheTime && (now - parseInt(cacheTime)) < 3600000) {
+                    distributorsData = JSON.parse(cached);
+                    const total = Object.values(distributorsData).reduce((sum, arr) => sum + arr.length, 0);
+                    showNotification(`✅ تم تحميل ${total} موزع/شركة`, 'success');
+                    if (loading) loading.style.display = 'none';
+                    return true;
                 }
                 
-                // البحث عن موزع
-                const distributorMatch = line.match(/[•\-]\s*(.+?)\s*\((.+?)\)/);
-                if (distributorMatch && currentStateCode) {
-                    const distributor = {
-                        name: distributorMatch[1],
-                        typeText: distributorMatch[2],
-                        type: distributorMatch[2].includes('🚚') ? 'delivery' : 'distributor',
-                        customId: null,
-                        manager: null,
-                        phone: null
-                    };
-                    
-                    // البحث عن المعرف والمسؤول في الأسطر التالية
-                    for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-                        const nextLine = lines[j].trim();
-                        if (nextLine.includes('🆔')) {
-                            const idMatch = nextLine.match(/🆔\s*المعرف:\s*(.+)$/);
-                            if (idMatch) distributor.customId = idMatch[1].replace('---', '').trim() || null;
-                        }
-                        if (nextLine.includes('👤')) {
-                            const contactMatch = nextLine.match(/👤\s*(.+?)\s*[|│]\s*📞\s*(.+)$/);
-                            if (contactMatch) {
-                                distributor.manager = contactMatch[1].trim();
-                                distributor.phone = contactMatch[2].trim();
-                            }
-                        }
-                    }
-                    
-                    distributorsData[currentStateCode].push(distributor);
+                const message = await findDistributorsMessage();
+                
+                if (!message) {
+                    useDefaultDistributors();
+                    if (loading) loading.style.display = 'none';
+                    return false;
                 }
+                
+                parseDistributorsMessage(message.text);
+                
+                if (Object.keys(distributorsData).length > 0) {
+                    localStorage.setItem('nardo_distributors_data', JSON.stringify(distributorsData));
+                    localStorage.setItem('nardo_distributors_cache_time', Date.now().toString());
+                    const total = Object.values(distributorsData).reduce((sum, arr) => sum + arr.length, 0);
+                    showNotification(`✅ تم تحميل ${total} موزع/شركة من القناة`, 'success');
+                    if (loading) loading.style.display = 'none';
+                    return true;
+                } else {
+                    useDefaultDistributors();
+                    if (loading) loading.style.display = 'none';
+                    return false;
+                }
+                
+            } catch (error) {
+                console.error('خطأ:', error);
+                useDefaultDistributors();
+                if (loading) loading.style.display = 'none';
+                showNotification('❌ فشل جلب البيانات، تم استخدام البيانات المحلية', 'error');
+                return false;
             }
         }
         
-        // تحميل الموزعين حسب الولاية
+        async function refreshDistributorsList() {
+            showNotification('🔄 جاري تحديث بيانات الموزعين من القناة...', 'info');
+            localStorage.removeItem('nardo_distributors_data');
+            localStorage.removeItem('nardo_distributors_cache_time');
+            
+            const success = await fetchDistributorsFromChannel();
+            
+            if (success) {
+                const selectedState = document.getElementById('customerState').value;
+                if (selectedState) await loadDistributorsFromTelegram();
+                showNotification('✅ تم تحديث قائمة الموزعين بنجاح', 'success');
+            } else {
+                showNotification('❌ فشل تحديث القائمة', 'error');
+            }
+            return success;
+        }
+        
         async function loadDistributorsFromTelegram() {
             const selectedStateName = document.getElementById('customerState').value;
             const container = document.getElementById('distributorsList');
             const loading = document.getElementById('distributorsLoading');
             
             if (!selectedStateName) {
-                container.innerHTML = '';
+                if (container) container.innerHTML = '';
                 return;
             }
             
             const stateCode = getStateCode(selectedStateName);
             
             if (loading) loading.style.display = 'block';
-            container.innerHTML = '';
+            if (container) container.innerHTML = '';
             
-            // جلب البيانات إذا كانت فارغة
             if (Object.keys(distributorsData).length === 0) {
-                await fetchDistributorsFromTelegram();
+                const cached = localStorage.getItem('nardo_distributors_data');
+                if (cached) {
+                    distributorsData = JSON.parse(cached);
+                } else {
+                    await fetchDistributorsFromChannel();
+                }
             }
             
             if (loading) loading.style.display = 'none';
@@ -717,24 +795,29 @@
             const distributors = distributorsData[stateCode] || [];
             
             if (distributors.length === 0) {
-                container.innerHTML = `
-                    <div class="distributors-section">
-                        <h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة</h3>
-                        <div class="no-distributors">
-                            <i class="fas fa-truck" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>
-                            لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${selectedStateName}</strong> حالياً
-                            <button class="btn btn-refresh" style="margin-top: 15px;" onclick="fetchDistributorsFromTelegram(); loadDistributorsFromTelegram();">
-                                <i class="fas fa-sync-alt"></i> تحديث البيانات من التلغرام
-                            </button>
+                if (container) {
+                    container.innerHTML = `
+                        <div class="distributors-section">
+                            <h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة</h3>
+                            <div class="no-distributors">
+                                <i class="fas fa-truck" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>
+                                لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${selectedStateName}</strong> حالياً
+                                <button class="btn btn-refresh" style="margin-top: 15px;" onclick="refreshDistributorsList()">
+                                    <i class="fas fa-sync-alt"></i> تحديث القائمة من القناة
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
                 return;
             }
             
             let html = `
                 <div class="distributors-section">
                     <h3><i class="fas fa-warehouse"></i> اختر شركة التوصيل أو الموزع في ${selectedStateName}</h3>
+                    <button class="btn btn-refresh" style="margin-bottom: 15px; width: 100%;" onclick="refreshDistributorsList()">
+                        <i class="fas fa-sync-alt"></i> تحديث القائمة من القناة
+                    </button>
             `;
             
             distributors.forEach((distributor, index) => {
@@ -743,26 +826,19 @@
                 const typeClass = distributor.type === 'delivery' ? 'type-delivery' : 'type-distributor';
                 
                 html += `
-                    <div class="distributor-item" onclick="selectDistributor('${stateCode}', ${index})" data-state="${stateCode}" data-index="${index}">
+                    <div class="distributor-item" onclick='selectDistributor("${stateCode}", ${index})' data-state="${stateCode}" data-index="${index}">
                         <div class="distributor-name">${serviceIcon} ${distributor.name}</div>
-                        <div>
-                            <span class="distributor-type ${typeClass}">${serviceLabel}</span>
-                        </div>
-                        <div class="distributor-info">
-                            👤 <strong>${distributor.manager || 'غير محدد'}</strong> | 📞 ${distributor.phone || 'غير محدد'}
-                        </div>
-                        <div class="distributor-info">
-                            🆔 المعرف: <span class="distributor-id">${distributor.customId || '---'}</span>
-                        </div>
+                        <div><span class="distributor-type ${typeClass}">${serviceLabel}</span></div>
+                        <div class="distributor-info">👤 <strong>${distributor.manager || 'غير محدد'}</strong> | 📞 ${distributor.phone || 'غير محدد'}</div>
+                        <div class="distributor-info">🆔 المعرف: <span class="distributor-id">${distributor.customId || '---'}</span></div>
                     </div>
                 `;
             });
             
             html += `</div>`;
-            container.innerHTML = html;
+            if (container) container.innerHTML = html;
         }
         
-        // اختيار موزع
         function selectDistributor(stateCode, index) {
             document.querySelectorAll('.distributor-item').forEach(item => {
                 item.classList.remove('selected');
@@ -953,7 +1029,6 @@
                     })
                 });
                 
-                // إرسال رسالة لكل متجر
                 for (const [storeID, storeData] of Object.entries(groupedStores)) {
                     let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
                     merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -1187,21 +1262,23 @@
         window.addEventListener('load', function() {
             loadCart();
             renderOrdersArchive();
-            // تحميل البيانات المخزنة مؤقتاً
+            
             const cached = localStorage.getItem('nardo_distributors_data');
             if (cached) {
                 try {
                     distributorsData = JSON.parse(cached);
-                    console.log('✅ تم تحميل البيانات من cache:', Object.keys(distributorsData).length, 'ولاية');
+                    console.log('✅ تم تحميل البيانات من cache');
                 } catch(e) {}
             }
-            // جلب البيانات من التلغرام في الخلفية
+            
             setTimeout(() => {
-                fetchDistributorsFromTelegram();
-            }, 1000);
-            console.log('✅ نظام السلة جاهز - يجلب الموزعين من التلغرام');
+                fetchDistributorsFromChannel();
+            }, 2000);
+            
+            console.log('✅ نظام السلة جاهز - يبحث عن: "📋 قائمة الموزعين وشركات التوصيل حسب كل ولاية"');
         });
     </script>
 </body>
 </html>
+
 
