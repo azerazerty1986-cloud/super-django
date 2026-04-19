@@ -1,6 +1,4 @@
-
-<head>
-    <meta charset="UTF-8">
+   <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>إدارة التوصيل والموزعين | ناردو برو</title>
     
@@ -510,13 +508,66 @@
 
         function updateStats() { const approvedDistributors = distributors.filter(d => d.status === 'approved').length; const completedDeliveries = deliveries.filter(d => d.status === 'completed').length; const pendingDeliveries = deliveries.filter(d => d.status === 'pending' || d.status === 'in_transit').length; document.getElementById('totalDeliveries').textContent = deliveries.length; document.getElementById('completedDeliveries').textContent = completedDeliveries; document.getElementById('pendingDeliveries').textContent = pendingDeliveries; document.getElementById('totalDistributors').textContent = approvedDistributors; }
         
-        async function sendDeliveryToTelegram(delivery) { const distributor = distributors.find(d => d.id == delivery.distributorId); const message = `🚚 *طلب توصيل جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *العنوان:* ${delivery.address}\n📞 *الهاتف:* ${delivery.phone}\n💰 *المبلغ:* ${delivery.amount} دج\n🏪 *الموزع:* ${distributor?.companyName || 'غير محدد'} (${distributor?.customId || ''})\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        async function sendDeliveryToTelegram(delivery) { 
+            const distributor = distributors.find(d => d.id == delivery.distributorId); 
+            const serviceIcon = distributor?.serviceType === 'delivery' ? '🚚' : '📦';
+            const serviceLabel = distributor?.serviceType === 'delivery' ? 'شركة توصيل' : 'موزع معتمد';
+            
+            const message = `📍 ولاية ${delivery.address.split(' - ')[0] || delivery.address} - طلب جديد\n──────────────────────────────\n• ${delivery.customer} (${serviceIcon} ${serviceLabel}) / ${delivery.phone}\n  🆔 المعرف: ${distributor?.customId || 'غير محدد'}\n  📦 رقم الطلب: ${delivery.orderId}\n  💰 المبلغ: ${delivery.amount} دج\n  🕐 ${new Date().toLocaleString('ar-EG')}`; 
+            
+            try { 
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) 
+                }); 
+            } catch(e) { console.error(e); } 
+        }
         
-        async function sendDistributorRequestToTelegram(distributor) { const message = `🏢 *طلب تسجيل موزع جديد*\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n🆔 *المعرف:* \`${distributor.customId}\`\n👤 *المسؤول:* ${distributor.managerName}\n📧 *البريد:* ${distributor.email}\n📞 *الهاتف:* ${distributor.phone}\n🌍 *المناطق:* ${distributor.coverageArea}\n📝 *الخدمة:* ${distributor.serviceType === 'delivery' ? 'شركة توصيل (جميع الولايات)' : distributor.serviceType === 'distributor' ? 'موزع معتمد' : 'كليهما'}\n🕐 ${new Date().toLocaleString('ar-EG')}\n⚠️ *بانتظار موافقة المدير*`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        async function sendDistributorRequestToTelegram(distributor) { 
+            const serviceIcon = distributor.serviceType === 'delivery' ? '🚚' : '📦';
+            const serviceLabel = distributor.serviceType === 'delivery' ? 'شركة توصيل' : 'موزع معتمد';
+            
+            const message = `📍 ${distributor.coverageArea} - طلب تسجيل جديد\n──────────────────────────────\n• ${distributor.companyName} (${serviceIcon} ${serviceLabel}) / ${distributor.phone}\n  🆔 المعرف: ${distributor.customId}\n  👤 المسؤول: ${distributor.managerName}\n  📧 البريد: ${distributor.email}\n  🕐 ${new Date().toLocaleString('ar-EG')}\n  ⚠️ بانتظار موافقة المدير`; 
+            
+            try { 
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) 
+                }); 
+            } catch(e) { console.error(e); } 
+        }
         
-        async function sendApprovalNotification(distributor, action) { const message = `${action === 'approved' ? '✅ *تمت الموافقة على موزع*' : '❌ *تم رفض طلب موزع*'}\n━━━━━━━━━━━━━━━━━━━━━━\n🏢 *الشركة:* ${distributor.companyName}\n🆔 *المعرف:* \`${distributor.customId}\`\n👤 *المسؤول:* ${distributor.managerName}\n👨‍💼 ${action === 'approved' ? `*وافق عليه:* ${distributor.approvedBy}` : `*رفضه:* ${distributor.rejectedBy}`}\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        async function sendApprovalNotification(distributor, action) { 
+            const statusIcon = action === 'approved' ? '✅' : '❌';
+            const statusLabel = action === 'approved' ? 'تمت الموافقة' : 'تم الرفض';
+            
+            const message = `📍 ${distributor.coverageArea} - تحديث حالة طلب\n──────────────────────────────\n• ${distributor.companyName} (${statusIcon} ${statusLabel})\n  🆔 المعرف: ${distributor.customId}\n  👤 المسؤول: ${distributor.managerName}\n  👨‍💼 ${action === 'approved' ? `بواسطة: ${distributor.approvedBy}` : `بواسطة: ${distributor.rejectedBy}`}\n  🕐 ${new Date().toLocaleString('ar-EG')}`; 
+            
+            try { 
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) 
+                }); 
+            } catch(e) { console.error(e); } 
+        }
         
-        async function sendDeliveryStatusUpdate(delivery) { const statusText = delivery.status === 'pending' ? '⏳ قيد الانتظار' : delivery.status === 'in_transit' ? '🚚 قيد التوصيل' : '✅ مكتمل'; const message = `📦 *تحديث حالة الطلب*\n━━━━━━━━━━━━━━━━━━━━━━\n📦 *رقم الطلب:* ${delivery.orderId}\n👤 *الزبون:* ${delivery.customer}\n📍 *الحالة:* ${statusText}\n🕐 ${new Date().toLocaleString('ar-EG')}`; try { await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) }); } catch(e) { console.error(e); } }
+        async function sendDeliveryStatusUpdate(delivery) { 
+            const statusIcon = delivery.status === 'pending' ? '⏳' : delivery.status === 'in_transit' ? '🚚' : '✅';
+            const statusLabel = delivery.status === 'pending' ? 'قيد الانتظار' : delivery.status === 'in_transit' ? 'قيد التوصيل' : 'مكتمل';
+            
+            const message = `📍 ولاية ${delivery.address.split(' - ')[0] || delivery.address} - تحديث طلب\n──────────────────────────────\n• ${delivery.customer} (${statusIcon} ${statusLabel})\n  📦 رقم الطلب: ${delivery.orderId}\n  🕐 ${new Date().toLocaleString('ar-EG')}`; 
+            
+            try { 
+                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ chat_id: TELEGRAM.channelId, text: message, parse_mode: 'Markdown' }) 
+                }); 
+            } catch(e) { console.error(e); } 
+        }
         
         function showNotification(message, type = 'info') { const notification = document.createElement('div'); notification.className = `notification ${type}`; notification.textContent = message; document.body.appendChild(notification); setTimeout(() => notification.remove(), 3000); }
         function goBack() { window.history.back(); }
@@ -527,5 +578,4 @@
     </script>
 </body>
 </html>
-
 
