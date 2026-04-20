@@ -495,6 +495,7 @@
             apiUrl: 'https://api.telegram.org/bot' 
         };
         
+        // النص الذي نبحث عنه في القناة - تم تعديله ليتطابق مع الصورة
         const SEARCH_TITLE = "📋 قائمة الموزعين وشركات التوصيل حسب كل ولاية";
         const CART_STORAGE_KEY = 'nardoo_cart';
         const ORDERS_STORAGE_KEY = 'nardo_orders';
@@ -612,90 +613,82 @@
             }
         }
         
+        // دالة تحليل الرسالة - تستخرج الاسم من المعرف مباشرة
         function parseDistributorsMessage(messageText) {
             distributorsData = {};
             const lines = messageText.split('\n');
             let currentState = null;
             let currentStateCode = null;
-            let currentDistributor = null;
             
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
                 
+                // تخطي النصوص غير المهمة
                 if (line.includes(SEARCH_TITLE)) continue;
                 if (line.includes('════════════════════════════════════════')) continue;
                 if (line.includes('──────────────────────────────')) continue;
+                if (line === '') continue;
                 
+                // البحث عن الولاية
                 const stateMatch = line.match(/📍\s*ولاية\s*(.+?)\s*\(([A-Z]{3})\)/);
                 if (stateMatch) {
-                    if (currentDistributor && currentDistributor.name && currentStateCode) {
-                        distributorsData[currentStateCode].push({ ...currentDistributor });
-                    }
                     currentState = stateMatch[1];
                     currentStateCode = stateMatch[2];
                     if (!distributorsData[currentStateCode]) {
                         distributorsData[currentStateCode] = [];
                     }
-                    currentDistributor = null;
                     continue;
                 }
                 
-                const distributorMatch = line.match(/[•\-]\s*(.+?)\s*\((.+?)\)/);
-                if (distributorMatch && currentStateCode) {
-                    if (currentDistributor && currentDistributor.name && currentStateCode) {
-                        distributorsData[currentStateCode].push({ ...currentDistributor });
-                    }
-                    currentDistributor = {
-                        name: distributorMatch[1].trim(),
-                        typeText: distributorMatch[2].trim(),
-                        type: distributorMatch[2].includes('🚚') ? 'delivery' : 
-                               distributorMatch[2].includes('📦') ? 'distributor' : 'other',
-                        customId: null,
-                        manager: null,
-                        phone: null
-                    };
-                    continue;
-                }
-                
-                if (currentDistributor && line.includes('🆔')) {
-                    const idMatch = line.match(/🆔\s*المعرف:\s*(.+)$/);
+                // البحث عن الموزع - السطر الذي يحتوي على المعرف
+                if (currentStateCode && line.includes('المعرف:')) {
+                    // استخراج المعرف والاسم منه
+                    // مثال: المعرف: ALG-Dis - محمد الأولان
+                    const idMatch = line.match(/المعرف:\s*(.+)$/);
                     if (idMatch) {
-                        let id = idMatch[1].trim();
-                        if (id !== '---') currentDistributor.customId = id;
+                        const fullId = idMatch[1].trim(); // ALG-Dis - محمد الأولان
+                        
+                        // استخراج الاسم من المعرف (الجزء بعد الشرطة)
+                        let distributorName = fullId;
+                        let nameMatch = fullId.match(/-\s*(.+)$/);
+                        if (nameMatch) {
+                            distributorName = nameMatch[1].trim();
+                        }
+                        
+                        // محاولة استخراج رقم الهاتف من السطر التالي
+                        let phone = null;
+                        for (let j = i+1; j < Math.min(i+3, lines.length); j++) {
+                            let nextLine = lines[j].trim();
+                            let phoneMatch = nextLine.match(/(0[5-7]\d{8}|\d{10,})/);
+                            if (phoneMatch) {
+                                phone = phoneMatch[1];
+                                break;
+                            }
+                        }
+                        
+                        distributorsData[currentStateCode].push({
+                            name: distributorName,           // محمد الأولان
+                            fullId: fullId,                  // ALG-Dis - محمد الأولان
+                            type: 'distributor',
+                            typeText: '📦 موزع معتمد',
+                            customId: fullId,
+                            phone: phone || 'غير محدد',
+                            manager: distributorName
+                        });
+                        
+                        console.log(`✓ تم إضافة موزع: ${distributorName} - المعرف: ${fullId}`);
                     }
-                    continue;
                 }
-                
-                if (currentDistributor && line.includes('👤')) {
-                    const contactMatch = line.match(/👤\s*(.+?)\s*[|│]\s*📞\s*(.+)$/);
-                    if (contactMatch) {
-                        currentDistributor.manager = contactMatch[1].trim();
-                        currentDistributor.phone = contactMatch[2].trim();
-                        distributorsData[currentStateCode].push({ ...currentDistributor });
-                        currentDistributor = null;
-                    }
-                    continue;
-                }
-            }
-            
-            if (currentDistributor && currentDistributor.name && currentStateCode) {
-                distributorsData[currentStateCode].push({ ...currentDistributor });
             }
             
             console.log('✅ تم تحليل البيانات بنجاح');
+            console.log('الموزعين المستخرجين:', distributorsData);
         }
         
         function useDefaultDistributors() {
             distributorsData = {
                 'ALG': [
-                    { name: 'يمن إكسبرس', type: 'delivery', typeText: '🚚 شركة توصيل', customId: 'ALG-DEL-YEMEN', manager: 'كريم', phone: '0555123456' },
-                    { name: 'ناردو موزع', type: 'distributor', typeText: '📦 موزع معتمد', customId: 'ALG-DIS-NARDO', manager: 'سامي', phone: '0555345678' }
-                ],
-                'ORA': [
-                    { name: 'تمارة إكسبرس', type: 'delivery', typeText: '🚚 شركة توصيل', customId: 'ORA-DEL-TAMARA', manager: 'وائل', phone: '0556456789' }
-                ],
-                'CON': [
-                    { name: 'قسنطينة ديليفري', type: 'delivery', typeText: '🚚 شركة توصيل', customId: 'CON-DEL-CONST', manager: 'علي', phone: '0557678901' }
+                    { name: 'محمد الأولان', fullId: 'ALG-Dis - محمد الأولان', type: 'distributor', typeText: '📦 موزع معتمد', customId: 'ALG-Dis - محمد الأولان', phone: '0956??????', manager: 'محمد الأولان' }
                 ]
             };
         }
@@ -829,8 +822,8 @@
                     <div class="distributor-item" onclick='selectDistributor("${stateCode}", ${index})' data-state="${stateCode}" data-index="${index}">
                         <div class="distributor-name">${serviceIcon} ${distributor.name}</div>
                         <div><span class="distributor-type ${typeClass}">${serviceLabel}</span></div>
-                        <div class="distributor-info">👤 <strong>${distributor.manager || 'غير محدد'}</strong> | 📞 ${distributor.phone || 'غير محدد'}</div>
-                        <div class="distributor-info">🆔 المعرف: <span class="distributor-id">${distributor.customId || '---'}</span></div>
+                        <div class="distributor-info">🆔 المعرف: <span class="distributor-id">${distributor.fullId || distributor.customId}</span></div>
+                        <div class="distributor-info">📞 ${distributor.phone || 'رقم الهاتف غير متوفر'}</div>
                     </div>
                 `;
             });
@@ -996,7 +989,7 @@
                     const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
                     channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     channelMsg += `${serviceIcon} *جهة التوصيل:* ${distributor.name}\n`;
-                    channelMsg += `🆔 *معرف الموزع:* \`${distributor.customId || '---'}\`\n`;
+                    channelMsg += `🆔 *معرف الموزع:* \`${distributor.fullId || distributor.customId}\`\n`;
                     channelMsg += `📞 *هاتف الموزع:* ${distributor.phone || 'غير محدد'}\n`;
                 }
                 channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
@@ -1098,7 +1091,7 @@
                     items: storeData.items, 
                     total: storeData.total, 
                     distributor: distributor ? distributor.name : null,
-                    distributorId: distributor ? distributor.customId : null,
+                    distributorId: distributor ? (distributor.fullId || distributor.customId) : null,
                     status: 'pending'
                 });
             }
@@ -1275,10 +1268,9 @@
                 fetchDistributorsFromChannel();
             }, 2000);
             
-            console.log('✅ نظام السلة جاهز - يبحث عن: "📋 قائمة الموزعين وشركات التوصيل حسب كل ولاية"');
+            console.log('✅ نظام السلة جاهز - يبحث عن: "الاولوان (🟢) موزع معتمد"');
         });
     </script>
 </body>
 </html>
-
 
