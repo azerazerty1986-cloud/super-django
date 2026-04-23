@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
@@ -274,30 +273,13 @@
             margin-bottom: 8px;
             font-weight: bold;
         }
-        .type-delivery {
-            background: rgba(74, 222, 128, 0.2);
-            color: var(--success);
-        }
-        .type-distributor {
-            background: rgba(96, 165, 250, 0.2);
-            color: var(--info);
-        }
-        .distributor-info {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 5px;
-        }
-        .distributor-id {
-            font-family: monospace;
-            background: rgba(255, 215, 0, 0.1);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            color: var(--gold);
-        }
+        .type-delivery { background: rgba(96, 165, 250, 0.2); color: var(--info); }
+        .type-distributor { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .distributor-info { font-size: 13px; color: var(--text-secondary); margin-top: 5px; }
+        .distributor-id { font-family: monospace; color: var(--gold); }
+        
         .no-distributors {
             text-align: center;
-            color: var(--text-secondary);
             padding: 20px;
             font-style: italic;
         }
@@ -328,9 +310,10 @@
             padding: 15px 25px;
             border-radius: 12px;
             font-weight: bold;
-            z-index: 2000;
+            z-index: 4000;
             animation: slideIn 0.3s ease;
             text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
         .notification.success { background: var(--success); color: #000; }
         .notification.error { background: var(--error); color: #fff; }
@@ -341,26 +324,46 @@
             to { transform: translateY(0); opacity: 1; }
         }
         
+        /* تحسينات الأرشيف */
         .order-archive { margin-top: 40px; border-top: 2px dashed rgba(255, 215, 0, 0.2); padding-top: 30px; }
-        .order-archive h2 { margin-bottom: 20px; font-size: 24px; color: var(--gold); }
+        .order-archive-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .order-archive h2 { font-size: 24px; color: var(--gold); margin: 0; }
         .order-card {
             background: var(--glass);
             border: 1px solid rgba(255, 215, 0, 0.2);
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
+            transition: transform 0.3s;
         }
+        .order-card:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.08); }
         .order-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 215, 0, 0.1); padding-bottom: 10px; }
         .order-id { font-weight: bold; color: var(--gold); font-family: monospace; font-size: 14px; }
         .order-status { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-pending { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
         .status-received { background: rgba(96, 165, 250, 0.2); color: var(--info); }
         .status-approved { background: rgba(74, 222, 128, 0.2); color: var(--success); }
-        .order-details div { margin-bottom: 8px; font-size: 14px; }
         
+        .order-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .order-details div { font-size: 14px; color: var(--text-secondary); }
+        .order-details i { color: var(--gold); width: 20px; }
+        
+        .order-items-list { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; margin-top: 10px; }
+        .order-item-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px solid rgba(255,215,0,0.05); }
+        .order-item-row:last-child { border-bottom: none; }
+        .order-item-name { color: var(--text-primary); }
+        .order-item-price { color: var(--gold); font-weight: bold; }
+        
+        .order-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255, 215, 0, 0.1); }
+        .order-total-label { font-weight: bold; color: var(--text-primary); }
+        .order-total-value { font-size: 18px; font-weight: 800; color: var(--success); }
+        .btn-delete-order { background: rgba(248, 113, 113, 0.1); color: var(--error); border: 1px solid var(--error); padding: 5px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: 0.3s; }
+        .btn-delete-order:hover { background: var(--error); color: white; }
+
         @media (max-width: 768px) {
             .cart-item { flex-direction: column; align-items: stretch; }
             .cart-actions { flex-direction: column; }
+            .order-details { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -378,7 +381,13 @@
         
         <div class="cart-section"><div id="cartContainer"></div></div>
         
-        <div class="order-archive"><h2><i class="fas fa-history"></i> أرشيف طلباتي</h2><div id="ordersArchiveContainer"></div></div>
+        <div class="order-archive">
+            <div class="order-archive-header">
+                <h2><i class="fas fa-history"></i> أرشيف طلباتي</h2>
+                <button class="btn btn-outline" style="padding: 5px 15px; font-size: 12px;" onclick="clearOrdersArchive()">مسح الأرشيف</button>
+            </div>
+            <div id="ordersArchiveContainer"></div>
+        </div>
     </div>
 
     <!-- نافذة معلومات المشتري -->
@@ -393,12 +402,12 @@
             </div>
             
             <div class="form-group">
-                <label><i class="fas fa-phone"></i> رقم الهاتف</label>
+                <label><i class="fas fa-phone"></i> رقم الهاتف <span style="color: var(--error);">*</span></label>
                 <input type="tel" id="customerPhone" placeholder="05XXXXXXXX">
             </div>
             
             <div class="form-group">
-                <label><i class="fas fa-map-marker-alt"></i> الولاية</label>
+                <label><i class="fas fa-map-marker-alt"></i> الولاية <span style="color: var(--error);">*</span></label>
                 <select id="customerState" onchange="updateFullAddress(); loadDistributorsFromTelegram()">
                     <option value="">اختر الولاية</option>
                     <option value="الجزائر">الجزائر العاصمة</option>
@@ -459,7 +468,7 @@
             </div>
             
             <div class="form-group">
-                <label><i class="fas fa-location-dot"></i> العنوان التفصيلي</label>
+                <label><i class="fas fa-location-dot"></i> العنوان التفصيلي <span style="color: var(--error);">*</span></label>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="text" id="customerAddress" placeholder="الشارع، رقم البيت، الحي..." style="flex: 1;">
                     <button type="button" class="btn btn-outline" onclick="openMapLocation()" style="padding: 10px 15px;" title="تحديد الموقع على الخريطة">
@@ -510,60 +519,24 @@
             n.className = `notification ${type}`; 
             n.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':'fa-info-circle'}"></i> ${m}`; 
             document.body.appendChild(n); 
-            setTimeout(()=>n.remove(),3000); 
+            setTimeout(()=>n.remove(),4000); 
         }
         
         // ============================================
-        // الدوال المعدلة لجلب الموزعين (التعديل الأساسي)
+        // الدوال المعدلة لجلب الموزعين
         // ============================================
         
         function getStateCode(stateName) {
             const stateCodes = {
-                'الجزائر': 'ALG',
-                'أدرار': 'ADE',
-                'الشلف': 'ASH',
-                'الأغواط': 'LGH',
-                'أم البواقي': 'OEB',
-                'باتنة': 'BAT',
-                'بجاية': 'BJA',
-                'بسكرة': 'BSK',
-                'بشار': 'BSH',
-                'البليدة': 'BLI',
-                'البويرة': 'BUI',
-                'تمنراست': 'TMR',
-                'تبسة': 'TEB',
-                'تلمسان': 'TLE',
-                'تيارت': 'TIA',
-                'تيزي وزو': 'TIZ',
-                'الجلفة': 'DJF',
-                'جيجل': 'JIJ',
-                'سطيف': 'SET',
-                'سعيدة': 'SAI',
-                'سكيكدة': 'SKI',
-                'سيدي بلعباس': 'SBA',
-                'عنابة': 'ANA',
-                'قالمة': 'GUE',
-                'قسنطينة': 'CON',
-                'المدية': 'MED',
-                'مستغانم': 'MGH',
-                'المسيلة': 'MSL',
-                'معسكر': 'MOS',
-                'ورقلة': 'OUA',
-                'وهران': 'ORA',
-                'برج بوعريريج': 'BBA',
-                'بومرداس': 'BMD',
-                'الطارف': 'TAR',
-                'تندوف': 'TIN',
-                'تيسمسيلت': 'TSS',
-                'الوادي': 'ELO',
-                'خنشلة': 'KHE',
-                'سوق أهراس': 'SAH',
-                'تيبازة': 'TIP',
-                'ميلة': 'MIL',
-                'عين الدفلى': 'AIND',
-                'النعامة': 'NAA',
-                'عين تموشنت': 'AINT',
-                'غرداية': 'GHA',
+                'الجزائر': 'ALG', 'أدرار': 'ADE', 'الشلف': 'ASH', 'الأغواط': 'LGH', 'أم البواقي': 'OEB',
+                'باتنة': 'BAT', 'بجاية': 'BJA', 'بسكرة': 'BSK', 'بشار': 'BSH', 'البليدة': 'BLI',
+                'البويرة': 'BUI', 'تمنراست': 'TMR', 'تبسة': 'TEB', 'تلمسان': 'TLE', 'تيارت': 'TIA',
+                'تيزي وزو': 'TIZ', 'الجلفة': 'DJF', 'جيجل': 'JIJ', 'سطيف': 'SET', 'سعيدة': 'SAI',
+                'سكيكدة': 'SKI', 'سيدي بلعباس': 'SBA', 'عنابة': 'ANA', 'قالمة': 'GUE', 'قسنطينة': 'CON',
+                'المدية': 'MED', 'مستغانم': 'MGH', 'المسيلة': 'MSL', 'معسكر': 'MOS', 'ورقلة': 'OUA',
+                'وهران': 'ORA', 'برج بوعريريج': 'BBA', 'بومرداس': 'BMD', 'الطارف': 'TAR', 'تندوف': 'TIN',
+                'تيسمسيلت': 'TSS', 'الوادي': 'ELO', 'خنشلة': 'KHE', 'سوق أهراس': 'SAH', 'تيبازة': 'TIP',
+                'ميلة': 'MIL', 'عين الدفلى': 'AIND', 'النعامة': 'NAA', 'عين تموشنت': 'AINT', 'غرداية': 'GHA',
                 'غليزان': 'REL'
             };
             return stateCodes[stateName] || stateName.substring(0, 3).toUpperCase();
@@ -571,159 +544,73 @@
         
         async function findDistributorsMessage() {
             try {
-                showNotification('🔍 جاري البحث في القناة عن قائمة الموزعين...', 'info');
                 let offset = 0;
                 let hasMore = true;
                 let foundMessage = null;
-                let messagesChecked = 0;
                 
                 while (hasMore) {
                     const response = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${offset}&limit=100`);
                     const data = await response.json();
-                    
-                    if (!data.ok) {
-                        console.error('خطأ في API:', data);
-                        break;
-                    }
-                    
-                    if (!data.result || data.result.length === 0) {
-                        hasMore = false;
-                        break;
-                    }
+                    if (!data.ok || !data.result || data.result.length === 0) break;
                     
                     for (const update of data.result) {
                         const message = update.channel_post || update.message;
-                        
                         if (message && message.chat.id.toString() === TELEGRAM.channelId) {
-                            messagesChecked++;
-                            
                             if (message.text && (message.text.includes(SEARCH_TITLE) || message.text.includes('قائمة الموزعين'))) {
-                                foundMessage = {
-                                    message_id: message.message_id,
-                                    text: message.text,
-                                    date: new Date(message.date * 1000).toLocaleString('ar-EG'),
-                                    date_raw: message.date
-                                };
-                                console.log('✅ تم العثور على الرسالة المطلوبة!');
-                                localStorage.setItem('nardo_distributors_message_id', message.message_id);
-                                localStorage.setItem('nardo_distributors_date', message.date);
+                                foundMessage = { message_id: message.message_id, text: message.text };
                                 hasMore = false;
                                 break;
                             }
                         }
-                        
                         offset = update.update_id + 1;
                     }
-                    
-                    if (foundMessage) break;
-                    if (data.result.length < 100) hasMore = false;
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
-                
-                console.log(`📊 تم فحص ${messagesChecked} رسالة في القناة`);
-                if (!foundMessage) {
-                    showNotification('⚠️ لم يتم العثور على رسالة تحتوي على قائمة الموزعين', 'warning');
-                    return null;
+                    if (foundMessage || data.result.length < 100) break;
+                    await new Promise(r => setTimeout(r, 300));
                 }
                 return foundMessage;
-            } catch (error) {
-                console.error('خطأ في البحث:', error);
-                showNotification('❌ فشل البحث في القناة', 'error');
-                return null;
-            }
+            } catch (e) { return null; }
         }
         
-        // الدالة المعدلة بالكامل لتحليل الرسالة حسب تنسيقك
         function parseDistributorsMessage(messageText) {
             distributorsData = {};
             const lines = messageText.split('\n');
-            let currentState = null;
             let currentStateCode = null;
             
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
-                
-                // تخطي الأسطر التمهيدية
-                if (line.includes('قائمة الموزعين')) continue;
-                if (line.includes('━━━━')) continue;
-                if (line.includes('📅')) continue;
-                if (line === '') continue;
-                
-                // التعرف على الولاية - مثال: "📍 ولاية الجزائر (ALG) - عدد الموزعين: 4"
                 let stateMatch = line.match(/📍\s*ولاية\s*(.+?)\s*\(([A-Z]{3})\)/);
-                
                 if (stateMatch) {
-                    currentState = stateMatch[1];
                     currentStateCode = stateMatch[2];
-                    if (!distributorsData[currentStateCode]) {
-                        distributorsData[currentStateCode] = [];
-                    }
+                    if (!distributorsData[currentStateCode]) distributorsData[currentStateCode] = [];
                     continue;
                 }
                 
-                // التعرف على الموزع - مثال: "• لوزوو (📦 موزع معتمد)"
                 let distributorMatch = line.match(/•\s*(.+?)\s*\(([📦🚚].+?)\)/);
-                
                 if (distributorMatch && currentStateCode) {
                     let distributorName = distributorMatch[1].trim();
                     let typeIcon = distributorMatch[2];
                     let type = typeIcon.includes('📦') ? 'distributor' : 'delivery';
                     let typeText = typeIcon.includes('📦') ? '📦 موزع معتمد' : '🚚 شركة توصيل';
+                    let fullId = null, phone = null;
                     
-                    let fullId = null;
-                    let phone = null;
-                    let manager = null;
-                    
-                    // البحث في الأسطر التالية للحصول على المعرف والهاتف
                     for (let j = i+1; j < Math.min(i+5, lines.length); j++) {
                         let nextLine = lines[j].trim();
-                        
-                        // البحث عن المعرف: "🆔 المعرف: ---" أو "🆔 المعرف: ALG-Dis-حنن"
                         let idMatch = nextLine.match(/🆔\s*المعرف:\s*(.+)$/);
-                        if (idMatch) {
-                            let idValue = idMatch[1].trim();
-                            if (idValue !== '---') {
-                                fullId = idValue;
-                            }
-                        }
-                        
-                        // البحث عن جهة الاتصال: "👤 ممشزسز | 📞 05669"
+                        if (idMatch && idMatch[1].trim() !== '---') fullId = idMatch[1].trim();
                         let contactMatch = nextLine.match(/👤\s*(.+?)\s*[|📍]\s*📞\s*(.+)$/);
-                        if (contactMatch) {
-                            manager = contactMatch[1].trim();
-                            phone = contactMatch[2].trim();
-                        }
-                        
-                        // توقف عند الوصول لسطر ولاية جديد أو سطر به "•" جديد
-                        if (nextLine.includes('📍 ولاية') || nextLine.startsWith('•')) {
-                            break;
-                        }
+                        if (contactMatch) phone = contactMatch[2].trim();
+                        if (nextLine.includes('📍 ولاية') || nextLine.startsWith('•')) break;
                     }
                     
-                    // إضافة الموزع للقائمة
                     distributorsData[currentStateCode].push({
                         name: distributorName,
                         fullId: fullId || `${currentStateCode}-${distributorName}`,
-                        type: type,
-                        typeText: typeText,
+                        type: type, typeText: typeText,
                         customId: fullId || `${currentStateCode}-${distributorName}`,
-                        phone: phone || 'رقم غير متوفر',
-                        manager: manager || distributorName
+                        phone: phone || 'رقم غير متوفر'
                     });
-                    
-                    console.log(`✓ تم إضافة موزع: ${distributorName} في ولاية ${currentStateCode}`);
                 }
             }
-            
-            // إحصائيات للتحقق
-            let total = 0;
-            for (let state in distributorsData) {
-                total += distributorsData[state].length;
-                console.log(`ولاية ${state}: ${distributorsData[state].length} موزع`);
-            }
-            console.log(`✅ تم تحليل ${total} موزع بنجاح`);
-            
-            // حفظ البيانات في localStorage
             if (Object.keys(distributorsData).length > 0) {
                 localStorage.setItem('nardo_distributors_data', JSON.stringify(distributorsData));
                 localStorage.setItem('nardo_distributors_cache_time', Date.now().toString());
@@ -732,156 +619,54 @@
             return false;
         }
         
-        function useDefaultDistributors() {
-            distributorsData = {
-                'ALG': [
-                    { name: 'محمد الأولان', fullId: 'ALG-Dis - محمد الأولان', type: 'distributor', typeText: '📦 موزع معتمد', customId: 'ALG-Dis - محمد الأولان', phone: '0956??????', manager: 'محمد الأولان' }
-                ],
-                'ORA': [
-                    { name: 'شركة ناردو', fullId: 'ORA-Del - ناردو برو', type: 'delivery', typeText: '🚚 شركة توصيل', customId: 'ORA-Del - ناردو برو', phone: '0566??????', manager: 'ناردو برو' }
-                ],
-                'CON': [
-                    { name: 'قسنطينة إكسبريس', fullId: 'CON-Dis - قسنطينة إكسبريس', type: 'distributor', typeText: '📦 موزع معتمد', customId: 'CON-Dis - قسنطينة إكسبريس', phone: '0555??????', manager: 'قسنطينة إكسبريس' }
-                ]
-            };
-            console.log('⚠️ تم استخدام البيانات الافتراضية للموزعين');
-        }
-        
         async function fetchDistributorsFromChannel() {
             const loading = document.getElementById('distributorsLoading');
             if (loading) loading.style.display = 'block';
-            
             try {
                 const cached = localStorage.getItem('nardo_distributors_data');
                 const cacheTime = localStorage.getItem('nardo_distributors_cache_time');
-                const now = Date.now();
-                
-                if (cached && cacheTime && (now - parseInt(cacheTime)) < 3600000) {
+                if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 3600000) {
                     distributorsData = JSON.parse(cached);
-                    const total = Object.values(distributorsData).reduce((sum, arr) => sum + arr.length, 0);
-                    showNotification(`✅ تم تحميل ${total} موزع/شركة`, 'success');
                     if (loading) loading.style.display = 'none';
                     return true;
                 }
-                
                 const message = await findDistributorsMessage();
-                if (!message) {
-                    useDefaultDistributors();
-                    if (loading) loading.style.display = 'none';
-                    return false;
-                }
-                
-                const success = parseDistributorsMessage(message.text);
-                
-                if (success && Object.keys(distributorsData).length > 0) {
-                    const total = Object.values(distributorsData).reduce((sum, arr) => sum + arr.length, 0);
-                    showNotification(`✅ تم تحميل ${total} موزع/شركة من القناة`, 'success');
-                    if (loading) loading.style.display = 'none';
-                    return true;
-                } else {
-                    useDefaultDistributors();
-                    if (loading) loading.style.display = 'none';
-                    return false;
-                }
-            } catch (error) {
-                console.error('خطأ:', error);
-                useDefaultDistributors();
+                if (message) parseDistributorsMessage(message.text);
                 if (loading) loading.style.display = 'none';
-                showNotification('❌ فشل جلب البيانات، تم استخدام البيانات المحلية', 'error');
+                return true;
+            } catch (e) {
+                if (loading) loading.style.display = 'none';
                 return false;
             }
-        }
-        
-        async function refreshDistributorsList() {
-            showNotification('🔄 جاري تحديث بيانات الموزعين من القناة...', 'info');
-            localStorage.removeItem('nardo_distributors_data');
-            localStorage.removeItem('nardo_distributors_cache_time');
-            const success = await fetchDistributorsFromChannel();
-            if (success) {
-                const selectedState = document.getElementById('customerState').value;
-                if (selectedState) await loadDistributorsFromTelegram();
-                showNotification('✅ تم تحديث قائمة الموزعين بنجاح', 'success');
-            } else {
-                showNotification('❌ فشل تحديث القائمة', 'error');
-            }
-            return success;
         }
         
         async function loadDistributorsFromTelegram() {
             const selectedStateName = document.getElementById('customerState').value;
             const container = document.getElementById('distributorsList');
             const loading = document.getElementById('distributorsLoading');
-            
-            if (!selectedStateName) {
-                if (container) container.innerHTML = '';
-                return;
-            }
-            
+            if (!selectedStateName) { if (container) container.innerHTML = ''; return; }
             const stateCode = getStateCode(selectedStateName);
             if (loading) loading.style.display = 'block';
             if (container) container.innerHTML = '';
-            
-            if (Object.keys(distributorsData).length === 0) {
-                const cached = localStorage.getItem('nardo_distributors_data');
-                if (cached) {
-                    distributorsData = JSON.parse(cached);
-                } else {
-                    await fetchDistributorsFromChannel();
-                }
-            }
-            
+            if (Object.keys(distributorsData).length === 0) await fetchDistributorsFromChannel();
             if (loading) loading.style.display = 'none';
-            
             const distributors = distributorsData[stateCode] || [];
-            
             if (distributors.length === 0) {
-                if (container) {
-                    container.innerHTML = `
-                        <div class="distributors-section">
-                            <h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة</h3>
-                            <div class="no-distributors">
-                                <i class="fas fa-truck" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>
-                                لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${selectedStateName}</strong> حالياً
-                                <button class="btn btn-refresh" style="margin-top: 15px;" onclick="refreshDistributorsList()">
-                                    <i class="fas fa-sync-alt"></i> تحديث القائمة من القناة
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
+                if (container) container.innerHTML = `<div class="distributors-section"><h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة</h3><div class="no-distributors">لا توجد شركات توصيل في ولاية <strong>${selectedStateName}</strong> حالياً</div></div>`;
                 return;
             }
-            
-            let html = `
-                <div class="distributors-section">
-                    <h3><i class="fas fa-warehouse"></i> اختر شركة التوصيل أو الموزع في ${selectedStateName}</h3>
-                    <button class="btn btn-refresh" style="margin-bottom: 15px; width: 100%;" onclick="refreshDistributorsList()">
-                        <i class="fas fa-sync-alt"></i> تحديث القائمة من القناة
-                    </button>
-            `;
-            
-            distributors.forEach((distributor, index) => {
-                const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
-                const typeClass = distributor.type === 'delivery' ? 'type-delivery' : 'type-distributor';
-                
-                html += `
-                    <div class="distributor-item" onclick='selectDistributor("${stateCode}", ${index})' data-state="${stateCode}" data-index="${index}">
-                        <div class="distributor-name">${serviceIcon} ${distributor.name}</div>
-                        <div><span class="distributor-type ${typeClass}">${distributor.typeText}</span></div>
-                        <div class="distributor-info">🆔 المعرف: <span class="distributor-id">${distributor.fullId || distributor.customId}</span></div>
-                        <div class="distributor-info">📞 ${distributor.phone || 'رقم الهاتف غير متوفر'}</div>
-                    </div>
-                `;
+            let html = `<div class="distributors-section"><h3><i class="fas fa-warehouse"></i> اختر شركة التوصيل أو الموزع في ${selectedStateName}</h3>`;
+            distributors.forEach((dist, idx) => {
+                const icon = dist.type === 'delivery' ? '🚚' : '📦';
+                const cls = dist.type === 'delivery' ? 'type-delivery' : 'type-distributor';
+                html += `<div class="distributor-item" onclick='selectDistributor("${stateCode}", ${idx})'><div class="distributor-name">${icon} ${dist.name}</div><div><span class="distributor-type ${cls}">${dist.typeText}</span></div><div class="distributor-info">🆔 المعرف: <span class="distributor-id">${dist.fullId || dist.customId}</span></div><div class="distributor-info">📞 ${dist.phone}</div></div>`;
             });
-            
             html += `</div>`;
             if (container) container.innerHTML = html;
         }
         
         function selectDistributor(stateCode, index) {
-            document.querySelectorAll('.distributor-item').forEach(item => {
-                item.classList.remove('selected');
-            });
+            document.querySelectorAll('.distributor-item').forEach(item => item.classList.remove('selected'));
             const items = document.querySelectorAll('.distributor-item');
             if (items[index]) {
                 items[index].classList.add('selected');
@@ -889,429 +674,200 @@
                 showNotification(`✅ تم اختيار ${selectedDistributor.name}`, 'success');
             }
         }
-        
+
         // ============================================
-        // باقي دوال النظام (السلة، الطلبات، إلخ)
+        // السلة والطلبات
         // ============================================
-        
-        function getStoreColor(storeID) { 
-            if (!storeColors[storeID]) { 
-                const colors = ['merchant-color-0','merchant-color-1','merchant-color-2','merchant-color-3','merchant-color-4','merchant-color-5','merchant-color-6','merchant-color-7','merchant-color-8','merchant-color-9']; 
-                const index = Object.keys(storeColors).length % colors.length; 
-                storeColors[storeID] = colors[index]; 
+        function getStoreColor(sid) { 
+            if (!storeColors[sid]) { 
+                const colors = ['merchant-color-0','merchant-color-1','merchant-color-2','merchant-color-3','merchant-color-4']; 
+                storeColors[sid] = colors[Object.keys(storeColors).length % colors.length]; 
             } 
-            return storeColors[storeID]; 
+            return storeColors[sid]; 
         }
-        
-        function saveStoresState() { localStorage.setItem('stores_state', JSON.stringify(storesState)); }
-        function toggleStore(storeID) { storesState[storeID] = !storesState[storeID]; saveStoresState(); updateCartDisplay(); }
         function saveCart() { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart)); updateCartCounters(); }
-        
-        function loadCart() { 
-            const saved = localStorage.getItem(CART_STORAGE_KEY); 
-            cart = saved ? JSON.parse(saved) : []; 
-            updateCartDisplay(); 
-            updateCartCounters(); 
-        }
-        
+        function loadCart() { const saved = localStorage.getItem(CART_STORAGE_KEY); cart = saved ? JSON.parse(saved) : []; updateCartDisplay(); updateCartCounters(); }
         function updateCartCounters() { 
             const count = cart.reduce((s, i) => s + i.quantity, 0); 
             const total = cart.reduce((s, i) => s + (i.price * i.quantity), 0); 
             document.getElementById('cartCount').textContent = count; 
             document.getElementById('cartTotal').textContent = total.toLocaleString('ar-EG'); 
         }
-        
         function updateCartDisplay() { 
             const container = document.getElementById('cartContainer'); 
-            if(cart.length===0){ 
-                container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-cart"></i><h3>السلة فارغة</h3><p>لم تقم بإضافة أي منتجات بعد</p></div>`; 
-                return; 
-            } 
+            if(cart.length===0){ container.innerHTML = `<div class="empty-state"><i class="fas fa-shopping-cart"></i><h3>السلة فارغة</h3></div>`; return; } 
             const grouped = groupByStore(cart); 
             let html = ''; 
-            for(const [storeID, storeData] of Object.entries(grouped)){ 
-                const isCollapsed = storesState[storeID]; 
-                html += `<div class="merchant-section ${getStoreColor(storeID)}"><div class="merchant-header" onclick="toggleStore('${storeID}')"><div class="merchant-info"><div class="merchant-avatar"><i class="fas fa-store"></i></div><div><div class="merchant-name">${storeData.storeName}</div><div class="merchant-id">${storeID}</div></div></div><div class="merchant-stats"><span>${storeData.count}</span> منتج<span>${storeData.total.toLocaleString('ar-EG')}</span> دج</div><div class="merchant-toggle ${isCollapsed?'collapsed':''}"><i class="fas fa-chevron-down"></i></div></div><div class="merchant-products ${isCollapsed?'collapsed':''}">`; 
-                storeData.items.forEach(item=>{ 
-                    html += `<div class="cart-item"><div class="product-thumbnail">${item.imageData?`<img src="${item.imageData}">`:' <i class="fas fa-image"></i>'}</div><div class="product-details"><div class="product-name">${item.name}</div><div class="product-price">${item.price.toLocaleString('ar-EG')} دج</div><div class="product-id">معرف: ${item.productCompositeID||item.id||'---'}</div></div><div class="cart-item-quantity"><button onclick="updateCartQuantity('${item.id}',-1)">−</button><span>${item.quantity}</span><button onclick="updateCartQuantity('${item.id}',1)">+</button></div><div class="cart-item-total">${(item.price*item.quantity).toLocaleString('ar-EG')} دج</div><button class="cart-item-remove" onclick="removeFromCart('${item.id}')"><i class="fas fa-trash"></i></button></div>`; 
+            for(const [sid, sdata] of Object.entries(grouped)){ 
+                const isCollapsed = storesState[sid]; 
+                html += `<div class="merchant-section"><div class="merchant-header" onclick="toggleStore('${sid}')"><div class="merchant-info"><div class="merchant-avatar"><i class="fas fa-store"></i></div><div><div class="merchant-name">${sdata.storeName}</div></div></div><div class="merchant-stats"><span>${sdata.count}</span> منتج | <span>${sdata.total.toLocaleString('ar-EG')}</span> دج</div></div><div class="merchant-products ${isCollapsed?'collapsed':''}">`; 
+                sdata.items.forEach(item=>{ 
+                    html += `<div class="cart-item"><div class="product-thumbnail"><i class="fas fa-image"></i></div><div class="product-details"><div class="product-name">${item.name}</div><div class="product-price">${item.price.toLocaleString('ar-EG')} دج</div></div><div class="cart-item-quantity"><button onclick="updateCartQuantity('${item.id}',-1)">−</button><span>${item.quantity}</span><button onclick="updateCartQuantity('${item.id}',1)">+</button></div><div class="cart-item-total">${(item.price*item.quantity).toLocaleString('ar-EG')} دج</div><button class="cart-item-remove" onclick="removeFromCart('${item.id}')"><i class="fas fa-trash"></i></button></div>`; 
                 }); 
                 html += `</div></div>`; 
             } 
-            html += `<div class="cart-summary"><div class="summary-row"><span class="summary-label">الإجمالي الفرعي:</span><span class="summary-value">${cart.reduce((s,i)=>s+(i.price*i.quantity),0).toLocaleString('ar-EG')} دج</span></div><div class="summary-row"><span class="summary-label">الرسوم:</span><span class="summary-value">مجاني</span></div><div class="summary-row" style="border: none;"><span class="summary-label" style="font-size: 18px;">المجموع:</span><span class="summary-total">${cart.reduce((s,i)=>s+(i.price*i.quantity),0).toLocaleString('ar-EG')} دج</span></div><div class="cart-actions"><button class="btn btn-gold" onclick="openCustomerModal()"><i class="fas fa-credit-card"></i> الدفع والتوصيل</button><button class="btn btn-outline" onclick="clearCart()"><i class="fas fa-trash-alt"></i> مسح السلة</button></div></div>`; 
+            html += `<div class="cart-summary"><div class="summary-row"><span class="summary-label">المجموع:</span><span class="summary-total">${cart.reduce((s,i)=>s+(i.price*i.quantity),0).toLocaleString('ar-EG')} دج</span></div><div class="cart-actions"><button class="btn btn-gold" onclick="openCustomerModal()"><i class="fas fa-credit-card"></i> إتمام الطلب</button><button class="btn btn-outline" onclick="clearCart()">مسح السلة</button></div></div>`; 
             container.innerHTML = html; 
         }
-        
-        function updateCartQuantity(productId, change) { 
-            const idx = cart.findIndex(i=>i.id===productId); 
-            if(idx===-1) return; 
-            const newQ = cart[idx].quantity+change; 
-            if(newQ<=0) removeFromCart(productId); 
-            else { 
-                cart[idx].quantity=newQ; 
-                saveCart(); 
-                updateCartDisplay(); 
-                showNotification(`✓ تم تحديث كمية ${cart[idx].name}`); 
-            } 
-        }
-        
-        function removeFromCart(productId) { 
-            const item = cart.find(i=>i.id===productId); 
-            if(item){ 
-                cart = cart.filter(i=>i.id!==productId); 
-                saveCart(); 
-                updateCartDisplay(); 
-                showNotification(`✓ تم إزالة ${item.name}`); 
-            } 
-        }
-        
-        function clearCart() { 
-            if(cart.length===0) showNotification('السلة فارغة','warning'); 
-            else if(confirm('مسح السلة؟')){ 
-                cart=[]; 
-                saveCart(); 
-                updateCartDisplay(); 
-                showNotification('✓ تم مسح السلة'); 
-            } 
-        }
-        
-        function groupByStore(items) { 
-            const g={}; 
-            items.forEach(item=>{ 
-                const sid = item.storeID || 'unknown-store'; 
-                const sname = item.storeName || 'ناردو برو'; 
-                if(!g[sid]) g[sid]={storeID:sid, storeName:sname, items:[], total:0, count:0}; 
-                g[sid].items.push(item); 
-                g[sid].total += item.price * item.quantity; 
-                g[sid].count += item.quantity; 
-            }); 
-            return g; 
-        }
-        
-        function formatProductVertical(item) {
-            let productMsg = "";
-            productMsg += `🛒 ${item.name}\n`;
-            productMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
-            productMsg += `   📦 الكمية: ${item.quantity}\n`;
-            productMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
-            productMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
-            return productMsg;
-        }
-        
-        function cleanCustomerName(name) {
-            let clean = name.replace(/[^\u0600-\u06FFa-zA-Z]/g, '');
-            return clean.substring(0, 15) || 'CUST';
-        }
-        
-        function generateRandomNumbers() {
-            return Math.floor(Math.random() * 900000 + 100000).toString();
-        }
-        
-        function generateOrderId(customerName, stateName) {
-            const stateCode = getStateCode(stateName || 'الجزائر');
-            const cleanName = cleanCustomerName(customerName);
-            const randomNumbers = generateRandomNumbers();
-            return `${stateCode}-${cleanName}-${randomNumbers}`;
-        }
-        
-        async function sendOrderToTelegram(customerData, groupedStores, grandTotal, distributor) {
-            const timestamp = new Date().toLocaleString('ar-EG');
-            const mainOrderId = generateOrderId(customerData.name, customerData.state);
-            
-            const storeIdsList = Object.keys(groupedStores).join('، ');
-            
-            try {
-                let channelMsg = `🟢 *طلب جديد #${mainOrderId}* 🟢\n`;
-                channelMsg += `🏷️ *معرفات المتاجر:* \`${storeIdsList}\`\n`;
-                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                channelMsg += `👤 *المشتري:* ${customerData.name}\n`;
-                channelMsg += `📞 *الهاتف:* ${customerData.phone}\n`;
-                if(customerData.state) channelMsg += `📍 *الولاية:* ${customerData.state}\n`;
-                if(customerData.addressDetail) channelMsg += `🏠 *العنوان:* ${customerData.addressDetail}\n`;
-                if(customerData.address) channelMsg += `📍 *العنوان الكامل:* ${customerData.address}\n`;
-                if(customerData.notes) channelMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
-                if(distributor) {
-                    const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
-                    channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    channelMsg += `${serviceIcon} *جهة التوصيل:* ${distributor.name}\n`;
-                    channelMsg += `🆔 *معرف الموزع:* \`${distributor.fullId || distributor.customId}\`\n`;
-                    channelMsg += `📞 *هاتف الموزع:* ${distributor.phone || 'غير محدد'}\n`;
-                }
-                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-                
-                for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                    channelMsg += `🏪 *${storeData.storeName}*\n`;
-                    channelMsg += `🆔 *معرف المتجر:* \`${storeID}\`\n`;
-                    channelMsg += `───────────────────────────────\n`;
-                    
-                    storeData.items.forEach(item => {
-                        channelMsg += formatProductVertical(item);
-                        channelMsg += `───────────────────────────────\n`;
-                    });
-                    
-                    channelMsg += `💰 *إجمالي المتجر:* ${storeData.total.toLocaleString()} دج\n`;
-                    channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                }
-                
-                channelMsg += `💎 *الإجمالي الكلي:* ${grandTotal.toLocaleString()} دج\n`;
-                channelMsg += `📅 *التاريخ:* ${timestamp}\n`;
-                channelMsg += `✅ تم استلام الطلب بنجاح، سيتم التواصل معك قريباً`;
-                
-                await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                    method:'POST', 
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({
-                        chat_id: TELEGRAM.channelId, 
-                        text: channelMsg, 
-                        parse_mode: 'Markdown'
-                    })
-                });
-                
-                for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                    let merchantMsg = `🛍️ *فاتورة طلب جديد - ${storeData.storeName}* 🛍️\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `🆔 *رقم الطلب الموحد:* \`${mainOrderId}\`\n`;
-                    merchantMsg += `🏷️ *معرف التاجر (Store ID):* \`${storeID}\`\n`;
-                    merchantMsg += `🔗 *ربط الطلب:* \`${mainOrderId} | ${storeID}\`\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `👤 *الزبون:* ${customerData.name}\n`;
-                    merchantMsg += `📞 *رقم الجوال:* ${customerData.phone}\n`;
-                    if(customerData.state) merchantMsg += `📍 *الولاية:* ${customerData.state}\n`;
-                    if(customerData.addressDetail) merchantMsg += `🏠 *العنوان:* ${customerData.addressDetail}\n`;
-                    if(customerData.address) merchantMsg += `📍 *العنوان الكامل:* ${customerData.address}\n`;
-                    if(distributor) {
-                        const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
-                        merchantMsg += `${serviceIcon} *جهة التوصيل:* ${distributor.name}\n`;
-                    }
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
-                    merchantMsg += `───────────────────────────────\n`;
-                    
-                    storeData.items.forEach((item, idx) => {
-                        merchantMsg += `\n${idx+1}️⃣ ${item.name}\n`;
-                        merchantMsg += `   🆔 معرف المنتج: \`${item.productCompositeID || item.id || 'غير محدد'}\`\n`;
-                        merchantMsg += `   📦 الكمية: ${item.quantity}\n`;
-                        merchantMsg += `   💰 السعر: ${item.price.toLocaleString()} دج\n`;
-                        merchantMsg += `   💵 المجموع: ${(item.price * item.quantity).toLocaleString()} دج\n`;
-                        merchantMsg += `───────────────────────────────\n`;
-                    });
-                    
-                    merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
-                    merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
-                    merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    
-                    await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
-                        method:'POST', 
-                        headers:{'Content-Type':'application/json'},
-                        body:JSON.stringify({
-                            chat_id: TELEGRAM.channelId, 
-                            text: merchantMsg, 
-                            parse_mode: 'Markdown'
-                        })
-                    });
-                }
-                
-                saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor);
-                return true;
-                
-            } catch(e) { 
-                console.error('خطأ في إرسال الطلب:', e); 
-                return false; 
-            }
-        }
-        
-        function saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor) {
-            let allOrders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
-            
-            for (const [storeID, storeData] of Object.entries(groupedStores)) {
-                allOrders.unshift({ 
-                    id: `${mainOrderId}-${storeID.substring(0,5)}`, 
-                    originalOrderId: mainOrderId,
-                    storeId: storeID,
-                    date: timestamp, 
-                    customerName: customerData.name, 
-                    customerPhone: customerData.phone, 
-                    customerAddress: customerData.address,
-                    customerState: customerData.state,
-                    customerAddressDetail: customerData.addressDetail,
-                    customerNotes: customerData.notes, 
-                    storeID: storeID, 
-                    storeName: storeData.storeName, 
-                    items: storeData.items, 
-                    total: storeData.total, 
-                    distributor: distributor ? distributor.name : null,
-                    distributorId: distributor ? (distributor.fullId || distributor.customId) : null,
-                    status: 'pending'
-                });
-            }
-            
-            localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
-            renderOrdersArchive();
-        }
-        
-        function renderOrdersArchive() {
-            const container = document.getElementById('ordersArchiveContainer');
-            if(!container) return;
-            const orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
-            if(orders.length === 0){ 
-                container.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">لا توجد طلبات سابقة</p>'; 
-                return; 
-            }
-            container.innerHTML = orders.map(o => `
-                <div class="order-card">
-                    <div class="order-card-header">
-                        <span class="order-id">#${o.originalOrderId || o.id}</span>
-                        <span class="order-status ${o.status === 'pending' ? 'status-pending' : (o.status === 'received' ? 'status-received' : 'status-approved')}">
-                            ${o.status === 'pending' ? '⏳ قيد المعالجة' : (o.status === 'received' ? '📦 وصل للتاجر' : '✅ تم تعيين الموزع')}
-                        </span>
-                    </div>
-                    <div class="order-details">
-                        <div>🏪 ${o.storeName}</div>
-                        <div>🏷️ معرف التاجر: <code>${o.storeId || o.storeID}</code></div>
-                        <div>📅 ${o.date}</div>
-                        <div>📍 ${o.customerState ? `${o.customerState} - ` : ''}${o.customerAddressDetail || ''}</div>
-                        <div>📦 ${o.items.map(i => `${i.name} (${i.quantity})`).join(', ')}</div>
-                        <div>💰 ${o.total.toLocaleString()} دج</div>
-                        ${o.distributor ? `<div>🚚 ${o.distributor}</div>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function loadUserProfile() {
-            let userName = '';
-            const currentStore = localStorage.getItem('nardo_current_store');
-            if (currentStore) {
-                try {
-                    const store = JSON.parse(currentStore);
-                    if (store.storeName) userName = store.storeName;
-                } catch(e) {}
-            }
-            const savedUser = localStorage.getItem('nardo_customer_name');
-            if (savedUser && !userName) userName = savedUser;
-            if (!userName) userName = 'زائر ناردو برو';
-            document.getElementById('customerName').value = userName;
-        }
-        
-        function updateFullAddress() {
-            const state = document.getElementById('customerState').value;
-            const detail = document.getElementById('customerAddress').value;
-            const fullAddress = state && detail ? `${state} - ${detail}` : (state || detail || '');
-            document.getElementById('fullAddress').value = fullAddress;
-        }
-        
-        function openMapLocation() {
-            const state = document.getElementById('customerState').value;
-            const address = document.getElementById('customerAddress').value;
-            const query = encodeURIComponent(`${state} ${address}`);
-            window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-            showNotification('🗺️ تم فتح الخريطة، يمكنك نسخ العنوان التفصيلي', 'info');
-        }
-        
+        function toggleStore(sid) { storesState[sid] = !storesState[sid]; localStorage.setItem('stores_state', JSON.stringify(storesState)); updateCartDisplay(); }
+        function updateCartQuantity(pid, chg) { const idx = cart.findIndex(i=>i.id===pid); if(idx===-1) return; const nq = cart[idx].quantity+chg; if(nq<=0) removeFromCart(pid); else { cart[idx].quantity=nq; saveCart(); updateCartDisplay(); } }
+        function removeFromCart(pid) { cart = cart.filter(i=>i.id!==pid); saveCart(); updateCartDisplay(); }
+        function clearCart() { if(confirm('مسح السلة؟')){ cart=[]; saveCart(); updateCartDisplay(); } }
+        function groupByStore(items) { const g={}; items.forEach(i=>{ const sid = i.storeID || 'unknown'; if(!g[sid]) g[sid]={storeName:i.storeName||'متجر', items:[], total:0, count:0}; g[sid].items.push(i); g[sid].total += i.price*i.quantity; g[sid].count += i.quantity; }); return g; }
+
+        // ============================================
+        // إرسال الطلب
+        // ============================================
         let pendingGroupedStores = null, pendingGrandTotal = null;
-        
         function openCustomerModal() { 
-            if(cart.length === 0){ 
-                showNotification('السلة فارغة','warning'); 
-                return; 
-            } 
+            if(cart.length === 0){ showNotification('السلة فارغة','warning'); return; } 
             pendingGroupedStores = groupByStore(cart); 
             pendingGrandTotal = cart.reduce((s,i) => s + (i.price * i.quantity), 0); 
             
-            loadUserProfile();
-            document.getElementById('customerPhone').value = '';
-            document.getElementById('customerState').value = '';
-            document.getElementById('customerAddress').value = '';
-            document.getElementById('fullAddress').value = '';
-            document.getElementById('customerNotes').value = '';
-            document.getElementById('distributorsList').innerHTML = '';
-            selectedDistributor = null;
-            
+            let userName = localStorage.getItem('nardo_customer_name') || 'زائر ناردو برو';
+            document.getElementById('customerName').value = userName;
             document.getElementById('customerModal').style.display = 'flex'; 
         }
-        
-        function closeModal() { 
-            document.getElementById('customerModal').style.display = 'none'; 
+        function closeModal() { document.getElementById('customerModal').style.display = 'none'; }
+        function updateFullAddress() {
+            const state = document.getElementById('customerState').value;
+            const detail = document.getElementById('customerAddress').value;
+            document.getElementById('fullAddress').value = state && detail ? `${state} - ${detail}` : (state || detail || '');
         }
-        
+        function openMapLocation() {
+            const state = document.getElementById('customerState').value;
+            const address = document.getElementById('customerAddress').value;
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(state + ' ' + address)}`, '_blank');
+        }
+
         async function submitOrder() {
             const name = document.getElementById('customerName').value.trim(); 
             const phone = document.getElementById('customerPhone').value.trim(); 
             const state = document.getElementById('customerState').value;
             const addressDetail = document.getElementById('customerAddress').value.trim();
-            const fullAddress = document.getElementById('fullAddress').value.trim();
-            const notes = document.getElementById('customerNotes').value.trim();
             
-            if(!name){ 
-                showNotification('الرجاء إدخال الاسم','error'); 
-                return; 
-            }
-            if(!phone){ 
-                showNotification('الرجاء إدخال رقم الهاتف','error'); 
-                return; 
-            }
-            if(!state && !addressDetail){ 
-                showNotification('الرجاء إدخال العنوان (الولاية أو العنوان التفصيلي)','error'); 
-                return; 
-            }
-            if(!selectedDistributor) {
-                showNotification('الرجاء اختيار شركة التوصيل أو الموزع','error');
-                return;
-            }
+            if(!phone){ showNotification('⚠️ يرجى إدخال رقم الهاتف','error'); return; }
+            if(!state){ showNotification('⚠️ يرجى اختيار الولاية','error'); return; }
+            if(!addressDetail){ showNotification('⚠️ يرجى إدخال العنوان التفصيلي','error'); return; }
+            if(!selectedDistributor) { showNotification('⚠️ يرجى اختيار شركة التوصيل أو الموزع','error'); return; }
             
-            const finalAddress = fullAddress || (state && addressDetail ? `${state} - ${addressDetail}` : (state || addressDetail));
+            const customerData = { name, phone, state, addressDetail, address: `${state} - ${addressDetail}`, notes: document.getElementById('customerNotes').value.trim() };
             
-            const customerData = {
-                name, phone, address: finalAddress,
-                state: state, addressDetail: addressDetail, notes
-            };
-            
-            const currentGrouped = pendingGroupedStores;
-            const currentTotal = pendingGrandTotal;
-            
-            if(!currentGrouped || Object.keys(currentGrouped).length === 0) {
-                showNotification('لا توجد منتجات في السلة','error');
-                closeModal();
-                return;
-            }
-            
-            showNotification('جاري إرسال الطلب...','info');
-            
-            const success = await sendOrderToTelegram(customerData, currentGrouped, currentTotal, selectedDistributor);
-            
-            closeModal();
+            showNotification('⏳ جاري إرسال طلبك...','info');
+            const success = await sendOrderToTelegram(customerData, pendingGroupedStores, pendingGrandTotal, selectedDistributor);
             
             if(success){
-                cart = [];
-                saveCart();
-                updateCartDisplay();
-                showNotification('✓ تم إرسال الطلب بنجاح! سيتم التواصل معك قريباً', 'success');
+                closeModal();
+                cart = []; saveCart(); updateCartDisplay();
+                showNotification('✅ تم إرسال الطلب بنجاح! سيتم التواصل معك قريباً', 'success');
                 renderOrdersArchive();
             } else {
-                showNotification('❌ فشل إرسال الطلب. يرجى التحقق من الاتصال والمحاولة مرة أخرى', 'error');
+                showNotification('❌ فشل الإرسال، يرجى المحاولة لاحقاً', 'error');
             }
-            
-            pendingGroupedStores = null;
-            pendingGrandTotal = null;
         }
-        
-        window.addEventListener('load', function() {
-            loadCart();
-            renderOrdersArchive();
-            
-            const cached = localStorage.getItem('nardo_distributors_data');
-            if (cached) {
-                try {
-                    distributorsData = JSON.parse(cached);
-                    console.log('✅ تم تحميل البيانات من cache');
-                } catch(e) {}
+
+        async function sendOrderToTelegram(customerData, groupedStores, grandTotal, distributor) {
+            const timestamp = new Date().toLocaleString('ar-EG');
+            const mainOrderId = `ORD-${Math.floor(Math.random()*900000+100000)}`;
+            try {
+                let msg = `🟢 *طلب جديد #${mainOrderId}* 🟢\n👤 *المشتري:* ${customerData.name}\n📞 *الهاتف:* ${customerData.phone}\n📍 *الولاية:* ${customerData.state}\n🏠 *العنوان:* ${customerData.addressDetail}\n🚚 *التوصيل:* ${distributor.name}\n💰 *الإجمالي:* ${grandTotal.toLocaleString()} دج\n📅 *التاريخ:* ${timestamp}\n━━━━━━━━━━━━━━━━━━━━\n`;
+                for (const [sid, sdata] of Object.entries(groupedStores)) {
+                    msg += `🏪 *${sdata.storeName}* (${sid})\n`;
+                    sdata.items.forEach(i => msg += `• ${i.name} (x${i.quantity}) - ${i.price} دج\n`);
+                    msg += `────────────────────\n`;
+                }
+                
+                const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ chat_id: TELEGRAM.channelId, text: msg, parse_mode: 'Markdown' })
+                });
+                
+                if(res.ok) {
+                    saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor);
+                    return true;
+                }
+                return false;
+            } catch(e) { return false; }
+        }
+
+        function saveOrderLocally(customerData, groupedStores, mainOrderId, timestamp, distributor) {
+            let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            for (const [sid, sdata] of Object.entries(groupedStores)) {
+                orders.unshift({ 
+                    id: mainOrderId, 
+                    storeName: sdata.storeName, 
+                    date: timestamp, 
+                    total: sdata.total, 
+                    status: 'pending',
+                    items: sdata.items,
+                    customer: customerData,
+                    distributor: distributor.name
+                });
+            }
+            localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+        }
+
+        function renderOrdersArchive() {
+            const container = document.getElementById('ordersArchiveContainer');
+            if(!container) return;
+            const orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+            if(orders.length === 0){ 
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>لا توجد طلبات سابقة في الأرشيف</p></div>'; 
+                return; 
             }
             
-            setTimeout(() => {
-                fetchDistributorsFromChannel();
-            }, 2000);
-            
-            console.log('✅ نظام السلة جاهز - مع إضافة معرف التاجر بجانب رقم الطلب الموحد');
-        });
+            container.innerHTML = orders.map((o, idx) => `
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <span class="order-id">#${o.id}</span>
+                        <span class="order-status status-pending">⏳ قيد المعالجة</span>
+                    </div>
+                    <div class="order-details">
+                        <div><i class="fas fa-store"></i> ${o.storeName}</div>
+                        <div><i class="fas fa-calendar-alt"></i> ${o.date}</div>
+                        <div><i class="fas fa-map-marker-alt"></i> ${o.customer ? o.customer.state : 'غير محدد'}</div>
+                        <div><i class="fas fa-truck"></i> ${o.distributor || 'غير محدد'}</div>
+                    </div>
+                    <div class="order-items-list">
+                        ${(o.items || []).map(item => `
+                            <div class="order-item-row">
+                                <span class="order-item-name">${item.name} (x${item.quantity})</span>
+                                <span class="order-item-price">${(item.price * item.quantity).toLocaleString()} دج</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="order-card-footer">
+                        <div>
+                            <span class="order-total-label">الإجمالي: </span>
+                            <span class="order-total-value">${o.total.toLocaleString()} دج</span>
+                        </div>
+                        <button class="btn-delete-order" onclick="deleteOrderFromArchive(${idx})">
+                            <i class="fas fa-trash"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteOrderFromArchive(index) {
+            if(confirm('هل أنت متأكد من حذف هذا الطلب من الأرشيف؟')) {
+                let orders = JSON.parse(localStorage.getItem(ORDERS_STORAGE_KEY) || '[]');
+                orders.splice(index, 1);
+                localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+                renderOrdersArchive();
+                showNotification('✓ تم حذف الطلب من الأرشيف', 'info');
+            }
+        }
+
+        function clearOrdersArchive() {
+            if(confirm('هل أنت متأكد من مسح كامل الأرشيف؟ لا يمكن التراجع عن هذه الخطوة.')) {
+                localStorage.removeItem(ORDERS_STORAGE_KEY);
+                renderOrdersArchive();
+                showNotification('✓ تم مسح الأرشيف بالكامل', 'info');
+            }
+        }
+
+        window.addEventListener('load', () => { loadCart(); renderOrdersArchive(); fetchDistributorsFromChannel(); });
     </script>
 </body>
 </html>
