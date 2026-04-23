@@ -77,6 +77,12 @@
         .btn-danger:hover { background: var(--error); color: white; }
         .btn-refresh { background: rgba(96, 165, 250, 0.2); border: 1px solid var(--info); color: var(--info); }
         .btn-refresh:hover { background: var(--info); color: white; }
+        .btn-store-delivery {
+            background: linear-gradient(135deg, #2d5a2c, #1a3a19);
+            border: 2px solid var(--success);
+            color: var(--success);
+        }
+        .btn-store-delivery:hover { background: var(--success); color: #000; transform: translateY(-2px); }
         
         .merchant-section {
             background: var(--glass);
@@ -229,7 +235,6 @@
             font-size: 13px;
         }
         
-        /* رسائل التأكيد للحقول */
         .field-message {
             font-size: 12px;
             margin-top: -10px;
@@ -253,7 +258,6 @@
         }
         .field-message i { font-size: 12px; }
         
-        /* تنسيق الحقول عند التحقق */
         input.valid, select.valid {
             border-color: #4ade80 !important;
             background: rgba(74, 222, 128, 0.05) !important;
@@ -263,7 +267,6 @@
             background: rgba(248, 113, 113, 0.05) !important;
         }
         
-        /* شريط التقدم */
         .progress-bar-container {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
@@ -285,7 +288,6 @@
             margin-bottom: 10px;
         }
         
-        /* زر التأكيد المعطل */
         #submitOrderBtn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -294,7 +296,6 @@
             transform: none;
         }
         
-        /* الإشعارات الصغيرة */
         .small-notification {
             position: fixed;
             bottom: 20px;
@@ -371,6 +372,10 @@
             background: rgba(96, 165, 250, 0.2);
             color: var(--info);
         }
+        .type-store {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--gold);
+        }
         .distributor-info {
             font-size: 13px;
             color: var(--text-secondary);
@@ -383,6 +388,26 @@
             border-radius: 4px;
             font-size: 11px;
             color: var(--gold);
+        }
+        .store-delivery-btn {
+            background: linear-gradient(135deg, #2d5a2c, #1a3a19);
+            border: 2px solid var(--success);
+            margin-top: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .store-delivery-btn:hover {
+            background: linear-gradient(135deg, #3a7a38, #2a5a28);
+            transform: translateY(-2px);
+        }
+        .store-delivery-btn.selected {
+            background: var(--success);
+            border-color: #fff;
+        }
+        .store-delivery-btn.selected .distributor-name {
+            color: #000;
         }
         .no-distributors {
             text-align: center;
@@ -601,8 +626,8 @@
         let storeColors = {};
         let distributorsData = {};
         let selectedDistributor = null;
+        let isStoreDelivery = false; // متغير لتحديد إذا كان التوصيل من طرف المتجر
         
-        // متغير لتتبع اكتمال النموذج
         let formCompletion = {
             phone: false,
             state: false,
@@ -928,6 +953,32 @@
             }
         }
         
+        function selectStoreDelivery() {
+            isStoreDelivery = true;
+            selectedDistributor = {
+                name: 'توصيل من طرف المتجر',
+                type: 'store',
+                typeText: '🏪 توصيل من المتجر',
+                fullId: 'STORE-DELIVERY',
+                customId: 'STORE-DELIVERY',
+                phone: 'يتولى المتجر التوصيل',
+                manager: 'المتجر'
+            };
+            
+            document.querySelectorAll('.distributor-item').forEach(item => item.classList.remove('selected'));
+            const storeBtn = document.getElementById('storeDeliveryBtn');
+            if(storeBtn) storeBtn.classList.add('selected');
+            
+            const distributorMessage = document.getElementById('distributorMessage');
+            distributorMessage.innerHTML = '<i class="fas fa-check-circle"></i> ✓ تم اختيار توصيل من طرف المتجر';
+            distributorMessage.classList.add('show', 'success');
+            distributorMessage.classList.remove('error');
+            
+            formCompletion.distributor = true;
+            showSmallNotification('✅ تم اختيار التوصيل من طرف المتجر', 'success');
+            updateFormProgress();
+        }
+        
         async function loadDistributorsFromTelegram() {
             const selectedStateName = document.getElementById('customerState').value;
             const container = document.getElementById('distributorsList');
@@ -952,30 +1003,53 @@
             
             const distributors = distributorsData[stateCode] || [];
             
+            let html = `<div class="distributors-section"><h3><i class="fas fa-warehouse"></i> اختر جهة التوصيل في ${selectedStateName}</h3>`;
+            html += `<button class="btn btn-refresh" style="margin-bottom: 15px; width: 100%;" onclick="refreshDistributorsList()"><i class="fas fa-sync-alt"></i> تحديث القائمة من القناة</button>`;
+            
+            // إضافة زر "توصيل من طرف المتجر"
+            html += `<div class="distributor-item store-delivery-btn" id="storeDeliveryBtn" onclick="selectStoreDelivery()">
+                        <div class="distributor-name">🏪 توصيل من طرف المتجر</div>
+                        <div><span class="distributor-type type-store">🏪 يتحمل المتجر مسؤولية التوصيل</span></div>
+                        <div class="distributor-info">🆔 المعرف: <span class="distributor-id">STORE-DELIVERY</span></div>
+                        <div class="distributor-info">📞 سيتواصل معك المتجر لتنسيق التوصيل</div>
+                    </div>`;
+            
             if (distributors.length === 0) {
-                if (container) {
-                    container.innerHTML = `<div class="distributors-section"><h3><i class="fas fa-warehouse"></i> الموزعون والشركات المتاحة</h3><div class="no-distributors"><i class="fas fa-truck" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${selectedStateName}</strong> حالياً<button class="btn btn-refresh" style="margin-top: 15px;" onclick="refreshDistributorsList()"><i class="fas fa-sync-alt"></i> تحديث القائمة من القناة</button></div></div>`;
-                }
-                return;
+                html += `<div class="no-distributors"><i class="fas fa-truck" style="font-size: 30px; margin-bottom: 10px; display: block;"></i>لا توجد شركات توصيل أو موزعون معتمدون في ولاية <strong>${selectedStateName}</strong><br>يمكنك اختيار <strong>"توصيل من طرف المتجر"</strong> أعلاه</div>`;
+            } else {
+                html += `<div style="margin-top: 15px;"><hr style="border-color: rgba(255,215,0,0.2); margin: 15px 0;"><p style="color: var(--gold); font-size: 13px; text-align: center;">👇 أو اختر من قائمة الموزعين وشركات التوصيل 👇</p></div>`;
+                
+                distributors.forEach((distributor, index) => {
+                    const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
+                    const typeClass = distributor.type === 'delivery' ? 'type-delivery' : 'type-distributor';
+                    html += `<div class="distributor-item" onclick='selectDistributorFromList("${stateCode}", ${index})' data-state="${stateCode}" data-index="${index}">
+                                <div class="distributor-name">${serviceIcon} ${distributor.name}</div>
+                                <div><span class="distributor-type ${typeClass}">${distributor.typeText}</span></div>
+                                <div class="distributor-info">🆔 المعرف: <span class="distributor-id">${distributor.fullId || distributor.customId}</span></div>
+                                <div class="distributor-info">📞 ${distributor.phone || 'رقم الهاتف غير متوفر'}</div>
+                            </div>`;
+                });
             }
-            
-            let html = `<div class="distributors-section"><h3><i class="fas fa-warehouse"></i> اختر شركة التوصيل أو الموزع في ${selectedStateName}</h3><button class="btn btn-refresh" style="margin-bottom: 15px; width: 100%;" onclick="refreshDistributorsList()"><i class="fas fa-sync-alt"></i> تحديث القائمة من القناة</button>`;
-            
-            distributors.forEach((distributor, index) => {
-                const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
-                const typeClass = distributor.type === 'delivery' ? 'type-delivery' : 'type-distributor';
-                html += `<div class="distributor-item" onclick='selectDistributor("${stateCode}", ${index})' data-state="${stateCode}" data-index="${index}"><div class="distributor-name">${serviceIcon} ${distributor.name}</div><div><span class="distributor-type ${typeClass}">${distributor.typeText}</span></div><div class="distributor-info">🆔 المعرف: <span class="distributor-id">${distributor.fullId || distributor.customId}</span></div><div class="distributor-info">📞 ${distributor.phone || 'رقم الهاتف غير متوفر'}</div></div>`;
-            });
             
             html += `</div>`;
             if (container) container.innerHTML = html;
+            
+            // إعادة تعيين الاختيار السابق
+            isStoreDelivery = false;
+            selectedDistributor = null;
+            formCompletion.distributor = false;
+            updateFormProgress();
         }
         
-        function selectDistributor(stateCode, index) {
+        function selectDistributorFromList(stateCode, index) {
+            isStoreDelivery = false;
             document.querySelectorAll('.distributor-item').forEach(item => item.classList.remove('selected'));
+            const storeBtn = document.getElementById('storeDeliveryBtn');
+            if(storeBtn) storeBtn.classList.remove('selected');
+            
             const items = document.querySelectorAll('.distributor-item');
-            if (items[index]) {
-                items[index].classList.add('selected');
+            if (items[index + 1]) { // +1 لأن أول عنصر هو زر المتجر
+                items[index + 1].classList.add('selected');
                 selectedDistributor = distributorsData[stateCode][index];
                 
                 const distributorMessage = document.getElementById('distributorMessage');
@@ -1154,12 +1228,28 @@
                 if(customerData.addressDetail) channelMsg += `🏠 *العنوان:* ${customerData.addressDetail}\n`;
                 if(customerData.address) channelMsg += `📍 *العنوان الكامل:* ${customerData.address}\n`;
                 if(customerData.notes) channelMsg += `📝 *ملاحظات:* ${customerData.notes}\n`;
+                channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                
                 if(distributor) {
-                    const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
-                    channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    channelMsg += `${serviceIcon} *جهة التوصيل:* ${distributor.name}\n`;
-                    channelMsg += `🆔 *معرف الموزع:* \`${distributor.fullId || distributor.customId}\`\n`;
-                    channelMsg += `📞 *هاتف الموزع:* ${distributor.phone || 'غير محدد'}\n`;
+                    let serviceIcon = '';
+                    let serviceText = '';
+                    if(distributor.type === 'delivery') {
+                        serviceIcon = '🚚';
+                        serviceText = 'شركة توصيل خارجية';
+                    } else if(distributor.type === 'distributor') {
+                        serviceIcon = '📦';
+                        serviceText = 'موزع معتمد';
+                    } else {
+                        serviceIcon = '🏪';
+                        serviceText = 'توصيل من طرف المتجر';
+                    }
+                    channelMsg += `${serviceIcon} *جهة التوصيل:* ${distributor.name} (${serviceText})\n`;
+                    if(distributor.type !== 'store') {
+                        channelMsg += `🆔 *معرف الموزع:* \`${distributor.fullId || distributor.customId}\`\n`;
+                        channelMsg += `📞 *هاتف الموزع:* ${distributor.phone || 'غير محدد'}\n`;
+                    } else {
+                        channelMsg += `📌 *ملاحظة:* سيتولى المتجر مسؤولية توصيل الطلب إلى الزبون\n`;
+                    }
                 }
                 channelMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
                 
@@ -1197,10 +1287,20 @@
                     if(customerData.state) merchantMsg += `📍 *الولاية:* ${customerData.state}\n`;
                     if(customerData.addressDetail) merchantMsg += `🏠 *العنوان:* ${customerData.addressDetail}\n`;
                     if(customerData.address) merchantMsg += `📍 *العنوان الكامل:* ${customerData.address}\n`;
+                    
                     if(distributor) {
-                        const serviceIcon = distributor.type === 'delivery' ? '🚚' : '📦';
-                        merchantMsg += `${serviceIcon} *جهة التوصيل:* ${distributor.name}\n`;
+                        if(distributor.type === 'delivery') {
+                            merchantMsg += `🚚 *جهة التوصيل:* ${distributor.name} (شركة توصيل)\n`;
+                            merchantMsg += `📞 *هاتف الموزع:* ${distributor.phone || 'غير محدد'}\n`;
+                        } else if(distributor.type === 'distributor') {
+                            merchantMsg += `📦 *جهة التوصيل:* ${distributor.name} (موزع معتمد)\n`;
+                            merchantMsg += `📞 *هاتف الموزع:* ${distributor.phone || 'غير محدد'}\n`;
+                        } else {
+                            merchantMsg += `🏪 *جهة التوصيل:* المتجر نفسه (يتولى المتجر التوصيل)\n`;
+                            merchantMsg += `📌 *ملاحظة:* يجب على المتجر التنسيق مع الزبون لتوصيل الطلب\n`;
+                        }
                     }
+                    
                     merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     merchantMsg += `📦 *المنتجات المطلوبة:*\n`;
                     merchantMsg += `───────────────────────────────\n`;
@@ -1217,6 +1317,10 @@
                     merchantMsg += `💰 *إجمالي الطلب:* ${storeData.total.toLocaleString()} دج\n`;
                     merchantMsg += `📅 *التاريخ:* ${timestamp}\n`;
                     merchantMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    
+                    if(distributor && distributor.type === 'store') {
+                        merchantMsg += `🔄 *إجراء مطلوب:* يرجى التواصل مع الزبون لتنسيق التوصيل\n`;
+                    }
                     
                     await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/sendMessage`, {
                         method:'POST', 
@@ -1243,8 +1347,11 @@
                     customerAddress: customerData.address, customerState: customerData.state,
                     customerAddressDetail: customerData.addressDetail, customerNotes: customerData.notes,
                     storeID: storeID, storeName: storeData.storeName, items: storeData.items,
-                    total: storeData.total, distributor: distributor ? distributor.name : null,
-                    distributorId: distributor ? (distributor.fullId || distributor.customId) : null, status: 'pending'
+                    total: storeData.total, 
+                    distributor: distributor ? distributor.name : null,
+                    distributorType: distributor ? distributor.type : null,
+                    distributorId: distributor ? (distributor.fullId || distributor.customId) : null, 
+                    status: 'pending'
                 });
             }
             localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(allOrders));
@@ -1274,7 +1381,7 @@
                         <div>📍 ${o.customerState ? `${o.customerState} - ` : ''}${o.customerAddressDetail || ''}</div>
                         <div>📦 ${o.items.map(i => `${i.name} (${i.quantity})`).join(', ')}</div>
                         <div>💰 ${o.total.toLocaleString()} دج</div>
-                        ${o.distributor ? `<div>🚚 ${o.distributor}</div>` : ''}
+                        ${o.distributor ? `<div>${o.distributorType === 'store' ? '🏪' : (o.distributorType === 'delivery' ? '🚚' : '📦')} ${o.distributor}</div>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -1315,6 +1422,7 @@
             
             formCompletion = { phone: false, state: false, address: false, distributor: false };
             selectedDistributor = null;
+            isStoreDelivery = false;
             
             ['phoneMessage', 'stateMessage', 'addressMessage'].forEach(msgId => {
                 const msg = document.getElementById(msgId);
@@ -1378,3 +1486,4 @@
     </script>
 </body>
 </html>
+
