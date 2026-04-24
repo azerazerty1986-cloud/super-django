@@ -846,69 +846,137 @@
         // ============================================================
         // [36] دالة استخراج البيانات من نص الرسالة
         // ============================================================
-        function extractOrderDataFromText(text) {
+        // ============================================================
+// [36] دالة استخراج البيانات من نص الرسالة - النسخة الكاملة
+// ============================================================
+function extractOrderDataFromText(text) {
     try {
-        const patterns = {
-            storeID: /(?:معرف المتجر:|🆔\s*\*معرف المتجر\*:)\s*`?([^\n`]+)`?/,
-            customerName: /(?:(?:المشتري|الزبون):|👤\s*\*الزبون\*:)\s*([^\n]+)/,
-            customerPhone: /(?:(?:الهاتف|رقم الجوال):|📞\s*\*رقم الجوال\*:)\s*([^\n]+)/,
-            customerAddress: /(?:(?:العنوان):|📍\s*\*العنوان\*:)\s*([^\n]+)/,
-            productID: /(?:معرف المنتج:|🆔\s*معرف المنتج:)\s*`?([A-Z0-9\u0600-\u06FF\s-]+-\d+-\d+)`?/i,
-            quantity: /(?:الكمية:|📦\s*الكمية:)\s*(\d+)/,
-            total: /(?:(?:إجمالي المتجر|إجمالي الطلب):|💰\s*\*إجمالي الطلب\*:)\s*([\d,]+)/,
-            notes: /(?:ملاحظات:|📝\s*\*ملاحظات\*:)\s*([^\n]+)/,
-            orderNumber: /(?:(?:رقم الطلب|رقم الطلب الموحد):|🆔\s*\*رقم الطلب الموحد\*:)\s*(\d+)/,
-            date: /(?:(?:التاريخ):|📅\s*\*التاريخ\*:)\s*([^\n]+)/,
-            deliveryCompany: /(?:جهة التوصيل:|🏪\s*جهة التوصيل:)\s*([^\n]+)/,
-            distributorId: /(?:معرف الموزع:|🆔\s*معرف الموزع:|معرف التوصيل:)\s*([^\n]+)/
+        const result = {
+            items: [],
+            storeID: '',
+            customerName: '',
+            customerPhone: '',
+            customerAddress: '',
+            total: 0,
+            notes: '',
+            orderNumber: '',
+            date: '',
+            deliveryCompany: '',
+            distributorId: ''
         };
         
-        const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
-        let customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim().replace(/[*_]/g, '');
-        let customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim().replace(/[*_]/g, '');
-        let customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim().replace(/[*_]/g, '');
-        const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
-        const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
-        const total = parseInt((text.match(patterns.total)?.[1] || '0').replace(/,/g, ''));
-        const notes = (text.match(patterns.notes)?.[1] || '').trim();
-        const deliveryCompany = (text.match(patterns.deliveryCompany)?.[1] || '').trim();
-        const distributorId = (text.match(patterns.distributorId)?.[1] || '').trim();
-
-        const items = [];
-        const lines = text.split('\n');
-        let currentItem = null;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            const productStartMatch = line.match(/^(\d+)[️⃣\.]\s*(?:المنتج:\s*)?(.*?)$/);
-            if (productStartMatch) {
-                currentItem = { name: productStartMatch[2].trim().replace(/[*_]/g, '') };
-                continue;
-            }
-            if (currentItem) {
-                const idMatch = line.match(patterns.productID);
-                if (idMatch) currentItem.productID = idMatch[1].trim();
-                const qtyMatch = line.match(patterns.quantity);
-                if (qtyMatch) {
-                    currentItem.quantity = parseInt(qtyMatch[1]);
-                    items.push({ ...currentItem });
-                    currentItem = null;
+        // استخراج رقم الطلب
+        let orderMatch = text.match(/رقم الطلب الموحد:\s*([^\n]+)/);
+        if (!orderMatch) orderMatch = text.match(/🆔\s*\*رقم الطلب الموحد\*:\s*([^\n]+)/);
+        if (orderMatch) result.orderNumber = orderMatch[1].trim();
+        
+        // استخراج معرف المتجر
+        let storeMatch = text.match(/معرف التاجر \(Store ID\):\s*([^\n]+)/);
+        if (!storeMatch) storeMatch = text.match(/معرف المتجر:\s*`?([^\n`]+)`?/);
+        if (storeMatch) result.storeID = storeMatch[1].trim();
+        
+        // استخراج اسم الزبون
+        let customerMatch = text.match(/الزبون:\s*([^\n]+)/);
+        if (!customerMatch) customerMatch = text.match(/👤\s*\*الزبون\*:\s*([^\n]+)/);
+        if (customerMatch) result.customerName = customerMatch[1].trim().replace(/[*_]/g, '');
+        
+        // استخراج رقم الجوال
+        let phoneMatch = text.match(/رقم الجوال:\s*([^\n]+)/);
+        if (!phoneMatch) phoneMatch = text.match(/📞\s*\*رقم الجوال\*:\s*([^\n]+)/);
+        if (phoneMatch) result.customerPhone = phoneMatch[1].trim().replace(/[*_]/g, '');
+        
+        // استخراج العنوان
+        let addressMatch = text.match(/العنوان الكامل:\s*([^\n]+)/);
+        if (!addressMatch) addressMatch = text.match(/📍\s*\*العنوان\*:\s*([^\n]+)/);
+        if (addressMatch) result.customerAddress = addressMatch[1].trim().replace(/[*_]/g, '');
+        
+        // استخراج جهة التوصيل
+        let deliveryMatch = text.match(/جهة التوصيل:\s*([^\n]+)/);
+        if (!deliveryMatch) deliveryMatch = text.match(/🏪\s*جهة التوصيل:\s*([^\n]+)/);
+        if (deliveryMatch) result.deliveryCompany = deliveryMatch[1].trim();
+        
+        // استخراج هاتف الموزع (كمعرف للموزع)
+        let distributorMatch = text.match(/هاتف الموزع:\s*([^\n]+)/);
+        if (!distributorMatch) distributorMatch = text.match(/🆔\s*معرف الموزع:\s*([^\n]+)/);
+        if (distributorMatch) result.distributorId = distributorMatch[1].trim();
+        
+        // استخراج التاريخ
+        let dateMatch = text.match(/التاريخ:\s*([^\n]+)/);
+        if (!dateMatch) dateMatch = text.match(/📅\s*\*التاريخ\*:\s*([^\n]+)/);
+        if (dateMatch) result.date = dateMatch[1].trim();
+        
+        // استخراج الإجمالي
+        let totalMatch = text.match(/إجمالي الطلب:\s*([\d,]+)/);
+        if (!totalMatch) totalMatch = text.match(/💰\s*\*إجمالي الطلب\*:\s*([\d,]+)/);
+        if (totalMatch) result.total = parseInt(totalMatch[1].replace(/,/g, ''));
+        
+        // استخراج الملاحظات إن وجدت
+        let notesMatch = text.match(/ملاحظات:\s*([^\n]+)/);
+        if (!notesMatch) notesMatch = text.match(/📝\s*\*ملاحظات\*:\s*([^\n]+)/);
+        if (notesMatch) result.notes = notesMatch[1].trim();
+        
+        // استخراج المنتجات - الطريقة الأولى (للرسالة الجديدة)
+        const productRegex = /(\d+)️⃣\s*📦\s*المنتج:\s*([^\n]+)\s*🆔\s*معرف المنتج:\s*([^\n]+)\s*📦\s*الكمية:\s*(\d+)\s*💰\s*السعر:\s*([\d,]+)/g;
+        let match;
+        while ((match = productRegex.exec(text)) !== null) {
+            result.items.push({
+                productID: match[3].trim(),
+                name: match[2].trim(),
+                quantity: parseInt(match[4]),
+                price: parseInt(match[5].replace(/,/g, ''))
+            });
+        }
+        
+        // الطريقة الثانية (للرسالة القديمة)
+        if (result.items.length === 0) {
+            const lines = text.split('\n');
+            let currentItem = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                const productStartMatch = line.match(/^(\d+)[️⃣\.]\s*(?:المنتج:\s*)?(.*?)$/);
+                if (productStartMatch) {
+                    currentItem = { name: productStartMatch[2].trim().replace(/[*_]/g, '') };
+                    continue;
+                }
+                if (currentItem) {
+                    const idMatch = line.match(/معرف المنتج:\s*`?([^\n`]+)`?/);
+                    if (idMatch) currentItem.productID = idMatch[1].trim();
+                    const qtyMatch = line.match(/الكمية:\s*(\d+)/);
+                    if (qtyMatch) {
+                        currentItem.quantity = parseInt(qtyMatch[1]);
+                        const priceMatch = line.match(/السعر:\s*([\d,]+)/);
+                        if (priceMatch) currentItem.price = parseInt(priceMatch[1].replace(/,/g, ''));
+                        result.items.push({ ...currentItem });
+                        currentItem = null;
+                    }
                 }
             }
         }
-
-        if (items.length === 0) {
-            const productID = (text.match(patterns.productID)?.[1] || '').trim();
-            const quantity = parseInt(text.match(patterns.quantity)?.[1] || '1');
-            if (productID) items.push({ productID, quantity });
+        
+        // الطريقة الثالثة (بسيطة)
+        if (result.items.length === 0) {
+            const simpleProductMatch = text.match(/المنتج:\s*([^\n]+).*?الكمية:\s*(\d+).*?السعر:\s*([\d,]+)/);
+            if (simpleProductMatch) {
+                result.items.push({
+                    productID: '',
+                    name: simpleProductMatch[1].trim(),
+                    quantity: parseInt(simpleProductMatch[2]),
+                    price: parseInt(simpleProductMatch[3].replace(/,/g, ''))
+                });
+            }
         }
-
-        return { items, storeID, customerName, customerPhone, customerAddress, total, notes, orderNumber, date, deliveryCompany, distributorId };
+        
+        console.log('✅ تم استخراج البيانات:', result);
+        return result;
+        
     } catch (e) {
         console.error("خطأ في تحليل نص الرسالة:", e);
         return null;
     }
 }
+    
+
         // ============================================================
         // ============================================================
 // [37] دالة حفظ المنتج محلياً فقط (مع الصورة)
