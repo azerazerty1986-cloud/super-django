@@ -1626,31 +1626,51 @@ function renderProducts() {
         // ============================================================
         // [63] دالة إرسال الطلب إلى صفحة التوصيل
         // ============================================================
-        // ============================================================
-// [63] دالة إرسال الطلب إلى صفحة التوصيل - نسخة معدلة
+        
+// ============================================================
+// [63] دالة إرسال الطلب إلى صفحة التوصيل - النسخة النهائية
 // ============================================================
 function sendToDelivery(orderId) {
-    // محاولة البحث بطرق مختلفة
-    let order = orders.find(o => o.id === orderId);
+    console.log("🔍 جاري البحث عن الطلب:", orderId);
+    console.log("📋 جميع الطلبات:", orders.map(o => ({ 
+        id: o.id, 
+        telegramId: o.telegramOrderId,
+        customer: o.customerName 
+    })));
     
-    // إذا لم يجد، حاول البحث بـ telegramOrderId
+    // طرق البحث المختلفة
+    let order = null;
+    
+    // 1. البحث بالـ id الرقمي
+    if (!order) {
+        order = orders.find(o => o.id == orderId);
+        if (order) console.log("✅ تم العثور بالـ id:", order.id);
+    }
+    
+    // 2. البحث بالـ telegramOrderId (النص الطويل)
     if (!order) {
         order = orders.find(o => o.telegramOrderId == orderId);
+        if (order) console.log("✅ تم العثور بالـ telegramOrderId:", order.telegramOrderId);
     }
     
-    // إذا لم يجد، حاول البحث كـ نص كامل
+    // 3. البحث إذا كان orderId جزءاً من telegramOrderId
     if (!order) {
-        order = orders.find(o => o.telegramOrderId === orderId || 
-                                 o.telegramOrderId?.includes(orderId) ||
-                                 o.id?.toString() === orderId?.toString());
+        order = orders.find(o => o.telegramOrderId && o.telegramOrderId.includes(orderId));
+        if (order) console.log("✅ تم العثور بـ includes:", order.telegramOrderId);
+    }
+    
+    // 4. البحث إذا كان orderId نصياً مقارنة مع id
+    if (!order && !isNaN(orderId)) {
+        order = orders.find(o => o.id === parseInt(orderId));
+        if (order) console.log("✅ تم العثور بـ parseInt:", order.id);
     }
     
     if (!order) {
-        showToast('❌ الطلب غير موجود - تأكد من الرقم', 'error');
-        console.log('البحث عن:', orderId);
-        console.log('الطلبات المتاحة:', orders.map(o => ({ id: o.id, telegramId: o.telegramOrderId })));
+        showToast('❌ الطلب غير موجود - تأكد من رقم الطلب', 'error');
         return;
     }
+    
+    console.log("🎯 تم العثور على الطلب:", order);
     
     // تفاصيل المنتجات للعرض
     const productsHtml = order.items.map(item => `
