@@ -1767,6 +1767,73 @@ function sendToDelivery(orderId) {
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
     showToast('📦 تم فتح نافذة التوصيل', 'info');
 }
+        // ============================================================
+// [64] دالة تأكيد التوصيل بالبيانات الحالية (موزع/شركة محددة)
+// ============================================================
+function completeDeliveryWithCurrent(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = 'delivered';
+        safeLocalStorage.set('nardo_orders', orders);
+        renderOrders();
+        updateStats();
+        showToast(`✅ تم تأكيد توصيل الطلب #${order.telegramOrderId || order.id}`, 'success');
+    }
+}
+        // ============================================================
+// [65] دالة تحديث بيانات التوصيل من المتجر (Store Delivery)
+// ============================================================
+function updateStoreDelivery(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const distributorSelect = document.getElementById(`storeDistributorSelect_${orderId}`);
+    const trackingInput = document.getElementById(`trackingNumber_${orderId}`);
+    
+    const selectedDistributor = distributorSelect?.value;
+    const trackingNumber = trackingInput?.value;
+    
+    if (!selectedDistributor) {
+        showToast('❌ الرجاء اختيار الموزع', 'warning');
+        return;
+    }
+    
+    // تحديث بيانات الطلب
+    order.deliveryCompany = selectedDistributor;
+    order.distributorId = trackingNumber || 'بدون رقم تتبع';
+    order.status = 'delivered';
+    
+    safeLocalStorage.set('nardo_orders', orders);
+    renderOrders();
+    updateStats();
+    
+    showToast(`✅ تم تعيين الموزع: ${selectedDistributor} - تم تسليم الطلب`, 'success');
+}
+        // ============================================================
+// [66] دالة نسخ معلومات التوصيل
+// ============================================================
+function copyDeliveryInfo(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const productsText = order.items.map(item => `• ${item.name} (${item.quantity}x) - ${(item.price * item.quantity).toLocaleString()} دج`).join('\n');
+    const info = `
+📦 طلب #${order.telegramOrderId || order.id}
+👤 العميل: ${order.customerName || 'غير معروف'}
+📞 الهاتف: ${order.customerPhone || '---'}
+📍 العنوان: ${order.customerAddress || '---'}
+📝 المنتجات:
+${productsText}
+💰 الإجمالي: ${order.total.toLocaleString()} دج
+🚚 جهة التوصيل: ${order.deliveryCompany || 'غير محدد'}
+🏷️ معرف الموزع: ${order.distributorId || 'غير محدد'}
+    `;
+    
+    navigator.clipboard.writeText(info);
+    showToast('📋 تم نسخ معلومات الطلب', 'success');
+}
+        
+        
         
             
         
