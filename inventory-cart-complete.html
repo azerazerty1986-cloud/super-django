@@ -1627,110 +1627,98 @@ function renderProducts() {
         // [63] دالة إرسال الطلب إلى صفحة التوصيل
         // ============================================================
         // ============================================================
-// [63] دالة إرسال الطلب إلى نافذة التوصيل (نسخة معدلة)
+// دالة فتح نافذة توصيل الطلب (نسخة كاملة تعمل بشكل صحيح)
 // ============================================================
 function sendToDelivery(orderId) {
     const order = orders.find(o => o.id === orderId);
-    if (!order) return;
+    if (!order) {
+        showToast('الطلب غير موجود', 'error');
+        return;
+    }
     
-    const productsDetails = order.items.map(item => {
-        const product = products.find(p => p.id === item.id || p.productCompositeID === item.productCompositeID);
-        return {
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            total: item.price * item.quantity,
-            productCompositeID: item.productCompositeID || product?.productCompositeID || '---',
-            imageData: product?.imageData || null
-        };
-    });
+    // تفاصيل المنتجات للعرض
+    const productsHtml = order.items.map(item => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 8px;">
+            <div>
+                <strong>${item.name}</strong><br>
+                <span style="font-size: 12px; color: #aaa;">الكمية: ${item.quantity}</span>
+            </div>
+            <div style="color: #4ade80; font-weight: bold;">${(item.price * item.quantity).toLocaleString()} دج</div>
+        </div>
+    `).join('');
     
+    // إنشاء النافذة
     const modal = document.createElement('div');
     modal.className = 'modal';
-    modal.style.display = 'flex';
-    modal.style.zIndex = '10000';
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
+    `;
     
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 700px; max-height: 85vh; overflow-y: auto;">
-            <div class="modal-header" style="border-bottom: 2px solid var(--gold); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-truck" style="color: var(--gold); font-size: 24px;"></i>
-                    <span style="font-size: 22px;">توصيل الطلب #${order.telegramOrderId || order.id}</span>
-                </span>
-                <button class="modal-close" onclick="this.closest('.modal').remove()" style="background: rgba(255,255,255,0.1); border: none; color: var(--gold); font-size: 28px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%;">&times;</button>
+        <div style="background: linear-gradient(135deg, #1a1a2e, #0f0f1a); border: 1px solid rgba(255,215,0,0.2); border-radius: 28px; padding: 25px; max-width: 550px; width: 90%; max-height: 85vh; overflow-y: auto;">
+            
+            <!-- رأس النافذة -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffd700; padding-bottom: 15px; margin-bottom: 20px;">
+                <div>
+                    <i class="fas fa-truck" style="color: #ffd700; font-size: 24px;"></i>
+                    <span style="font-size: 20px; font-weight: bold; color: #ffd700; margin-right: 10px;">توصيل الطلب #${order.telegramOrderId || order.id}</span>
+                </div>
+                <button onclick="this.closest('.modal').remove()" style="background: rgba(255,255,255,0.1); border: none; color: #ffd700; font-size: 24px; cursor: pointer; width: 35px; height: 35px; border-radius: 50%;">&times;</button>
             </div>
             
             <!-- معلومات العميل -->
-            <div style="background: rgba(255,215,0,0.1); border-radius: 20px; padding: 15px; margin-bottom: 20px;">
-                <h3 style="color: var(--gold); margin-bottom: 12px;"><i class="fas fa-user"></i> معلومات العميل</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><strong>👤 الاسم:</strong> ${order.customerName || 'غير معروف'}</div>
-                    <div><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</div>
-                    <div><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</div>
-                    <div><strong>🚚 جهة التوصيل الحالية:</strong> <span style="color: var(--gold);">${order.deliveryCompany || 'غير محدد'}</span></div>
-                    <div><strong>🆔 معرف الموزع الحالي:</strong> <span style="color: var(--info);">${order.distributorId || 'غير محدد'}</span></div>
-                    ${order.customerNotes ? `<div><strong>📝 ملاحظات:</strong> ${order.customerNotes}</div>` : ''}
+            <div style="background: rgba(255,215,0,0.08); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 16px;"><i class="fas fa-user"></i> معلومات العميل</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <div><span style="color: #aaa;">👤 الاسم:</span> <strong>${order.customerName || 'غير معروف'}</strong></div>
+                    <div><span style="color: #aaa;">📞 الهاتف:</span> <strong>${order.customerPhone || '---'}</strong></div>
+                    <div><span style="color: #aaa;">📍 العنوان:</span> <strong>${order.customerAddress || '---'}</strong></div>
                 </div>
             </div>
             
             <!-- المنتجات -->
-            <h3 style="color: var(--gold); margin-bottom: 12px;"><i class="fas fa-boxes"></i> المنتجات (${productsDetails.length})</h3>
-            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
-                ${productsDetails.map(item => `
-                    <div style="display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); border-radius: 16px; padding: 10px; margin-bottom: 10px;">
-                        <div style="width: 45px; height: 45px; border-radius: 12px; overflow: hidden; background: #1a1a2e; flex-shrink: 0;">
-                            ${item.imageData ? `<img src="${item.imageData}" style="width: 100%; height: 100%; object-fit: cover;">` : `<i class="fas fa-box" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--gold);"></i>`}
-                        </div>
-                        <div style="flex: 1;">
-                            <div style="font-weight: bold;">${item.name}</div>
-                            <div style="font-size: 12px; color: #aaa;">${item.productCompositeID} | الكمية: ${item.quantity}</div>
-                        </div>
-                        <div style="text-align: left;">
-                            <div style="color: var(--success); font-weight: bold;">${item.total.toLocaleString()} دج</div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <!-- إجمالي الطلب -->
-            <div style="background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(0,0,0,0.3)); border-radius: 20px; padding: 12px; margin-bottom: 20px; text-align: center;">
-                <span style="font-size: 18px;">💰 إجمالي الطلب:</span>
-                <span style="font-size: 26px; font-weight: 800; color: var(--success); margin-right: 10px;">${order.total.toLocaleString()} دج</span>
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 16px;"><i class="fas fa-boxes"></i> المنتجات</h3>
+                ${productsHtml}
+                <div style="background: rgba(74,222,128,0.1); border-radius: 12px; padding: 12px; margin-top: 10px; text-align: center;">
+                    <span style="font-size: 16px;">💰 الإجمالي: </span>
+                    <span style="font-size: 20px; font-weight: bold; color: #4ade80;">${order.total.toLocaleString()} دج</span>
+                </div>
             </div>
             
             <!-- ========== خيارات التوصيل ========== -->
-            <div style="background: rgba(0,0,0,0.4); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,215,0,0.2);">
-                <h3 style="color: var(--gold); margin-bottom: 15px;"><i class="fas fa-truck-fast"></i> طريقة التوصيل</h3>
+            <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin: 0 0 15px 0; font-size: 16px;"><i class="fas fa-truck-fast"></i> طريقة التوصيل</h3>
                 
-                <!-- الخيار 1: توصيل عن طريق موزع/شركة محددة -->
-                <div style="background: rgba(74,222,128,0.1); border-radius: 16px; padding: 15px; margin-bottom: 20px; border-right: 3px solid var(--success);">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                        <span style="font-weight: bold; font-size: 16px;">✅ توصيل عن طريق موزع/شركة محددة</span>
+                <!-- الخيار 1: توصيل عن طريق موزع/شركة محددة (البيانات القديمة) -->
+                <div style="background: rgba(74,222,128,0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px; border-right: 3px solid #4ade80;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <i class="fas fa-building" style="color: #4ade80;"></i>
+                        <span style="font-weight: bold; font-size: 15px;">✅ توصيل عن طريق موزع/شركة محددة</span>
                     </div>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap; font-size: 14px;">
-                        <div><span style="color: #aaa;">جهة التوصيل:</span> <strong style="color: var(--gold);">${order.deliveryCompany || 'غير محدد'}</strong></div>
-                        <div><span style="color: #aaa;">معرف الموزع:</span> <strong style="color: var(--info);">${order.distributorId || 'غير محدد'}</strong></div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 12px;">
+                        <div><span style="color: #aaa;">🚚 جهة التوصيل:</span> <strong style="color: #ffd700;">${order.deliveryCompany || 'غير محدد'}</strong></div>
+                        <div><span style="color: #aaa;">🆔 معرف الموزع:</span> <strong style="color: #60a5fa;">${order.distributorId || 'غير محدد'}</strong></div>
                     </div>
-                    ${(order.deliveryCompany || order.distributorId) ? `
-                        <button class="btn btn-success" onclick="completeDeliveryWithCurrent(${order.id}); this.closest('.modal').remove();" style="margin-top: 12px; padding: 8px 20px; font-size: 13px;">
-                            <i class="fas fa-check"></i> تأكيد التوصيل بهذه البيانات
-                        </button>
-                    ` : '<div style="margin-top: 10px; color: #888; font-size: 13px;"><i class="fas fa-info-circle"></i> لا توجد بيانات توصيل محددة مسبقاً</div>'}
+                    <button class="btn btn-success" onclick="completeDeliveryWithDistributor(${order.id}); this.closest('.modal').remove();" style="width: 100%; padding: 10px; justify-content: center;">
+                        <i class="fas fa-check-circle"></i> تأكيد التوصيل بهذه البيانات
+                    </button>
                 </div>
                 
-                <!-- الخيار 2: توصيل عن طريق المتجر -->
-                <div style="background: rgba(96,165,250,0.1); border-radius: 16px; padding: 15px; border-right: 3px solid var(--info);">
+                <!-- الخيار 2: توصيل عن طريق المتجر (إضافة جديدة) -->
+                <div style="background: rgba(96,165,250,0.1); border-radius: 12px; padding: 15px; border-right: 3px solid #60a5fa;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-store" style="color: var(--info);"></i>
-                        <span style="font-weight: bold; font-size: 16px;">🏪 توصيل عن طريق المتجر (Store Delivery)</span>
+                        <i class="fas fa-store" style="color: #60a5fa;"></i>
+                        <span style="font-weight: bold; font-size: 15px;">🏪 توصيل عن طريق المتجر (Store Delivery)</span>
                     </div>
                     
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 8px; font-size: 13px; color: #aaa;">
                             <i class="fas fa-user-check"></i> اختيار الموزع:
                         </label>
-                        <select id="storeDistributorSelect_${order.id}" style="width: 100%; padding: 10px 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; color: white; font-family: 'Cairo';">
+                        <select id="newDistributor_${order.id}" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; color: white; font-family: 'Cairo';">
                             <option value="">-- اختر الموزع --</option>
                             <option value="مندوب المتجر - محمد">🚚 مندوب المتجر - محمد</option>
                             <option value="مندوب المتجر - خالد">🚚 مندوب المتجر - خالد</option>
@@ -1745,28 +1733,75 @@ function sendToDelivery(orderId) {
                         <label style="display: block; margin-bottom: 8px; font-size: 13px; color: #aaa;">
                             <i class="fas fa-barcode"></i> رقم التتبع (اختياري):
                         </label>
-                        <input type="text" id="trackingNumber_${order.id}" placeholder="أدخل رقم التتبع إن وجد" style="width: 100%; padding: 10px 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; color: white;">
+                        <input type="text" id="newTracking_${order.id}" placeholder="أدخل رقم التتبع إن وجد" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; color: white; font-family: 'Cairo';">
                     </div>
                     
-                    <button class="btn btn-info" onclick="updateStoreDelivery(${order.id}); this.closest('.modal').remove();" style="width: 100%; padding: 12px; justify-content: center;">
+                    <button class="btn btn-info" onclick="completeDeliveryWithNewDistributor(${order.id}); this.closest('.modal').remove();" style="width: 100%; padding: 12px; justify-content: center;">
                         <i class="fas fa-truck"></i> تحديد الموزع وإكمال الطلب
                     </button>
                 </div>
             </div>
             
             <!-- أزرار إضافية -->
-            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 10px;">
-                <button class="btn btn-gold" onclick="callCustomer('${order.customerPhone || ''}');"><i class="fas fa-phone"></i> اتصال بالعميل</button>
-                <button class="btn btn-outline" onclick="copyDeliveryInfo(${order.id});"><i class="fas fa-copy"></i> نسخ معلومات الطلب</button>
-                <button class="btn btn-outline" onclick="this.closest('.modal').remove();"><i class="fas fa-times"></i> إغلاق</button>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-gold" onclick="callCustomer('${order.customerPhone || ''}');" style="flex: 1;">
+                    <i class="fas fa-phone"></i> اتصال
+                </button>
+                <button class="btn btn-outline" onclick="this.closest('.modal').remove();" style="flex: 1;">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-    showToast('📦 تم فتح نافذة التوصيل', 'info');
 }
+
+// ============================================================
+// دالة تأكيد التوصيل بالموزع/الشركة المحددة مسبقاً
+// ============================================================
+function completeDeliveryWithDistributor(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = 'delivered';
+        safeLocalStorage.set('nardo_orders', orders);
+        renderOrders();
+        updateStats();
+        showToast(`✅ تم تأكيد توصيل الطلب #${order.telegramOrderId || order.id}`, 'success');
+    }
+}
+
+// ============================================================
+// دالة إكمال التوصيل بموزع جديد من المتجر
+// ============================================================
+function completeDeliveryWithNewDistributor(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const distributorSelect = document.getElementById(`newDistributor_${orderId}`);
+    const trackingInput = document.getElementById(`newTracking_${orderId}`);
+    
+    const selectedDistributor = distributorSelect?.value;
+    const trackingNumber = trackingInput?.value;
+    
+    if (!selectedDistributor) {
+        showToast('❌ الرجاء اختيار الموزع', 'warning');
+        return;
+    }
+    
+    // تحديث بيانات الطلب
+    order.deliveryCompany = selectedDistributor;
+    order.distributorId = trackingNumber || 'بدون رقم تتبع';
+    order.status = 'delivered';
+    
+    safeLocalStorage.set('nardo_orders', orders);
+    renderOrders();
+    updateStats();
+    
+    showToast(`✅ تم تعيين الموزع: ${selectedDistributor} - تم تسليم الطلب`, 'success');
+}
+        
         // ============================================================
 // [64] دالة تأكيد التوصيل بالبيانات الحالية (موزع/شركة محددة)
 // ============================================================
