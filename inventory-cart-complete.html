@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -846,137 +845,69 @@
         // ============================================================
         // [36] دالة استخراج البيانات من نص الرسالة
         // ============================================================
-        // ============================================================
-// [36] دالة استخراج البيانات من نص الرسالة - النسخة الكاملة
-// ============================================================
-function extractOrderDataFromText(text) {
+        function extractOrderDataFromText(text) {
     try {
-        const result = {
-            items: [],
-            storeID: '',
-            customerName: '',
-            customerPhone: '',
-            customerAddress: '',
-            total: 0,
-            notes: '',
-            orderNumber: '',
-            date: '',
-            deliveryCompany: '',
-            distributorId: ''
+        const patterns = {
+            storeID: /(?:معرف المتجر:|🆔\s*\*معرف المتجر\*:)\s*`?([^\n`]+)`?/,
+            customerName: /(?:(?:المشتري|الزبون):|👤\s*\*الزبون\*:)\s*([^\n]+)/,
+            customerPhone: /(?:(?:الهاتف|رقم الجوال):|📞\s*\*رقم الجوال\*:)\s*([^\n]+)/,
+            customerAddress: /(?:(?:العنوان):|📍\s*\*العنوان\*:)\s*([^\n]+)/,
+            productID: /(?:معرف المنتج:|🆔\s*معرف المنتج:)\s*`?([A-Z0-9\u0600-\u06FF\s-]+-\d+-\d+)`?/i,
+            quantity: /(?:الكمية:|📦\s*الكمية:)\s*(\d+)/,
+            total: /(?:(?:إجمالي المتجر|إجمالي الطلب):|💰\s*\*إجمالي الطلب\*:)\s*([\d,]+)/,
+            notes: /(?:ملاحظات:|📝\s*\*ملاحظات\*:)\s*([^\n]+)/,
+            orderNumber: /(?:(?:رقم الطلب|رقم الطلب الموحد):|🆔\s*\*رقم الطلب الموحد\*:)\s*(\d+)/,
+            date: /(?:(?:التاريخ):|📅\s*\*التاريخ\*:)\s*([^\n]+)/,
+            deliveryCompany: /(?:جهة التوصيل:|🏪\s*جهة التوصيل:)\s*([^\n]+)/,
+            distributorId: /(?:معرف الموزع:|🆔\s*معرف الموزع:|معرف التوصيل:)\s*([^\n]+)/
         };
         
-        // استخراج رقم الطلب
-        let orderMatch = text.match(/رقم الطلب الموحد:\s*([^\n]+)/);
-        if (!orderMatch) orderMatch = text.match(/🆔\s*\*رقم الطلب الموحد\*:\s*([^\n]+)/);
-        if (orderMatch) result.orderNumber = orderMatch[1].trim();
-        
-        // استخراج معرف المتجر
-        let storeMatch = text.match(/معرف التاجر \(Store ID\):\s*([^\n]+)/);
-        if (!storeMatch) storeMatch = text.match(/معرف المتجر:\s*`?([^\n`]+)`?/);
-        if (storeMatch) result.storeID = storeMatch[1].trim();
-        
-        // استخراج اسم الزبون
-        let customerMatch = text.match(/الزبون:\s*([^\n]+)/);
-        if (!customerMatch) customerMatch = text.match(/👤\s*\*الزبون\*:\s*([^\n]+)/);
-        if (customerMatch) result.customerName = customerMatch[1].trim().replace(/[*_]/g, '');
-        
-        // استخراج رقم الجوال
-        let phoneMatch = text.match(/رقم الجوال:\s*([^\n]+)/);
-        if (!phoneMatch) phoneMatch = text.match(/📞\s*\*رقم الجوال\*:\s*([^\n]+)/);
-        if (phoneMatch) result.customerPhone = phoneMatch[1].trim().replace(/[*_]/g, '');
-        
-        // استخراج العنوان
-        let addressMatch = text.match(/العنوان الكامل:\s*([^\n]+)/);
-        if (!addressMatch) addressMatch = text.match(/📍\s*\*العنوان\*:\s*([^\n]+)/);
-        if (addressMatch) result.customerAddress = addressMatch[1].trim().replace(/[*_]/g, '');
-        
-        // استخراج جهة التوصيل
-        let deliveryMatch = text.match(/جهة التوصيل:\s*([^\n]+)/);
-        if (!deliveryMatch) deliveryMatch = text.match(/🏪\s*جهة التوصيل:\s*([^\n]+)/);
-        if (deliveryMatch) result.deliveryCompany = deliveryMatch[1].trim();
-        
-        // استخراج هاتف الموزع (كمعرف للموزع)
-        let distributorMatch = text.match(/هاتف الموزع:\s*([^\n]+)/);
-        if (!distributorMatch) distributorMatch = text.match(/🆔\s*معرف الموزع:\s*([^\n]+)/);
-        if (distributorMatch) result.distributorId = distributorMatch[1].trim();
-        
-        // استخراج التاريخ
-        let dateMatch = text.match(/التاريخ:\s*([^\n]+)/);
-        if (!dateMatch) dateMatch = text.match(/📅\s*\*التاريخ\*:\s*([^\n]+)/);
-        if (dateMatch) result.date = dateMatch[1].trim();
-        
-        // استخراج الإجمالي
-        let totalMatch = text.match(/إجمالي الطلب:\s*([\d,]+)/);
-        if (!totalMatch) totalMatch = text.match(/💰\s*\*إجمالي الطلب\*:\s*([\d,]+)/);
-        if (totalMatch) result.total = parseInt(totalMatch[1].replace(/,/g, ''));
-        
-        // استخراج الملاحظات إن وجدت
-        let notesMatch = text.match(/ملاحظات:\s*([^\n]+)/);
-        if (!notesMatch) notesMatch = text.match(/📝\s*\*ملاحظات\*:\s*([^\n]+)/);
-        if (notesMatch) result.notes = notesMatch[1].trim();
-        
-        // استخراج المنتجات - الطريقة الأولى (للرسالة الجديدة)
-        const productRegex = /(\d+)️⃣\s*📦\s*المنتج:\s*([^\n]+)\s*🆔\s*معرف المنتج:\s*([^\n]+)\s*📦\s*الكمية:\s*(\d+)\s*💰\s*السعر:\s*([\d,]+)/g;
-        let match;
-        while ((match = productRegex.exec(text)) !== null) {
-            result.items.push({
-                productID: match[3].trim(),
-                name: match[2].trim(),
-                quantity: parseInt(match[4]),
-                price: parseInt(match[5].replace(/,/g, ''))
-            });
-        }
-        
-        // الطريقة الثانية (للرسالة القديمة)
-        if (result.items.length === 0) {
-            const lines = text.split('\n');
-            let currentItem = null;
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                const productStartMatch = line.match(/^(\d+)[️⃣\.]\s*(?:المنتج:\s*)?(.*?)$/);
-                if (productStartMatch) {
-                    currentItem = { name: productStartMatch[2].trim().replace(/[*_]/g, '') };
-                    continue;
-                }
-                if (currentItem) {
-                    const idMatch = line.match(/معرف المنتج:\s*`?([^\n`]+)`?/);
-                    if (idMatch) currentItem.productID = idMatch[1].trim();
-                    const qtyMatch = line.match(/الكمية:\s*(\d+)/);
-                    if (qtyMatch) {
-                        currentItem.quantity = parseInt(qtyMatch[1]);
-                        const priceMatch = line.match(/السعر:\s*([\d,]+)/);
-                        if (priceMatch) currentItem.price = parseInt(priceMatch[1].replace(/,/g, ''));
-                        result.items.push({ ...currentItem });
-                        currentItem = null;
-                    }
+        const storeID = (text.match(patterns.storeID)?.[1] || '').trim();
+        let customerName = (text.match(patterns.customerName)?.[1] || 'عميل ناردو').trim().replace(/[*_]/g, '');
+        let customerPhone = (text.match(patterns.customerPhone)?.[1] || '').trim().replace(/[*_]/g, '');
+        let customerAddress = (text.match(patterns.customerAddress)?.[1] || '').trim().replace(/[*_]/g, '');
+        const orderNumber = (text.match(patterns.orderNumber)?.[1] || Date.now().toString()).trim();
+        const date = (text.match(patterns.date)?.[1] || new Date().toLocaleString('ar-EG')).trim();
+        const total = parseInt((text.match(patterns.total)?.[1] || '0').replace(/,/g, ''));
+        const notes = (text.match(patterns.notes)?.[1] || '').trim();
+        const deliveryCompany = (text.match(patterns.deliveryCompany)?.[1] || '').trim();
+        const distributorId = (text.match(patterns.distributorId)?.[1] || '').trim();
+
+        const items = [];
+        const lines = text.split('\n');
+        let currentItem = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            const productStartMatch = line.match(/^(\d+)[️⃣\.]\s*(?:المنتج:\s*)?(.*?)$/);
+            if (productStartMatch) {
+                currentItem = { name: productStartMatch[2].trim().replace(/[*_]/g, '') };
+                continue;
+            }
+            if (currentItem) {
+                const idMatch = line.match(patterns.productID);
+                if (idMatch) currentItem.productID = idMatch[1].trim();
+                const qtyMatch = line.match(patterns.quantity);
+                if (qtyMatch) {
+                    currentItem.quantity = parseInt(qtyMatch[1]);
+                    items.push({ ...currentItem });
+                    currentItem = null;
                 }
             }
         }
-        
-        // الطريقة الثالثة (بسيطة)
-        if (result.items.length === 0) {
-            const simpleProductMatch = text.match(/المنتج:\s*([^\n]+).*?الكمية:\s*(\d+).*?السعر:\s*([\d,]+)/);
-            if (simpleProductMatch) {
-                result.items.push({
-                    productID: '',
-                    name: simpleProductMatch[1].trim(),
-                    quantity: parseInt(simpleProductMatch[2]),
-                    price: parseInt(simpleProductMatch[3].replace(/,/g, ''))
-                });
-            }
+
+        if (items.length === 0) {
+            const productID = (text.match(patterns.productID)?.[1] || '').trim();
+            const quantity = parseInt(text.match(patterns.quantity)?.[1] || '1');
+            if (productID) items.push({ productID, quantity });
         }
-        
-        console.log('✅ تم استخراج البيانات:', result);
-        return result;
-        
+
+        return { items, storeID, customerName, customerPhone, customerAddress, total, notes, orderNumber, date, deliveryCompany, distributorId };
     } catch (e) {
         console.error("خطأ في تحليل نص الرسالة:", e);
         return null;
     }
 }
-    
-
         // ============================================================
         // ============================================================
 // [37] دالة حفظ المنتج محلياً فقط (مع الصورة)
@@ -1695,47 +1626,17 @@ function renderProducts() {
         // ============================================================
         // [63] دالة إرسال الطلب إلى صفحة التوصيل
         // ============================================================
-        
-            // ============================================================
-// [63] دالة توصيل الطلب - النسخة النهائية التي تعمل 100%
+        // ============================================================
+// دالة فتح نافذة توصيل الطلب (نسخة كاملة تعمل بشكل صحيح)
 // ============================================================
 function sendToDelivery(orderId) {
-    // طرق البحث المختلفة عن الطلب
-    let order = null;
-    
-    // 1. البحث بالـ id
-    order = orders.find(o => o.id == orderId);
-    
-    // 2. البحث بالـ telegramOrderId
+    const order = orders.find(o => o.id === orderId);
     if (!order) {
-        order = orders.find(o => o.telegramOrderId == orderId);
-    }
-    
-    // 3. البحث إذا كان orderId يحتوي على الرقم النصي
-    if (!order) {
-        order = orders.find(o => o.telegramOrderId && o.telegramOrderId.includes(orderId));
-    }
-    
-    // 4. البحث في كل الطلبات بدون شرط (آخر حل)
-    if (!order && orders.length > 0) {
-        // جرب أول طلب في القائمة إذا كان هناك طلب واحد فقط
-        if (orders.length === 1) {
-            order = orders[0];
-            showToast('⚠️ تم اختيار الطلب الوحيد المتاح', 'warning');
-        }
-    }
-    
-    if (!order) {
-        showToast('❌ لم يتم العثور على الطلب! تأكد من رقم الطلب', 'error');
-        console.log('🔍 الطلبات المتاحة:', orders.map(o => ({ 
-            id: o.id, 
-            telegramId: o.telegramOrderId,
-            customer: o.customerName 
-        })));
+        showToast('الطلب غير موجود', 'error');
         return;
     }
     
-    // بناء واجهة المنتجات
+    // تفاصيل المنتجات للعرض
     const productsHtml = order.items.map(item => `
         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 8px;">
             <div>
@@ -1748,85 +1649,105 @@ function sendToDelivery(orderId) {
     
     // إنشاء النافذة
     const modal = document.createElement('div');
+    modal.className = 'modal';
     modal.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.95); display: flex; align-items: center;
-        justify-content: center; z-index: 10001;
+        background: rgba(0,0,0,0.85); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
     `;
     
     modal.innerHTML = `
-        <div style="background: linear-gradient(135deg, #1a1a2e, #0f0f1a); border: 2px solid #ffd700; border-radius: 28px; padding: 25px; max-width: 550px; width: 90%; max-height: 85vh; overflow-y: auto;">
+        <div style="background: linear-gradient(135deg, #1a1a2e, #0f0f1a); border: 1px solid rgba(255,215,0,0.2); border-radius: 28px; padding: 25px; max-width: 550px; width: 90%; max-height: 85vh; overflow-y: auto;">
             
+            <!-- رأس النافذة -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffd700; padding-bottom: 15px; margin-bottom: 20px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-truck" style="color: #ffd700; font-size: 28px;"></i>
-                    <span style="font-size: 20px; font-weight: bold; color: #ffd700;">توصيل الطلب</span>
+                <div>
+                    <i class="fas fa-truck" style="color: #ffd700; font-size: 24px;"></i>
+                    <span style="font-size: 20px; font-weight: bold; color: #ffd700; margin-right: 10px;">توصيل الطلب #${order.telegramOrderId || order.id}</span>
                 </div>
-                <button onclick="this.closest('div').parentElement.remove()" style="background: rgba(255,255,255,0.2); border: none; color: #ffd700; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%;">&times;</button>
+                <button onclick="this.closest('.modal').remove()" style="background: rgba(255,255,255,0.1); border: none; color: #ffd700; font-size: 24px; cursor: pointer; width: 35px; height: 35px; border-radius: 50%;">&times;</button>
             </div>
             
-            <div style="background: rgba(255,215,0,0.1); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div><i class="fas fa-hashtag" style="color: #ffd700;"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId || order.id}</div>
-                    <div><i class="fas fa-user" style="color: #ffd700;"></i> <strong>العميل:</strong> ${order.customerName || 'غير معروف'}</div>
-                    <div><i class="fas fa-phone" style="color: #ffd700;"></i> <strong>الهاتف:</strong> ${order.customerPhone || 'غير متوفر'}</div>
-                    <div><i class="fas fa-map-marker-alt" style="color: #ffd700;"></i> <strong>العنوان:</strong> ${order.customerAddress || 'غير متوفر'}</div>
+            <!-- معلومات العميل -->
+            <div style="background: rgba(255,215,0,0.08); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 16px;"><i class="fas fa-user"></i> معلومات العميل</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    <div><span style="color: #aaa;">👤 الاسم:</span> <strong>${order.customerName || 'غير معروف'}</strong></div>
+                    <div><span style="color: #aaa;">📞 الهاتف:</span> <strong>${order.customerPhone || '---'}</strong></div>
+                    <div><span style="color: #aaa;">📍 العنوان:</span> <strong>${order.customerAddress || '---'}</strong></div>
                 </div>
             </div>
             
+            <!-- المنتجات -->
             <div style="margin-bottom: 20px;">
-                <h3 style="color: #ffd700; margin-bottom: 10px;"><i class="fas fa-boxes"></i> المنتجات</h3>
+                <h3 style="color: #ffd700; margin: 0 0 10px 0; font-size: 16px;"><i class="fas fa-boxes"></i> المنتجات</h3>
                 ${productsHtml}
-                <div style="background: rgba(74,222,128,0.2); border-radius: 12px; padding: 12px; margin-top: 10px; text-align: center;">
+                <div style="background: rgba(74,222,128,0.1); border-radius: 12px; padding: 12px; margin-top: 10px; text-align: center;">
                     <span style="font-size: 16px;">💰 الإجمالي: </span>
-                    <span style="font-size: 22px; font-weight: bold; color: #4ade80;">${order.total.toLocaleString()} دج</span>
+                    <span style="font-size: 20px; font-weight: bold; color: #4ade80;">${order.total.toLocaleString()} دج</span>
                 </div>
             </div>
             
-            <div style="background: rgba(0,0,0,0.4); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
-                <h3 style="color: #ffd700; margin-bottom: 15px;"><i class="fas fa-truck-fast"></i> طريقة التوصيل</h3>
+            <!-- ========== خيارات التوصيل ========== -->
+            <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin: 0 0 15px 0; font-size: 16px;"><i class="fas fa-truck-fast"></i> طريقة التوصيل</h3>
                 
-                <div style="background: rgba(74,222,128,0.15); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-                    <div style="margin-bottom: 10px;">
-                        <span style="color: #4ade80;">✅ جهة التوصيل الحالية:</span>
-                        <strong style="display: block; font-size: 16px; margin-top: 5px;">${order.deliveryCompany || 'غير محدد'}</strong>
+                <!-- الخيار 1: توصيل عن طريق موزع/شركة محددة (البيانات القديمة) -->
+                <div style="background: rgba(74,222,128,0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px; border-right: 3px solid #4ade80;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <i class="fas fa-building" style="color: #4ade80;"></i>
+                        <span style="font-weight: bold; font-size: 15px;">✅ توصيل عن طريق موزع/شركة محددة</span>
                     </div>
-                    <div>
-                        <span style="color: #60a5fa;">🆔 معرف الموزع:</span>
-                        <strong style="display: block; font-size: 16px; margin-top: 5px;">${order.distributorId || 'غير محدد'}</strong>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 12px;">
+                        <div><span style="color: #aaa;">🚚 جهة التوصيل:</span> <strong style="color: #ffd700;">${order.deliveryCompany || 'غير محدد'}</strong></div>
+                        <div><span style="color: #aaa;">🆔 معرف الموزع:</span> <strong style="color: #60a5fa;">${order.distributorId || 'غير محدد'}</strong></div>
                     </div>
-                    <button class="btn btn-success" onclick="completeDeliveryWithDistributor(${order.id}); this.closest('div').parentElement.parentElement.parentElement.remove();" style="width: 100%; margin-top: 15px; padding: 12px;">
-                        <i class="fas fa-check-circle"></i> تأكيد التوصيل
+                    <button class="btn btn-success" onclick="completeDeliveryWithDistributor(${order.id}); this.closest('.modal').remove();" style="width: 100%; padding: 10px; justify-content: center;">
+                        <i class="fas fa-check-circle"></i> تأكيد التوصيل بهذه البيانات
                     </button>
                 </div>
                 
-                <div style="background: rgba(96,165,250,0.15); border-radius: 12px; padding: 15px;">
-                    <div style="margin-bottom: 12px;">
-                        <label style="color: #60a5fa;">🛵 اختيار موزع جديد:</label>
-                        <select id="newDistributor_${order.id}" style="width: 100%; margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #ffd700; border-radius: 10px; color: white;">
+                <!-- الخيار 2: توصيل عن طريق المتجر (إضافة جديدة) -->
+                <div style="background: rgba(96,165,250,0.1); border-radius: 12px; padding: 15px; border-right: 3px solid #60a5fa;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-store" style="color: #60a5fa;"></i>
+                        <span style="font-weight: bold; font-size: 15px;">🏪 توصيل عن طريق المتجر (Store Delivery)</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; color: #aaa;">
+                            <i class="fas fa-user-check"></i> اختيار الموزع:
+                        </label>
+                        <select id="newDistributor_${order.id}" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; color: white; font-family: 'Cairo';">
                             <option value="">-- اختر الموزع --</option>
                             <option value="مندوب المتجر - محمد">🚚 مندوب المتجر - محمد</option>
                             <option value="مندوب المتجر - خالد">🚚 مندوب المتجر - خالد</option>
                             <option value="شركة أرامكس">📦 شركة أرامكس</option>
                             <option value="شركة زاجل">📦 شركة زاجل</option>
                             <option value="مندوب خارجي - سامي">🛵 مندوب خارجي - سامي</option>
+                            <option value="مندوب خارجي - أحمد">🛵 مندوب خارجي - أحمد</option>
                         </select>
                     </div>
-                    <div style="margin-bottom: 12px;">
-                        <label style="color: #60a5fa;">🔢 رقم التتبع (اختياري):</label>
-                        <input type="text" id="newTracking_${order.id}" placeholder="أدخل رقم التتبع" style="width: 100%; margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #ffd700; border-radius: 10px; color: white;">
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; color: #aaa;">
+                            <i class="fas fa-barcode"></i> رقم التتبع (اختياري):
+                        </label>
+                        <input type="text" id="newTracking_${order.id}" placeholder="أدخل رقم التتبع إن وجد" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; color: white; font-family: 'Cairo';">
                     </div>
-                    <button class="btn btn-info" onclick="completeDeliveryWithNewDistributor(${order.id}); this.closest('div').parentElement.parentElement.parentElement.remove();" style="width: 100%; padding: 12px;">
-                        <i class="fas fa-truck"></i> تحديد وإكمال التوصيل
+                    
+                    <button class="btn btn-info" onclick="completeDeliveryWithNewDistributor(${order.id}); this.closest('.modal').remove();" style="width: 100%; padding: 12px; justify-content: center;">
+                        <i class="fas fa-truck"></i> تحديد الموزع وإكمال الطلب
                     </button>
                 </div>
             </div>
             
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-gold" onclick="callCustomer('${order.customerPhone || ''}')" style="flex: 1; padding: 12px;">
+            <!-- أزرار إضافية -->
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-gold" onclick="callCustomer('${order.customerPhone || ''}');" style="flex: 1;">
                     <i class="fas fa-phone"></i> اتصال
                 </button>
-                <button class="btn btn-outline" onclick="this.closest('div').parentElement.remove()" style="flex: 1; padding: 12px;">
+                <button class="btn btn-outline" onclick="this.closest('.modal').remove();" style="flex: 1;">
                     <i class="fas fa-times"></i> إغلاق
                 </button>
             </div>
@@ -1834,11 +1755,11 @@ function sendToDelivery(orderId) {
     `;
     
     document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 }
-            
 
 // ============================================================
-// الدالة 2: تأكيد التوصيل بالموزع المحدد مسبقاً
+// دالة تأكيد التوصيل بالموزع/الشركة المحددة مسبقاً
 // ============================================================
 function completeDeliveryWithDistributor(orderId) {
     const order = orders.find(o => o.id === orderId);
@@ -1852,7 +1773,7 @@ function completeDeliveryWithDistributor(orderId) {
 }
 
 // ============================================================
-// الدالة 3: تأكيد التوصيل بموزع جديد من المتجر
+// دالة إكمال التوصيل بموزع جديد من المتجر
 // ============================================================
 function completeDeliveryWithNewDistributor(orderId) {
     const order = orders.find(o => o.id === orderId);
@@ -1869,9 +1790,48 @@ function completeDeliveryWithNewDistributor(orderId) {
         return;
     }
     
+    // تحديث بيانات الطلب
+    order.deliveryCompany = selectedDistributor;
+    order.distributorId = trackingNumber || 'بدون رقم تتبع';
+    order.status = 'delivered';
     
+    safeLocalStorage.set('nardo_orders', orders);
+    renderOrders();
+    updateStats();
+    
+    showToast(`✅ تم تعيين الموزع: ${selectedDistributor} - تم تسليم الطلب`, 'success');
+}
         
-
+        // ============================================================
+// [64] دالة تأكيد التوصيل بالبيانات الحالية (موزع/شركة محددة)
+// ============================================================
+function completeDeliveryWithCurrent(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = 'delivered';
+        safeLocalStorage.set('nardo_orders', orders);
+        renderOrders();
+        updateStats();
+        showToast(`✅ تم تأكيد توصيل الطلب #${order.telegramOrderId || order.id}`, 'success');
+    }
+}
+        // ============================================================
+// [65] دالة تحديث بيانات التوصيل من المتجر (Store Delivery)
+// ============================================================
+function updateStoreDelivery(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const distributorSelect = document.getElementById(`storeDistributorSelect_${orderId}`);
+    const trackingInput = document.getElementById(`trackingNumber_${orderId}`);
+    
+    const selectedDistributor = distributorSelect?.value;
+    const trackingNumber = trackingInput?.value;
+    
+    if (!selectedDistributor) {
+        showToast('❌ الرجاء اختيار الموزع', 'warning');
+        return;
+    }
     
     // تحديث بيانات الطلب
     order.deliveryCompany = selectedDistributor;
@@ -1993,4 +1953,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-                    
+
+    
