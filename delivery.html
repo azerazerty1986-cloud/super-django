@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ناردو برو | التوصيل</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #0a0a1a;
+            --secondary: #1a1a2e;
+            --gold: #ffd700;
+            --success: #4ade80;
+            --error: #f87171;
+            --info: #60a5fa;
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #0b0b14 0%, #15152a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        .top-navbar {
+            background: linear-gradient(135deg, rgba(10,10,26,0.95), rgba(26,26,46,0.95));
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,215,0,0.25);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .nav-logo { display: flex; align-items: center; gap: 10px; }
+        .nav-logo i { font-size: 28px; color: var(--gold); }
+        .nav-logo .logo-text { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, #ffd700, #ffed4e); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .nav-btn { padding: 8px 18px; border-radius: 40px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: 'Cairo', sans-serif; display: flex; align-items: center; gap: 6px; }
+        .nav-btn-gold { background: linear-gradient(135deg, var(--gold), #daa520); color: #111; }
+        .nav-btn-telegram { background: linear-gradient(135deg, #0088cc, #006699); color: white; }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(0,0,0,0.3));
+            border: 1px solid rgba(255,215,0,0.15);
+            border-radius: 28px;
+            padding: 16px 24px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .stat-badge { background: rgba(0,0,0,0.4); padding: 6px 20px; border-radius: 24px; text-align: center; }
+        .stat-badge .number { font-size: 24px; font-weight: 800; color: var(--gold); }
+        .stat-badge .label { font-size: 12px; color: #aaa; }
+        
+        .toolbar { background: rgba(255,215,0,0.05); border-radius: 28px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .btn { padding: 10px 24px; border: none; border-radius: 40px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-success { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+        .btn-telegram { background: linear-gradient(135deg, #0088cc, #006699); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .btn-sm { padding: 5px 12px; font-size: 12px; }
+        
+        .table-container { background: rgba(0,0,0,0.25); border-radius: 24px; overflow-x: auto; margin-bottom: 20px; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: right; padding: 14px 16px; background: rgba(255,215,0,0.12); color: var(--gold); font-weight: 800; font-size: 13px; }
+        .data-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,215,0,0.06); font-size: 13px; }
+        .data-table tr:hover td { background: rgba(255,215,0,0.05); }
+        
+        .status-pending { background: rgba(251,191,36,0.15); color: #fbbf24; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .status-delivered { background: rgba(74,222,128,0.15); color: #4ade80; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 40px; color: white; font-weight: 700; z-index: 3000; display: flex; align-items: center; gap: 10px; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        .toast.success { background: #22c55e; }
+        .toast.error { background: #ef4444; }
+        
+        @media (max-width: 768px) { .data-table th, .data-table td { font-size: 11px; padding: 8px; } }
+    </style>
+</head>
+<body>
+
+<nav class="top-navbar">
+    <div class="nav-logo">
+        <i class="fas fa-truck"></i>
+        <div><span class="logo-text">ناردو برو - التوصيل</span></div>
+    </div>
+    <button class="nav-btn nav-btn-gold" onclick="window.location.href='inventory-cart-complete.html'">
+        <i class="fas fa-store"></i> العودة للمخزون
+    </button>
+</nav>
+
+<div class="container">
+    <div class="stats-card">
+        <div class="stat-badge"><div class="number" id="pendingCount">0</div><div class="label">طلبات معلقة</div></div>
+        <div class="stat-badge"><div class="number" id="totalCount">0</div><div class="label">إجمالي الطلبات</div></div>
+    </div>
+
+    <div class="toolbar">
+        <h2 style="color:var(--gold); font-size:18px;"><i class="fas fa-shopping-cart"></i> طلبات التوصيل</h2>
+        <button class="btn btn-telegram" id="fetchOrdersBtn" onclick="fetchOrdersFromTelegram()">
+            <i class="fas fa-download"></i> جلب من تلغرام
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>جهة التوصيل</th><th>إجراءات</th></tr>
+            </thead>
+            <tbody id="ordersTableBody">
+                <tr><td colspan="10" style="text-align:center; padding:40px;">جاري التحميل...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const TELEGRAM = { botToken: '8576673096:AAFwOd-Ut1tCyKTHwkgj_r6OFi9UZbb4pTM', apiUrl: 'https://api.telegram.org/bot' };
+    
+    let orders = [];
+    let products = [];
+    let currentStore = { storeFixedID: '', storeName: 'ناردو برو' };
+
+    function loadData() {
+        const savedStore = localStorage.getItem('nardo_current_store');
+        if(savedStore) currentStore = JSON.parse(savedStore);
+        else { currentStore.storeFixedID = 'NARDO-' + Math.floor(Math.random()*900000+100000); localStorage.setItem('nardo_current_store', JSON.stringify(currentStore)); }
+        orders = JSON.parse(localStorage.getItem('nardo_orders') || '[]');
+        products = JSON.parse(localStorage.getItem('nardo_products') || '[]');
+        renderOrders();
+    }
+
+    function saveOrders() { localStorage.setItem('nardo_orders', JSON.stringify(orders)); }
+
+    function extractOrderDataFromText(text) {
+        try {
+            let result = { items: [], customerName: '', customerPhone: '', customerAddress: '', total: 0, orderNumber: '', date: '', deliveryCompany: '', distributorId: '' };
+            let orderMatch = text.match(/رقم الطلب الموحد:\s*([^\n]+)/);
+            if(orderMatch) result.orderNumber = orderMatch[1].trim();
+            let storeMatch = text.match(/معرف التاجر \(Store ID\):\s*([^\n]+)/);
+            if(storeMatch && storeMatch[1] !== currentStore.storeFixedID) return null;
+            let customerMatch = text.match(/الزبون:\s*([^\n]+)/);
+            if(customerMatch) result.customerName = customerMatch[1].trim().replace(/[*_]/g, '');
+            let phoneMatch = text.match(/رقم الجوال:\s*([^\n]+)/);
+            if(phoneMatch) result.customerPhone = phoneMatch[1].trim().replace(/[*_]/g, '');
+            let addressMatch = text.match(/العنوان الكامل:\s*([^\n]+)/);
+            if(addressMatch) result.customerAddress = addressMatch[1].trim().replace(/[*_]/g, '');
+            let deliveryMatch = text.match(/جهة التوصيل:\s*([^\n]+)/);
+            if(deliveryMatch) result.deliveryCompany = deliveryMatch[1].trim();
+            let dateMatch = text.match(/التاريخ:\s*([^\n]+)/);
+            if(dateMatch) result.date = dateMatch[1].trim();
+            let totalMatch = text.match(/إجمالي الطلب:\s*([\d,]+)/);
+            if(totalMatch) result.total = parseInt(totalMatch[1].replace(/,/g, ''));
+            const productRegex = /(\d+)️⃣\s*📦\s*المنتج:\s*([^\n]+)\s*🆔\s*معرف المنتج:\s*([^\n]+)\s*📦\s*الكمية:\s*(\d+)\s*💰\s*السعر:\s*([\d,]+)/g;
+            let match;
+            while((match = productRegex.exec(text)) !== null) {
+                result.items.push({ productID: match[3].trim(), name: match[2].trim(), quantity: parseInt(match[4]), price: parseInt(match[5].replace(/,/g,'')) });
+            }
+            if(result.items.length === 0) {
+                let simpleMatch = text.match(/المنتج:\s*([^\n]+).*?الكمية:\s*(\d+).*?السعر:\s*([\d,]+)/);
+                if(simpleMatch) result.items.push({ productID: '', name: simpleMatch[1].trim(), quantity: parseInt(simpleMatch[2]), price: parseInt(simpleMatch[3].replace(/,/g,'')) });
+            }
+            return result;
+        } catch(e) { return null; }
+    }
+
+    async function fetchOrdersFromTelegram() {
+        let btn = document.getElementById('fetchOrdersBtn');
+        if(btn) { btn.innerHTML = '<span class="loading-spinner"></span> جاري...'; btn.disabled = true; }
+        try {
+            showToast('📡 جاري جلب الطلبات...', 'success');
+            let res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=100`);
+            let data = await res.json();
+            if(!data.ok) throw new Error();
+            let processedIds = JSON.parse(localStorage.getItem('nardo_processed_telegram_ids') || '[]');
+            let newCount = 0;
+            for(let upd of data.result || []) {
+                let post = upd.channel_post || upd.message;
+                if(!post?.text) continue;
+                let uniqueId = post.message_id;
+                if(processedIds.includes(uniqueId)) continue;
+                let orderData = extractOrderDataFromText(post.text);
+                if(!orderData || orderData.items.length === 0) continue;
+                let existing = orders.find(o => o.telegramOrderId === orderData.orderNumber);
+                if(existing) { processedIds.push(uniqueId); continue; }
+                let orderItems = [], orderTotal = 0;
+                for(let item of orderData.items) {
+                    let product = products.find(p => p.productCompositeID === item.productID);
+                    if(product && product.storeID === currentStore.storeFixedID) {
+                        orderItems.push({ id: product.id, productCompositeID: product.productCompositeID, name: product.name, price: product.price, quantity: item.quantity });
+                        orderTotal += product.price * item.quantity;
+                        let oldQ = product.quantity;
+                        product.quantity = Math.max(0, product.quantity - item.quantity);
+                        localStorage.setItem('nardo_products', JSON.stringify(products));
+                    }
+                }
+                if(orderItems.length === 0) { processedIds.push(uniqueId); continue; }
+                let newOrder = { id: Date.now() + Math.random(), telegramOrderId: orderData.orderNumber, telegramMessageId: uniqueId, date: orderData.date || new Date().toLocaleString('ar-EG'), customerName: orderData.customerName, customerPhone: orderData.customerPhone, customerAddress: orderData.customerAddress, storeID: currentStore.storeFixedID, storeName: currentStore.storeName, items: orderItems, total: orderTotal || orderData.total, status: 'pending', source: 'telegram', deliveryCompany: orderData.deliveryCompany || '', distributorId: orderData.distributorId || '' };
+                orders.unshift(newOrder);
+                processedIds.push(uniqueId);
+                newCount++;
+            }
+            localStorage.setItem('nardo_orders', JSON.stringify(orders));
+            localStorage.setItem('nardo_processed_telegram_ids', JSON.stringify(processedIds));
+            renderOrders();
+            showToast(newCount > 0 ? `✅ تم جلب ${newCount} طلب جديد` : '📭 لا توجد طلبات جديدة', 'success');
+        } catch(e) { showToast('❌ فشل جلب الطلبات', 'error'); }
+        finally { if(btn) { btn.innerHTML = '<i class="fas fa-download"></i> جلب من تلغرام'; btn.disabled = false; } }
+    }
+
+    function deliverOrder(orderId) {
+        let order = orders.find(o => o.id === orderId);
+        if(order) {
+            order.status = order.status === 'delivered' ? 'pending' : 'delivered';
+            saveOrders();
+            renderOrders();
+            showToast(order.status === 'delivered' ? '✅ تم تسليم الطلب' : '🔄 تم إعادة الطلب', 'success');
+        }
+    }
+
+    function deleteOrder(orderId) {
+        if(confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
+            orders = orders.filter(o => o.id !== orderId);
+            saveOrders();
+            renderOrders();
+            showToast('تم حذف الطلب', 'success');
+        }
+    }
+
+    function callCustomer(phone) { if(phone) window.location.href = `tel:${phone}`; else showToast('رقم الهاتف غير متوفر', 'error'); }
+
+    function renderOrders() {
+        let filtered = orders.filter(o => o.storeID === currentStore.storeFixedID);
+        let pending = filtered.filter(o => o.status !== 'delivered');
+        document.getElementById('pendingCount').innerText = pending.length;
+        document.getElementById('totalCount').innerText = filtered.length;
+        let tbody = document.getElementById('ordersTableBody');
+        if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px;">لا توجد طلبات</td></tr>'; return; }
+        tbody.innerHTML = filtered.map(order => `
+            <tr style="${order.status === 'delivered' ? 'opacity:0.6;' : ''}">
+                <td><strong>${order.telegramOrderId || order.id}</strong></td>
+                <td style="font-size:11px;">${order.date || ''}</td>
+                <td>${order.customerName || 'غير معروف'}</td>
+                <td><button class="btn btn-sm" style="background:#60a5fa; color:white;" onclick="callCustomer('${order.customerPhone || ''}')"><i class="fas fa-phone"></i> ${order.customerPhone || 'اتصل'}</button></td>
+                <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${order.customerAddress || '---'}</td>
+                <td>${order.items.map(i=>`${i.name} (${i.quantity})`).join(', ')}</td>
+                <td style="color:#4ade80; font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                <td><span class="${order.status === 'delivered' ? 'status-delivered' : 'status-pending'}">${order.status === 'delivered' ? '✅ تم التوصيل' : '🔄 قيد المعالجة'}</span></td>
+                <td>${order.deliveryCompany || '---'}</td>
+                <td><div style="display:flex; gap:5px;"><button class="btn btn-success btn-sm" onclick="deliverOrder(${order.id})"><i class="fas fa-check"></i></button><button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})"><i class="fas fa-trash"></i></button></div></td>
+            </tr>
+        `).join('');
+    }
+
+    function showToast(msg, type) { let t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="fas ${type==='success'?'fa-check-circle':'fa-exclamation-circle'}"></i> ${msg}`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+
+    document.addEventListener('DOMContentLoaded', () => { loadData(); setTimeout(fetchOrdersFromTelegram, 1000); setInterval(() => { loadData(); fetchOrdersFromTelegram(); }, 30000); });
+</script>
+</body>
+</html>
