@@ -255,6 +255,97 @@ function renderOrders() {
     
     document.getElementById('deliveryModal').classList.add('active');
 }
+    // ============================================
+// الدوال الثلاثة المفقودة لنافذة توصيل الطلبات
+// ============================================
+
+async function loadDistributorsForModal() {
+    const state = document.getElementById('stateSelect')?.value;
+    const container = document.getElementById('distributorsContainer');
+    if (!state || !container) return;
+    
+    container.innerHTML = '<div style="text-align:center;padding:20px"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الموزعين...</div>';
+    
+    const distributors = await getDistributorsByState(state);
+    
+    if (distributors.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#f87171">⚠️ لا توجد موزعين مسجلين في هذه الولاية</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div style="margin-bottom:10px;color:var(--gold)"><i class="fas fa-list"></i> اختر جهة التوصيل / الموزع:</div>
+        ${distributors.map((d, idx) => `
+            <div class="distributor-card" onclick="selectDistributorForOrder(${idx})" data-idx="${idx}" style="display:flex;align-items:center;gap:15px;padding:12px;background:rgba(0,0,0,.3);border-radius:12px;margin-bottom:8px;cursor:pointer;border:1px solid rgba(255,215,0,.2);transition:all 0.2s">
+                <div style="font-size:32px">${d.type === 'delivery' ? '🚚' : '📦'}</div>
+                <div style="flex:1">
+                    <div style="font-weight:bold">${d.name}</div>
+                    <div style="font-size:12px">${d.type === 'delivery' ? '🚚 شركة توصيل' : '📦 موزع معتمد'}</div>
+                    <div style="font-size:11px;color:#aaa">📞 ${d.phone || 'غير متوفر'}</div>
+                </div>
+                <div><i class="fas fa-chevron-left" style="color:var(--gold)"></i></div>
+            </div>
+        `).join('')}
+    `;
+    
+    window.currentDistributorsList = distributors;
+}
+
+function selectDistributorForOrder(idx) {
+    // إزالة التحديد السابق من جميع البطاقات
+    document.querySelectorAll('.distributor-card').forEach(card => {
+        card.style.borderColor = 'rgba(255,215,0,.2)';
+        card.style.background = 'rgba(0,0,0,.3)';
+    });
+    
+    // تحديد البطاقة المختارة
+    const cards = document.querySelectorAll('.distributor-card');
+    if (cards[idx]) {
+        cards[idx].style.borderColor = 'var(--gold)';
+        cards[idx].style.background = 'rgba(255,215,0,.15)';
+    }
+    
+    // حفظ بيانات الموزع المختار
+    window.selectedDistributorData = window.currentDistributorsList[idx];
+    showToast(`✅ تم اختيار: ${window.selectedDistributorData.name}`, 'success');
+}
+
+function confirmDeliveryWithSelectedDistributor(orderId) {
+    // التحقق من وجود موزع مختار
+    if (!window.selectedDistributorData) {
+        showToast('⚠️ الرجاء اختيار موزع أولاً', 'warning');
+        return;
+    }
+    
+    // البحث عن الطلب
+    const order = orders.find(o => o.id == orderId);
+    if (!order) return;
+    
+    // تحديث بيانات الطلب
+    order.status = 'delivered';
+    order.deliveredAt = new Date().toLocaleString('ar-EG');
+    order.deliveryCompany = window.selectedDistributorData.name;
+    order.distributorId = window.selectedDistributorData.fullId || window.selectedDistributorData.phone;
+    order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
+    
+    // حفظ التغييرات
+    safeLocalStorageSet('nardo_orders', orders);
+    renderOrders();
+    updateStats();
+    
+    // إشعار نجاح
+    showToast(`✅ تم توصيل الطلب بواسطة: ${window.selectedDistributorData.name}`, 'success');
+    
+    // إرسال إشعار واتساب إذا كان الرقم متوفر
+    if (order.customerPhone && order.customerPhone !== '---') {
+        sendWhatsAppNotification(order.customerPhone, order.telegramOrderId || order.id, order.deliveryCompany);
+    }
+    
+    // تنظيف المتغيرات وإغلاق النافذة
+    window.selectedDistributorData = null;
+    window.currentDistributorsList = null;
+    closeDeliveryModal();
+}
 function closeTelegramModal() { const modal = document.getElementById('telegramFetchModal'); if(modal) modal.remove(); }
 async function fetchLatestMessages() { showToast('جاري جلب الرسائل...','info'); telegramMessages = []; const container = document.getElementById('telegramMessagesList'); container.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><p>جاري التحميل...</p></div>'; try { const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`); const data = await res.json(); if(data.ok && data.result) { for(const update of data.result) { const msg = update.channel_post || update.message; if(msg && msg.text && msg.chat?.id?.toString() === TELEGRAM.channelId) { telegramMessages.push({ id: update.update_id, text: msg.text, date: new Date(msg.date*1000).toLocaleString('ar-EG') }); } } renderTelegramMessagesList(); showToast(`تم جلب ${telegramMessages.length} رسالة`,'success'); } else { container.innerHTML = '<div style="text-align:center;padding:40px;color:red">حدث خطأ في جلب الرسائل</div>'; } } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:red">خطأ في الاتصال</div>'; showToast('خطأ في الاتصال','error'); } }
 async function fetchAllMessages() { await fetchLatestMessages(); }
