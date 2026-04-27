@@ -140,6 +140,8 @@ let ordersChart = null, revenueChart = null, driversChart = null;
 let notificationPermission = false;
 let coupons = [{ code: 'WELCOME10', discount: 10, used: false, expires: new Date(Date.now() + 30*86400000).toISOString() }];
 let loyaltyPoints = {};
+window.selectedDistributorData = null;
+window.currentDistributorsList = [];
 
 const defaultDrivers = [
     { id: 'DRV-001', name: 'محمد الأولان', status: 'available', rating: 4.8, completedOrders: 156, avgDeliveryTime: 35, phone: '0555123456', vehicle: 'دراجة', earnings: 12500, currentLocation: { lat: 36.7538, lng: 3.0588 } },
@@ -172,7 +174,7 @@ function viewOrderDetails(orderId) { const order = orders.find(o=>o.id==orderId)
 async function exportSingleOrderToPDF(orderId) { const order = orders.find(o=>o.id==orderId); if(!order) return; const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(`فاتورة #${order.telegramOrderId || order.id}`, 10, 10); doc.save(`order_${order.id}.pdf`); showToast('تم تصدير PDF','success'); }
 function copyAddress(address) { if(address) { navigator.clipboard.writeText(address); showToast('تم نسخ العنوان','success'); } }
 function deleteOrder(orderId) { if(confirm('حذف الطلب؟')) { orders = orders.filter(o=>o.id != orderId); safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); showToast('تم الحذف','success'); } }
-function openDeliveryModal(orderId) { const order = orders.find(o=>o.id==orderId); if(!order) return; document.getElementById('deliveryModalContent').innerHTML = `<div>توصيل #${order.telegramOrderId}</div><button class="btn btn-success" onclick="markOrderAsDeliveredCurrent(${order.id})">تسليم</button><button class="btn btn-outline" onclick="closeDeliveryModal()">إغلاق</button>`; document.getElementById('deliveryModal').classList.add('active'); }
+
 function markOrderAsDeliveredCurrent(orderId) { const order = orders.find(o=>o.id==orderId); if(order) { order.status='delivered'; safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast('تم التسليم','success'); closeDeliveryModal(); } }
 function closeDeliveryModal() { document.getElementById('deliveryModal').classList.remove('active'); }
 function renderOrders() {
