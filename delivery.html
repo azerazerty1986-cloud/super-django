@@ -287,6 +287,8 @@ function printDeliveryReport(){ const flt=getFilteredOrders(); if(!flt.length){s
 function callCustomer(phone){ if(phone&&phone!=='---') window.location.href=`tel:${phone}`; else showToast('رقم غير متوفر','warning'); }
 
 // نافذة التوصيل الرئيسية مع اختيار الولاية والموزع
+    
+ // ========== نافذة التوصيل الرئيسية مع اختيار الولاية والموزع ==========
 async function openDeliveryModal(orderId){
     currentDeliveryOrderId = orderId;
     const order = orders.find(o=>o.id==orderId);
@@ -294,6 +296,11 @@ async function openDeliveryModal(orderId){
     const modalDiv = document.getElementById('deliveryModalContent');
     await fetchDistributorsFromChannel();
     const statesList = Object.keys(distributorsData);
+    
+    // عرض جهة التوصيل الحالية إن وجدت
+    const currentDelivery = order.deliveryCompany && order.deliveryCompany !== '' ? order.deliveryCompany : 'لا يوجد';
+    const currentDistributorId = order.distributorId && order.distributorId !== '' ? order.distributorId : 'لا يوجد';
+    
     modalDiv.innerHTML = `
         <div style="background:rgba(255,215,0,0.1);border-radius:16px;padding:15px;margin-bottom:20px;">
             <div><i class="fas fa-hashtag"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId||order.id}</div>
@@ -301,6 +308,13 @@ async function openDeliveryModal(orderId){
             <div><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone||'غير متوفر'}</div>
             <div><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress||'غير متوفر'}</div>
             <div><i class="fas fa-coins"></i> <strong>الإجمالي:</strong> ${order.total.toLocaleString()} دج</div>
+            <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,215,0,0.2);">
+                <div><i class="fas fa-truck-fast" style="color:var(--gold);"></i> <strong style="color:var(--gold);">جهة التوصيل الحالية:</strong></div>
+                <div style="background:rgba(0,0,0,0.4); border-radius:12px; padding:10px; margin-top:6px;">
+                    <span style="font-size:15px; font-weight:bold;">🚚 ${currentDelivery}</span>
+                    ${currentDelivery !== 'لا يوجد' ? `<span style="font-size:12px; color:#aaa; display:block; margin-top:5px;">🆔 رقم التتبع / المعرف: ${currentDistributorId}</span>` : ''}
+                </div>
+            </div>
         </div>
         <div class="form-group">
             <label><i class="fas fa-city"></i> اختيار الولاية</label>
@@ -312,16 +326,40 @@ async function openDeliveryModal(orderId){
         <div id="distributorsContainer" style="margin-bottom:20px;"></div>
         <div class="form-group">
             <label><i class="fas fa-sticky-note"></i> ملاحظة إضافية</label>
-            <textarea id="deliveryNote" rows="2" placeholder="ملاحظات للتوصيل..."></textarea>
+            <textarea id="deliveryNote" rows="2" placeholder="ملاحظات للتوصيل...">${order.deliveryNotes || ''}</textarea>
         </div>
-        <div style="display:flex;gap:10px;margin-top:10px;">
+        <div style="display:flex;gap:10px;margin-top:10px; flex-wrap:wrap;">
             <button class="btn btn-success" style="flex:1;" onclick="confirmDeliveryWithDistributor(${order.id})"><i class="fas fa-check-circle"></i> تأكيد التوصيل مع الموزع المختار</button>
+            <button class="btn btn-warning" style="flex:1;" onclick="markOrderAsDeliveredCurrent(${order.id})"><i class="fas fa-truck"></i> تسليم بجهة التوصيل الحالية</button>
             <button class="btn btn-info" style="flex:1;" onclick="callCustomer('${order.customerPhone||''}')"><i class="fas fa-phone"></i> اتصال</button>
             <button class="btn btn-outline" onclick="closeDeliveryModal()">إغلاق</button>
+        </div>
+        <div style="margin-top:12px; font-size:12px; color:#888; text-align:center;">
+            <i class="fas fa-info-circle"></i> يمكنك تغيير جهة التوصيل باختيار ولاية ثم موزع، أو تسليم الطلب بجهة التوصيل الحالية مباشرة
         </div>`;
     document.getElementById('deliveryModal').classList.add('active');
 }
 
+// دالة تسليم الطلب بجهة التوصيل الحالية
+function markOrderAsDeliveredCurrent(orderId){
+    const order = orders.find(o=>o.id==orderId);
+    if(order){
+        if(!order.deliveryCompany || order.deliveryCompany === ''){
+            showToast('⚠️ لا توجد جهة توصيل حالية، الرجاء اختيار موزع أولاً', 'warning');
+            return;
+        }
+        order.status = 'delivered';
+        order.deliveredAt = new Date().toLocaleString('ar-EG');
+        order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
+        safeLocalStorageSet('nardo_orders', orders);
+        renderOrders(); 
+        updateStats();
+        showToast(`✅ تم تسليم الطلب #${order.telegramOrderId||order.id} بواسطة: ${order.deliveryCompany}`, 'success');
+        closeDeliveryModal();
+    }
+}
+
+// تحميل الموزعين حسب الولاية المختارة
 async function loadDistributorsByState(){
     const state = document.getElementById('stateSelect').value;
     const container = document.getElementById('distributorsContainer');
@@ -332,10 +370,73 @@ async function loadDistributorsByState(){
     container.innerHTML = `<div style="margin-bottom:10px;"><strong>اختر جهة التوصيل / الموزع:</strong></div>` + distributors.map((d,idx)=>`
         <div class="distributor-card" onclick="selectDistributorCard(${idx})" data-idx="${idx}" data-name="${d.name}" data-phone="${d.phone||''}">
             <div class="distributor-icon">${d.type==='delivery'?'🚚':'📦'}</div>
-            <div class="distributor-info"><div class="distributor-name">${d.name}</div><div class="distributor-type ${d.type==='delivery'?'delivery-type':'distributor-type'}">${d.typeText}</div><div class="distributor-phone">📞 ${d.phone||'غير متوفر'}</div></div>
+            <div class="distributor-info">
+                <div class="distributor-name">${d.name}</div>
+                <div class="distributor-type ${d.type==='delivery'?'delivery-type':'distributor-type'}">${d.typeText}</div>
+                <div class="distributor-phone">📞 ${d.phone||'غير متوفر'}</div>
+            </div>
         </div>
     `).join('');
     window.currentDistributorsList = distributors;
+}
+
+// المتغير العمومي لقائمة الموزعين
+window.currentDistributorsList = [];
+
+// اختيار موزع من البطاقات
+function selectDistributorCard(idx){
+    document.querySelectorAll('.distributor-card').forEach(c=>c.classList.remove('selected'));
+    const cards = document.querySelectorAll('.distributor-card');
+    if(cards[idx]) cards[idx].classList.add('selected');
+    const dist = window.currentDistributorsList[idx];
+    if(dist) window.selectedDistributorData = dist;
+}
+
+// تأكيد التوصيل مع موزع جديد
+async function confirmDeliveryWithDistributor(orderId){
+    if(!window.selectedDistributorData && window.currentDistributorsList && window.currentDistributorsList.length>0 && !window.selectedDistributorData){
+        const state = document.getElementById('stateSelect')?.value;
+        if(!state){
+            showToast('الرجاء اختيار الولاية أولاً','warning');
+            return;
+        }
+        if(window.currentDistributorsList.length === 1){
+            window.selectedDistributorData = window.currentDistributorsList[0];
+            selectDistributorCard(0);
+        } else {
+            showToast('الرجاء اختيار الموزع من القائمة','warning');
+            return;
+        }
+    }
+    const dist = window.selectedDistributorData || (window.currentDistributorsList ? window.currentDistributorsList[0] : null);
+    if(!dist){ showToast('لا يوجد موزع متاح لهذه الولاية','error'); return; }
+    const order = orders.find(o=>o.id==orderId);
+    if(order){
+        order.status = 'delivered';
+        order.deliveredAt = new Date().toLocaleString('ar-EG');
+        order.deliveryCompany = dist.name;
+        order.distributorId = dist.fullId || dist.phone;
+        order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
+        safeLocalStorageSet('nardo_orders',orders);
+        renderOrders(); 
+        updateStats();
+        showToast(`✅ تم توصيل الطلب بواسطة: ${dist.name}`,'success');
+        closeDeliveryModal();
+        window.selectedDistributorData = null;
+    }
+}
+
+// إغلاق نافذة التوصيل
+function closeDeliveryModal(){ 
+    document.getElementById('deliveryModal').classList.remove('active'); 
+    currentDeliveryOrderId = null; 
+    window.selectedDistributorData = null; 
+}
+
+// اتصال بالعميل
+function callCustomer(phone){ 
+    if(phone && phone !== '---' && phone !== '') window.location.href = `tel:${phone}`; 
+    else showToast('رقم الهاتف غير متوفر', 'warning'); 
 }
 window.currentDistributorsList = [];
 function selectDistributorCard(idx){
