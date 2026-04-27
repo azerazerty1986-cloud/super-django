@@ -55,6 +55,7 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
 .btn-error{background:linear-gradient(135deg,#f87171,#ef4444);color:#fff}
 .btn-sm{padding:5px 12px;font-size:12px}
 .btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
+.btn-delivery{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
 .filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;background:rgba(0,0,0,.2);padding:12px 20px;border-radius:28px}
 .filter-btn{padding:8px 20px;border-radius:30px;background:rgba(0,0,0,.3);border:1px solid rgba(255,215,0,.2);color:#fff;cursor:pointer;font-family:'Cairo';transition:.2s}
 .filter-btn:hover{background:rgba(255,215,0,.1)}
@@ -124,7 +125,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
 </nav>
 
 <div class="container">
-    <!-- بطاقة إحصائيات التوصيل -->
     <div class="store-card">
         <div class="store-info">
             <div class="store-item">
@@ -152,7 +152,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
         </div>
     </div>
 
-    <!-- شريط الأدوات -->
     <div class="toolbar">
         <div class="search-box">
             <i class="fas fa-search"></i>
@@ -174,7 +173,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
         </div>
     </div>
 
-    <!-- شريط الفلترة -->
     <div class="filter-bar">
         <button class="filter-btn active" onclick="filterOrders('all', this)">📋 الكل</button>
         <button class="filter-btn" onclick="filterOrders('pending', this)">🔄 قيد المعالجة</button>
@@ -184,7 +182,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
         <button class="filter-btn" onclick="filterOrders('week', this)">📅 هذا الأسبوع</button>
     </div>
 
-    <!-- جدول الطلبات -->
     <div class="table-container">
         <table class="data-table">
             <thead>
@@ -209,7 +206,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
         </table>
     </div>
 
-    <!-- أزرار الإجراءات الجماعية -->
     <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
         <button class="btn btn-success" onclick="bulkDeliverOrders()">
             <i class="fas fa-check-double"></i> تسليم المحدد
@@ -223,7 +219,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
     </div>
 </div>
 
-<!-- نافذة تفاصيل الطلب للتوصيل -->
 <div id="deliveryModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -245,7 +240,6 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
     </div>
 </div>
 
-<!-- نافذة تعديل بيانات التوصيل -->
 <div id="editDeliveryModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -279,14 +273,14 @@ body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#1
 </div>
 
 <script>
-// ========== القسم 1: إعدادات التليجرام ==========
+// ========== إعدادات التليجرام ==========
 const TELEGRAM = {
     botToken: '8576673096:AAFwOd-Ut1tCyKTHwkgj_r6OFi9UZbb4pTM',
     channelId: '-1003822964890',
     apiUrl: 'https://api.telegram.org/bot'
 };
 
-// ========== القسم 2: المتغيرات العامة ==========
+// ========== المتغيرات العامة ==========
 let orders = [];
 let products = [];
 let currentStore = {
@@ -298,7 +292,7 @@ let currentFilter = 'all';
 let currentDeliveryOrderId = null;
 let selectedOrders = new Set();
 
-// ========== القسم 3: دوال التخزين المحلي ==========
+// ========== دوال التخزين المحلي ==========
 function safeLocalStorageGet(key) {
     try {
         const data = localStorage.getItem(key);
@@ -357,7 +351,7 @@ function loadCurrentStore() {
     renderOrders();
 }
 
-// ========== القسم 4: دالة استخراج البيانات من نص الرسالة ==========
+// ========== استخراج البيانات من نص الرسالة ==========
 function extractOrderDataFromText(text) {
     try {
         const result = {
@@ -421,7 +415,7 @@ function extractOrderDataFromText(text) {
     }
 }
 
-// ========== القسم 5: دالة جلب الطلبات من التليجرام ==========
+// ========== جلب الطلبات من التليجرام ==========
 async function fetchOrdersFromTelegram() {
     const btn = document.getElementById('fetchOrdersBtn');
     const originalText = btn?.innerHTML;
@@ -508,7 +502,6 @@ async function fetchOrdersFromTelegram() {
             orders.unshift(newOrder);
             processedIds.push(uniqueId);
             newOrdersCount++;
-            sendWhatsAppNotification(newOrder);
         }
         safeLocalStorageSet('nardo_orders', orders);
         safeLocalStorageSet('nardo_products', products);
@@ -532,7 +525,7 @@ async function fetchOrdersFromTelegram() {
     }
 }
 
-// ========== القسم 6: دوال إدارة الطلبات ==========
+// ========== دوال إدارة الطلبات الأساسية ==========
 function deliverOrder(orderId) {
     const order = orders.find(o => o.id == orderId);
     if (order) {
@@ -600,7 +593,184 @@ function copyAddress(address) {
     }
 }
 
-// ========== القسم 7: دوال نافذة التوصيل ==========
+// ========== نافذة التوصيل الرئيسية (الشاحنة الصغيرة) ==========
+function sendToDelivery(orderId) {
+    let order = orders.find(o => o.id == orderId);
+    if (!order) {
+        order = orders.find(o => o.telegramOrderId == orderId);
+    }
+    if (!order && orders.length > 0) {
+        if (orders.length === 1) {
+            order = orders[0];
+            showToast('⚠️ تم اختيار الطلب الوحيد المتاح', 'warning');
+        }
+    }
+    if (!order) {
+        showToast('❌ لم يتم العثور على الطلب!', 'error');
+        return;
+    }
+    
+    const productsHtml = order.items.map(item => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 8px;">
+            <div>
+                <strong>${item.name}</strong><br>
+                <span style="font-size: 12px; color: #aaa;">الكمية: ${item.quantity}</span>
+            </div>
+            <div style="color: #4ade80; font-weight: bold;">${(item.price * item.quantity).toLocaleString()} دج</div>
+        </div>
+    `).join('');
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.95); display: flex; align-items: center;
+        justify-content: center; z-index: 10001;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: linear-gradient(135deg, #1a1a2e, #0f0f1a); border: 2px solid #ffd700; border-radius: 28px; padding: 25px; max-width: 550px; width: 90%; max-height: 85vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffd700; padding-bottom: 15px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-truck" style="color: #ffd700; font-size: 28px;"></i>
+                    <span style="font-size: 20px; font-weight: bold; color: #ffd700;">توصيل الطلب</span>
+                </div>
+                <button onclick="this.closest('div').parentElement.remove()" style="background: rgba(255,255,255,0.2); border: none; color: #ffd700; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%;">&times;</button>
+            </div>
+            
+            <div style="background: rgba(255,215,0,0.1); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div><i class="fas fa-hashtag" style="color: #ffd700;"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId || order.id}</div>
+                    <div><i class="fas fa-user" style="color: #ffd700;"></i> <strong>العميل:</strong> ${order.customerName || 'غير معروف'}</div>
+                    <div><i class="fas fa-phone" style="color: #ffd700;"></i> <strong>الهاتف:</strong> ${order.customerPhone || 'غير متوفر'}</div>
+                    <div><i class="fas fa-map-marker-alt" style="color: #ffd700;"></i> <strong>العنوان:</strong> ${order.customerAddress || 'غير متوفر'}</div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin-bottom: 10px;"><i class="fas fa-boxes"></i> المنتجات</h3>
+                ${productsHtml}
+                <div style="background: rgba(74,222,128,0.2); border-radius: 12px; padding: 12px; margin-top: 10px; text-align: center;">
+                    <span style="font-size: 16px;">💰 الإجمالي: </span>
+                    <span style="font-size: 22px; font-weight: bold; color: #4ade80;">${order.total.toLocaleString()} دج</span>
+                </div>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.4); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+                <h3 style="color: #ffd700; margin-bottom: 15px;"><i class="fas fa-truck-fast"></i> طريقة التوصيل</h3>
+                
+                <div style="background: rgba(74,222,128,0.15); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                    <div style="margin-bottom: 10px;">
+                        <span style="color: #4ade80;">✅ جهة التوصيل الحالية:</span>
+                        <strong style="display: block; font-size: 16px; margin-top: 5px;">${order.deliveryCompany || 'غير محدد'}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #60a5fa;">🆔 معرف الموزع:</span>
+                        <strong style="display: block; font-size: 16px; margin-top: 5px;">${order.distributorId || 'غير محدد'}</strong>
+                    </div>
+                    <button class="btn btn-success" onclick="completeDeliveryWithDistributor(${order.id}); this.closest('div').parentElement.parentElement.parentElement.remove();" style="width: 100%; margin-top: 15px; padding: 12px;">
+                        <i class="fas fa-check-circle"></i> تأكيد التوصيل
+                    </button>
+                </div>
+                
+                <div style="background: rgba(96,165,250,0.15); border-radius: 12px; padding: 15px;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="color: #60a5fa;">🛵 اختيار موزع جديد:</label>
+                        <select id="newDistributor_${order.id}" style="width: 100%; margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #ffd700; border-radius: 10px; color: white;">
+                            <option value="">-- اختر الموزع --</option>
+                            <option value="مندوب المتجر - محمد">🚚 مندوب المتجر - محمد</option>
+                            <option value="مندوب المتجر - خالد">🚚 مندوب المتجر - خالد</option>
+                            <option value="شركة أرامكس">📦 شركة أرامكس</option>
+                            <option value="شركة زاجل">📦 شركة زاجل</option>
+                            <option value="مندوب خارجي - سامي">🛵 مندوب خارجي - سامي</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="color: #60a5fa;">🔢 رقم التتبع (اختياري):</label>
+                        <input type="text" id="newTracking_${order.id}" placeholder="أدخل رقم التتبع" style="width: 100%; margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid #ffd700; border-radius: 10px; color: white;">
+                    </div>
+                    <button class="btn btn-info" onclick="completeDeliveryWithNewDistributor(${order.id}); this.closest('div').parentElement.parentElement.parentElement.remove();" style="width: 100%; padding: 12px;">
+                        <i class="fas fa-truck"></i> تحديد وإكمال التوصيل
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-gold" onclick="callCustomer('${order.customerPhone || ''}')" style="flex: 1; padding: 12px;">
+                    <i class="fas fa-phone"></i> اتصال
+                </button>
+                <button class="btn btn-outline" onclick="this.closest('div').parentElement.remove()" style="flex: 1; padding: 12px;">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function completeDeliveryWithDistributor(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = 'delivered';
+        order.deliveredAt = new Date().toLocaleString('ar-EG');
+        safeLocalStorageSet('nardo_orders', orders);
+        renderOrders();
+        updateStats();
+        showToast(`✅ تم تأكيد توصيل الطلب #${order.telegramOrderId || order.id}`, 'success');
+    }
+}
+
+function completeDeliveryWithNewDistributor(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const distributorSelect = document.getElementById(`newDistributor_${orderId}`);
+    const trackingInput = document.getElementById(`newTracking_${orderId}`);
+    
+    const selectedDistributor = distributorSelect?.value;
+    const trackingNumber = trackingInput?.value;
+    
+    if (!selectedDistributor) {
+        showToast('❌ الرجاء اختيار الموزع', 'warning');
+        return;
+    }
+    
+    order.deliveryCompany = selectedDistributor;
+    order.distributorId = trackingNumber || 'بدون رقم تتبع';
+    order.status = 'delivered';
+    order.deliveredAt = new Date().toLocaleString('ar-EG');
+    
+    safeLocalStorageSet('nardo_orders', orders);
+    renderOrders();
+    updateStats();
+    
+    showToast(`✅ تم تعيين الموزع: ${selectedDistributor} - تم تسليم الطلب`, 'success');
+}
+
+function copyDeliveryInfo(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const productsText = order.items.map(item => `• ${item.name} (${item.quantity}x) - ${(item.price * item.quantity).toLocaleString()} دج`).join('\n');
+    const info = `📦 طلب #${order.telegramOrderId || order.id}\n👤 العميل: ${order.customerName || 'غير معروف'}\n📞 الهاتف: ${order.customerPhone || '---'}\n📍 العنوان: ${order.customerAddress || '---'}\n📝 المنتجات:\n${productsText}\n💰 الإجمالي: ${order.total.toLocaleString()} دج\n🚚 جهة التوصيل: ${order.deliveryCompany || 'غير محدد'}\n🏷️ معرف الموزع: ${order.distributorId || 'غير محدد'}`;
+    
+    navigator.clipboard.writeText(info);
+    showToast('📋 تم نسخ معلومات الطلب', 'success');
+}
+
+function markOrderAsDelivered(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.status = 'delivered';
+        order.deliveredAt = new Date().toLocaleString('ar-EG');
+        safeLocalStorageSet('nardo_orders', orders);
+        renderOrders();
+        updateStats();
+        showToast('✅ تم تسجيل الطلب كـ "تم التوصيل"', 'success');
+    }
+}
+
+// ========== دوال نافذة التوصيل ==========
 function openDeliveryModal(orderId) {
     currentDeliveryOrderId = orderId;
     const order = orders.find(o => o.id == orderId);
@@ -698,7 +868,7 @@ function closeEditDeliveryModal() {
     currentDeliveryOrderId = null;
 }
 
-// ========== القسم 8: دوال الإجراءات الجماعية ==========
+// ========== الإجراءات الجماعية ==========
 function toggleSelectAll() {
     const selectAllCheckbox = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.order-checkbox');
@@ -822,7 +992,7 @@ async function exportSingleOrderToPDF(order) {
     }
 }
 
-// ========== القسم 9: دوال التصدير ==========
+// ========== دوال التصدير ==========
 function exportDeliveredOrdersToExcel() {
     const deliveredOrders = orders.filter(o => o.storeID === currentStore.storeFixedID && o.status === 'delivered');
     if (deliveredOrders.length === 0) {
@@ -894,10 +1064,10 @@ function printDeliveryReport() {
         <h1>🚚 تقرير التوصيل - ${currentStore.storeName}</h1>
         <p>📅 تاريخ التقرير: ${new Date().toLocaleString('ar-EG')}</p>
         <p>📊 عدد الطلبات: ${filteredOrders.length}</p>
-         <table>
+        <table>
             <thead><tr><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>جهة التوصيل</th></tr></thead>
             <tbody>${filteredOrders.map(o => `<tr><td>#${o.telegramOrderId || o.id}</td><td>${o.date}</td><td>${o.customerName || '-'}</td><td>${o.customerPhone || '-'}</td><td>${o.customerAddress || '-'}</td><td>${o.deliveryCompany || '-'}</td></tr>`).join('')}</tbody>
-         </table>
+        </table>
         <div class="footer">نظام ناردو برو لإدارة التوصيل</div>
         </body></html>
     `);
@@ -905,7 +1075,7 @@ function printDeliveryReport() {
     printWindow.print();
 }
 
-// ========== القسم 10: دوال الإشعارات ==========
+// ========== الإشعارات ==========
 function playNotificationSound() {
     try {
         const audio = new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3');
@@ -913,15 +1083,7 @@ function playNotificationSound() {
     } catch(e) {}
 }
 
-function sendWhatsAppNotification(order) {
-    if (order.customerPhone && order.customerPhone !== '---') {
-        const message = `🛵 *طلبك قيد التوصيل*\n━━━━━━━━━━━━━━━━━━\n📦 رقم الطلب: #${order.telegramOrderId}\n🚚 جهة التوصيل: ${order.deliveryCompany || 'مندوب المتجر'}\n💵 الإجمالي: ${order.total.toLocaleString()} دج\n━━━━━━━━━━━━━━━━━━\n📌 سيتم توصيل طلبك خلال 24 ساعة`;
-        const whatsappUrl = `https://wa.me/${order.customerPhone.replace(/^0/, '')}?text=${encodeURIComponent(message)}`;
-        console.log('WhatsApp URL:', whatsappUrl);
-    }
-}
-
-// ========== القسم 11: دوال الفلترة والعرض ==========
+// ========== الفلترة والعرض ==========
 function filterOrders(filter, btn) {
     currentFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -987,7 +1149,13 @@ function renderOrders() {
                     <td><span class="${statusClass}">${statusText}</span></td>
                     <td>${order.deliveryCompany || '---'}</td>
                     <td style="max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${order.customerNotes || ''}">${order.customerNotes ? (order.customerNotes.length > 30 ? order.customerNotes.substring(0,30)+'...' : order.customerNotes) : '---'}</td>
-                    <td><div style="display:flex; gap:5px; flex-wrap:wrap;"><button class="btn btn-success btn-sm" onclick="openDeliveryModal(${order.id})" title="تفاصيل التوصيل"><i class="fas fa-eye"></i></button><button class="btn btn-info btn-sm" onclick="openEditDeliveryModal(${order.id})" title="تعديل"><i class="fas fa-edit"></i></button><button class="btn btn-gold btn-sm" onclick="copyAddress('${order.customerAddress?.replace(/'/g, "\\'") || ''}')" title="نسخ العنوان"><i class="fas fa-copy"></i></button><button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف"><i class="fas fa-trash"></i></button></div></td>
+                    <td><div style="display:flex; gap:5px; flex-wrap:wrap;">
+                        <button class="btn btn-success btn-sm" onclick="openDeliveryModal(${order.id})" title="تفاصيل التوصيل"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-info btn-sm" onclick="openEditDeliveryModal(${order.id})" title="تعديل"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-gold btn-sm" onclick="copyAddress('${order.customerAddress?.replace(/'/g, "\\'") || ''}')" title="نسخ العنوان"><i class="fas fa-copy"></i></button>
+                        <button class="btn btn-delivery btn-sm" onclick="sendToDelivery(${order.id})" title="توصيل الطلب" style="background:linear-gradient(135deg,#22c55e,#16a34a);"><i class="fas fa-truck"></i></button>
+                        <button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})" title="حذف"><i class="fas fa-trash"></i></button>
+                    </div></td>
                 </tr>
             `;
         }).join('');
@@ -995,7 +1163,6 @@ function renderOrders() {
     updateStats();
 }
 
-// ========== القسم 12: دوال الإحصائيات ==========
 function updateStats() {
     const myOrders = orders.filter(o => o.storeID === currentStore.storeFixedID);
     const pending = myOrders.filter(o => o.status !== 'delivered').length;
@@ -1005,7 +1172,6 @@ function updateStats() {
     document.getElementById('statTotal').innerText = myOrders.length;
 }
 
-// ========== القسم 13: دوال مساعدة ==========
 function showToast(msg, type) {
     const t = document.createElement('div');
     t.className = `toast ${type}`;
@@ -1015,10 +1181,9 @@ function showToast(msg, type) {
     setTimeout(() => t.remove(), 3000);
 }
 
-// ========== القسم 14: البحث المباشر ==========
+// ========== تشغيل التطبيق ==========
 document.getElementById('searchOrders')?.addEventListener('input', () => renderOrders());
 
-// ========== القسم 15: تشغيل التطبيق ==========
 document.addEventListener('DOMContentLoaded', () => {
     loadCurrentStore();
     setTimeout(fetchOrdersFromTelegram, 1000);
@@ -1030,4 +1195,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
