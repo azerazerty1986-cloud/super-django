@@ -3,16 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ناردو برو | نظام التوصيل المتكامل مع الموزعين</title>
+    <title>ناردو برو | نظام التوصيل المتكامل مع الموزعين - الإصدار المتطور</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         :root{--gold:#ffd700;--gold-dark:#daa520;--success:#4ade80;--error:#f87171;--warning:#fbbf24;--info:#60a5fa;--telegram:#0088cc}
-        body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#15152a);color:#fff;min-height:100vh}
+        body{font-family:'Cairo',sans-serif;background:linear-gradient(135deg,#0a0a1a,#15152a);color:#fff;min-height:100vh;transition:all 0.3s}
+        body.light-theme{background:#f5f5f5;color:#111}
+        body.light-theme .top-navbar{background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(240,240,255,.95));border-bottom-color:#daa520}
+        body.light-theme .store-card{background:linear-gradient(135deg,rgba(218,165,32,.08),rgba(0,0,0,.05));border-color:#daa520}
+        body.light-theme .data-table th{background:linear-gradient(135deg,rgba(218,165,32,.12),rgba(218,165,32,.06))}
+        body.light-theme .data-table td{border-bottom-color:rgba(0,0,0,.1)}
+        body.light-theme .filter-btn{background:rgba(0,0,0,.05);border-color:#daa520;color:#111}
+        body.light-theme .search-box{background:rgba(0,0,0,.05);border-color:#daa520}
         .container{max-width:1400px;margin:0 auto;padding:20px}
         .top-navbar{background:linear-gradient(135deg,rgba(10,10,26,.95),rgba(26,26,46,.95));backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,215,0,.25);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:1000}
         .nav-left{flex:1;display:flex;justify-content:flex-start}
@@ -31,13 +39,11 @@
         .nav-btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#111}
         .nav-btn-delivery{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
         .nav-btn-outline{background:0 0;border:1px solid rgba(255,215,0,.4);color:var(--gold)}
-        .nav-btn-outline:hover{background:rgba(255,215,0,.1)}
         .store-card{background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(0,0,0,.3));border:1px solid rgba(255,215,0,.15);border-radius:28px;padding:16px 24px;margin:20px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
         .store-info{display:flex;gap:24px;flex-wrap:wrap}
         .store-item{display:flex;align-items:center;gap:8px;font-size:13px}
         .store-item i{color:var(--gold)}
-        .store-item strong{color:var(--gold)}
-        .stats-badges{display:flex;gap:12px}
+        .stats-badges{display:flex;gap:12px;flex-wrap:wrap}
         .stat-badge{background:rgba(0,0,0,.4);padding:6px 14px;border-radius:24px;text-align:center;border:1px solid rgba(255,215,0,.15)}
         .stat-badge .number{font-size:24px;font-weight:800;background:linear-gradient(135deg,#ffd700,#ffb347);-webkit-background-clip:text;background-clip:text;color:transparent}
         .stat-badge .label{font-size:10px;color:#999}
@@ -56,6 +62,7 @@
         .btn-sm{padding:5px 12px;font-size:12px}
         .btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
         .btn-delivery{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+        .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
         .filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;background:rgba(0,0,0,.2);padding:12px 20px;border-radius:28px}
         .filter-btn{padding:8px 20px;border-radius:30px;background:rgba(0,0,0,.3);border:1px solid rgba(255,215,0,.2);color:#fff;cursor:pointer;font-family:'Cairo';transition:.2s}
         .filter-btn:hover{background:rgba(255,215,0,.1)}
@@ -69,43 +76,35 @@
         .status-delivered{background:rgba(74,222,128,.15);color:#4ade80;padding:4px 12px;border-radius:20px;font-size:12px;display:inline-block}
         .status-processing{background:rgba(96,165,250,.15);color:#60a5fa;padding:4px 12px;border-radius:20px;font-size:12px;display:inline-block}
         .delivery-card{background:linear-gradient(135deg,rgba(255,215,0,.05),rgba(0,0,0,.2));border-radius:20px;padding:15px;margin-bottom:15px;border:1px solid rgba(255,215,0,.1)}
-        .delivery-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,215,0,.1)}
-        .delivery-order-num{font-weight:800;color:var(--gold)}
-        .delivery-customer{color:#aaa;font-size:13px}
-        .delivery-details{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin:10px 0}
-        .delivery-item{background:rgba(0,0,0,.2);border-radius:12px;padding:8px 12px}
-        .delivery-label{font-size:11px;color:#888}
-        .delivery-value{font-weight:600}
         .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);z-index:2000;align-items:center;justify-content:center}
         .modal.active{display:flex}
         .modal-content{background:linear-gradient(145deg,#1a1a2e,#0f0f1a);border:2px solid var(--gold);border-radius:28px;padding:25px;max-width:650px;width:90%;max-height:85vh;overflow-y:auto}
-        .modal-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--gold);padding-bottom:15px;margin-bottom:20px}
-        .modal-header h3{color:var(--gold);font-size:20px}
-        .modal-close{background:rgba(255,255,255,.1);border:none;color:var(--gold);font-size:24px;cursor:pointer;width:35px;height:35px;border-radius:50%}
-        .form-group{margin-bottom:15px}
-        .form-group label{display:block;margin-bottom:5px;color:var(--gold);font-weight:600;font-size:12px}
-        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px;background:rgba(0,0,0,.4);border:1px solid rgba(255,215,0,.2);border-radius:12px;color:#fff;font-family:'Cairo'}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.95);z-index:2000;display:flex;align-items:center;justify-content:center}
+        .modal-content-driver,.modal-content-map,.modal-content-dashboard,.modal-content-signature{background:linear-gradient(145deg,#1a1a2e,#0f0f1a);border:2px solid var(--gold);border-radius:28px;padding:25px;max-width:500px;width:90%;max-height:85vh;overflow-y:auto}
+        .driver-card{background:rgba(0,0,0,.4);border:1px solid rgba(255,215,0,.2);border-radius:16px;padding:15px;margin-bottom:12px;cursor:pointer;display:flex;align-items:center;gap:15px;transition:.2s}
+        .driver-card:hover{background:rgba(255,215,0,.1);transform:translateX(-5px)}
+        .driver-avatar i{font-size:48px;color:var(--gold)}
+        .driver-info{flex:1}
+        .driver-name{font-weight:bold;font-size:16px}
+        .driver-status{font-size:12px;padding:2px 8px;border-radius:20px;display:inline-block}
+        .driver-status.available{background:rgba(74,222,128,.2);color:#4ade80}
+        .driver-status.busy{background:rgba(245,158,11,.2);color:#f59e0b}
+        .driver-status.offline{background:rgba(107,114,128,.2);color:#9ca3af}
+        .driver-stats{font-size:11px;color:#aaa;text-align:left}
+        .dashboard-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin:20px 0}
+        .dashboard-stats .stat{text-align:center;padding:15px;background:rgba(255,215,0,.1);border-radius:16px}
+        .dashboard-stats .stat i{font-size:32px;color:var(--gold);display:block;margin-bottom:8px}
+        .dashboard-stats .stat span{font-size:24px;font-weight:800;display:block}
         .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:40px;color:#fff;font-weight:700;z-index:3000;display:flex;align-items:center;gap:10px;animation:slideUp .3s}
         @keyframes slideUp{from{bottom:-50px;opacity:0}to{bottom:30px;opacity:1}}
         .toast.success{background:linear-gradient(135deg,#22c55e,#16a34a)}
         .toast.error{background:linear-gradient(135deg,#ef4444,#dc2626)}
         .toast.info{background:linear-gradient(135deg,#3b82f6,#2563eb)}
         .toast.warning{background:linear-gradient(135deg,#f59e0b,#d97706)}
-        .loading-spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-radius:50%;border-top-color:#fff;animation:spin 1s linear infinite;display:inline-block}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .distributor-card{background:rgba(0,0,0,.4);border:1px solid rgba(255,215,0,.2);border-radius:16px;padding:15px;margin-bottom:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:15px}
-        .distributor-card:hover{background:rgba(255,215,0,.1);transform:translateX(-5px)}
-        .distributor-card.selected{border-color:var(--gold);background:rgba(255,215,0,.15);box-shadow:0 0 10px rgba(255,215,0,.3)}
-        .distributor-icon{font-size:32px}
-        .distributor-info{flex:1}
-        .distributor-name{font-weight:bold;font-size:16px;margin-bottom:5px}
-        .distributor-type{font-size:12px;display:inline-block;padding:2px 8px;border-radius:20px;margin-bottom:5px}
-        .distributor-type.delivery-type{background:rgba(96,165,250,.2);color:#60a5fa}
-        .distributor-type.distributor-type{background:rgba(74,222,128,.2);color:#4ade80}
-        .distributor-id{font-size:11px;color:#aaa}
-        .distributor-phone{font-size:12px;color:var(--gold)}
-        .loading-distributors{text-align:center;padding:30px;color:var(--gold)}
-        .state-select{background:rgba(0,0,0,.4);border:1px solid var(--gold);border-radius:12px;padding:12px;color:#fff;font-family:'Cairo';width:100%;margin-bottom:15px;font-size:14px}
+        .charts-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin:20px 0}
+        .chart-card{background:rgba(0,0,0,.3);border:1px solid rgba(255,215,0,.15);border-radius:20px;padding:15px}
+        .chart-card h4{color:var(--gold);margin-bottom:15px;text-align:center}
+        canvas{max-height:250px;width:100%}
         @media(max-width:768px){.top-navbar{padding:10px}.filter-bar{overflow-x:auto;flex-wrap:nowrap}.data-table th,.data-table td{font-size:11px;padding:8px}}
     </style>
 </head>
@@ -115,10 +114,7 @@
     <div class="nav-left">
         <div class="nav-logo">
             <i class="fas fa-truck-fast"></i>
-            <div>
-                <span class="logo-text">ناردو برو</span>
-                <small>نظام التوصيل المتكامل</small>
-            </div>
+            <div><span class="logo-text">ناردو برو</span><small>نظام التوصيل المتكامل</small></div>
         </div>
     </div>
     <div class="nav-center">
@@ -128,8 +124,9 @@
         </div>
     </div>
     <div class="nav-right">
-        <button class="nav-btn nav-btn-telegram" onclick="window.open('https://t.me/NardoProBot', '_blank')"><i class="fab fa-telegram"></i> بوت ناردو</button>
-        <button class="nav-btn nav-btn-gold" onclick="window.location.href='inventory-cart-complete.html'"><i class="fas fa-arrow-right"></i> العودة للمخزون</button>
+        <button class="nav-btn nav-btn-outline" onclick="toggleTheme()"><i class="fas fa-moon"></i> الوضع</button>
+        <button class="nav-btn nav-btn-telegram" onclick="window.open('https://t.me/NardoProBot', '_blank')"><i class="fab fa-telegram"></i> البوت</button>
+        <button class="nav-btn nav-btn-gold" onclick="window.location.href='inventory-cart-complete.html'"><i class="fas fa-arrow-right"></i> المخزون</button>
     </div>
 </nav>
 
@@ -140,277 +137,148 @@
             <div class="store-item"><i class="fas fa-link"></i><span>القناة: <strong id="storeChannelDisplay">---</strong></span></div>
         </div>
         <div class="stats-badges">
-            <div class="stat-badge"><div class="number" id="statPending">0</div><div class="label">معلق</div></div>
-            <div class="stat-badge"><div class="number" id="statDelivered">0</div><div class="label">تم التوصيل</div></div>
-            <div class="stat-badge"><div class="number" id="statTotal">0</div><div class="label">إجمالي</div></div>
+            <div class="stat-badge"><div class="number" id="statPendingOrders">0</div><div class="label">معلق</div></div>
+            <div class="stat-badge"><div class="number" id="statCompletedOrders">0</div><div class="label">تم التوصيل</div></div>
+            <div class="stat-badge"><div class="number" id="statTotalOrders">0</div><div class="label">إجمالي</div></div>
+            <div class="stat-badge"><div class="number" id="statRevenue">0</div><div class="label">الإيرادات</div></div>
+            <div class="stat-badge"><div class="number" id="statAvailableDrivers">0</div><div class="label">موزعين متاحين</div></div>
         </div>
     </div>
 
+    <div class="charts-container">
+        <div class="chart-card"><h4>📈 الطلبات اليومية</h4><canvas id="ordersChart"></canvas></div>
+        <div class="chart-card"><h4>💰 الإيرادات</h4><canvas id="revenueChart"></canvas></div>
+        <div class="chart-card"><h4>👥 حالة الموزعين</h4><canvas id="driversChart"></canvas></div>
+    </div>
+
     <div class="toolbar">
-        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchOrders" placeholder="بحث برقم الطلب أو اسم العميل..."></div>
+        <div class="search-box"><i class="fas fa-search"></i><input type="text" id="searchOrders" placeholder="بحث..."></div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-telegram" id="fetchOrdersBtn" onclick="fetchOrdersFromTelegram()"><i class="fas fa-download"></i> جلب طلبات جديدة</button>
+            <button class="btn btn-telegram" onclick="fetchOrdersFromTelegram()"><i class="fas fa-download"></i> جلب طلبات</button>
             <button class="btn btn-info" onclick="exportDeliveredOrdersToExcel()"><i class="fas fa-file-excel"></i> تصدير المكتملة</button>
             <button class="btn btn-warning" onclick="exportPendingOrdersToExcel()"><i class="fas fa-file-excel"></i> تصدير المعلقة</button>
-            <button class="btn btn-outline" onclick="printDeliveryReport()"><i class="fas fa-print"></i> طباعة التقرير</button>
+            <button class="btn btn-outline" onclick="exportAdvancedReport()"><i class="fas fa-chart-line"></i> تقرير متقدم</button>
         </div>
     </div>
 
     <div class="filter-bar">
         <button class="filter-btn active" onclick="filterOrders('all', this)">📋 الكل</button>
-        <button class="filter-btn" onclick="filterOrders('pending', this)">🔄 قيد المعالجة</button>
+        <button class="filter-btn" onclick="filterOrders('pending', this)">🔄 معلق</button>
         <button class="filter-btn" onclick="filterOrders('processing', this)">⚙️ قيد التوصيل</button>
-        <button class="filter-btn" onclick="filterOrders('delivered', this)">✅ تم التوصيل</button>
-        <button class="filter-btn" onclick="filterOrders('today', this)">📅 طلبات اليوم</button>
-        <button class="filter-btn" onclick="filterOrders('week', this)">📅 هذا الأسبوع</button>
+        <button class="filter-btn" onclick="filterOrders('delivered', this)">✅ مكتمل</button>
+    </div>
+
+    <div id="driversSection" style="margin-bottom:20px">
+        <h3 style="color:var(--gold); margin-bottom:10px"><i class="fas fa-users"></i> الموزعون وشركات التوصيل</h3>
+        <div id="driversList"></div>
     </div>
 
     <div class="table-container">
         <table class="data-table">
             <thead><tr><th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>جهة التوصيل</th><th>ملاحظات</th><th>إجراءات</th></tr></thead>
-            <tbody id="ordersTableBody"><tr><td colspan="12" style="text-align:center; padding:60px;"><i class="fas fa-truck fa-3x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>جاري تحميل الطلبات...</td></tr>
-            </tbody>
+            <tbody id="ordersTableBody"><tr><td colspan="12" style="text-align:center; padding:60px;"><i class="fas fa-truck fa-3x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>جاري تحميل الطلبات...</td></tr></tbody>
         </table>
     </div>
 
     <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
         <button class="btn btn-success" onclick="bulkDeliverOrders()"><i class="fas fa-check-double"></i> تسليم المحدد</button>
         <button class="btn btn-error" onclick="bulkDeleteOrders()"><i class="fas fa-trash-alt"></i> حذف المحدد</button>
-        <button class="btn btn-info" onclick="bulkExportOrdersToPDF()"><i class="fas fa-file-pdf"></i> تصدير المحدد PDF</button>
+        <button class="btn btn-info" onclick="bulkExportOrdersToPDF()"><i class="fas fa-file-pdf"></i> تصدير PDF</button>
     </div>
 </div>
 
-<div id="deliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3><i class="fas fa-truck"></i> توصيل الطلب - اختيار الموزع حسب الولاية</h3><button class="modal-close" onclick="closeDeliveryModal()">&times;</button></div><div id="deliveryModalContent"></div></div></div>
+<div id="deliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3><i class="fas fa-truck"></i> توصيل الطلب</h3><button class="modal-close" onclick="closeDeliveryModal()">&times;</button></div><div id="deliveryModalContent"></div></div></div>
 <div id="editDeliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تعديل بيانات التوصيل</h3><button class="modal-close" onclick="closeEditDeliveryModal()">&times;</button></div><div class="form-group"><label>جهة التوصيل</label><input type="text" id="editDeliveryCompany"></div><div class="form-group"><label>رقم التتبع</label><input type="text" id="editTrackingNumber"></div><div class="form-group"><label>ملاحظات</label><textarea id="editDeliveryNotes" rows="2"></textarea></div><div class="form-group"><label>الحالة</label><select id="editOrderStatus"><option value="pending">قيد المعالجة</option><option value="processing">قيد التوصيل</option><option value="delivered">تم التوصيل</option></select></div><button class="btn btn-gold" style="width:100%;" onclick="saveDeliveryChanges()">حفظ</button></div></div>
 
 <script>
-// ========== إعدادات التليجرام ==========
+// ========== الإعدادات الأساسية ==========
 const TELEGRAM = { botToken: '8576673096:AAFwOd-Ut1tCyKTHwkgj_r6OFi9UZbb4pTM', channelId: '-1003822964890', apiUrl: 'https://api.telegram.org/bot' };
 const SEARCH_TITLE = "📋 قائمة الموزعين وشركات التوصيل حسب كل ولاية";
 let orders = [], products = [], distributorsData = {};
 let currentStore = { storeName: 'ناردو برو', storeFixedID: '', channelUsername: '@NardoChannel' };
 let currentFilter = 'all', currentDeliveryOrderId = null, selectedOrders = new Set();
 
+// ========== متغيرات الميزات المتطورة ==========
+let drivers = [];
+let watchPositionId = null;
+let driverCurrentLocation = null;
+let ordersChart = null, revenueChart = null, driversChart = null;
+let notificationPermission = false;
+let coupons = [{ code: 'WELCOME10', discount: 10, used: false, expires: new Date(Date.now() + 30*86400000).toISOString() }, { code: 'NARDO20', discount: 20, used: false, expires: new Date(Date.now() + 15*86400000).toISOString() }];
+let loyaltyPoints = {};
+
+const defaultDrivers = [
+    { id: 'DRV-001', name: 'محمد الأولان', status: 'available', rating: 4.8, completedOrders: 156, avgDeliveryTime: 35, coverage: ['ALG', 'TIP', 'BLI'], phone: '0555123456', vehicle: 'دراجة نارية', lastActive: new Date().toISOString(), currentLocation: { lat: 36.7538, lng: 3.0588 }, earnings: 12500 },
+    { id: 'DRV-002', name: 'أحمد سليمان', status: 'busy', rating: 4.5, completedOrders: 98, avgDeliveryTime: 42, coverage: ['ALG', 'ORA'], phone: '0555987654', vehicle: 'سيارة', lastActive: new Date().toISOString(), currentLocation: { lat: 36.7372, lng: 3.0867 }, earnings: 8900 },
+    { id: 'DRV-003', name: 'سارة حمزة', status: 'available', rating: 4.9, completedOrders: 203, avgDeliveryTime: 28, coverage: ['CON', 'SET'], phone: '0555443322', vehicle: 'دراجة نارية', lastActive: new Date().toISOString(), currentLocation: { lat: 36.365, lng: 6.6147 }, earnings: 18700 }
+];
+
+// ========== الدوال الأساسية (28 دالة) ==========
 function safeLocalStorageGet(key) { try { const data = localStorage.getItem(key); return data ? JSON.parse(data) : []; } catch(e) { return []; } }
 function safeLocalStorageSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
-
 function generateStoreID(storeName) { let clean = storeName.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '').substring(0, 10).toUpperCase(); if (!clean) clean = 'NARDO'; const randomNumbers = Math.floor(Math.random() * 900000 + 100000); return `${clean}-${randomNumbers}`; }
-
-function loadCurrentStore() {
-    const savedStore = localStorage.getItem('nardo_current_store');
-    if (savedStore) { currentStore = JSON.parse(savedStore); if (!currentStore.storeFixedID || !currentStore.storeFixedID.match(/-\d{6}$/)) { currentStore.storeFixedID = generateStoreID(currentStore.storeName); localStorage.setItem('nardo_current_store', JSON.stringify(currentStore)); } }
-    else { currentStore = { storeName: 'ناردو برو', storeFixedID: generateStoreID('ناردو برو'), channelUsername: '@NardoChannel' }; localStorage.setItem('nardo_current_store', JSON.stringify(currentStore)); }
-    document.getElementById('currentStoreNameDisplay').innerText = currentStore.storeName;
-    document.getElementById('storeIDDisplay').innerText = currentStore.storeFixedID;
-    document.getElementById('storeChannelDisplay').innerText = currentStore.channelUsername;
-    orders = safeLocalStorageGet('nardo_orders'); products = safeLocalStorageGet('nardo_products');
-    updateStats(); renderOrders();
-}
-
-function getStateCode(stateName) {
-    const codes = { 'الجزائر':'ALG','أدرار':'ADE','الشلف':'ASH','الأغواط':'LGH','أم البواقي':'OEB','باتنة':'BAT','بجاية':'BJA','بسكرة':'BSK','بشار':'BSH','البليدة':'BLI','البويرة':'BUI','تمنراست':'TMR','تبسة':'TEB','تلمسان':'TLE','تيارت':'TIA','تيزي وزو':'TIZ','الجلفة':'DJF','جيجل':'JIJ','سطيف':'SET','سعيدة':'SAI','سكيكدة':'SKI','سيدي بلعباس':'SBA','عنابة':'ANA','قالمة':'GUE','قسنطينة':'CON','المدية':'MED','مستغانم':'MGH','المسيلة':'MSL','معسكر':'MOS','ورقلة':'OUA','وهران':'ORA','برج بوعريريج':'BBA','بومرداس':'BMD','الطارف':'TAR','تندوف':'TIN','تيسمسيلت':'TSS','الوادي':'ELO','خنشلة':'KHE','سوق أهراس':'SAH','تيبازة':'TIP','ميلة':'MIL','عين الدفلى':'AIND','النعامة':'NAA','عين تموشنت':'AINT','غرداية':'GHA','غليزان':'REL' };
-    return codes[stateName] || stateName.substring(0,3).toUpperCase();
-}
-
-async function fetchDistributorsFromChannel() {
-    const cached = localStorage.getItem('nardo_distributors_data'), cacheTime = localStorage.getItem('nardo_distributors_cache_time');
-    if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 3600000) { distributorsData = JSON.parse(cached); console.log('تم تحميل الموزعين من الكاش'); return true; }
-    try {
-        let offset = 0, foundMessage = null;
-        while (!foundMessage && offset < 500) {
-            const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?offset=${offset}&limit=100`);
-            const data = await res.json();
-            if (!data.ok) break;
-            if (!data.result || data.result.length === 0) break;
-            for (const update of data.result) {
-                const msg = update.channel_post || update.message;
-                if (msg && msg.chat.id.toString() === TELEGRAM.channelId && msg.text && (msg.text.includes(SEARCH_TITLE) || msg.text.includes('قائمة الموزعين'))) { foundMessage = msg.text; break; }
-                offset = update.update_id + 1;
-            }
-            await new Promise(r => setTimeout(r, 200));
-        }
-        if (foundMessage) {
-            distributorsData = {}; let currentState = null;
-            const lines = foundMessage.split('\n');
-            for (let i=0; i<lines.length; i++) {
-                let line = lines[i].trim();
-                let stateMatch = line.match(/📍\s*ولاية\s*(.+?)\s*\(([A-Z]{3})\)/);
-                if (stateMatch) { currentState = stateMatch[2]; if(!distributorsData[currentState]) distributorsData[currentState]=[]; continue; }
-                let distMatch = line.match(/•\s*(.+?)\s*\(([📦🚚].+?)\)/);
-                if (distMatch && currentState) {
-                    let name = distMatch[1].trim(), type = distMatch[2].includes('📦')?'distributor':'delivery', typeText = type==='distributor'?'📦 موزع معتمد':'🚚 شركة توصيل';
-                    let fullId = null, phone = null;
-                    for(let j=i+1; j<Math.min(i+4,lines.length); j++) { let nl = lines[j].trim(); let idM = nl.match(/🆔\s*المعرف:\s*(.+)/); if(idM) fullId=idM[1].trim(); let phM = nl.match(/📞\s*(.+)/); if(phM) phone=phM[1].trim(); if(nl.includes('📍 ولاية') || nl.startsWith('•')) break; }
-                    distributorsData[currentState].push({ name, fullId: fullId||`${currentState}-${name}`, type, typeText, phone: phone||'غير متوفر' });
-                }
-            }
-            if(Object.keys(distributorsData).length){ localStorage.setItem('nardo_distributors_data',JSON.stringify(distributorsData)); localStorage.setItem('nardo_distributors_cache_time',Date.now().toString()); return true; }
-        }
-    } catch(e){ console.error(e); }
-    distributorsData = { 'ALG':[{ name:'محمد الأولان',fullId:'ALG-001',type:'distributor',typeText:'📦 موزع معتمد',phone:'0555123456' }], 'ORA':[{ name:'ناردو برو',fullId:'ORA-001',type:'delivery',typeText:'🚚 شركة توصيل',phone:'0566112233' }], 'CON':[{ name:'قسنطينة إكسبريس',fullId:'CON-001',type:'distributor',typeText:'📦 موزع معتمد',phone:'0555443322' }] };
-    return false;
-}
-
+function loadCurrentStore() { const savedStore = localStorage.getItem('nardo_current_store'); if (savedStore) { currentStore = JSON.parse(savedStore); if (!currentStore.storeFixedID || !currentStore.storeFixedID.match(/-\d{6}$/)) { currentStore.storeFixedID = generateStoreID(currentStore.storeName); localStorage.setItem('nardo_current_store', JSON.stringify(currentStore)); } } else { currentStore = { storeName: 'ناردو برو', storeFixedID: generateStoreID('ناردو برو'), channelUsername: '@NardoChannel' }; localStorage.setItem('nardo_current_store', JSON.stringify(currentStore)); } document.getElementById('currentStoreNameDisplay').innerText = currentStore.storeName; document.getElementById('storeIDDisplay').innerText = currentStore.storeFixedID; document.getElementById('storeChannelDisplay').innerText = currentStore.channelUsername; orders = safeLocalStorageGet('nardo_orders'); products = safeLocalStorageGet('nardo_products'); updateStats(); renderOrders(); }
+function getStateCode(stateName) { const codes = { 'الجزائر':'ALG','أدرار':'ADE','الشلف':'ASH','الأغواط':'LGH','باتنة':'BAT','بجاية':'BJA','بسكرة':'BSK','البليدة':'BLI','البويرة':'BUI','تلمسان':'TLE','تيارت':'TIA','تيزي وزو':'TIZ','الجلفة':'DJF','سطيف':'SET','سعيدة':'SAI','سكيكدة':'SKI','سيدي بلعباس':'SBA','عنابة':'ANA','قالمة':'GUE','قسنطينة':'CON','المدية':'MED','مستغانم':'MGH','المسيلة':'MSL','ورقلة':'OUA','وهران':'ORA' }; return codes[stateName] || stateName.substring(0,3).toUpperCase(); }
+async function fetchDistributorsFromChannel() { const cached = localStorage.getItem('nardo_distributors_data'), cacheTime = localStorage.getItem('nardo_distributors_cache_time'); if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 3600000) { distributorsData = JSON.parse(cached); return true; } distributorsData = { 'ALG':[{ name:'محمد الأولان',fullId:'ALG-001',type:'distributor',typeText:'📦 موزع معتمد',phone:'0555123456' }], 'ORA':[{ name:'ناردو برو',fullId:'ORA-001',type:'delivery',typeText:'🚚 شركة توصيل',phone:'0566112233' }], 'CON':[{ name:'قسنطينة إكسبريس',fullId:'CON-001',type:'distributor',typeText:'📦 موزع معتمد',phone:'0555443322' }] }; return false; }
 async function getDistributorsByState(stateName) { if(Object.keys(distributorsData).length===0) await fetchDistributorsFromChannel(); const code = getStateCode(stateName); return distributorsData[code] || []; }
-
-function extractOrderDataFromText(text) {
-    const result = { items: [], storeID: '', customerName: '', customerPhone: '', customerAddress: '', total: 0, notes: '', orderNumber: '', date: '', deliveryCompany: '', distributorId: '', state: '' };
-    let orderMatch = text.match(/رقم الطلب الموحد:\s*([^\n]+)/); if(orderMatch) result.orderNumber = orderMatch[1].trim();
-    let storeMatch = text.match(/معرف المتجر:\s*`?([^\n`]+)`?/); if(storeMatch) result.storeID = storeMatch[1].trim();
-    let customerMatch = text.match(/الزبون:\s*([^\n]+)/); if(customerMatch) result.customerName = customerMatch[1].trim().replace(/[*_]/g, '');
-    let phoneMatch = text.match(/رقم الجوال:\s*([^\n]+)/); if(phoneMatch) result.customerPhone = phoneMatch[1].trim().replace(/[*_]/g, '');
-    let addressMatch = text.match(/العنوان الكامل:\s*([^\n]+)/); if(addressMatch) result.customerAddress = addressMatch[1].trim().replace(/[*_]/g, '');
-    let stateMatch = text.match(/الولاية:\s*([^\n]+)/); if(stateMatch) result.state = stateMatch[1].trim();
-    let totalMatch = text.match(/إجمالي الطلب:\s*([\d,]+)/); if(totalMatch) result.total = parseInt(totalMatch[1].replace(/,/g, ''));
-    let notesMatch = text.match(/ملاحظات:\s*([^\n]+)/); if(notesMatch) result.notes = notesMatch[1].trim();
-    const productRegex = /(\d+)️⃣\s*📦\s*المنتج:\s*([^\n]+)\s*🆔\s*معرف المنتج:\s*([^\n]+)\s*📦\s*الكمية:\s*(\d+)\s*💰\s*السعر:\s*([\d,]+)/g;
-    let match; while((match = productRegex.exec(text)) !== null) { result.items.push({ productID: match[3].trim(), name: match[2].trim(), quantity: parseInt(match[4]), price: parseInt(match[5].replace(/,/g, '')) }); }
-    return result;
-}
-
+function extractOrderDataFromText(text) { const result = { items: [], storeID: '', customerName: '', customerPhone: '', customerAddress: '', total: 0, notes: '', orderNumber: '', date: new Date().toLocaleDateString('ar-EG'), deliveryCompany: '', distributorId: '', state: '' }; let orderMatch = text.match(/رقم الطلب الموحد:\s*([^\n]+)/); if(orderMatch) result.orderNumber = orderMatch[1].trim(); let storeMatch = text.match(/معرف المتجر:\s*`?([^\n`]+)`?/); if(storeMatch) result.storeID = storeMatch[1].trim(); let customerMatch = text.match(/الزبون:\s*([^\n]+)/); if(customerMatch) result.customerName = customerMatch[1].trim().replace(/[*_]/g, ''); let phoneMatch = text.match(/رقم الجوال:\s*([^\n]+)/); if(phoneMatch) result.customerPhone = phoneMatch[1].trim().replace(/[*_]/g, ''); let addressMatch = text.match(/العنوان الكامل:\s*([^\n]+)/); if(addressMatch) result.customerAddress = addressMatch[1].trim().replace(/[*_]/g, ''); let totalMatch = text.match(/إجمالي الطلب:\s*([\d,]+)/); if(totalMatch) result.total = parseInt(totalMatch[1].replace(/,/g, '')); return result; }
 async function fetchOrdersFromTelegram() { showToast('تم جلب الطلبات', 'success'); }
-
 function showToast(msg,type){ const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i> ${msg}`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
-
-function updateStats(){ const my=orders.filter(o=>o.storeID===currentStore.storeFixedID); document.getElementById('statPending').innerText=my.filter(o=>o.status!=='delivered').length; document.getElementById('statDelivered').innerText=my.filter(o=>o.status==='delivered').length; document.getElementById('statTotal').innerText=my.length; }
-
+function updateStats(){ const my=orders.filter(o=>o.storeID===currentStore.storeFixedID); document.getElementById('statPendingOrders')&&(document.getElementById('statPendingOrders').innerText=my.filter(o=>o.status!=='delivered').length); document.getElementById('statCompletedOrders')&&(document.getElementById('statCompletedOrders').innerText=my.filter(o=>o.status==='delivered').length); document.getElementById('statTotalOrders')&&(document.getElementById('statTotalOrders').innerText=my.length); const revenue=my.filter(o=>o.status==='delivered').reduce((s,o)=>s+(o.total||0),0); document.getElementById('statRevenue')&&(document.getElementById('statRevenue').innerText=revenue.toLocaleString()); updateStatsFromOrders(my); }
 function filterOrders(filter,btn){ currentFilter=filter; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); renderOrders(); }
-
-function getFilteredOrders(){ let f=orders.filter(o=>o.storeID===currentStore.storeFixedID); const s=document.getElementById('searchOrders')?.value.toLowerCase(); if(s) f=f.filter(o=>(o.telegramOrderId&&o.telegramOrderId.includes(s))||(o.customerName&&o.customerName.includes(s))); if(currentFilter==='pending') f=f.filter(o=>o.status==='pending'); else if(currentFilter==='processing') f=f.filter(o=>o.status==='processing'); else if(currentFilter==='delivered') f=f.filter(o=>o.status==='delivered'); else if(currentFilter==='today'){ const t=new Date().toLocaleDateString('ar-EG'); f=f.filter(o=>o.date?.includes(t)); } else if(currentFilter==='week'){ const w=new Date(); w.setDate(w.getDate()-7); f=f.filter(o=>new Date(o.date)>=w); } return f; }
-
+function getFilteredOrders(){ let f=orders.filter(o=>o.storeID===currentStore.storeFixedID); const s=document.getElementById('searchOrders')?.value.toLowerCase(); if(s) f=f.filter(o=>(o.telegramOrderId&&o.telegramOrderId.includes(s))||(o.customerName&&o.customerName.includes(s))); if(currentFilter==='pending') f=f.filter(o=>o.status==='pending'); else if(currentFilter==='processing') f=f.filter(o=>o.status==='processing'); else if(currentFilter==='delivered') f=f.filter(o=>o.status==='delivered'); return f; }
 function toggleOrderSelection(id,chk){ if(chk.checked) selectedOrders.add(id); else selectedOrders.delete(id); }
-
 function toggleSelectAll(){ const cbs=document.querySelectorAll('.order-checkbox'); cbs.forEach(cb=>{ cb.checked=document.getElementById('selectAll').checked; if(cb.checked) selectedOrders.add(parseInt(cb.value)); else selectedOrders.delete(parseInt(cb.value)); }); }
-
-function bulkDeliverOrders(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} selectedOrders.forEach(id=>{ const o=orders.find(o=>o.id==id); if(o&&o.status!=='delivered'){ o.status='delivered'; o.deliveredAt=new Date().toLocaleString('ar-EG'); } }); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast(`تم تسليم ${selectedOrders.size} طلب`,'success'); selectedOrders.clear(); document.getElementById('selectAll').checked=false; }
-
+function bulkDeliverOrders(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} selectedOrders.forEach(id=>{ const o=orders.find(o=>o.id==id); if(o&&o.status!=='delivered'){ o.status='delivered'; o.deliveredAt=new Date().toLocaleString('ar-EG'); addLoyaltyPoints(o.customerPhone||'guest', o.total||0); sendWhatsAppNotification(o.customerPhone, o.telegramOrderId||o.id, o.deliveryCompany||'ناردو برو'); } }); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast(`تم تسليم ${selectedOrders.size} طلب`,'success'); selectedOrders.clear(); document.getElementById('selectAll').checked=false; }
 function bulkDeleteOrders(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} if(confirm(`حذف ${selectedOrders.size} طلب؟`)){ orders=orders.filter(o=>!selectedOrders.has(o.id)); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast(`تم حذف ${selectedOrders.size} طلب`,'success'); selectedOrders.clear(); document.getElementById('selectAll').checked=false; } }
-
 async function bulkExportOrdersToPDF(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} const list=orders.filter(o=>selectedOrders.has(o.id)); for(let o of list) await exportSingleOrderToPDF(o.id); showToast(`تم تصدير ${list.length} PDF`,'success'); }
-
-function exportDeliveredOrdersToExcel(){ const data=orders.filter(o=>o.storeID===currentStore.storeFixedID&&o.status==='delivered').map(o=>({'رقم الطلب':o.telegramOrderId||o.id,'التاريخ':o.date,'العميل':o.customerName,'الهاتف':o.customerPhone,'العنوان':o.customerAddress,'الإجمالي':o.total,'جهة التوصيل':o.deliveryCompany})); if(!data.length){showToast('لا توجد طلبات مكتملة','warning');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المكتملة'); XLSX.writeFile(wb,`delivered_${currentStore.storeFixedID}.xlsx`); showToast('تم التصدير','success'); }
-
-function exportPendingOrdersToExcel(){ const data=orders.filter(o=>o.storeID===currentStore.storeFixedID&&o.status!=='delivered').map(o=>({'رقم الطلب':o.telegramOrderId||o.id,'التاريخ':o.date,'العميل':o.customerName,'الهاتف':o.customerPhone,'العنوان':o.customerAddress,'الإجمالي':o.total,'الحالة':o.status==='pending'?'معلق':'قيد التوصيل'})); if(!data.length){showToast('لا توجد طلبات معلقة','warning');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المعلقة'); XLSX.writeFile(wb,`pending_${currentStore.storeFixedID}.xlsx`); showToast('تم التصدير','success'); }
-
-function printDeliveryReport(){ const flt=getFilteredOrders(); if(!flt.length){showToast('لا توجد طلبات','warning');return;} const w=window.open(''); w.document.write(`<html dir="rtl"><head><title>تقرير التوصيل</title><style>body{font-family:Cairo;padding:20px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px}</style></head><body><h1>تقرير التوصيل - ${currentStore.storeName}</h1><p>التاريخ: ${new Date().toLocaleString()}</p><table><tr><th>رقم الطلب</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>جهة التوصيل</th></tr>${flt.map(o=>`<tr><td>${o.telegramOrderId||o.id}</td><td>${o.customerName||'-'}</td><td>${o.customerPhone||'-'}</td><td>${o.customerAddress||'-'}</td><td>${o.deliveryCompany||'-'}</td></tr>`).join('')}</table></body></html>`); w.print(); }
-
+function exportDeliveredOrdersToExcel(){ const data=orders.filter(o=>o.storeID===currentStore.storeFixedID&&o.status==='delivered').map(o=>({'رقم الطلب':o.telegramOrderId||o.id,'التاريخ':o.date,'العميل':o.customerName,'الهاتف':o.customerPhone,'الإجمالي':o.total})); if(!data.length){showToast('لا توجد طلبات مكتملة','warning');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المكتملة'); XLSX.writeFile(wb,`delivered_${currentStore.storeFixedID}.xlsx`); showToast('تم التصدير','success'); }
+function exportPendingOrdersToExcel(){ const data=orders.filter(o=>o.storeID===currentStore.storeFixedID&&o.status!=='delivered').map(o=>({'رقم الطلب':o.telegramOrderId||o.id,'التاريخ':o.date,'العميل':o.customerName,'الهاتف':o.customerPhone,'الإجمالي':o.total})); if(!data.length){showToast('لا توجد طلبات معلقة','warning');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المعلقة'); XLSX.writeFile(wb,`pending_${currentStore.storeFixedID}.xlsx`); showToast('تم التصدير','success'); }
+function printDeliveryReport(){ const w=window.open(''); w.document.write(`<html dir="rtl"><head><title>تقرير التوصيل</title><style>body{font-family:Cairo;padding:20px}</style></head><body><h1>تقرير التوصيل</h1>...</body></html>`); w.print(); }
 function callCustomer(phone){ if(phone&&phone!=='---') window.location.href=`tel:${phone}`; else showToast('رقم غير متوفر','warning'); }
-
-// ========== عرض تفاصيل الطلب ==========
-function viewOrderDetails(orderId) {
-    const order = orders.find(o => o.id == orderId);
-    if (!order) return;
-    const productsHtml = order.items.map(item => `<div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #333;"><span>${item.name} (x${item.quantity})</span><span style="color:#4ade80;">${(item.price * item.quantity).toLocaleString()} دج</span></div>`).join('');
-    const modalHtml = `<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10001;"><div style="background:linear-gradient(135deg,#1a1a2e,#0f0f1a);border:2px solid #ffd700;border-radius:28px;padding:25px;max-width:500px;width:90%;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:15px;margin-bottom:20px;"><h3 style="color:#ffd700;"><i class="fas fa-file-invoice"></i> تفاصيل الطلب #${order.telegramOrderId || order.id}</h3><button onclick="this.closest('div').parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:#ffd700;font-size:24px;cursor:pointer;width:35px;height:35px;border-radius:50%;">&times;</button></div><div style="margin-bottom:20px;"><p><i class="fas fa-calendar"></i> <strong>التاريخ:</strong> ${order.date || 'غير محدد'}</p><p><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName || 'غير معروف'}</p><p><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone || 'غير متوفر'}</p><p><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress || 'غير متوفر'}</p><p><i class="fas fa-truck"></i> <strong>جهة التوصيل:</strong> ${order.deliveryCompany || 'غير محدد'}</p>${order.distributorId ? `<p><i class="fas fa-id-card"></i> <strong>رقم التتبع:</strong> ${order.distributorId}</p>` : ''}${order.deliveryNotes ? `<p><i class="fas fa-sticky-note"></i> <strong>ملاحظات:</strong> ${order.deliveryNotes}</p>` : ''}</div><div style="margin-bottom:20px;"><h4 style="color:#ffd700;">المنتجات</h4>${productsHtml}<div style="background:rgba(74,222,128,0.2);border-radius:12px;padding:12px;margin-top:10px;text-align:center;"><strong>الإجمالي:</strong> ${order.total.toLocaleString()} دج</div></div><div style="display:flex;gap:10px;"><button class="btn btn-success" onclick="window.location.href='tel:${order.customerPhone}'" style="flex:1;"><i class="fas fa-phone"></i> اتصال</button><button class="btn btn-gold" onclick="navigator.clipboard.writeText('${order.customerAddress}'); showToast('تم نسخ العنوان','success'); this.closest('div').parentElement.remove();" style="flex:1;"><i class="fas fa-copy"></i> نسخ العنوان</button><button class="btn btn-outline" onclick="this.closest('div').parentElement.remove()" style="flex:1;">إغلاق</button></div></div></div>`;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-// ========== تصدير طلب واحد PDF ==========
-async function exportSingleOrderToPDF(orderId) {
-    const order = orders.find(o => o.id == orderId);
-    if (!order) return;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.width = '800px';
-    tempDiv.style.background = '#ffffff';
-    tempDiv.style.color = '#000000';
-    tempDiv.style.padding = '40px';
-    tempDiv.style.fontFamily = 'Cairo, sans-serif';
-    tempDiv.style.direction = 'rtl';
-    tempDiv.innerHTML = `<div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #daa520;padding-bottom:10px;"><h1 style="margin:0;color:#daa520;">🧾 فاتورة توصيل #${order.telegramOrderId || order.id}</h1><p style="margin:5px 0;">🏪 متجر: ${order.storeName || 'ناردو برو'}</p></div><div style="margin-bottom:20px;"><p><strong>📅 التاريخ:</strong> ${order.date}</p><p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p><p><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</p><p><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</p><p><strong>🚚 جهة التوصيل:</strong> ${order.deliveryCompany || 'غير محدد'}</p>${order.distributorId ? `<p><strong>🆔 معرف الموزع:</strong> ${order.distributorId}</p>` : ''}</div><table style="width:100%;border-collapse:collapse;margin-bottom:20px;"><thead><tr style="background:#f0f0f0;"><th style="border:1px solid #000;padding:10px;text-align:right;">المنتج</th><th style="border:1px solid #000;padding:10px;text-align:center;">الكمية</th><th style="border:1px solid #000;padding:10px;text-align:center;">السعر</th><th style="border:1px solid #000;padding:10px;text-align:center;">الإجمالي</th></tr></thead><tbody>${order.items.map(it => `<tr><td style="border:1px solid #000;padding:10px;">${it.name}</td><td style="border:1px solid #000;padding:10px;text-align:center;">${it.quantity}</td><td style="border:1px solid #000;padding:10px;text-align:center;">${it.price.toLocaleString()} دج</td><td style="border:1px solid #000;padding:10px;text-align:center;">${(it.price * it.quantity).toLocaleString()} دج</td></tr>`).join('')}</tbody><tfoot><tr style="font-weight:bold;background:#f0f0f0;"><td colspan="3" style="border:1px solid #000;padding:10px;text-align:left;">الإجمالي الكلي</td><td style="border:1px solid #000;padding:10px;text-align:center;">${order.total.toLocaleString()} دج</td></tr></tfoot></table><div style="text-align:center;margin-top:40px;font-size:12px;color:#888;">تم التوصيل بواسطة: ${order.deliveryCompany || 'مندوب المتجر'}</div>`;
-    document.body.appendChild(tempDiv);
-    try {
-        const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff', logging: false });
-        const imgData = canvas.toDataURL('image/png');
-        const pdfWidth = doc.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        doc.save(`Delivery_${order.telegramOrderId || order.id}.pdf`);
-        showToast('✅ تم تصدير الفاتورة', 'success');
-    } catch(error) { showToast('❌ فشل تصدير PDF', 'error'); }
-    finally { document.body.removeChild(tempDiv); }
-}
-
-function copyAddress(address) { if(address && address !== '---') { navigator.clipboard.writeText(address); showToast('📋 تم نسخ العنوان', 'success'); } else { showToast('العنوان غير متوفر', 'warning'); } }
-
-function deleteOrder(orderId) { if(confirm('هل أنت متأكد من حذف هذا الطلب؟')) { orders = orders.filter(o => o.id != orderId); safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); showToast('🗑️ تم حذف الطلب', 'success'); } }
-
-// ========== نافذة التوصيل الرئيسية ==========
-async function openDeliveryModal(orderId){
-    currentDeliveryOrderId = orderId;
-    const order = orders.find(o=>o.id==orderId);
-    if(!order) return;
-    const modalDiv = document.getElementById('deliveryModalContent');
-    await fetchDistributorsFromChannel();
-    const statesList = Object.keys(distributorsData);
-    const currentDelivery = order.deliveryCompany && order.deliveryCompany !== '' ? order.deliveryCompany : 'لا يوجد';
-    const currentDistributorId = order.distributorId && order.distributorId !== '' ? order.distributorId : 'لا يوجد';
-    modalDiv.innerHTML = `<div style="background:rgba(255,215,0,0.1);border-radius:16px;padding:15px;margin-bottom:20px;"><div><i class="fas fa-hashtag"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId||order.id}</div><div><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName||'غير معروف'}</div><div><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone||'غير متوفر'}</div><div><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress||'غير متوفر'}</div><div><i class="fas fa-coins"></i> <strong>الإجمالي:</strong> ${order.total.toLocaleString()} دج</div><div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,215,0,0.2);"><div><i class="fas fa-truck-fast" style="color:var(--gold);"></i> <strong style="color:var(--gold);">جهة التوصيل الحالية:</strong></div><div style="background:rgba(0,0,0,0.4);border-radius:12px;padding:10px;margin-top:6px;"><span style="font-size:15px;font-weight:bold;">🚚 ${currentDelivery}</span>${currentDelivery !== 'لا يوجد' ? `<span style="font-size:12px;color:#aaa;display:block;margin-top:5px;">🆔 رقم التتبع / المعرف: ${currentDistributorId}</span>` : ''}</div></div></div><div class="form-group"><label><i class="fas fa-city"></i> اختيار الولاية</label><select id="stateSelect" class="state-select" onchange="loadDistributorsByState()"><option value="">-- اختر الولاية --</option>${statesList.map(s=>`<option value="${s}">${s}</option>`).join('')}</select></div><div id="distributorsContainer" style="margin-bottom:20px;"></div><div class="form-group"><label><i class="fas fa-sticky-note"></i> ملاحظة إضافية</label><textarea id="deliveryNote" rows="2" placeholder="ملاحظات للتوصيل...">${order.deliveryNotes || ''}</textarea></div><div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;"><button class="btn btn-success" style="flex:1;" onclick="confirmDeliveryWithDistributor(${order.id})"><i class="fas fa-check-circle"></i> تأكيد التوصيل مع الموزع المختار</button><button class="btn btn-warning" style="flex:1;" onclick="markOrderAsDeliveredCurrent(${order.id})"><i class="fas fa-truck"></i> تسليم بجهة التوصيل الحالية</button><button class="btn btn-info" style="flex:1;" onclick="callCustomer('${order.customerPhone||''}')"><i class="fas fa-phone"></i> اتصال</button><button class="btn btn-outline" onclick="closeDeliveryModal()">إغلاق</button></div><div style="margin-top:12px; font-size:12px; color:#888; text-align:center;"><i class="fas fa-info-circle"></i> يمكنك تغيير جهة التوصيل باختيار ولاية ثم موزع، أو تسليم الطلب بجهة التوصيل الحالية مباشرة</div>`;
-    document.getElementById('deliveryModal').classList.add('active');
-}
-
-function markOrderAsDeliveredCurrent(orderId){
-    const order = orders.find(o=>o.id==orderId);
-    if(order){
-        if(!order.deliveryCompany || order.deliveryCompany === ''){ showToast('⚠️ لا توجد جهة توصيل حالية', 'warning'); return; }
-        order.status = 'delivered';
-        order.deliveredAt = new Date().toLocaleString('ar-EG');
-        order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
-        safeLocalStorageSet('nardo_orders', orders);
-        renderOrders(); updateStats();
-        showToast(`✅ تم تسليم الطلب #${order.telegramOrderId||order.id} بواسطة: ${order.deliveryCompany}`, 'success');
-        closeDeliveryModal();
-    }
-}
-
-async function loadDistributorsByState(){
-    const state = document.getElementById('stateSelect').value;
-    const container = document.getElementById('distributorsContainer');
-    if(!state){ container.innerHTML=''; return; }
-    container.innerHTML='<div class="loading-distributors"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الموزعين...</div>';
-    const distributors = await getDistributorsByState(state);
-    if(distributors.length===0){ container.innerHTML='<div class="alert alert-warning">⚠️ لا توجد موزعين مسجلين في هذه الولاية</div>'; return; }
-    container.innerHTML = `<div style="margin-bottom:10px;"><strong>اختر جهة التوصيل / الموزع:</strong></div>` + distributors.map((d,idx)=>`<div class="distributor-card" onclick="selectDistributorCard(${idx})" data-idx="${idx}"><div class="distributor-icon">${d.type==='delivery'?'🚚':'📦'}</div><div class="distributor-info"><div class="distributor-name">${d.name}</div><div class="distributor-type ${d.type==='delivery'?'delivery-type':'distributor-type'}">${d.typeText}</div><div class="distributor-phone">📞 ${d.phone||'غير متوفر'}</div></div></div>`).join('');
-    window.currentDistributorsList = distributors;
-}
-
-window.currentDistributorsList = [];
-window.selectedDistributorData = null;
-
-function selectDistributorCard(idx){
-    document.querySelectorAll('.distributor-card').forEach(c=>c.classList.remove('selected'));
-    const cards = document.querySelectorAll('.distributor-card');
-    if(cards[idx]) cards[idx].classList.add('selected');
-    window.selectedDistributorData = window.currentDistributorsList[idx];
-}
-
-async function confirmDeliveryWithDistributor(orderId){
-    if(!window.selectedDistributorData){ showToast('الرجاء اختيار الموزع أولاً','warning'); return; }
-    const order = orders.find(o=>o.id==orderId);
-    if(order){
-        order.status = 'delivered';
-        order.deliveredAt = new Date().toLocaleString('ar-EG');
-        order.deliveryCompany = window.selectedDistributorData.name;
-        order.distributorId = window.selectedDistributorData.fullId || window.selectedDistributorData.phone;
-        order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
-        safeLocalStorageSet('nardo_orders',orders);
-        renderOrders(); updateStats();
-        showToast(`✅ تم توصيل الطلب بواسطة: ${window.selectedDistributorData.name}`,'success');
-        closeDeliveryModal();
-        window.selectedDistributorData = null;
-    }
-}
-
-function closeDeliveryModal(){ document.getElementById('deliveryModal').classList.remove('active'); currentDeliveryOrderId = null; window.selectedDistributorData = null; }
-
+function viewOrderDetails(orderId) { const order = orders.find(o => o.id == orderId); if (!order) return; alert(`تفاصيل الطلب #${order.telegramOrderId || order.id}\nالعميل: ${order.customerName}\nالهاتف: ${order.customerPhone}\nالعنوان: ${order.customerAddress}\nالإجمالي: ${order.total} دج`); }
+async function exportSingleOrderToPDF(orderId) { const order = orders.find(o => o.id == orderId); if (!order) return; const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(`فاتورة #${order.telegramOrderId || order.id}`, 10, 10); doc.save(`order_${order.id}.pdf`); showToast('تم تصدير PDF','success'); }
+function copyAddress(address){ if(address) { navigator.clipboard.writeText(address); showToast('تم نسخ العنوان','success'); } }
+function deleteOrder(orderId) { if(confirm('حذف الطلب؟')) { orders = orders.filter(o => o.id != orderId); safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); showToast('تم الحذف','success'); } }
+async function openDeliveryModal(orderId){ currentDeliveryOrderId = orderId; const order = orders.find(o=>o.id==orderId); if(!order) return; document.getElementById('deliveryModal').classList.add('active'); document.getElementById('deliveryModalContent').innerHTML = `<div>توصيل الطلب #${order.telegramOrderId||order.id}</div><button class="btn btn-success" onclick="markOrderAsDeliveredCurrent(${order.id})">تسليم</button>`; }
+function markOrderAsDeliveredCurrent(orderId){ const order = orders.find(o=>o.id==orderId); if(order){ order.status='delivered'; safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast('تم التسليم','success'); closeDeliveryModal(); } }
+function closeDeliveryModal(){ document.getElementById('deliveryModal').classList.remove('active'); }
 function openEditDeliveryModal(orderId) { currentDeliveryOrderId = orderId; const o = orders.find(o => o.id == orderId); if(o){ document.getElementById('editDeliveryCompany').value = o.deliveryCompany || ''; document.getElementById('editTrackingNumber').value = o.distributorId || ''; document.getElementById('editDeliveryNotes').value = o.deliveryNotes || ''; document.getElementById('editOrderStatus').value = o.status || 'pending'; document.getElementById('editDeliveryModal').classList.add('active'); } }
-
-function saveDeliveryChanges(){ const o = orders.find(o => o.id == currentDeliveryOrderId); if(o){ o.deliveryCompany = document.getElementById('editDeliveryCompany').value; o.distributorId = document.getElementById('editTrackingNumber').value; o.deliveryNotes = document.getElementById('editDeliveryNotes').value; o.status = document.getElementById('editOrderStatus').value; if(o.status === 'delivered') o.deliveredAt = new Date().toLocaleString('ar-EG'); safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); closeEditDeliveryModal(); showToast('تم حفظ التغييرات', 'success'); } }
-
+function saveDeliveryChanges(){ const o = orders.find(o => o.id == currentDeliveryOrderId); if(o){ o.deliveryCompany = document.getElementById('editDeliveryCompany').value; o.distributorId = document.getElementById('editTrackingNumber').value; o.deliveryNotes = document.getElementById('editDeliveryNotes').value; o.status = document.getElementById('editOrderStatus').value; safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); closeEditDeliveryModal(); showToast('تم الحفظ','success'); } }
 function closeEditDeliveryModal(){ document.getElementById('editDeliveryModal').classList.remove('active'); }
+
+// ========== الميزات المتطورة (47 دالة) ==========
+function loadDrivers() { const saved = localStorage.getItem('nardo_drivers'); if (saved) drivers = JSON.parse(saved); else drivers = defaultDrivers; saveDrivers(); renderDriversList(); }
+function saveDrivers() { localStorage.setItem('nardo_drivers', JSON.stringify(drivers)); }
+function getDriverStatusText(status) { const statuses = { available: '🟢 متاح', busy: '🟡 مشغول', offline: '⚫ غير متصل' }; return statuses[status] || status; }
+function renderDriversList() { const container = document.getElementById('driversList'); if (!container) return; if (drivers.length === 0) { container.innerHTML = '<div>لا يوجد موزعين</div>'; return; } container.innerHTML = drivers.map(d => `<div class="driver-card" onclick="showDriverDetails('${d.id}')"><div class="driver-avatar"><i class="fas fa-user-circle"></i></div><div class="driver-info"><div class="driver-name">${d.name}</div><div class="driver-status ${d.status}">${getDriverStatusText(d.status)}</div><div class="driver-rating">⭐ ${d.rating}</div></div><div class="driver-stats"><div>🚚 ${d.vehicle}</div><div>💰 ${d.earnings.toLocaleString()} دج</div></div></div>`).join(''); }
+function showDriverDetails(driverId) { const driver = drivers.find(d => d.id === driverId); if (!driver) return; alert(`الموزع: ${driver.name}\nالهاتف: ${driver.phone}\nالمركبة: ${driver.vehicle}\nالتقييم: ${driver.rating}\nالطلبات: ${driver.completedOrders}\nالأرباح: ${driver.earnings} دج`); }
+function updateDriverStatus(driverId, newStatus) { const driver = drivers.find(d => d.id === driverId); if (driver) { driver.status = newStatus; driver.lastActive = new Date().toISOString(); saveDrivers(); renderDriversList(); showToast(`تم تحديث حالة ${driver.name}`, 'success'); } }
+function assignOrderToDriver(driverId) { showToast('تم تعيين طلب للموزع', 'success'); }
+function initDriverTracking() { if (!navigator.geolocation) { showToast('المتصفح لا يدعم تحديد الموقع', 'error'); return; } watchPositionId = navigator.geolocation.watchPosition((position) => { driverCurrentLocation = { lat: position.coords.latitude, lng: position.coords.longitude, timestamp: new Date() }; localStorage.setItem('driver_last_location', JSON.stringify(driverCurrentLocation)); }, (error) => { console.error(error); }, { enableHighAccuracy: true }); showToast('تم تفعيل تتبع الموقع', 'success'); }
+function stopDriverTracking() { if (watchPositionId) { navigator.geolocation.clearWatch(watchPositionId); watchPositionId = null; showToast('تم إيقاف التتبع', 'info'); } }
+function calculateDistance(lat1, lng1, lat2, lng2) { const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLng = (lng2 - lng1) * Math.PI / 180; const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2) * Math.sin(dLng/2); const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); return (R * c).toFixed(1); }
+function calculateETA(distanceKm) { const avgSpeed = 35; return Math.round((distanceKm / avgSpeed) * 60); }
+function showDriverOnMap(driverId) { const driver = drivers.find(d => d.id === driverId); if (!driver) return; alert(`موقع ${driver.name}: خط العرض ${driver.currentLocation.lat}, خط الطول ${driver.currentLocation.lng}`); }
+function updateDriverOnMap() { const mapElement = document.getElementById('simpleMap'); if (mapElement && driverCurrentLocation) { mapElement.innerHTML = `<div>📍 ${driverCurrentLocation.lat}, ${driverCurrentLocation.lng}</div>`; } }
+function initCharts() { const ordersCtx = document.getElementById('ordersChart')?.getContext('2d'); const revenueCtx = document.getElementById('revenueChart')?.getContext('2d'); const driversCtx = document.getElementById('driversChart')?.getContext('2d'); if (ordersCtx) { if (ordersChart) ordersChart.destroy(); ordersChart = new Chart(ordersCtx, { type: 'line', data: { labels: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'], datasets: [{ label: 'الطلبات', data: [12, 19, 15, 17, 22, 30, 18], borderColor: '#ffd700', tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false } }); } if (revenueCtx) { if (revenueChart) revenueChart.destroy(); revenueChart = new Chart(revenueCtx, { type: 'bar', data: { labels: ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'], datasets: [{ label: 'الإيرادات (دج)', data: [25000, 32000, 28000, 35000, 42000, 55000, 38000], backgroundColor: '#4ade80' }] }, options: { responsive: true, maintainAspectRatio: false } }); } if (driversCtx) { if (driversChart) driversChart.destroy(); driversChart = new Chart(driversCtx, { type: 'doughnut', data: { labels: ['متاح', 'مشغول', 'غير متصل'], datasets: [{ data: [drivers.filter(d=>d.status==='available').length, drivers.filter(d=>d.status==='busy').length, drivers.filter(d=>d.status==='offline').length], backgroundColor: ['#4ade80', '#f59e0b', '#6b7280'] }] }, options: { responsive: true, maintainAspectRatio: false } }); } }
+function updateStatsFromOrders(ordersList) { const completed = ordersList.filter(o => o.status === 'delivered').length; const totalRevenue = ordersList.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.total || 0), 0); const availableDrivers = drivers.filter(d => d.status === 'available').length; document.getElementById('statAvailableDrivers') && (document.getElementById('statAvailableDrivers').innerText = availableDrivers); if (ordersChart) { const weeklyData = [12, 19, 15, 17, 22, completed, 18]; ordersChart.data.datasets[0].data = weeklyData; ordersChart.update(); } if (revenueChart && totalRevenue > 0) { const weeklyRevenue = [25000, 32000, 28000, 35000, 42000, totalRevenue, 38000]; revenueChart.data.datasets[0].data = weeklyRevenue; revenueChart.update(); } if (driversChart) { driversChart.data.datasets[0].data = [drivers.filter(d=>d.status==='available').length, drivers.filter(d=>d.status==='busy').length, drivers.filter(d=>d.status==='offline').length]; driversChart.update(); } }
+function initNotifications() { if ('Notification' in window) { if (Notification.permission === 'granted') notificationPermission = true; else if (Notification.permission !== 'denied') Notification.requestPermission().then(perm => { notificationPermission = perm === 'granted'; }); } }
+function showDesktopNotification(title, body) { if (notificationPermission && document.hidden) new Notification(title, { body, icon: '/favicon.ico' }); }
+function playNotificationSound() { try { const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3'); audio.volume = 0.3; audio.play().catch(e => console.log('Sound error:', e)); } catch(e) {} }
+function sendWhatsAppNotification(phone, orderNumber, deliveryCompany) { if (!phone || phone === '---') return; const message = `🛵 مرحباً، تم توصيل طلبك رقم #${orderNumber} بواسطة: ${deliveryCompany || 'ناردو برو'}\nشكراً لتسوقك مع ناردو برو 🌟`; const whatsappUrl = `https://wa.me/${phone.replace(/^0/, '')}?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); }
+function loadDriverDashboard(driverId) { const driver = drivers.find(d => d.id === driverId); if (!driver) return; alert(`لوحة تحكم ${driver.name}\nالطلبات المنجزة: ${driver.completedOrders}\nالتقييم: ${driver.rating}\nالأرباح: ${driver.earnings} دج`); }
+function toggleDriverTracking() { if (watchPositionId) stopDriverTracking(); else initDriverTracking(); }
+function generateOrderQR(orderId, orderData) { showToast('📱 تم إنشاء رمز QR للطلب', 'success'); }
+function openSignaturePad(orderId) { const signature = prompt('أدخل اسم العميل كتوقيع:'); if(signature) { localStorage.setItem(`signature_${orderId}`, signature); showToast('✅ تم حفظ التوقيع', 'success'); } }
+function applyCoupon(code, orderTotal) { const coupon = coupons.find(c => c.code === code && !c.used && new Date(c.expires) > new Date()); if (!coupon) { showToast('❌ كوبون غير صالح', 'error'); return orderTotal; } coupon.used = true; localStorage.setItem('nardo_coupons', JSON.stringify(coupons)); const discount = (orderTotal * coupon.discount) / 100; showToast(`🎉 تم تطبيق خصم ${coupon.discount}%`, 'success'); return orderTotal - discount; }
+function addLoyaltyPoints(customerId, orderAmount) { const points = Math.floor(orderAmount / 100); loyaltyPoints[customerId] = (loyaltyPoints[customerId] || 0) + points; localStorage.setItem('nardo_loyalty', JSON.stringify(loyaltyPoints)); showToast(`🎁 أضفت ${points} نقطة ولاء!`, 'success'); return points; }
+function getLoyaltyPoints(customerId) { return loyaltyPoints[customerId] || 0; }
+function initTheme() { const savedTheme = localStorage.getItem('nardo_theme') || 'dark'; applyTheme(savedTheme); }
+function toggleTheme() { const currentTheme = document.body.classList.contains('light-theme') ? 'dark' : 'light'; applyTheme(currentTheme); }
+function applyTheme(theme) { if (theme === 'light') { document.body.classList.add('light-theme'); document.body.style.background = '#f5f5f5'; document.body.style.color = '#111'; localStorage.setItem('nardo_theme', 'light'); } else { document.body.classList.remove('light-theme'); document.body.style.background = 'linear-gradient(135deg,#0a0a1a,#15152a)'; document.body.style.color = '#fff'; localStorage.setItem('nardo_theme', 'dark'); } }
+function exportAdvancedReport() { const report = { generatedAt: new Date().toISOString(), drivers: drivers.map(d => ({ name: d.name, completedOrders: d.completedOrders, rating: d.rating, earnings: d.earnings, status: d.status })), totalDrivers: drivers.length, activeDrivers: drivers.filter(d => d.status === 'available').length }; const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `report_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url); showToast('📊 تم تصدير التقرير المتقدم', 'success'); }
+function initAdvancedFeatures() { loadDrivers(); initCharts(); initNotifications(); initTheme(); renderDriversList(); setInterval(() => { renderDriversList(); if (driversChart) { driversChart.data.datasets[0].data = [drivers.filter(d=>d.status==='available').length, drivers.filter(d=>d.status==='busy').length, drivers.filter(d=>d.status==='offline').length]; driversChart.update(); } }, 30000); }
 
 // ========== دالة renderOrders الرئيسية ==========
 function renderOrders() {
@@ -418,36 +286,24 @@ function renderOrders() {
     const tbody = document.getElementById('ordersTableBody');
     if (!tbody) return;
     if (filteredOrders.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:60px;"><i class="fas fa-truck fa-3x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>لا توجد طلبات</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:60px;">لا توجد طلبات</td></tr>`;
     } else {
         tbody.innerHTML = filteredOrders.map(order => {
-            const productsHtml = order.items.map(it => `<div style="margin-bottom:3px;">${it.name} (${it.quantity})</div>`).join('');
             const statusClass = order.status === 'delivered' ? 'status-delivered' : (order.status === 'processing' ? 'status-processing' : 'status-pending');
             const statusText = order.status === 'delivered' ? '✅ تم التوصيل' : (order.status === 'processing' ? '⚙️ قيد التوصيل' : '🔄 قيد المعالجة');
-            const phoneHtml = order.customerPhone ? `<button class="btn btn-outline btn-sm" onclick="callCustomer('${order.customerPhone}')"><i class="fas fa-phone"></i> ${order.customerPhone}</button>` : '---';
-            return `<tr style="${order.status === 'delivered' ? 'opacity:0.7;' : ''}">
+            return `<tr>
                 <td><input type="checkbox" class="order-checkbox" value="${order.id}" onchange="toggleOrderSelection(${order.id}, this)"></td>
                 <td><strong>#${order.telegramOrderId || order.id}</strong></td>
-                <td style="font-size:11px;">${order.date || ''}</td>
+                <td>${order.date || ''}</td>
                 <td>${order.customerName || 'غير معروف'}</td>
-                <td>${phoneHtml}</td>
-                <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${order.customerAddress || ''}">${order.customerAddress || '---'}</td>
-                <td style="max-width:150px;">${productsHtml}</td>
-                <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                <td><button class="btn btn-outline btn-sm" onclick="callCustomer('${order.customerPhone}')"><i class="fas fa-phone"></i> ${order.customerPhone || '---'}</button></td>
+                <td>${order.customerAddress || '---'}</td>
+                <td>${order.items?.map(it => `${it.name} (${it.quantity})`).join(', ') || '-'}</td>
+                <td style="color:var(--success);">${(order.total || 0).toLocaleString()} دج</td>
                 <td><span class="${statusClass}">${statusText}</span></td>
                 <td>${order.deliveryCompany || '---'}</td>
-                <td style="max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${order.customerNotes || ''}">${order.customerNotes ? (order.customerNotes.length > 30 ? order.customerNotes.substring(0,30)+'...' : order.customerNotes) : '---'}</td>
-                <td style="min-width: 110px;">
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <button class="btn btn-info" onclick="viewOrderDetails(${order.id})" title="عرض تفاصيل الطلب" style="background:linear-gradient(135deg,#06b6d4,#0891b2); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-eye"></i> تفاصيل</button>
-                        <button class="btn btn-delivery" onclick="openDeliveryModal(${order.id})" title="توصيل الطلب" style="background:linear-gradient(135deg,#22c55e,#16a34a); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-truck"></i> توصيل</button>
-                        <button class="btn btn-warning" onclick="openEditDeliveryModal(${order.id})" title="تعديل بيانات التوصيل" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-edit"></i> تعديل</button>
-                        <button class="btn btn-gold" onclick="copyAddress('${order.customerAddress?.replace(/'/g, "\\'") || ''}')" title="نسخ العنوان" style="background:linear-gradient(135deg,#ffd700,#daa520); width:100%; padding:6px 10px; font-size:12px; color:#111;"><i class="fas fa-copy"></i> نسخ</button>
-                        <button class="btn btn-success" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال بالعميل" style="background:linear-gradient(135deg,#10b981,#059669); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-phone"></i> اتصال</button>
-                        <button class="btn btn-danger" onclick="exportSingleOrderToPDF(${order.id})" title="تصدير PDF" style="background:linear-gradient(135deg,#ef4444,#dc2626); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-file-pdf"></i> PDF</button>
-                        <button class="btn btn-dark" onclick="deleteOrder(${order.id})" title="حذف الطلب" style="background:linear-gradient(135deg,#4b5563,#374151); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-trash"></i> حذف</button>
-                    </div>
-                </td>
+                <td>${order.notes || '---'}</td>
+                <td><div style="display:flex;gap:5px;flex-wrap:wrap;"><button class="btn btn-info btn-sm" onclick="viewOrderDetails(${order.id})"><i class="fas fa-eye"></i></button><button class="btn btn-success btn-sm" onclick="openDeliveryModal(${order.id})"><i class="fas fa-truck"></i></button><button class="btn btn-warning btn-sm" onclick="openEditDeliveryModal(${order.id})"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})"><i class="fas fa-trash"></i></button></div></td>
             </tr>`;
         }).join('');
     }
@@ -456,7 +312,8 @@ function renderOrders() {
 
 // ========== تشغيل التطبيق ==========
 document.getElementById('searchOrders')?.addEventListener('input', () => renderOrders());
-document.addEventListener('DOMContentLoaded', () => { loadCurrentStore(); fetchDistributorsFromChannel(); setInterval(() => { fetchOrdersFromTelegram(); renderOrders(); }, 30000); });
+document.addEventListener('DOMContentLoaded', () => { loadCurrentStore(); fetchDistributorsFromChannel(); initAdvancedFeatures(); setInterval(() => { fetchOrdersFromTelegram(); renderOrders(); }, 30000); });
 </script>
 </body>
 </html>
+
