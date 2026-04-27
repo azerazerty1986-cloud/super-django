@@ -193,22 +193,67 @@ function renderOrders() {
 }
 
 // ========== نافذة جلب الطلبات من التليجرام ==========
-function openFetchOrdersModal() {
-    const modalDiv = document.createElement('div');
-    modalDiv.className = 'telegram-fetch-modal';
-    modalDiv.id = 'telegramFetchModal';
-    modalDiv.innerHTML = `
-        <div class="telegram-modal-overlay" onclick="closeTelegramModal()"></div>
-        <div class="telegram-modal-content">
-            <div class="telegram-modal-header" style="display:flex;justify-content:space-between;border-bottom:1px solid var(--gold);padding-bottom:15px"><h3><i class="fab fa-telegram"></i> جلب الطلبات من القناة</h3><button onclick="closeTelegramModal()" style="background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer">&times;</button></div>
-            <div class="telegram-channel-info" style="margin:15px 0;padding:10px;background:rgba(0,0,0,.3);border-radius:16px"><div>📢 معرف القناة: <strong>${TELEGRAM.channelId}</strong></div><div>🤖 البوت: <strong>@NardoProBot</strong></div></div>
-            <div class="telegram-controls" style="display:flex;gap:10px;flex-wrap:wrap;margin:15px 0"><button class="btn btn-telegram" onclick="fetchLatestMessages()" id="fetchBtn"><i class="fas fa-download"></i> جلب أحدث الرسائل</button><button class="btn btn-info" onclick="fetchAllMessages()" id="fetchAllBtn"><i class="fas fa-cloud-download-alt"></i> جلب الكل</button><input type="text" id="filterTelegramMessages" placeholder="بحث..." style="flex:1;padding:10px;border-radius:40px;border:1px solid var(--gold);background:rgba(0,0,0,.3);color:#fff" onkeyup="filterTelegramMessages()"></div>
-            <div id="fetchProgress" style="display:none;margin:15px 0"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><span id="progressText">جاري...</span></div>
-            <div class="telegram-messages-list" id="telegramMessagesList"><div style="text-align:center;padding:40px"><i class="fas fa-telegram fa-3x" style="color:var(--gold)"></i><p>اضغط على جلب الرسائل</p></div></div>
-            <div style="margin-top:15px;display:flex;gap:10px"><button class="btn btn-success" onclick="importSelectedTelegramMessages()" style="flex:1"><i class="fas fa-arrow-down"></i> استيراد المحددة</button><button class="btn btn-outline" onclick="closeTelegramModal()">إغلاق</button></div>
+  async function openDeliveryModal(orderId) {
+    currentDeliveryOrderId = orderId;
+    const order = orders.find(o => o.id == orderId);
+    if (!order) return;
+    
+    await fetchDistributorsFromChannel();
+    
+    const modalContent = document.getElementById('deliveryModalContent');
+    modalContent.innerHTML = `
+        <div style="margin-bottom:20px">
+            <div style="background:rgba(255,215,0,0.1);border-radius:16px;padding:15px;margin-bottom:15px">
+                <div><i class="fas fa-hashtag"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId || order.id}</div>
+                <div><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName || 'غير معروف'}</div>
+                <div><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone || 'غير متوفر'}</div>
+                <div><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress || 'غير متوفر'}</div>
+                <div><i class="fas fa-coins"></i> <strong>الإجمالي:</strong> ${(order.total || 0).toLocaleString()} دج</div>
+                <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,215,0,0.2)">
+                    <i class="fas fa-truck-fast" style="color:var(--gold);"></i> 
+                    <strong>جهة التوصيل الحالية:</strong>
+                    <div style="background:rgba(0,0,0,0.4);border-radius:12px;padding:10px;margin-top:6px">
+                        <span style="font-size:15px;font-weight:bold;">🚚 ${order.deliveryCompany || 'لا يوجد'}</span>
+                        ${order.distributorId ? `<span style="font-size:12px;color:#aaa;display:block;margin-top:5px;">🆔 المعرف: ${order.distributorId}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:15px">
+                <label><i class="fas fa-city"></i> اختيار الولاية</label>
+                <select id="stateSelect" class="state-select" onchange="loadDistributorsForModal()" style="width:100%;padding:12px;background:rgba(0,0,0,.4);border:1px solid var(--gold);border-radius:12px;color:#fff">
+                    <option value="">-- اختر الولاية --</option>
+                    ${Object.keys(distributorsData).map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+            </div>
+            
+            <div id="distributorsContainer" style="margin-bottom:20px;max-height:300px;overflow-y:auto">
+                <div style="text-align:center;padding:20px;color:#888">
+                    <i class="fas fa-map-marker-alt"></i> اختر ولاية لعرض الموزعين
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:15px">
+                <label><i class="fas fa-sticky-note"></i> ملاحظة إضافية</label>
+                <textarea id="deliveryNote" rows="2" placeholder="ملاحظات للتوصيل..." style="width:100%;padding:10px;background:rgba(0,0,0,.4);border:1px solid rgba(255,215,0,.2);border-radius:12px;color:#fff">${order.deliveryNotes || ''}</textarea>
+            </div>
+            
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn btn-success" onclick="confirmDeliveryWithSelectedDistributor(${order.id})" style="flex:1">
+                    <i class="fas fa-check-circle"></i> توصيل مع الموزع المختار
+                </button>
+                <button class="btn btn-warning" onclick="markOrderAsDeliveredCurrent(${order.id})" style="flex:1">
+                    <i class="fas fa-truck"></i> تسليم بالجهة الحالية
+                </button>
+                <button class="btn btn-info" onclick="callCustomer('${order.customerPhone || ''}')" style="flex:1">
+                    <i class="fas fa-phone"></i> اتصال
+                </button>
+                <button class="btn btn-outline" onclick="closeDeliveryModal()">إغلاق</button>
+            </div>
         </div>
     `;
-    document.body.appendChild(modalDiv);
+    
+    document.getElementById('deliveryModal').classList.add('active');
 }
 function closeTelegramModal() { const modal = document.getElementById('telegramFetchModal'); if(modal) modal.remove(); }
 async function fetchLatestMessages() { showToast('جاري جلب الرسائل...','info'); telegramMessages = []; const container = document.getElementById('telegramMessagesList'); container.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><p>جاري التحميل...</p></div>'; try { const res = await fetch(`${TELEGRAM.apiUrl}${TELEGRAM.botToken}/getUpdates?limit=50`); const data = await res.json(); if(data.ok && data.result) { for(const update of data.result) { const msg = update.channel_post || update.message; if(msg && msg.text && msg.chat?.id?.toString() === TELEGRAM.channelId) { telegramMessages.push({ id: update.update_id, text: msg.text, date: new Date(msg.date*1000).toLocaleString('ar-EG') }); } } renderTelegramMessagesList(); showToast(`تم جلب ${telegramMessages.length} رسالة`,'success'); } else { container.innerHTML = '<div style="text-align:center;padding:40px;color:red">حدث خطأ في جلب الرسائل</div>'; } } catch(e) { container.innerHTML = '<div style="text-align:center;padding:40px;color:red">خطأ في الاتصال</div>'; showToast('خطأ في الاتصال','error'); } }
