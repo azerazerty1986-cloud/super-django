@@ -168,7 +168,8 @@
     <div class="table-container">
         <table class="data-table">
             <thead><tr><th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th><th>رقم الطلب</th><th>التاريخ</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th><th>جهة التوصيل</th><th>ملاحظات</th><th>إجراءات</th></tr></thead>
-            <tbody id="ordersTableBody"><tr><td colspan="12" style="text-align:center; padding:60px;"><i class="fas fa-truck fa-3x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>جاري تحميل الطلبات...</td></tr></tbody>
+            <tbody id="ordersTableBody"><tr><td colspan="12" style="text-align:center; padding:60px;"><i class="fas fa-truck fa-3x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>جاري تحميل الطلبات...</td></tr>
+            </tbody>
         </table>
     </div>
 
@@ -180,6 +181,7 @@
 </div>
 
 <div id="deliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3><i class="fas fa-truck"></i> توصيل الطلب - اختيار الموزع حسب الولاية</h3><button class="modal-close" onclick="closeDeliveryModal()">&times;</button></div><div id="deliveryModalContent"></div></div></div>
+<div id="editDeliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تعديل بيانات التوصيل</h3><button class="modal-close" onclick="closeEditDeliveryModal()">&times;</button></div><div class="form-group"><label>جهة التوصيل</label><input type="text" id="editDeliveryCompany"></div><div class="form-group"><label>رقم التتبع</label><input type="text" id="editTrackingNumber"></div><div class="form-group"><label>ملاحظات</label><textarea id="editDeliveryNotes" rows="2"></textarea></div><div class="form-group"><label>الحالة</label><select id="editOrderStatus"><option value="pending">قيد المعالجة</option><option value="processing">قيد التوصيل</option><option value="delivered">تم التوصيل</option></select></div><button class="btn btn-gold" style="width:100%;" onclick="saveDeliveryChanges()">حفظ</button></div></div>
 
 <script>
 // ========== إعدادات التليجرام ==========
@@ -266,29 +268,77 @@ function extractOrderDataFromText(text) {
     return result;
 }
 
-async function fetchOrdersFromTelegram() { /* جلب الطلبات (نفس الكود السابق) */ showToast('تم جلب الطلبات', 'success'); }
-function deliverOrder(orderId) { }
-function deleteOrder(orderId) { }
-function updateOrderStatus(orderId, newStatus) { const o = orders.find(o=>o.id==orderId); if(o){ o.status=newStatus; if(newStatus==='delivered') o.deliveredAt=new Date().toLocaleString('ar-EG'); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast(`تم تحديث الحالة`,'success');} }
+async function fetchOrdersFromTelegram() { showToast('تم جلب الطلبات', 'success'); }
+
 function showToast(msg,type){ const t=document.createElement('div'); t.className=`toast ${type}`; t.innerHTML=`<i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i> ${msg}`; document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+
 function updateStats(){ const my=orders.filter(o=>o.storeID===currentStore.storeFixedID); document.getElementById('statPending').innerText=my.filter(o=>o.status!=='delivered').length; document.getElementById('statDelivered').innerText=my.filter(o=>o.status==='delivered').length; document.getElementById('statTotal').innerText=my.length; }
+
 function filterOrders(filter,btn){ currentFilter=filter; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); if(btn) btn.classList.add('active'); renderOrders(); }
+
 function getFilteredOrders(){ let f=orders.filter(o=>o.storeID===currentStore.storeFixedID); const s=document.getElementById('searchOrders')?.value.toLowerCase(); if(s) f=f.filter(o=>(o.telegramOrderId&&o.telegramOrderId.includes(s))||(o.customerName&&o.customerName.includes(s))); if(currentFilter==='pending') f=f.filter(o=>o.status==='pending'); else if(currentFilter==='processing') f=f.filter(o=>o.status==='processing'); else if(currentFilter==='delivered') f=f.filter(o=>o.status==='delivered'); else if(currentFilter==='today'){ const t=new Date().toLocaleDateString('ar-EG'); f=f.filter(o=>o.date?.includes(t)); } else if(currentFilter==='week'){ const w=new Date(); w.setDate(w.getDate()-7); f=f.filter(o=>new Date(o.date)>=w); } return f; }
-function renderOrders(){ const filtered=getFilteredOrders(); const tbody=document.getElementById('ordersTableBody'); if(filtered.length===0) tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:60px;">لا توجد طلبات</td></tr>'; else tbody.innerHTML=filtered.map(order=>`<tr><td><input type="checkbox" class="order-checkbox" value="${order.id}" onchange="toggleOrderSelection(${order.id},this)"></td><td><strong>#${order.telegramOrderId||order.id}</strong></td><td>${order.date||''}</td><td>${order.customerName||'غير معروف'}</td><td><button class="btn btn-outline btn-sm" onclick="callCustomer('${order.customerPhone||''}')"><i class="fas fa-phone"></i> ${order.customerPhone||'اتصل'}</button></td><td>${order.customerAddress||'---'}</td><td>${order.items.map(it=>`${it.name}(${it.quantity})`).join(',')}</td><td style="color:var(--success);">${order.total.toLocaleString()} دج</td><td><span class="${order.status==='delivered'?'status-delivered':(order.status==='processing'?'status-processing':'status-pending')}">${order.status==='delivered'?'✅ تم التوصيل':(order.status==='processing'?'⚙️ قيد التوصيل':'🔄 قيد المعالجة')}</span></td><td>${order.deliveryCompany||'---'}</td><td>${order.customerNotes||'---'}</td><td><div style="display:flex;gap:5px;"><button class="btn btn-success btn-sm" onclick="openDeliveryModal(${order.id})"><i class="fas fa-truck"></i></button><button class="btn btn-info btn-sm" onclick="openEditDeliveryModal(${order.id})"><i class="fas fa-edit"></i></button><button class="btn btn-delivery btn-sm" onclick="sendToDelivery(${order.id})"><i class="fas fa-shipping-fast"></i></button><button class="btn btn-error btn-sm" onclick="deleteOrder(${order.id})"><i class="fas fa-trash"></i></button></div></td></tr>`).join(''); updateStats(); }
+
 function toggleOrderSelection(id,chk){ if(chk.checked) selectedOrders.add(id); else selectedOrders.delete(id); }
+
 function toggleSelectAll(){ const cbs=document.querySelectorAll('.order-checkbox'); cbs.forEach(cb=>{ cb.checked=document.getElementById('selectAll').checked; if(cb.checked) selectedOrders.add(parseInt(cb.value)); else selectedOrders.delete(parseInt(cb.value)); }); }
+
 function bulkDeliverOrders(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} selectedOrders.forEach(id=>{ const o=orders.find(o=>o.id==id); if(o&&o.status!=='delivered'){ o.status='delivered'; o.deliveredAt=new Date().toLocaleString('ar-EG'); } }); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast(`تم تسليم ${selectedOrders.size} طلب`,'success'); selectedOrders.clear(); document.getElementById('selectAll').checked=false; }
+
 function bulkDeleteOrders(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} if(confirm(`حذف ${selectedOrders.size} طلب؟`)){ orders=orders.filter(o=>!selectedOrders.has(o.id)); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); showToast(`تم حذف ${selectedOrders.size} طلب`,'success'); selectedOrders.clear(); document.getElementById('selectAll').checked=false; } }
-async function bulkExportOrdersToPDF(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} const list=orders.filter(o=>selectedOrders.has(o.id)); for(let o of list) await exportSingleOrderToPDF(o); showToast(`تم تصدير ${list.length} PDF`,'success'); }
-async function exportSingleOrderToPDF(order){ const {jsPDF}=window.jspdf; const doc=new jsPDF(); const temp=document.createElement('div'); temp.style.position='absolute'; temp.style.left='-9999px'; temp.innerHTML=`<div style="padding:20px;font-family:Cairo;"><h2>فاتورة #${order.telegramOrderId||order.id}</h2><p>العميل: ${order.customerName}<br>الهاتف: ${order.customerPhone}<br>العنوان: ${order.customerAddress}</p><table border="1"><tr><th>المنتج</th><th>الكمية</th><th>السعر</th></tr>${order.items.map(i=>`<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.price} دج</td></tr>`).join('')}<tr><td colspan="2">الإجمالي</td><td>${order.total} دج</td></tr></table></div>`; document.body.appendChild(temp); const canvas=await html2canvas(temp); doc.addImage(canvas.toDataURL('image/png'),'PNG',10,10,190,0); doc.save(`order_${order.id}.pdf`); document.body.removeChild(temp); }
+
+async function bulkExportOrdersToPDF(){ if(selectedOrders.size===0){showToast('اختر طلبات أولاً','warning');return;} const list=orders.filter(o=>selectedOrders.has(o.id)); for(let o of list) await exportSingleOrderToPDF(o.id); showToast(`تم تصدير ${list.length} PDF`,'success'); }
+
 function exportDeliveredOrdersToExcel(){ const data=orders.filter(o=>o.storeID===currentStore.storeFixedID&&o.status==='delivered').map(o=>({'رقم الطلب':o.telegramOrderId||o.id,'التاريخ':o.date,'العميل':o.customerName,'الهاتف':o.customerPhone,'العنوان':o.customerAddress,'الإجمالي':o.total,'جهة التوصيل':o.deliveryCompany})); if(!data.length){showToast('لا توجد طلبات مكتملة','warning');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المكتملة'); XLSX.writeFile(wb,`delivered_${currentStore.storeFixedID}.xlsx`); showToast('تم التصدير','success'); }
+
 function exportPendingOrdersToExcel(){ const data=orders.filter(o=>o.storeID===currentStore.storeFixedID&&o.status!=='delivered').map(o=>({'رقم الطلب':o.telegramOrderId||o.id,'التاريخ':o.date,'العميل':o.customerName,'الهاتف':o.customerPhone,'العنوان':o.customerAddress,'الإجمالي':o.total,'الحالة':o.status==='pending'?'معلق':'قيد التوصيل'})); if(!data.length){showToast('لا توجد طلبات معلقة','warning');return;} const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المعلقة'); XLSX.writeFile(wb,`pending_${currentStore.storeFixedID}.xlsx`); showToast('تم التصدير','success'); }
+
 function printDeliveryReport(){ const flt=getFilteredOrders(); if(!flt.length){showToast('لا توجد طلبات','warning');return;} const w=window.open(''); w.document.write(`<html dir="rtl"><head><title>تقرير التوصيل</title><style>body{font-family:Cairo;padding:20px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px}</style></head><body><h1>تقرير التوصيل - ${currentStore.storeName}</h1><p>التاريخ: ${new Date().toLocaleString()}</p><table><tr><th>رقم الطلب</th><th>العميل</th><th>الهاتف</th><th>العنوان</th><th>جهة التوصيل</th></tr>${flt.map(o=>`<tr><td>${o.telegramOrderId||o.id}</td><td>${o.customerName||'-'}</td><td>${o.customerPhone||'-'}</td><td>${o.customerAddress||'-'}</td><td>${o.deliveryCompany||'-'}</td></tr>`).join('')}</table></body></html>`); w.print(); }
+
 function callCustomer(phone){ if(phone&&phone!=='---') window.location.href=`tel:${phone}`; else showToast('رقم غير متوفر','warning'); }
 
-// نافذة التوصيل الرئيسية مع اختيار الولاية والموزع
-    
- // ========== نافذة التوصيل الرئيسية مع اختيار الولاية والموزع ==========
+// ========== عرض تفاصيل الطلب ==========
+function viewOrderDetails(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) return;
+    const productsHtml = order.items.map(item => `<div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #333;"><span>${item.name} (x${item.quantity})</span><span style="color:#4ade80;">${(item.price * item.quantity).toLocaleString()} دج</span></div>`).join('');
+    const modalHtml = `<div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:10001;"><div style="background:linear-gradient(135deg,#1a1a2e,#0f0f1a);border:2px solid #ffd700;border-radius:28px;padding:25px;max-width:500px;width:90%;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:15px;margin-bottom:20px;"><h3 style="color:#ffd700;"><i class="fas fa-file-invoice"></i> تفاصيل الطلب #${order.telegramOrderId || order.id}</h3><button onclick="this.closest('div').parentElement.remove()" style="background:rgba(255,255,255,0.2);border:none;color:#ffd700;font-size:24px;cursor:pointer;width:35px;height:35px;border-radius:50%;">&times;</button></div><div style="margin-bottom:20px;"><p><i class="fas fa-calendar"></i> <strong>التاريخ:</strong> ${order.date || 'غير محدد'}</p><p><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName || 'غير معروف'}</p><p><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone || 'غير متوفر'}</p><p><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress || 'غير متوفر'}</p><p><i class="fas fa-truck"></i> <strong>جهة التوصيل:</strong> ${order.deliveryCompany || 'غير محدد'}</p>${order.distributorId ? `<p><i class="fas fa-id-card"></i> <strong>رقم التتبع:</strong> ${order.distributorId}</p>` : ''}${order.deliveryNotes ? `<p><i class="fas fa-sticky-note"></i> <strong>ملاحظات:</strong> ${order.deliveryNotes}</p>` : ''}</div><div style="margin-bottom:20px;"><h4 style="color:#ffd700;">المنتجات</h4>${productsHtml}<div style="background:rgba(74,222,128,0.2);border-radius:12px;padding:12px;margin-top:10px;text-align:center;"><strong>الإجمالي:</strong> ${order.total.toLocaleString()} دج</div></div><div style="display:flex;gap:10px;"><button class="btn btn-success" onclick="window.location.href='tel:${order.customerPhone}'" style="flex:1;"><i class="fas fa-phone"></i> اتصال</button><button class="btn btn-gold" onclick="navigator.clipboard.writeText('${order.customerAddress}'); showToast('تم نسخ العنوان','success'); this.closest('div').parentElement.remove();" style="flex:1;"><i class="fas fa-copy"></i> نسخ العنوان</button><button class="btn btn-outline" onclick="this.closest('div').parentElement.remove()" style="flex:1;">إغلاق</button></div></div></div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// ========== تصدير طلب واحد PDF ==========
+async function exportSingleOrderToPDF(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = '800px';
+    tempDiv.style.background = '#ffffff';
+    tempDiv.style.color = '#000000';
+    tempDiv.style.padding = '40px';
+    tempDiv.style.fontFamily = 'Cairo, sans-serif';
+    tempDiv.style.direction = 'rtl';
+    tempDiv.innerHTML = `<div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #daa520;padding-bottom:10px;"><h1 style="margin:0;color:#daa520;">🧾 فاتورة توصيل #${order.telegramOrderId || order.id}</h1><p style="margin:5px 0;">🏪 متجر: ${order.storeName || 'ناردو برو'}</p></div><div style="margin-bottom:20px;"><p><strong>📅 التاريخ:</strong> ${order.date}</p><p><strong>👤 العميل:</strong> ${order.customerName || 'غير معروف'}</p><p><strong>📞 الهاتف:</strong> ${order.customerPhone || '---'}</p><p><strong>📍 العنوان:</strong> ${order.customerAddress || '---'}</p><p><strong>🚚 جهة التوصيل:</strong> ${order.deliveryCompany || 'غير محدد'}</p>${order.distributorId ? `<p><strong>🆔 معرف الموزع:</strong> ${order.distributorId}</p>` : ''}</div><table style="width:100%;border-collapse:collapse;margin-bottom:20px;"><thead><tr style="background:#f0f0f0;"><th style="border:1px solid #000;padding:10px;text-align:right;">المنتج</th><th style="border:1px solid #000;padding:10px;text-align:center;">الكمية</th><th style="border:1px solid #000;padding:10px;text-align:center;">السعر</th><th style="border:1px solid #000;padding:10px;text-align:center;">الإجمالي</th></tr></thead><tbody>${order.items.map(it => `<tr><td style="border:1px solid #000;padding:10px;">${it.name}</td><td style="border:1px solid #000;padding:10px;text-align:center;">${it.quantity}</td><td style="border:1px solid #000;padding:10px;text-align:center;">${it.price.toLocaleString()} دج</td><td style="border:1px solid #000;padding:10px;text-align:center;">${(it.price * it.quantity).toLocaleString()} دج</td></tr>`).join('')}</tbody><tfoot><tr style="font-weight:bold;background:#f0f0f0;"><td colspan="3" style="border:1px solid #000;padding:10px;text-align:left;">الإجمالي الكلي</td><td style="border:1px solid #000;padding:10px;text-align:center;">${order.total.toLocaleString()} دج</td></tr></tfoot></table><div style="text-align:center;margin-top:40px;font-size:12px;color:#888;">تم التوصيل بواسطة: ${order.deliveryCompany || 'مندوب المتجر'}</div>`;
+    document.body.appendChild(tempDiv);
+    try {
+        const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff', logging: false });
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        doc.save(`Delivery_${order.telegramOrderId || order.id}.pdf`);
+        showToast('✅ تم تصدير الفاتورة', 'success');
+    } catch(error) { showToast('❌ فشل تصدير PDF', 'error'); }
+    finally { document.body.removeChild(tempDiv); }
+}
+
+function copyAddress(address) { if(address && address !== '---') { navigator.clipboard.writeText(address); showToast('📋 تم نسخ العنوان', 'success'); } else { showToast('العنوان غير متوفر', 'warning'); } }
+
+function deleteOrder(orderId) { if(confirm('هل أنت متأكد من حذف هذا الطلب؟')) { orders = orders.filter(o => o.id != orderId); safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); showToast('🗑️ تم حذف الطلب', 'success'); } }
+
+// ========== نافذة التوصيل الرئيسية ==========
 async function openDeliveryModal(orderId){
     currentDeliveryOrderId = orderId;
     const order = orders.find(o=>o.id==orderId);
@@ -296,70 +346,26 @@ async function openDeliveryModal(orderId){
     const modalDiv = document.getElementById('deliveryModalContent');
     await fetchDistributorsFromChannel();
     const statesList = Object.keys(distributorsData);
-    
-    // عرض جهة التوصيل الحالية إن وجدت
     const currentDelivery = order.deliveryCompany && order.deliveryCompany !== '' ? order.deliveryCompany : 'لا يوجد';
     const currentDistributorId = order.distributorId && order.distributorId !== '' ? order.distributorId : 'لا يوجد';
-    
-    modalDiv.innerHTML = `
-        <div style="background:rgba(255,215,0,0.1);border-radius:16px;padding:15px;margin-bottom:20px;">
-            <div><i class="fas fa-hashtag"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId||order.id}</div>
-            <div><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName||'غير معروف'}</div>
-            <div><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone||'غير متوفر'}</div>
-            <div><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress||'غير متوفر'}</div>
-            <div><i class="fas fa-coins"></i> <strong>الإجمالي:</strong> ${order.total.toLocaleString()} دج</div>
-            <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,215,0,0.2);">
-                <div><i class="fas fa-truck-fast" style="color:var(--gold);"></i> <strong style="color:var(--gold);">جهة التوصيل الحالية:</strong></div>
-                <div style="background:rgba(0,0,0,0.4); border-radius:12px; padding:10px; margin-top:6px;">
-                    <span style="font-size:15px; font-weight:bold;">🚚 ${currentDelivery}</span>
-                    ${currentDelivery !== 'لا يوجد' ? `<span style="font-size:12px; color:#aaa; display:block; margin-top:5px;">🆔 رقم التتبع / المعرف: ${currentDistributorId}</span>` : ''}
-                </div>
-            </div>
-        </div>
-        <div class="form-group">
-            <label><i class="fas fa-city"></i> اختيار الولاية</label>
-            <select id="stateSelect" class="state-select" onchange="loadDistributorsByState()">
-                <option value="">-- اختر الولاية --</option>
-                ${statesList.map(s=>`<option value="${s}">${s}</option>`).join('')}
-            </select>
-        </div>
-        <div id="distributorsContainer" style="margin-bottom:20px;"></div>
-        <div class="form-group">
-            <label><i class="fas fa-sticky-note"></i> ملاحظة إضافية</label>
-            <textarea id="deliveryNote" rows="2" placeholder="ملاحظات للتوصيل...">${order.deliveryNotes || ''}</textarea>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:10px; flex-wrap:wrap;">
-            <button class="btn btn-success" style="flex:1;" onclick="confirmDeliveryWithDistributor(${order.id})"><i class="fas fa-check-circle"></i> تأكيد التوصيل مع الموزع المختار</button>
-            <button class="btn btn-warning" style="flex:1;" onclick="markOrderAsDeliveredCurrent(${order.id})"><i class="fas fa-truck"></i> تسليم بجهة التوصيل الحالية</button>
-            <button class="btn btn-info" style="flex:1;" onclick="callCustomer('${order.customerPhone||''}')"><i class="fas fa-phone"></i> اتصال</button>
-            <button class="btn btn-outline" onclick="closeDeliveryModal()">إغلاق</button>
-        </div>
-        <div style="margin-top:12px; font-size:12px; color:#888; text-align:center;">
-            <i class="fas fa-info-circle"></i> يمكنك تغيير جهة التوصيل باختيار ولاية ثم موزع، أو تسليم الطلب بجهة التوصيل الحالية مباشرة
-        </div>`;
+    modalDiv.innerHTML = `<div style="background:rgba(255,215,0,0.1);border-radius:16px;padding:15px;margin-bottom:20px;"><div><i class="fas fa-hashtag"></i> <strong>رقم الطلب:</strong> ${order.telegramOrderId||order.id}</div><div><i class="fas fa-user"></i> <strong>العميل:</strong> ${order.customerName||'غير معروف'}</div><div><i class="fas fa-phone"></i> <strong>الهاتف:</strong> ${order.customerPhone||'غير متوفر'}</div><div><i class="fas fa-map-marker-alt"></i> <strong>العنوان:</strong> ${order.customerAddress||'غير متوفر'}</div><div><i class="fas fa-coins"></i> <strong>الإجمالي:</strong> ${order.total.toLocaleString()} دج</div><div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,215,0,0.2);"><div><i class="fas fa-truck-fast" style="color:var(--gold);"></i> <strong style="color:var(--gold);">جهة التوصيل الحالية:</strong></div><div style="background:rgba(0,0,0,0.4);border-radius:12px;padding:10px;margin-top:6px;"><span style="font-size:15px;font-weight:bold;">🚚 ${currentDelivery}</span>${currentDelivery !== 'لا يوجد' ? `<span style="font-size:12px;color:#aaa;display:block;margin-top:5px;">🆔 رقم التتبع / المعرف: ${currentDistributorId}</span>` : ''}</div></div></div><div class="form-group"><label><i class="fas fa-city"></i> اختيار الولاية</label><select id="stateSelect" class="state-select" onchange="loadDistributorsByState()"><option value="">-- اختر الولاية --</option>${statesList.map(s=>`<option value="${s}">${s}</option>`).join('')}</select></div><div id="distributorsContainer" style="margin-bottom:20px;"></div><div class="form-group"><label><i class="fas fa-sticky-note"></i> ملاحظة إضافية</label><textarea id="deliveryNote" rows="2" placeholder="ملاحظات للتوصيل...">${order.deliveryNotes || ''}</textarea></div><div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;"><button class="btn btn-success" style="flex:1;" onclick="confirmDeliveryWithDistributor(${order.id})"><i class="fas fa-check-circle"></i> تأكيد التوصيل مع الموزع المختار</button><button class="btn btn-warning" style="flex:1;" onclick="markOrderAsDeliveredCurrent(${order.id})"><i class="fas fa-truck"></i> تسليم بجهة التوصيل الحالية</button><button class="btn btn-info" style="flex:1;" onclick="callCustomer('${order.customerPhone||''}')"><i class="fas fa-phone"></i> اتصال</button><button class="btn btn-outline" onclick="closeDeliveryModal()">إغلاق</button></div><div style="margin-top:12px; font-size:12px; color:#888; text-align:center;"><i class="fas fa-info-circle"></i> يمكنك تغيير جهة التوصيل باختيار ولاية ثم موزع، أو تسليم الطلب بجهة التوصيل الحالية مباشرة</div>`;
     document.getElementById('deliveryModal').classList.add('active');
 }
 
-// دالة تسليم الطلب بجهة التوصيل الحالية
 function markOrderAsDeliveredCurrent(orderId){
     const order = orders.find(o=>o.id==orderId);
     if(order){
-        if(!order.deliveryCompany || order.deliveryCompany === ''){
-            showToast('⚠️ لا توجد جهة توصيل حالية، الرجاء اختيار موزع أولاً', 'warning');
-            return;
-        }
+        if(!order.deliveryCompany || order.deliveryCompany === ''){ showToast('⚠️ لا توجد جهة توصيل حالية', 'warning'); return; }
         order.status = 'delivered';
         order.deliveredAt = new Date().toLocaleString('ar-EG');
         order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
         safeLocalStorageSet('nardo_orders', orders);
-        renderOrders(); 
-        updateStats();
+        renderOrders(); updateStats();
         showToast(`✅ تم تسليم الطلب #${order.telegramOrderId||order.id} بواسطة: ${order.deliveryCompany}`, 'success');
         closeDeliveryModal();
     }
 }
 
-// تحميل الموزعين حسب الولاية المختارة
 async function loadDistributorsByState(){
     const state = document.getElementById('stateSelect').value;
     const container = document.getElementById('distributorsContainer');
@@ -367,115 +373,90 @@ async function loadDistributorsByState(){
     container.innerHTML='<div class="loading-distributors"><i class="fas fa-spinner fa-spin"></i> جاري تحميل الموزعين...</div>';
     const distributors = await getDistributorsByState(state);
     if(distributors.length===0){ container.innerHTML='<div class="alert alert-warning">⚠️ لا توجد موزعين مسجلين في هذه الولاية</div>'; return; }
-    container.innerHTML = `<div style="margin-bottom:10px;"><strong>اختر جهة التوصيل / الموزع:</strong></div>` + distributors.map((d,idx)=>`
-        <div class="distributor-card" onclick="selectDistributorCard(${idx})" data-idx="${idx}" data-name="${d.name}" data-phone="${d.phone||''}">
-            <div class="distributor-icon">${d.type==='delivery'?'🚚':'📦'}</div>
-            <div class="distributor-info">
-                <div class="distributor-name">${d.name}</div>
-                <div class="distributor-type ${d.type==='delivery'?'delivery-type':'distributor-type'}">${d.typeText}</div>
-                <div class="distributor-phone">📞 ${d.phone||'غير متوفر'}</div>
-            </div>
-        </div>
-    `).join('');
+    container.innerHTML = `<div style="margin-bottom:10px;"><strong>اختر جهة التوصيل / الموزع:</strong></div>` + distributors.map((d,idx)=>`<div class="distributor-card" onclick="selectDistributorCard(${idx})" data-idx="${idx}"><div class="distributor-icon">${d.type==='delivery'?'🚚':'📦'}</div><div class="distributor-info"><div class="distributor-name">${d.name}</div><div class="distributor-type ${d.type==='delivery'?'delivery-type':'distributor-type'}">${d.typeText}</div><div class="distributor-phone">📞 ${d.phone||'غير متوفر'}</div></div></div>`).join('');
     window.currentDistributorsList = distributors;
 }
 
-// المتغير العمومي لقائمة الموزعين
 window.currentDistributorsList = [];
+window.selectedDistributorData = null;
 
-// اختيار موزع من البطاقات
 function selectDistributorCard(idx){
     document.querySelectorAll('.distributor-card').forEach(c=>c.classList.remove('selected'));
     const cards = document.querySelectorAll('.distributor-card');
     if(cards[idx]) cards[idx].classList.add('selected');
-    const dist = window.currentDistributorsList[idx];
-    if(dist) window.selectedDistributorData = dist;
+    window.selectedDistributorData = window.currentDistributorsList[idx];
 }
 
-// تأكيد التوصيل مع موزع جديد
 async function confirmDeliveryWithDistributor(orderId){
-    if(!window.selectedDistributorData && window.currentDistributorsList && window.currentDistributorsList.length>0 && !window.selectedDistributorData){
-        const state = document.getElementById('stateSelect')?.value;
-        if(!state){
-            showToast('الرجاء اختيار الولاية أولاً','warning');
-            return;
-        }
-        if(window.currentDistributorsList.length === 1){
-            window.selectedDistributorData = window.currentDistributorsList[0];
-            selectDistributorCard(0);
-        } else {
-            showToast('الرجاء اختيار الموزع من القائمة','warning');
-            return;
-        }
-    }
-    const dist = window.selectedDistributorData || (window.currentDistributorsList ? window.currentDistributorsList[0] : null);
-    if(!dist){ showToast('لا يوجد موزع متاح لهذه الولاية','error'); return; }
+    if(!window.selectedDistributorData){ showToast('الرجاء اختيار الموزع أولاً','warning'); return; }
     const order = orders.find(o=>o.id==orderId);
     if(order){
         order.status = 'delivered';
         order.deliveredAt = new Date().toLocaleString('ar-EG');
-        order.deliveryCompany = dist.name;
-        order.distributorId = dist.fullId || dist.phone;
+        order.deliveryCompany = window.selectedDistributorData.name;
+        order.distributorId = window.selectedDistributorData.fullId || window.selectedDistributorData.phone;
         order.deliveryNotes = document.getElementById('deliveryNote')?.value || order.deliveryNotes || '';
         safeLocalStorageSet('nardo_orders',orders);
-        renderOrders(); 
-        updateStats();
-        showToast(`✅ تم توصيل الطلب بواسطة: ${dist.name}`,'success');
-        closeDeliveryModal();
-        window.selectedDistributorData = null;
-    }
-}
-
-// إغلاق نافذة التوصيل
-function closeDeliveryModal(){ 
-    document.getElementById('deliveryModal').classList.remove('active'); 
-    currentDeliveryOrderId = null; 
-    window.selectedDistributorData = null; 
-}
-
-// اتصال بالعميل
-function callCustomer(phone){ 
-    if(phone && phone !== '---' && phone !== '') window.location.href = `tel:${phone}`; 
-    else showToast('رقم الهاتف غير متوفر', 'warning'); 
-}
-window.currentDistributorsList = [];
-function selectDistributorCard(idx){
-    document.querySelectorAll('.distributor-card').forEach(c=>c.classList.remove('selected'));
-    const cards = document.querySelectorAll('.distributor-card');
-    if(cards[idx]) cards[idx].classList.add('selected');
-    const dist = window.currentDistributorsList[idx];
-    if(dist) window.selectedDistributorData = dist;
-}
-async function confirmDeliveryWithDistributor(orderId){
-    if(!window.selectedDistributorData && window.currentDistributorsList && window.currentDistributorsList.length>0 && !window.selectedDistributorData){
-        showToast('الرجاء اختيار الموزع أولاً','warning');
-        return;
-    }
-    const dist = window.selectedDistributorData || (window.currentDistributorsList ? window.currentDistributorsList[0] : null);
-    if(!dist){ showToast('لا يوجد موزع متاح لهذه الولاية','error'); return; }
-    const order = orders.find(o=>o.id==orderId);
-    if(order){
-        order.status = 'delivered';
-        order.deliveredAt = new Date().toLocaleString('ar-EG');
-        order.deliveryCompany = dist.name;
-        order.distributorId = dist.fullId || dist.phone;
-        order.deliveryNotes = document.getElementById('deliveryNote')?.value || '';
-        safeLocalStorageSet('nardo_orders',orders);
         renderOrders(); updateStats();
-        showToast(`✅ تم توصيل الطلب بواسطة: ${dist.name}`,'success');
+        showToast(`✅ تم توصيل الطلب بواسطة: ${window.selectedDistributorData.name}`,'success');
         closeDeliveryModal();
         window.selectedDistributorData = null;
     }
 }
-function openEditDeliveryModal(orderId){ currentDeliveryOrderId=orderId; const o=orders.find(o=>o.id==orderId); if(o){ document.getElementById('editDeliveryCompany').value=o.deliveryCompany||''; document.getElementById('editTrackingNumber').value=o.distributorId||''; document.getElementById('editDeliveryNotes').value=o.deliveryNotes||''; document.getElementById('editOrderStatus').value=o.status||'pending'; document.getElementById('editDeliveryModal').classList.add('active');} }
-function saveDeliveryChanges(){ const o=orders.find(o=>o.id==currentDeliveryOrderId); if(o){ o.deliveryCompany=document.getElementById('editDeliveryCompany').value; o.distributorId=document.getElementById('editTrackingNumber').value; o.deliveryNotes=document.getElementById('editDeliveryNotes').value; o.status=document.getElementById('editOrderStatus').value; if(o.status==='delivered') o.deliveredAt=new Date().toLocaleString('ar-EG'); safeLocalStorageSet('nardo_orders',orders); renderOrders(); updateStats(); closeEditDeliveryModal(); showToast('تم حفظ التغييرات','success');} }
-function closeDeliveryModal(){ document.getElementById('deliveryModal').classList.remove('active'); currentDeliveryOrderId=null; window.selectedDistributorData=null; }
-function closeEditDeliveryModal(){ document.getElementById('editDeliveryModal').classList.remove('active'); }
-function sendToDelivery(orderId){ openDeliveryModal(orderId); }
 
-document.getElementById('searchOrders')?.addEventListener('input',()=>renderOrders());
-document.addEventListener('DOMContentLoaded',()=>{ loadCurrentStore(); fetchDistributorsFromChannel(); setInterval(()=>{ fetchOrdersFromTelegram(); renderOrders(); },30000); });
+function closeDeliveryModal(){ document.getElementById('deliveryModal').classList.remove('active'); currentDeliveryOrderId = null; window.selectedDistributorData = null; }
+
+function openEditDeliveryModal(orderId) { currentDeliveryOrderId = orderId; const o = orders.find(o => o.id == orderId); if(o){ document.getElementById('editDeliveryCompany').value = o.deliveryCompany || ''; document.getElementById('editTrackingNumber').value = o.distributorId || ''; document.getElementById('editDeliveryNotes').value = o.deliveryNotes || ''; document.getElementById('editOrderStatus').value = o.status || 'pending'; document.getElementById('editDeliveryModal').classList.add('active'); } }
+
+function saveDeliveryChanges(){ const o = orders.find(o => o.id == currentDeliveryOrderId); if(o){ o.deliveryCompany = document.getElementById('editDeliveryCompany').value; o.distributorId = document.getElementById('editTrackingNumber').value; o.deliveryNotes = document.getElementById('editDeliveryNotes').value; o.status = document.getElementById('editOrderStatus').value; if(o.status === 'delivered') o.deliveredAt = new Date().toLocaleString('ar-EG'); safeLocalStorageSet('nardo_orders', orders); renderOrders(); updateStats(); closeEditDeliveryModal(); showToast('تم حفظ التغييرات', 'success'); } }
+
+function closeEditDeliveryModal(){ document.getElementById('editDeliveryModal').classList.remove('active'); }
+
+// ========== دالة renderOrders الرئيسية ==========
+function renderOrders() {
+    const filteredOrders = getFilteredOrders();
+    const tbody = document.getElementById('ordersTableBody');
+    if (!tbody) return;
+    if (filteredOrders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:60px;"><i class="fas fa-truck fa-3x" style="color:var(--gold); margin-bottom:10px; display:block;"></i>لا توجد طلبات</td></tr>`;
+    } else {
+        tbody.innerHTML = filteredOrders.map(order => {
+            const productsHtml = order.items.map(it => `<div style="margin-bottom:3px;">${it.name} (${it.quantity})</div>`).join('');
+            const statusClass = order.status === 'delivered' ? 'status-delivered' : (order.status === 'processing' ? 'status-processing' : 'status-pending');
+            const statusText = order.status === 'delivered' ? '✅ تم التوصيل' : (order.status === 'processing' ? '⚙️ قيد التوصيل' : '🔄 قيد المعالجة');
+            const phoneHtml = order.customerPhone ? `<button class="btn btn-outline btn-sm" onclick="callCustomer('${order.customerPhone}')"><i class="fas fa-phone"></i> ${order.customerPhone}</button>` : '---';
+            return `<tr style="${order.status === 'delivered' ? 'opacity:0.7;' : ''}">
+                <td><input type="checkbox" class="order-checkbox" value="${order.id}" onchange="toggleOrderSelection(${order.id}, this)"></td>
+                <td><strong>#${order.telegramOrderId || order.id}</strong></td>
+                <td style="font-size:11px;">${order.date || ''}</td>
+                <td>${order.customerName || 'غير معروف'}</td>
+                <td>${phoneHtml}</td>
+                <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${order.customerAddress || ''}">${order.customerAddress || '---'}</td>
+                <td style="max-width:150px;">${productsHtml}</td>
+                <td style="color:var(--success); font-weight:bold;">${order.total.toLocaleString()} دج</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td>${order.deliveryCompany || '---'}</td>
+                <td style="max-width:100px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${order.customerNotes || ''}">${order.customerNotes ? (order.customerNotes.length > 30 ? order.customerNotes.substring(0,30)+'...' : order.customerNotes) : '---'}</td>
+                <td style="min-width: 110px;">
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <button class="btn btn-info" onclick="viewOrderDetails(${order.id})" title="عرض تفاصيل الطلب" style="background:linear-gradient(135deg,#06b6d4,#0891b2); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-eye"></i> تفاصيل</button>
+                        <button class="btn btn-delivery" onclick="openDeliveryModal(${order.id})" title="توصيل الطلب" style="background:linear-gradient(135deg,#22c55e,#16a34a); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-truck"></i> توصيل</button>
+                        <button class="btn btn-warning" onclick="openEditDeliveryModal(${order.id})" title="تعديل بيانات التوصيل" style="background:linear-gradient(135deg,#f59e0b,#d97706); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-edit"></i> تعديل</button>
+                        <button class="btn btn-gold" onclick="copyAddress('${order.customerAddress?.replace(/'/g, "\\'") || ''}')" title="نسخ العنوان" style="background:linear-gradient(135deg,#ffd700,#daa520); width:100%; padding:6px 10px; font-size:12px; color:#111;"><i class="fas fa-copy"></i> نسخ</button>
+                        <button class="btn btn-success" onclick="callCustomer('${order.customerPhone || ''}')" title="اتصال بالعميل" style="background:linear-gradient(135deg,#10b981,#059669); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-phone"></i> اتصال</button>
+                        <button class="btn btn-danger" onclick="exportSingleOrderToPDF(${order.id})" title="تصدير PDF" style="background:linear-gradient(135deg,#ef4444,#dc2626); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn btn-dark" onclick="deleteOrder(${order.id})" title="حذف الطلب" style="background:linear-gradient(135deg,#4b5563,#374151); width:100%; padding:6px 10px; font-size:12px;"><i class="fas fa-trash"></i> حذف</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+    updateStats();
+}
+
+// ========== تشغيل التطبيق ==========
+document.getElementById('searchOrders')?.addEventListener('input', () => renderOrders());
+document.addEventListener('DOMContentLoaded', () => { loadCurrentStore(); fetchDistributorsFromChannel(); setInterval(() => { fetchOrdersFromTelegram(); renderOrders(); }, 30000); });
 </script>
-<div id="editDeliveryModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تعديل بيانات التوصيل</h3><button class="modal-close" onclick="closeEditDeliveryModal()">&times;</button></div><div class="form-group"><label>جهة التوصيل</label><input type="text" id="editDeliveryCompany"></div><div class="form-group"><label>رقم التتبع</label><input type="text" id="editTrackingNumber"></div><div class="form-group"><label>ملاحظات</label><textarea id="editDeliveryNotes" rows="2"></textarea></div><div class="form-group"><label>الحالة</label><select id="editOrderStatus"><option value="pending">قيد المعالجة</option><option value="processing">قيد التوصيل</option><option value="delivered">تم التوصيل</option></select></div><button class="btn btn-gold" style="width:100%;" onclick="saveDeliveryChanges()">حفظ</button></div></div>
 </body>
 </html>
